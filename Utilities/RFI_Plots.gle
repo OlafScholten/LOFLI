@@ -1,0 +1,187 @@
+size 60 42
+set font pstr fontlwidth 0.1 hei 0.7 just CC  
+Wi=25 ! Width of panel
+He=8  ! Heigth of panel
+x_off=4
+y_off=3
+dy=2
+dx=1
+file$='files/'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+filePreamb$=file$+'RFI_'
+!--------------------------------------------------------------------
+
+Sub Plot_EvenOdd
+
+fileStat$=filePreamb$+EvenOdd$+'Stat.dat'
+
+fopen fileStat$ inchan read
+freadln inchan i AntID$ p MinAmp
+
+set just CC 
+amove x_off+Wi/2 y_off+3*dy+4*He-1.2
+write EvenOdd$
+amove x_off+Wi/2 y_off+2*dy+3*He-1.2
+write AntID$
+
+amove x_off y_off
+begin graph
+   size Wi He
+   noBox
+   vscale 1
+   hscale 1  
+   xaxis !min 0. max 100 !dticks 20 dsubticks 5
+   yaxis  nolast !min -.3*10^5 max .3*10^5 !dticks 5 dsubticks 1
+   data filePreamb$+'AntR'+AntId$+'.dat' d1=c2,c3  d2=c2,c4  
+   d2 line lwidth 0.04   color green
+   let d9=minAmp
+   d9 line lstyle 1 lwidth 0.02 color black
+end graph
+begin key
+   nobox 
+   position tr
+   !text "Raw RMS" line color orange lstyle 1 lwidth 0.1
+   text "Raw Max Ampl" line color green lstyle 1 lwidth 0.1
+End key
+set just CC 
+amove x_off+Wi/2 y_off-1.2
+text time [ms]
+amove x_off-2 y_off+He/2
+begin rotate 90
+!text Raw Ampl.
+write "Raw Ampl."
+end rotate
+set just BR 
+amove x_off+Wi-.1 y_off+.05
+text Bkgr level
+
+amove x_off y_off+He
+begin graph
+   size Wi He
+   noBox
+   vscale 1
+   hscale 1  
+   xaxis !min 0. max 100 !dticks 20 dsubticks 5
+   xlabels off
+   yaxis log min 0.7 max 1000 !dticks 5 dsubticks 1
+   data filePreamb$+'AntT'+AntId$+'.dat' d1=c2,c3  d2=c2,c4  
+   let d12=d1
+   d12 line lwidth 0.04  color red 
+   d2 line lwidth 0.04   color blue
+   let d9=1
+   d9 line lstyle 1 lwidth 0.02 color black
+end graph
+begin key
+   nobox 
+   position tr
+   text "Filt RMS" line color red lstyle 1 lwidth 0.1
+   text "Filt Max Ampl" line color blue lstyle 1 lwidth 0.1
+End key
+set just CC 
+amove x_off-1.5 y_off+He/2+He
+begin rotate 90
+text Norm. Ampl.
+end rotate
+
+amove x_off y_off+dy+2*He
+begin graph
+   size Wi/2-dx He
+   noBox
+   vscale 1
+   hscale 1  
+   xaxis !min 0. max 100 !dticks 20 dsubticks 5
+   yaxis !log max 5000 !dticks 5 dsubticks 1
+   data filePreamb$+'AntT'+AntId$+'.dat'   d5=c1,c3 ignore 2
+   let d6 = hist d5 from 0.9 to 1.3 bins 100 !!!dm [from x1] [to x2] [bins n] [step n]
+   d6 line hist
+end graph
+begin key
+   nobox 
+   position tr
+   text "Filtered" 
+End key
+set just CC 
+amove x_off+Wi/4 y_off+dy+2*He-1.3
+text normalized RMS
+
+amove x_off+Wi/2+dx y_off+dy+2*He
+begin graph
+  size Wi/2-dx He
+  noBox
+  vscale 1
+  hscale 1
+   xaxis min 10. max 80 dticks 10 dsubticks 5
+   yaxis  min 0 max 2 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.05 max 5 !dticks 5 dsubticks 1
+     data filePreamb$+'AntF'+AntId$+'.dat' d1=c1,c2  d11=c1,c3
+     d11 marker fcircle msize .3  color green
+     d1 marker fcircle msize .1  color red
+     d11 line lwidth .02  color green
+     d1 marker fcircle msize .1  color red
+     d1 line lwidth .02  color red
+end graph
+begin key
+   nobox 
+   position tl
+   Text "Freq. Ampl." marker fcircle msize .2 color red
+   text "Filter" marker fcircle msize .2  color green
+End key
+set just CC 
+amove x_off+Wi*3/4+dx y_off+dy+2*He-1.3
+text \nu [MHz]
+
+amove x_off y_off+2*dy+3*He
+begin graph ! Accumulated statistics
+  size Wi He
+  noBox
+  vscale 1
+  hscale 1  
+   xaxis !min 0. max 100 !dticks 20 dsubticks 5
+   yaxis !log max 5000 !dticks 5 dsubticks 1
+     data fileStat$   d1=c1,c3 d2=c1,c4 d3=c1,c5 ! ignore 2
+      ! Write(16:  i_odd, Ant_ID, sqrt(powr), MinAmp, Filtring, 100.*N_zeroChunk/i_chunkMax
+     Let d11=d1*10.
+     d3 marker circle msize .2 color orange
+     d11 marker circle msize .13 color red
+     d2 marker cross msize .1 color green
+     data filePreamb$+EvenOdd$+'Zero.dat' d4=c1,c3
+     d4 marker diamond msize .2 color magenta
+end graph
+begin key
+   nobox 
+   position tr
+   text "#Filtered Freq." marker circle msize .2 color orange
+   text "Raw/norm x 10" marker fcircle msize .13 color red
+   text "Bkgr level" marker cross msize .1 color green
+   text "%dataloss" marker diamond msize .2 color magenta
+End key
+
+End Sub
+!---------------------------------------------------------------------
+
+EvenOdd$='Even'
+Plot_EvenOdd
+
+begin translate 30 0
+EvenOdd$='Odd'
+Plot_EvenOdd
+end translate
+
+!set font pstr fontlwidth 0.06 hei 0.8 just CC  
+!set lwidth 0.1
+!begin key
+!nobox 
+!position tr
+!text "r=0-1 m" line color red lstyle 1 lwidth 0.1
+!text "r=1-4 m" line color blue lstyle 1 lwidth 0.1
+!text "r=4-6 m" line color purple lstyle 1 lwidth 0.1
+!text "r=6-10 m" line color green lstyle 1 lwidth 0.1
+!text "r=10-20 m" line color yellow lstyle 1 lwidth 0.1
+!text "r=20-50 m" line color orange lstyle 1 lwidth 0.1
+!text "r=50-150 m" line color darkgreen lstyle 1 lwidth 0.1
+!!begin key
+!nobox 
+!position tr

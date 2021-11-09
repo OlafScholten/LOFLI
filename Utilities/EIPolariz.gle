@@ -1,0 +1,116 @@
+size 22 33
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+fontSz=0.8
+
+verSz=5
+horSz=19
+set lwidth 0.04
+set font pstr
+set hei .6
+set hei 0.7
+MarkSz = 0.1
+
+scl_th=0.5
+scl_ph=0.05
+
+labl$='../19A-1/files/DLtst'
+if(nargs() > 0 ) then 
+    labl$=arg$(1)
+end if
+DataFile$=labl$+"IntfSpecPolrz_d.dat"    ! DLsIntfSpecPolrz_d.dat
+   fopen DataFile$ inchanw read
+   freadln inchanw tmin tmax
+
+amove 2.  2
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis min 0 max +100 ! log ! min scl_min max scl log
+   data DataFile$ d1=c2,c5 d2=c2,c6  ignore 2 !
+   d1 marker circle  msize MarkSz  err d2 errwidth .1
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'I12/I [%]'
+
+amove 2.  2.+verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min -100 max +100
+   data DataFile$ d1=c2,c7 d2=c2,c8  ignore 1
+   d1 marker circle msize MarkSz  err d2 errwidth .1
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'Q/I [%]'
+
+amove 2.  2.+2*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min -100 max +100
+   data DataFile$ d1=c2,c9 d2=c2,c10  ignore 1
+   d1 marker circle msize MarkSz  err d2 errwidth .1
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'U/I [%]'
+
+amove 2.  2.+3*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min -100 max +100
+   data DataFile$ d1=c2,c11 d2=c2,c12  ignore 1
+   d1 marker circle  msize MarkSz   err d2 errwidth .1
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'V/I [%]'
+
+amove 2.  2.+4*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0 max +100
+   data DataFile$ d1=c2,c13 d2=c2,c14  ignore 1
+   d1 marker circle  msize MarkSz   err d2 errwidth .1
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'I3/I [%]'
+
+amove 2.  2.+5*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0 
+   data DataFile$ d1=c2,c23  ignore 1
+   d1 marker circle  msize MarkSz  
+end graph
+set just TR
+amove xg(tMax)-0.3 yg(100)-0.3
+write 'Chi^2/DoF'
+
+set hei .7
+amove 2+0.5*HorSz  0.7
+text time slice
+

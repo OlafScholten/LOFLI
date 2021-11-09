@@ -1,0 +1,265 @@
+!size   26 54
+H=6
+B=20
+fontSz=1.0
+bsh=3.5*fontSz
+HorOff=3.
+VerOff=4.
+dB=bsh+B
+dH=bsh+H
+size  HorOff+dB VerOff+5*dh+h+fontSz
+! ======================================
+file$='D20190424T194432D'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+filedat$=file$+'.dat'
+fopen filedat$ inchan read
+freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$
+freadln inchan NTracks EventNr Q t_start label$
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+
+amove HorOff VerOff+3*dh+h+fontSz 
+write label$
+
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+
+
+sub 2Dtime dt$ ds$ dmin dmax
+    local DDx = dmax-dmin
+    for i = 1 to ndata(dt$)
+        local x = dataxvalue(ds$,i)
+        local y = datayvalue(ds$,i)
+        local Cscale = (dataxvalue(dt$,i)-dmin)/DDx
+        amove xg(x) yg(y)
+        ! set color black
+        ! marker circle .41
+        Clr(Cscale)
+        marker fcircle .2
+    next i
+    set color black
+end sub
+
+sub SubTranspose da$ db$ dab$
+    local DDx = dmax-dmin
+    for i = 1 to ndata(dt$)
+        local y = datayvalue(da$,i)-datayvalue(db$,i)
+        local Cscale = (dataxvalue(dt$,i)-dmin)/DDx
+        amove xg(x) yg(y)
+        ! set color black
+        ! marker circle .41
+        Clr(Cscale)
+        marker fcircle .2
+    next i
+    set color black
+end sub
+
+
+
+! Start plotting
+amove HorOff VerOff ! (time,delta-East)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  x2axis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  xaxis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  y2axis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+!  yaxis min 0 max 10 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+   let d9 = 0. from tMin to tMax
+   d9 X2axis y2axis line lstyle 3 lwidth 0.05 color black
+   data file$+'1.dat' d1=c1,c2 d2=c1,c5 !  ignore 2
+   let d3 = 1000.*(d1-d2)
+   d3 X2axis y2axis marker cross msize 0.2 color blue
+   let d4 = hist d3 step 2
+   let d5 = d4/2
+   d5 line bar color red
+end graph
+
+amove  HorOff VerOff+dH ! (time,delta-North)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  x2axis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  xaxis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  y2axis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+!  yaxis min 0 max 10 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+   let d9 = 0. from tMin to tMax
+   d9 X2axis y2axis line lstyle 3 lwidth 0.05 color black
+  data file$+'1.dat' d1=c1,c3 d2=c1,c6 !  ignore 2
+  let d3 = 1000.*(d1-d2)
+  d3 X2axis y2axis marker cross msize 0.2 color blue
+   let d4 = hist d3 step 2
+   d4 line bar color red
+  !data file$+'2.dat' d21=c1,c3 d22=c1,c6   !  ignore 2
+  !let d23 = d21-d22
+  !d23 marker cross msize 0.2 color magenta
+  !data file$+'3.dat' d31=c1,c3 d32=c1,c6   !  ignore 2
+  !let d33 = d31-d32
+  !d33 marker cross msize 0.2 color red
+  !data file$+'4.dat' d41=c1,c3 d42=c1,c6   !  ignore 2
+  !let d43 = d41-d42
+  !d43 marker cross msize 0.2 color brown
+  !data file$+'5.dat' d51=c1,c3 d52=c1,c6   !  ignore 2
+  !let d53 = d51-d52
+  !d53 marker cross msize 0.2 color green
+end graph
+
+amove  HorOff VerOff+2*dH ! (time,delta-Height)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  x2axis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  xaxis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  y2axis min -100 max 100 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+!  yaxis min 0 max 10 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+   let d9 = 0. from tMin to tMax
+   d9 X2axis y2axis line lstyle 3 lwidth 0.05 color black
+  data file$+'1.dat' d1=c1,c4 d2=c1,c7 !  ignore 2
+  let d3 = 1000.*(d1-d2)
+  d3 X2axis y2axis marker cross msize 0.2 color blue
+   let d4 = hist d3 step 2
+   d4 line bar color red
+  !data file$+'2.dat' d21=c1,c4 d22=c1,c7   !  ignore 2
+  !let d23 = d21-d22
+  !d23 marker cross msize 0.2 color magenta
+  !data file$+'3.dat' d31=c1,c4 d32=c1,c7   !  ignore 2
+  !let d33 = d31-d32
+  !d33 marker cross msize 0.2 color red
+  !data file$+'4.dat' d41=c1,c4 d42=c1,c7   !  ignore 2
+  !let d43 = d41-d42
+  !d43 marker cross msize 0.2 color brown
+  !data file$+'5.dat' d51=c1,c4 d52=c1,c7   !  ignore 2
+  !let d53 = d51-d52
+  !d53 marker cross msize 0.2 color green
+end graph
+
+amove  HorOff VerOff+3*dH ! (time,velocity)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+  !yaxis min 0 max 25 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  !yaxis min 0 max 1.6 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  data file$+'1.dat' d1=c1,c12   ignore 1
+  d1 svg_smooth 5 marker cross msize 0.1 color blue
+  data file$+'_bin_1.dat' d2=c10,c9   ignore 1
+  d2 line lwidth 0.05 color red
+end graph
+set just TR
+amove  HorOff+B-fontsz VerOff+3*dH+H-0.5*fontsz
+text Velocity [10^6 m/s]
+
+amove  HorOff VerOff+4*dH ! (time,pulseDensity)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7  min 0 max 31 
+  yaxis log min 0.7  hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  data file$+'_STD-01.dat' d1=c1,c2    !  ignore 2
+  d1 line color red
+  data file$+'_STD-03.dat' d3=c1,c2    !  ignore 2
+  d3 line color magenta
+  data file$+'_STD-05.dat' d5=c1,c2    !  ignore 2
+  d5 line color blue
+  data file$+'_STD-07.dat' d7=c1,c2    !  ignore 2
+  d7 line color green
+  data file$+'_STD-09.dat' d9=c1,c2    !  ignore 2
+  d9 line color yellow
+end graph
+begin key
+    pos tr nobox
+    line text "0.5 [ms]" color red
+    line text "0.125 [ms]" color magenta
+    line text "31.2 [\mu s]" color blue
+    line text "7.8 [\mu s]" color green
+    line text "2.0 [\mu s]" color yellow
+end key
+set just TL
+amove HorOff+fontsz  VerOff+4*dH+H-0.5*fontsz
+text Pulse Density
+
+amove  HorOff VerOff+5*dH ! (time,pulseDensity)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis log min 0.1 max 200 hei fontSz ! dticks  1 dsubticks .2  ! length=7  min 0 max 31 
+  yaxis log min 3*10^-3 max 0.1 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  data file$+'_STD-nu.dat' d1=c1,c2    !  ignore 2
+  d1 line color red
+end graph
+begin key
+    pos tr nobox
+    text "Pulse Frequency" color red
+end key
+set just TC
+amove HorOff+B/2  VerOff+5*dH-1.5*fontsz
+text frequency [1/ms]
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+set hei fontSz
+amove HorOff+0.5*B  VerOff+2*dH+h+2.*fontsz
+text time [ms]
+
+amove HorOff+0.5*B  VerOff-1.5*fontsz
+text \delta [m]
+
+amove HorOff+2*fontsz VerOff+H-fontsz
+text East 
+amove HorOff+B+2.5*fontsz VerOff+H/2
+begin rotate -90
+text \delta E [m]
+end rotate
+amove HorOff-2.5*fontsz VerOff+H/2
+begin rotate 90
+text #/\delta E [m]
+end rotate
+
+amove HorOff+2*fontsz VerOff+dH+H-fontsz
+text North 
+amove HorOff+B+2.5*fontsz VerOff+dH+H/2
+begin rotate -90
+text \delta N [m]
+end rotate
+amove HorOff-2.5*fontsz VerOff+dH+H/2
+begin rotate 90
+text #/\delta N [m]
+end rotate
+
+amove HorOff+2*fontsz VerOff+2*dH+H-fontsz
+text Height 
+amove HorOff+B+2.5*fontsz VerOff+2*dH+H/2
+begin rotate -90
+text \delta h [m]
+end rotate
+amove HorOff-2.5*fontsz VerOff+2*dH+H/2
+begin rotate 90
+text #/\delta h [m]
+end rotate
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "TrScat" ! +"-"+file$
+translate 0 2
+!end rotate

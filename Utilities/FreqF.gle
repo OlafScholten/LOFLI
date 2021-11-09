@@ -1,0 +1,51 @@
+size 30 22
+set font pstr fontlwidth 0.08 hei 1.2 just CC  
+Ant$="002009079"
+Antb$="002011094"
+if(nargs() > 0 ) then 
+    Ant$=arg$(1)
+end if
+
+set lwidth 0.1
+amove 4 4
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   title  "Freq spec"
+   xtitle "\nu [MHz]"
+   ytitle "Amplitude"
+    
+   xaxis min 20. max 80 dticks 20 dsubticks 5
+   yaxis  min 0 max 2 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.05 max 5 !dticks 5 dsubticks 1
+  
+     !data Dump_nu013.dat d13=c1,c2
+     !d13 marker fcircle msize .1  color orange
+     !data Dump_nu014.dat d14=c1,c2
+     !d14 marker fcircle msize .05  color magenta
+     data 'files/LOFAR_Freq'+Ant$+'.dat' d1=c1,c2  d11=c1,c3
+     d11 marker fcircle msize .3  color green
+     d1 marker fcircle msize .1  color red
+     !data LOFAR_Freq1.dat d21=c1,c2
+     !d21 marker fcircle msize .1  color magenta
+	   
+!     let d9=0
+!     d9 line lstyle 1 lwidth 0.01 color black
+     end graph
+
+!set font pstr fontlwidth 0.06 hei 0.8 just CC  
+!set lwidth 0.1
+!begin key
+!nobox 
+!position tr
+!text "r=0-1 m" line color red lstyle 1 lwidth 0.1
+!text "r=1-4 m" line color blue lstyle 1 lwidth 0.1
+!text "r=4-6 m" line color purple lstyle 1 lwidth 0.1
+!text "r=6-10 m" line color green lstyle 1 lwidth 0.1
+!text "r=10-20 m" line color yellow lstyle 1 lwidth 0.1
+!text "r=20-50 m" line color orange lstyle 1 lwidth 0.1
+!text "r=50-150 m" line color darkgreen lstyle 1 lwidth 0.1
+!end key
