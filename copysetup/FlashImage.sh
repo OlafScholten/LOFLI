@@ -3,7 +3,7 @@
 # 
 source ../ShortCuts.sh
 #Vrsn="-v21"  # version number
-Prog="Track"${Vrsn}
+Prog="Track"
 source ${UtilDir}/compile.sh
 #
 #cd ${ProgramDir}

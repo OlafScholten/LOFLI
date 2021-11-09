@@ -2,7 +2,8 @@
 # 
 # 
 source ../ShortCuts.sh
-Prog="LOFAR-Imag"${Vrsn}
+#Prog="LOFAR-Imag"${Vrsn}
+Prog="LOFAR-Imag"
 source ${UtilDir}compile.sh
 
 # start Imaging run
