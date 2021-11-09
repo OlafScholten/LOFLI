@@ -2,7 +2,8 @@
 # 
 # 
 source ../ShortCuts.sh
-Prog="RFI_Mitigation"${Vrsn}
+#Prog="RFI_Mitigation"${Vrsn}
+Prog="RFI_Mitigation"
 source ${UtilDir}compile.sh
 echo "Flash Folder:" ${FlashFolder}
 echo "start RFI mitigation"
