@@ -1,0 +1,145 @@
+size 60 42
+set font pstr fontlwidth 0.08 hei 1.2 just CC  
+
+set lwidth 0.1
+amove 4 4
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   xtitle "Zenith angle"
+   ytitle "V^2"
+    
+   xaxis ! min 0. max 100 !dticks 20 dsubticks 5
+   yaxis ! min 0 max 8 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.001 max 20 !dticks 5 dsubticks 1
+  
+     data V_t60-Th.dat d1=c1,c4  
+     data V_p60-Th.dat d2=c1,c4  
+     data aV_t60-Th.dat d11=c1,c4 d12=c1,c8
+     d1 marker cross msize 0.4  color orange
+     d11 line lwidth 0.1 color red
+     d2 marker cross msize 0.4  color green
+     d12 line lwidth 0.1 color blue
+	   
+!     let d9=0
+!     d9 line lstyle 1 lwidth 0.01 color black
+     end graph
+
+!set font pstr fontlwidth 0.06 hei 0.8 just CC  
+!set lwidth 0.1
+begin key
+!nobox 
+position bl
+text "V@60MHz"
+text "Int_\phi" line color blue lstyle 1 lwidth 0.1
+text "V_\phi" line color green lstyle 1 lwidth 0.1
+text "Int_\theta" line color red lstyle 1 lwidth 0.1
+text "V_\theta" line color orange lstyle 1 lwidth 0.1
+end key
+
+amove 32 4
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   xtitle "Zenith angle"
+   ytitle "phase"
+    
+   xaxis ! min 0. max 100 !dticks 20 dsubticks 5
+   yaxis ! min 0 max 8 !dticks 5 dsubticks 1
+  
+     data V_t60-Th.dat d1=c1,c5  
+     data V_p60-Th.dat d2=c1,c5 
+     data aV_t60-Th.dat d11=c1,c5 d12=c1,c9
+     d1 marker cross msize 0.4  color orange
+     d11 line lwidth 0.1 color red
+     d2 marker cross msize 0.4  color green
+     d12 line lwidth 0.1 color blue
+	   
+!     let d9=0
+!     d9 line lstyle 1 lwidth 0.01 color black
+     end graph
+
+
+set lwidth 0.1
+amove 4 23
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   title  
+   xtitle "frequency"
+    
+   xaxis !min 0. max 1 !dticks 20 dsubticks 5
+   yaxis log !min 0 max 8 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.001 max 20 !dticks 5 dsubticks 1
+  
+     data RFI_AntF002010084.dat d31=c1,c2  
+     data RFI_AntF002010085.dat d32=c1,c2  
+     let d41=d31*d31*1000.
+     let d42=d32*d32*1000.
+     d41 marker fcircle msize .1  color yellow
+     d42 marker fcircle msize .1 color magenta
+
+     data V_t-nu.dat d1=c1,c4  
+     data V_p-nu.dat d2=c1,c4  
+     data aV_t-nu.dat d11=c1,c4  d12=c1,c8 
+     d1 marker cross msize 0.4  color orange
+     d11 line lwidth 0.1 color red
+     d2 marker cross msize 0.4  color green
+     d12 line lwidth 0.1   color blue
+End Graph
+	   
+begin key
+nobox 
+position bl
+text "V^2(\nu)"
+text "Int_\phi" line color blue lstyle 1 lwidth 0.1
+text "V_\phi" line color green lstyle 1 lwidth 0.1
+text "Int_\theta" line color red lstyle 1 lwidth 0.1
+text "V_\theta" line color orange lstyle 1 lwidth 0.1
+text "Backgr" line color magenta lstyle 1 lwidth 0.1
+end key
+
+
+amove 32 23
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   xtitle "frequency"
+    
+   xaxis !min 0. max 1 !dticks 20 dsubticks 5
+   yaxis  !min 0 max 8 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.001 max 20 !dticks 5 dsubticks 1
+  
+     data V_t-nu.dat d1=c1,c5  
+     data V_p-nu.dat d2=c1,c5  
+     data aV_t-nu.dat d11=c1,c5  d12=c1,c9
+     d1 marker cross msize 0.4  color orange
+     d2 marker cross msize 0.4  color green
+     d11 line lwidth 0.1   color red
+     d12 line lwidth 0.1   color blue
+	   
+!     let d9=0
+!     d9 line lstyle 1 lwidth 0.01 color black
+end graph
+
+
+     
+!text "r=0-1 m" line color red lstyle 1 lwidth 0.1
+!text "r=1-4 m" line color blue lstyle 1 lwidth 0.1
+!text "r=4-6 m" line color purple lstyle 1 lwidth 0.1
+!text "r=6-10 m" line color green lstyle 1 lwidth 0.1
+!text "r=10-20 m" line color yellow lstyle 1 lwidth 0.1
+!text "r=20-50 m" line color orange lstyle 1 lwidth 0.1
+!text "r=50-150 m" line color darkgreen lstyle 1 lwidth 0.1
+

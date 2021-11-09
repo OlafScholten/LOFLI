@@ -1,0 +1,57 @@
+size 30 42
+set font pstr fontlwidth 0.08 hei 1.2 just CC  
+Ant$="002009079"
+Antb$="002011094"
+if(nargs() > 0 ) then 
+    Ant$=arg$(1)
+end if
+
+set lwidth 0.1
+amove 4 4
+begin graph
+  size 25 16
+  noBox
+  vscale 1
+  hscale 1
+   title  "Time trace-peak1"
+   xtitle "Sample [5 ns]"
+   ytitle "Amplitude"
+    
+   xaxis min 0. max 100 !dticks 20 dsubticks 5
+   yaxis  min -1 max 1 !dticks 5 dsubticks 1
+   !x1axis off
+   !yaxis log min 0.001 max 20 !dticks 5 dsubticks 1
+  
+     data LOFAR_Time_1.dat d1=c1,c2  d2=c1,c3  d3=c1,c4  d4=c1,c5 
+     d1 line lwidth 0.04  color orange
+     d2 line lwidth 0.04   color magenta
+     d3 line lwidth 0.04   color blue
+     d4 line lwidth 0.04   color green
+     !d34 line lwidth 0.04   color blue
+	   
+!     let d9=0
+!     d9 line lstyle 1 lwidth 0.01 color black
+     end graph
+
+!set font pstr fontlwidth 0.06 hei 0.8 just CC  
+!set lwidth 0.1
+begin key
+!nobox 
+position tr
+text "v-0-48" line color blue lstyle 1 lwidth 0.1
+text "v-1-49" line color green lstyle 1 lwidth 0.1
+text "\phi" line color orange lstyle 1 lwidth 0.1
+text "\theta" line color magenta lstyle 1 lwidth 0.1
+end key
+!begin key
+!nobox 
+!position tr
+!text "r=0-1 m" line color red lstyle 1 lwidth 0.1
+!text "r=1-4 m" line color blue lstyle 1 lwidth 0.1
+!text "r=4-6 m" line color purple lstyle 1 lwidth 0.1
+!text "r=6-10 m" line color green lstyle 1 lwidth 0.1
+!text "r=10-20 m" line color yellow lstyle 1 lwidth 0.1
+!text "r=20-50 m" line color orange lstyle 1 lwidth 0.1
+!text "r=50-150 m" line color darkgreen lstyle 1 lwidth 0.1
+!end key
+
