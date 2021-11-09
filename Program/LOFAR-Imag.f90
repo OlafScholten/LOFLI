@@ -291,12 +291,12 @@ Program LOFAR_Imaging
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    Version='v21'
-   release='v21 (Aug, 2021)'
+   release='v21 (Nov, 2021)'
    Utility='LOFAR_Lightn.Imaging'
    CALL get_environment_variable("LIBRARY", lname)
-   WRITE (*,*) "LIBRARY=",TRIM(lname)
+   !WRITE (*,*) "LIBRARY=",TRIM(lname)
    CALL get_environment_variable("HOME", lname)
-   WRITE (*,*) "HOME=",TRIM(lname)
+   WRITE (*,*) "HOME=",TRIM(lname),', ',Trim(Utility), ', release=', TRIM(release)
    !
    ExcludedStat='  '
    ExcludedStatID=0

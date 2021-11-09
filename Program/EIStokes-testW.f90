@@ -311,7 +311,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
    W=ATAN2(StU,StQ)/2.*180./pi
    If(W.lt.-90.) W=W+180.
    write(2,"(I4,A,G12.4,7(A,F7.2))") i_slice,': Wgt: I123=',StI,', I12/I=',StI12/StI, ', Q/I=',StQ/StI, &
-         ', U/I=',StU/StI, ', V/I=',StV/StI, ', I3/I=',StI3/StI,', angle=',W
+         ', U/I=',StU/StI, ', V/I=',StV/StI, ', I3/I=',StI3/StI,', angle=',W,', chi^2=',Chi2pDF
    Do m=1,3
       Do n=1,3
          Cur2E(m,n)=SUM( Ai(m,:)*Ai(:,n) )*Chi2pDF**2  /4. ! this should correspond to the square of the error
@@ -330,8 +330,8 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
    dStU1 = 2*SQRT( ABS(Cur2E(2,3)) )
    dStV1 =  dStU1
    !Write(2,*) Esq_ak,FdotI,'chi-sq=', Esq_ak-FdotI, ', /DegFree=', (Esq_ak-FdotI)/(2.*Nr_IntFer), I_Scale
-   write(2,"(A, 3G12.2,A,2F7.2,I7)") 'Variance(Stokes), [A(m,:)^-1 x chi^2/DoF]^2=',Cur2E(1,1), Cur2E(2,2), Cur2E(3,3),&
-            '; Chi^2/DoF=',Chi2pDF, SumSq/(2.*Nr_IntFer), IntfBase+IntfLead+i_s
+   !write(2,"(A, 3G12.2,A,2F7.2,I7)") 'Variance(Stokes), [A(m,:)^-1 x chi^2/DoF]^2=',Cur2E(1,1), Cur2E(2,2), Cur2E(3,3),&
+   !         '; Chi^2/DoF=',Chi2pDF, SumSq/(2.*Nr_IntFer), IntfBase+IntfLead+i_s
    !
    If(TestCh2) then
       SumSq=SumSq/(2.*Nr_IntFer)
