@@ -27,13 +27,13 @@ begin graph
    vscale 1
    hscale 1
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
-   yaxis min 0 max +100 ! log ! min scl_min max scl log
-   data DataFile$ d1=c2,c5 d2=c2,c6  ignore 2 !
-   d1 marker circle  msize MarkSz  err d2 errwidth .1
+   yaxis log min 10. ! max +100 ! log ! min scl_min max scl log
+   data DataFile$ d1=c2,c3   ignore 2 !
+   d1 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
 end graph
 set just TR
 amove xg(tMax)-0.3 yg(100)-0.3
-write 'I12/I [%]'
+write 'log(I)'
 
 amove 2.  2.+verSz
 begin graph
@@ -107,7 +107,7 @@ begin graph
    d1 marker circle  msize MarkSz  
 end graph
 set just TR
-amove xg(tMax)-0.3 yg(100)-0.3
+amove xg(tMax)-0.3 2.+6*verSz-0.3
 write 'Chi^2/DoF'
 
 set hei .7
