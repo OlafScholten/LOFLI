@@ -103,7 +103,7 @@ Subroutine PixBoundingBox()
       If(-t_n.gt.t_p) diff(i) =-t_n
       PixLoc(i)=CenLoc(i)  ! set back to center for Cartesian coordinates
    Enddo ! i
-   write(2,*) 'Error ellips (N,E,h)=',sqrt(Err(:)),' [m]'
+   !write(2,*) 'Error ellips (N,E,h)=',sqrt(Err(:)),' [m]'
    If(zMin.lt.0.) zMin=0.
    !
    !-----------------------------------------------
@@ -140,7 +140,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    Use Interferom_Pars, only : PixelPower, MaxSmPow, N_smth, StartTime_ms
    Use FitParams, only : AntennaRange
    Use ThisSource, only : Dual
-   Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax
+   !Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax
    Use Interferom_Pars, only : i_chunk, NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, t_shft, NewCenLoc
    !Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
    Implicit none
@@ -332,20 +332,20 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    !
    If(Dual) Then
       OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat')
-      write(28,"(6F10.2,A,I3,F7.1,' 0')") tMin-.01-TimeBase, tMax+.005-TimeBase, &
+      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
          TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt , 0.0        ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
       Write(28,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
          '!   nr,  time[ms] ;','StI','StI12', '  StQ','  StU','  StV',' StI3',' StU1',' StV1',' StU2',' StV2', 'Chi^2/DoF'
    Else
       OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt)//'.dat')
-      write(28,"(8F8.2,A,F7.1,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
-         zMin/1000.-.05, zMax/1000.+.05, tMin-.01-TimeBase, tMax+.005-TimeBase, ' IntfBox ', TimeBase         ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      write(28,"(6F8.2,2F9.3,A,F7.1,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
+         zMin/1000.-.05, zMax/1000.+.05, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase         ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
       Write(28,"(A,I7,A,A,F8.3,A,F6.3)") &
          '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
    EndIf
    OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat')
-   write(29,"(8F8.2,A,F7.1,i3,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
-      zMin/1000.-.05, zMax/1000.+.05, tMin-.01-TimeBase, tMax+.005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+   write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
+      zMin/1000.-.05, zMax/1000.+.05, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
    Write(29,*) '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel, PowerScale, ' !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
    ! True bounding Box
    Do i_1=1,2   ! or azimuth Phi
@@ -407,9 +407,9 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       !
       ! Do a 3D parabolic fit to interpolate around the maximal pixel
       Call FindInterpolMx(i_slice,d_Mx, SMPowMx,QualMx)
-      !write(2,*) i,d_Mx, SMPowMx,QualMx(1:3)
       !
       If(SMPowMx.lt.NoiseLevel) cycle
+      !write(2,*) 'd_Mx', i_slice, d_Mx(:), SMPowMx,QualMx(1:3)
       NMx=NMx+1
       If(polar) then
          PixLocPol(:)=CenLocPol(:)+d_Mx(:)*d_loc(:)
@@ -562,6 +562,7 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !   Enddo
    !   Write(2,"(A,F9.1,3(3F6.2,','))") 'in:y0,Ay,By,Ry',y0,Ay/y0,By/y0,Ry/y0
    !EndIf
+   !write(2,*) 'FindInterpolMx @i_slice=:',i,y0,i_gr(:)
    Do j=1,3  ! fit y=Ax^2/2+Bx+C; A=y"/d^2 & B=y'/2d & x_max= -B/A= -d y'/(2y")
       ! 3D case: y=Sum[A(i)X(i)^2/2 + R'(i,j)X(i)X(j)+B(i)x(i)+C]
       If((i_gr(j).eq.N_pix(j,1)) .or. (i_gr(j).eq.N_pix(j,2))) Then
@@ -578,25 +579,25 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
       By(j)=(yp-ym)/2. ! in units of 1/d
       !d_gr(j)=-By/Ay ! in units of d
       !SMPow= SMPow -By*By/(2*Ay)
-      !write(2,*) 'yp,ym',yp/y0, ym/y0, Ay(j)/y0,By(j)/y0
+      !write(2,*) 'yp,ym',j,yp/y0, ym/y0, Ay(j)/y0,By(j)/y0
    Enddo
    !
-   B=(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)+1)) &
-      +(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)-1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)-1)) &
-      +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)+1,i_gr(3))) &
-      +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)-1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)-1,i_gr(3)))
+   !B=(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)+1)) &
+   !   +(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)-1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)-1)) &
+   !   +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)+1,i_gr(3))) &
+   !   +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)-1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)-1,i_gr(3)))
    !write(2,*) 'B(1)',B/8./y0,By(1)/y0
    !By(1)=(By(1)+B/4)/3.
-   B=(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)) &
-      +(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)) &
-      +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)+1,i_gr(2)-1,i_gr(3))) &
-      +(PixSmPowTr(i,i_gr(1)-1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)-1,i_gr(3)))
+   !B=(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)) &
+   !   +(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)) &
+   !   +(PixSmPowTr(i,i_gr(1)+1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)+1,i_gr(2)-1,i_gr(3))) &
+   !   +(PixSmPowTr(i,i_gr(1)-1,i_gr(2)+1,i_gr(3))) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2)-1,i_gr(3)))
    !write(2,*) 'B(2)',B/8./y0,By(2)/y0
    !By(2)=(By(2)+B/4)/3.
-   B=(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)) &
-      +(PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)) &
-      +(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)-1)) &
-      +(PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)-1))
+   !B=(PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)) &
+   !   +(PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)) &
+   !   +(PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)-1)) &
+   !   +(PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)+1)) - (PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)-1))
    !write(2,*) 'B(3)',B/8./y0,By(3)/y0
    !By(3)=(By(3)+B/4)/3.
    !
@@ -610,32 +611,34 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    If(Check) Then
       !  Checking the area around the max
       nxx=0
-      j=3
-!      Do j=1,3  ! fit y=Ax^2/2+Bx+C; A=y"/d^2 & B=y'/2d & x_max= -B/A= -d y'/(2y")
-         If((i_gr(j).eq.N_pix(j,1)+2) .or. (i_gr(j).eq.N_pix(j,2)-2)) nxx=1 ! max pixel should not be at the edge of the hypercibe
-!      Enddo
+!      j=3
+      Do j=1,3  ! fit y=Ax^2/2+Bx+C; A=y"/d^2 & B=y'/2d & x_max= -B/A= -d y'/(2y")
+         If((i_gr(j).le.N_pix(j,1)+2) .or. (i_gr(j).ge.N_pix(j,2)-2)) nxx=nxx+1 ! max pixel should not be at the edge of the hypercibe
+      Enddo
+      !write(2,*) 'nxx:',nxx, i_gr(:), N_pix(:,1)+2,N_pix(:,2)-2
       If(nxx.eq. 0) then
          !write(2,*) 'max pixel=',i_gr(:),y0
          Do i_h=-2,2
             B=i_h
             c_gr(3)=B ! SIGN(SQRT(ABS(B)),B)
-            !Do i_N= -2,2
-               i_N=0
+            Do i_N= -2,2
+               !i_N=0
                B=i_N
                c_gr(1)=B !SIGN(SQRT(ABS(B)),B)
-               !Do i_E= -2,2
-                  i_E=0
+               Do i_E= -2,2
+                  !i_E=0
                   B=i_E
                   c_gr(2)=B !SIGN(SQRT(ABS(B)),B)
                   !Valu(i_E)=1.-(PixSmPowTr(i,i_gr(1)+i_N,i_gr(2)+i_E,i_gr(3)+i_h))/y0
                   !Parb(i_E)=1.-Paraboloid(y0,Ay,By,Ry,c_gr)/y0
                   Valu(i_h)=1.-(PixSmPowTr(i,i_gr(1)+i_N,i_gr(2)+i_E,i_gr(3)+i_h))/y0
                   Parb(i_h)=1.-Paraboloid(y0,Ay,By,Ry,c_gr)/y0
-               !Enddo
-               !write(2,"(A, 2i3,5F6.2,'; ',5F6.2)") 'area i_h,i_n',i_h,i_N, Valu(:), Parb(:)
-            !Enddo
+               Enddo
+               write(2,"(A, 2i3,5F6.2,'; ',5F6.2)") 'area i_h,i_n',i_h,i_N, Valu(:), Parb(:)
+               flush(unit=2)
+            Enddo
          Enddo
-               write(2,"(/,A, 2i3,5F6.2,'; ',5F6.2,'; ',F9.1)") 'area i_h=-2:2,i_n=0',i_h,i_N, Valu(:), Parb(:),y0
+         !      write(2,"(/,A, 2i3,5F6.2,'; ',5F6.2,'; ',F9.1)") 'area i_h=-2:2,i_n=0',i_h,i_N, Valu(:), Parb(:),y0
       Endif
    EndIf
    !
@@ -664,6 +667,14 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !Write(2,"(A,F9.1,4(3F6.2,';'),F6.3,f9.4)") 'out:y0,Ay,By,Ry',y0,Ay/y0,By/y0,Ry/y0,d_gr,SMPow/y0,Det3/(y0**3)
    !EndIf
    !
+   !write(2,*) 'y0:',y0,det3
+   !write(2,*) 'FindInterpolMx:', i_gr(:), d_gr(:)
+   B=SUM(d_gr(:)*d_gr(:))
+   If(B.gt.0.5) Then
+      write(2,*) 'Interpolation distance shortend:',B
+      B=2.*B
+      d_gr(:)=d_gr(:)/B
+   EndIf
    d_gr(:)=i_gr(:)+d_gr(:) ! get true position of the maximum
    Qualty(1:3)=Ay(1:3)/y0
    !
