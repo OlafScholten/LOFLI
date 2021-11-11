@@ -112,5 +112,5 @@ write 'Chi^2/DoF'
 
 set hei .7
 amove 2+0.5*HorSz  0.7
-text time slice
+text source time [ms]
 
