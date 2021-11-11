@@ -208,7 +208,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                  If(Explore) then
                   RTime_s(:)=Chunk(:)*Hann(:)*sgn
                  Else
-                  RTime_s(:)=Chunk(:)*Hann(:)*sgn*100./sqrt(Powr) ! /Time_dim)
+                  RTime_s(:)=Chunk(:)*Hann(:)*sgn*100./sqrt(Powr) !  sqrt(power) level is normalized to 100.
                  Endif
               Else
                  RTime_s(WriteSimulation(1):WriteSimulation(1)+WriteSimulation(2))= &
@@ -574,7 +574,7 @@ Subroutine SimulationRead(SourceGuess)
          !
          !flush(Unit=2)
       EndDo
-      Powr_eo(0)=Powr_eo(0)+ AntNr_up-AntNr_lw*Powr
+      Powr_eo(0)=Powr_eo(0)+ (AntNr_up-AntNr_lw)*Powr
       NAnt_eo(0)=NAnt_eo(0)+ AntNr_up-AntNr_lw
       Ant_nr(i_chunk)=AntNr_up
       !write(2,*) 'Ant_IDs',Ant_IDens(1:Ant_nr(i_chunk),i_chunk)
@@ -601,7 +601,7 @@ Subroutine SimulationRead(SourceGuess)
             !write(2,*) i_sample, Sample_Offset
             If( (i_sample+Sample_Offset).lt.1) cycle
             If( (i_sample+Sample_Offset).gt.Time_dim) exit
-            RTime_s(i_sample+Sample_Offset)=spec(j_ant)*100./sqrt(Powr)
+            RTime_s(i_sample+Sample_Offset)=spec(j_ant)*100./sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
          Enddo
          Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s)
          Call RFTransform_CF2CT(Cnu_s,CTime_spectr(1,i_ant,i_chunk) )

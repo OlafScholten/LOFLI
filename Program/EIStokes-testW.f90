@@ -197,8 +197,8 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
       !write(2,*) 'pow=',i_slice,j_IntFer,Power_p(j_IntFer)/Power_p(0), Noise_p(j_IntFer), &
       !            Power_t(j_IntFer)/Power_p(0), Noise_t(j_IntFer)
       w=I_Scale ! to have alpha of order unity
-      w_p=W/(4.*Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.)) ! the denominator should be due to 'experimental accuracy' in power
-      w_t=W/(4.*Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
+      w_p=W/(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.)) ! the denominator should be due to 'experimental accuracy' in power
+      w_t=W/(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
       ! For chi-square calculation, sum_ak[ W_ak * E_ak^2]
       Esq_ak=Esq_ak + (Pow_p*w_p + Pow_t*w_t)  !
       If(TestCh2) Then

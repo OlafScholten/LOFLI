@@ -529,6 +529,7 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Real(dp) :: y0, Ay(1:3), By(1:3), yp, ym, Det3, Ry(1:3), c_gr(1:3), Parb(-2:+2), Valu(-2:+2)
    Integer :: i_h, i_E, i_N, Nxx
    Real(dp) :: A, B
+   Real(dp), parameter :: D0=0.75 ! maximal distance (in grid spacings) for the interpolated point from the max-intensity voxel
    Real(dp) :: Paraboloid ! , Sq
    Logical :: Check=.false.
    !Logical :: Check=.true.  !  .false.
@@ -647,13 +648,21 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    If(Det3.ge.0.) then  ! all eigenvalues should be negative for a real maximum (should always be fulfilled)
       B=Ay(1)*Ay(2)*Ay(3)
       Write(2,*) i,'Det3', Det3, Ay(:), (4*Ry(j)*Ry(j)*Ay(j)/B ,j=1,3)
-      Return
+      flush(unit=2)
+      !write(2,*) 'B:',B, Ry(:),i_gr(:)
+      !write(2,*) 'surroundings:',  PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)-y0, PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)-y0 &
+      !   , PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)-y0, PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)-y0 &
+      !   , PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)+1)-y0, PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)-1)-y0 &
+      !   , PixSmPowTr(i,i_gr(1)+1,i_gr(2),i_gr(3)-1)-y0, PixSmPowTr(i,i_gr(1)-1,i_gr(2),i_gr(3)+1)-y0 &
+      !   , PixSmPowTr(i,i_gr(1)+1,i_gr(2)+1,i_gr(3))-y0, PixSmPowTr(i,i_gr(1)-1,i_gr(2)-1,i_gr(3))-y0 &
+      !   , PixSmPowTr(i,i_gr(1)+1,i_gr(2)-1,i_gr(3))-y0, PixSmPowTr(i,i_gr(1)-1,i_gr(2)+1,i_gr(3))-y0
+      !
+      !Return
    EndIf
    Do j=1,3 ! get relative position of the maximum
       d_gr(j)=-(By(j)*(Ay(jp(j))*Ay(jm(j))-Ry(j)*Ry(j)) - By(jp(j))*(Ay(jm(j))*Ry(jm(j))-Ry(jp(j))*Ry(j)) &
          - By(jm(j))*(Ay(jp(j))*Ry(jp(j))-Ry(jm(j))*Ry(j)) )/Det3
    Enddo
-   SMPow=Paraboloid(y0,Ay,By,Ry,d_gr)  ! construct intensity at intepolated position of max
    !Do i_h=-1,1
    !   Do i_N=-1,1
    !      Do i_E=-1,1
@@ -669,12 +678,13 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !
    !write(2,*) 'y0:',y0,det3
    !write(2,*) 'FindInterpolMx:', i_gr(:), d_gr(:)
-   B=SUM(d_gr(:)*d_gr(:))
-   If(B.gt.0.5) Then
+   B=sqrt(SUM(d_gr(:)*d_gr(:)))
+   If(B.gt.D0) Then
       write(2,*) 'Interpolation distance shortend:',B
-      B=2.*B
-      d_gr(:)=d_gr(:)/B
+      d_gr(:)=d_gr(:)*D0/B
    EndIf
+   SMPow=Paraboloid(y0,Ay,By,Ry,d_gr)  ! construct intensity at intepolated position of max
+   !
    d_gr(:)=i_gr(:)+d_gr(:) ! get true position of the maximum
    Qualty(1:3)=Ay(1:3)/y0
    !
