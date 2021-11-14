@@ -38,7 +38,7 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
       Else
          Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(BatchFile)//'.sh')   ! It is assumed that this scipt is launched in the FlashFolder
          Write(10,"(7(A,/) )") &
-            '#!/bin/bash', &
+            '#!/bin/bash -v', &
             '#','#' , 'source ../ShortCuts.sh'     ! ,  'FlashFolder=$(pwd)',  'ProgramDir="/home/olaf/LMA-fit/LMA2019/program"'
       EndIf
    EndIf

@@ -71,7 +71,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
       !
       NormEven=sqrt(2.*Powr_eo(0)/(PowerScale*(Powr_eo(0)+Powr_eo(1))) )/100.
       NormOdd=sqrt(2.*Powr_eo(1)/(PowerScale*(Powr_eo(0)+Powr_eo(1))) )/100.
-      Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas to detremine t- and p- polarized trace for central pixel
+      Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas to detremine t- and p- polarized trace for central pixel; needed for noise estimate
          i_ant=IntFer_ant(j_IntFer)
          !write(2,*) i_ant, j_IntFer, Ant_pos(:,i_ant,i_chunk)
          Ras(1)=(CenLoc(1)-Ant_pos(1,i_ant,i_chunk))/1000.
@@ -119,6 +119,20 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
       Enddo    !  j_IntFer=1,Nr_IntFer
       !
    EndIf  ! End preparation
+   !
+   ! Just for checking causality
+   write(2,*) 'central pixel from slice center for first antenna pair:'
+   j_IntFer=1
+   i_ant=IntFer_ant(j_IntFer)
+   Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
+   dt_AntPix =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
+   i_s=1+i_slice*N_smth+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
+   !write(2,*) 'p_up',  (Abs(CTime_p(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth)
+   !write(2,*) 'p_dwn', (Abs(CTime_p(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth)
+   !write(2,*) 't_up',  (Abs(CTime_t(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth)
+   !write(2,*) 't_dwn', (Abs(CTime_t(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth)
+   write(2,*) 'p/t_up',  (CTime_p(IntfLead+i_s+j,j_IntFer)/CTime_t(IntfLead+i_s+j,j_IntFer), j=0,N_smth)
+   write(2,*) 'p/t_dwn', (CTime_p(IntfLead+i_s-j,j_IntFer)/CTime_t(IntfLead+i_s-j,j_IntFer), j=0,N_smth)
    !
    If(i_slice.ge.100) TestCh2=.false.
    If(TestCh2) then
@@ -213,7 +227,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
       EndIf
       !write(2,*) 'Esq_ak=',Esq_ak
       !
-      Do i_nu=inu1,inu2   ! Increment frequency spectrum with this antenna
+      Do i_nu=inu1,inu2   ! Increment frequency spectrum with the spectrum from this antenna
          nu=i_nu*dnu
          i_freq=Int(nu)
          dfreq=nu-i_freq

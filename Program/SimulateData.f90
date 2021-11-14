@@ -58,7 +58,7 @@ Program Simulate_Data
    Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Integer :: i_freq, i_nu, i_src, SrcNr, i_sampl
    Character(LEN=180) :: lname
-   Character(len=20) :: Utility, release, Antennas, Simulation, OutFileLabel
+   Character(len=20) :: Utility, release, Antennas, Simulation, OutFileLabel, Folder
    INTEGER :: DATE_T(8),i
    Real :: random_stdnormal
    NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples !, &
@@ -115,6 +115,30 @@ Program Simulate_Data
    TotalGain=sqrt(TotalGain)*(Freq_max-Freq_min) ! take out bandwidth to get total power gain
    !
    Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure.dat')
+   !
+   lname=''
+   i_src=LEN_TRIM(Simulation)
+   Folder=''
+   Do i=1,i_src-2
+      write(2,*) Simulation(i_src-i:i_src-i)
+      If( Simulation(i_src-i:i_src-i).ne.'/') cycle
+      Folder=Simulation(1:i_src-i-1)
+   EndDo
+   If(Folder.ne.'') then
+      !Call EXECUTE_COMMAND_LINE("touch "//'files/'//TRIM(Simulation)//'_Structure.dat' , WAIT=.true., &
+      !      EXITSTAT=nxx, CMDSTAT=i, CMDMSG=lname)
+      Call EXECUTE_COMMAND_LINE("mkdir -v  "//'files/'//TRIM(Folder) , WAIT=.true., &
+            EXITSTAT=nxx, CMDSTAT=i, CMDMSG=lname)
+      !stop
+      !mkdir -v foldername
+      If(nxx.eq.0 .and. i.eq.0) then
+         write(2,*) "Created folder: ",'files/'//TRIM(Folder)
+      Else
+         write(2,*) 'folder:', folder
+         write(2,*) 'nxx,i:',nxx,i
+         write(2,*) 'CMDMSG=',lname
+      EndIf
+   EndIf
    Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
    !
    call random_seed()
@@ -203,18 +227,16 @@ Program Simulate_Data
          Thet_d =0.
          Phi_d =0.
          Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
-         J_0p(:)=CONJG(J_0p(:))
-         J_1p(:)=CONJG(J_1p(:))
-         J_0t(:)=CONJG(J_0t(:))
-         J_1t(:)=CONJG(J_1t(:))
+         !J_0p(:)=CONJG(J_0p(:))
+         !J_1p(:)=CONJG(J_1p(:))
+         !J_0t(:)=CONJG(J_0t(:))
+         !J_1t(:)=CONJG(J_1t(:))
          IstN=sqrt((1.-FracGalacNoisePow)*0.33)
          GN=sqrt(FracGalacNoisePow*12.) ! phenomenological factor to have similar power in GalNoise as in InstNoise (when GalacNoise=1.)
          GN= GN*(inu2+inu1)*dnu/TotalGain
          Do i_nu=inu1,inu2   ! Pull through antenna function with 1/nu frequency spectrum
             nu=i_nu*dnu
             i_freq=Int(nu)
-            !write(2,*) i_freq, Ji_p0(i_freq)*J_0p(i_freq)+Ji_p1(i_freq)*J_1p(i_freq), &
-            !      Ji_t0(i_freq)*J_0p(i_freq)+Ji_t1(i_freq)*J_1p(i_freq)
             dfreq=nu-i_freq
             Cnu_0(i_nu)=IstN*Cnu_0(i_nu) + &
                         ((1.-dfreq)*J_0p(i_freq) + dfreq*J_0p(i_freq+1)) * Cnu_p(i_nu)*GN/nu + &
@@ -225,6 +247,7 @@ Program Simulate_Data
          Enddo
          !write(2,*) 'Galactic background added=',SUM(ABS(Cnu_0(:))**2),SUM(ABS(Cnu_1(:))**2)
          !
+         !stop
          !Cnu_0(:)=0.
          !Cnu_1(:)=0.
          NormPulseAmp0Bckg=PulseRespWidth*sqrt(14.)/TotalGain
@@ -252,13 +275,14 @@ Program Simulate_Data
             Thet_d =Thet_r*180/pi
             Phi_d =Phi_r*180/pi
             !
-            Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
+            Call AntFun_Inv(thet_d,phi_d) ! sets J_0p,J_0t,J_1p,J_1t as well as their inverse;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
+            !Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
             Vec_p(1)=sin(Phi_r)              ; Vec_p(2)=-cos(Phi_r)        ; Vec_p(3)=0.
             Vec_t(1)=-cos(Thet_r)*Vec_p(2)  ; Vec_t(2)=cos(Thet_r)*Vec_p(1) ; Vec_t(3)=-sin(Thet_r)
-            J_0p(:)=CONJG(J_0p(:))
-            J_1p(:)=CONJG(J_1p(:))
-            J_0t(:)=CONJG(J_0t(:))
-            J_1t(:)=CONJG(J_1t(:))
+            !J_0p(:)=CONJG(J_0p(:))
+            !J_1p(:)=CONJG(J_1p(:))
+            !J_0t(:)=CONJG(J_0t(:))
+            !J_1t(:)=CONJG(J_1t(:))
             ! Amplitude in theta & phi directions
             A_p=SUM( SourcesListAmpNEh(:,i_src)*Vec_p(:) )*NormPulseAmp0Bckg/D
             A_t=SUM( SourcesListAmpNEh(:,i_src)*Vec_t(:) )*NormPulseAmp0Bckg/D
@@ -269,6 +293,13 @@ Program Simulate_Data
                !write(2,*) 'PolDirection',i_src,Vec_p(:), A_p, Vec_t(:), A_t, SUM( SourcesListAmpNEh(:,i_src)*Ras(:) )
                !write(2,*) 'PolDirection',i_src, A_p, A_t, SUM( SourcesListAmpNEh(:,i_src)*Ras(:) )
             !EndIf
+            If((j_ant.eq.3) .and.  (i_src.eq. 1)) Then
+               write(2,*) 'thet_d,phi_d', thet_d,phi_d, Ant_pos(:,j_ant), A_p/A_t
+               i_freq=(Freq_min + Freq_max)/2
+               write(2,*) i_freq, 'p', Ji_p0(i_freq)*J_0p(i_freq)+Ji_p1(i_freq)*J_1p(i_freq), &
+                  Ji_t0(i_freq)*J_0p(i_freq)+Ji_t1(i_freq)*J_1p(i_freq),  &
+               't', Ji_t0(i_freq)*J_0t(i_freq)+Ji_t1(i_freq)*J_1t(i_freq), Ji_p0(i_freq)*J_0t(i_freq)+Ji_p1(i_freq)*J_1t(i_freq)
+            EndIf
             Do i_nu=inu1,inu2   ! Increment frequency spectrum of the antenna with the signal from this source
                nu=i_nu*dnu
                i_freq=Int(nu)
@@ -293,13 +324,17 @@ Program Simulate_Data
          write(22,*) (REAL(FTime_0(i_sampl,j_ant)), REAL(FTime_1(i_sampl,j_ant)), j_ant=1,Ant_nr)
          !write(2,*) i_sample, Sample_Offset
       Enddo
+      Close(unit=22)
+      Close(unit=12)
       !
    Enddo !  i_file=1,StationNrMax
    Close(unit=14)
+   Close(unit=24)
    Call DAssignFFT()
    !
    Stop
 End Program Simulate_Data
+!=====================================
 Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr)
    use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
    Implicit none

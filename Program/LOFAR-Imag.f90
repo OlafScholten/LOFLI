@@ -419,6 +419,7 @@ Program LOFAR_Imaging
       write(2,*) j,ExcludedStatID(j),ExcludedStat(j)
     enddo
     !
+    flush(unit=2)
     !Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
     !Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
     !

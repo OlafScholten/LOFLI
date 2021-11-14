@@ -59,6 +59,7 @@ Subroutine InterferometerRun
    E_FieldsCalc=Polariz
    N_smth=IntfSmoothWin
    If(N_smth.lt.2) N_smth=20
+   Allocate( Smooth(-N_smth:N_smth) )
    Smooth(:)=0.
    Smooth(0)=1.
    Smooth(N_smth/2)=0.5  ! needed for block profile for even values of N_smth
@@ -74,13 +75,15 @@ Subroutine InterferometerRun
    !
    Call GetNonZeroLine(lname)
    Read(lname,*) StartTime_ms, CenLoc  ! Start time
-   write(2,"(A,'"',A,'"')") 'Interferometry input line-1; time & position:',,TRIM(lname)
+   write(2,"(A)") 'Interferometry input line-1; time & position: "'//TRIM(lname)//'"'
+    flush(unit=2)
    StartTime_ms=StartTime_ms+TimeBase
    Call Convert2m(CenLoc)
    !If(abs(CenLoc(1)) .lt. 100. ) CenLoc(:)=CenLoc(:)*1000.  ! convert from [km] to [m]
    write(2,*) 'true start time (adding base)=', StartTime_ms, '[ms]'
    Call GetNonZeroLine(lname)
    Read(lname(2:180),*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
+   write(2,"(A)") 'Interferometry input line-2, grid specification: "'//TRIM(lname)//'"'
    SELECT CASE (lname(1:1))
       CASE("P")  ! polar option is selected
          Polar=.true.
@@ -90,7 +93,6 @@ Subroutine InterferometerRun
          Polar=.true.
          If(d_loc(1).gt.0.5) Polar=.false.
    End SELECT
-   write(2,"(A,'"',A,'"')") 'Interferometry input line-2; grid:',TRIM(lname)
    !d_loc(1)=d_N  ;  d_loc(2)=d_E   ;  d_loc(3)=d_h
    N_pix(:,1)=-N_pix(:,2)
    If(polar) then
@@ -116,7 +118,7 @@ Subroutine InterferometerRun
    ! Summing regions
    Call GetNonZeroLine(lname)
    Read(lname,*,iostat=nxx) SumStrt, SumWindw, NrSlices, AmpltPlot
-   write(2,"(A,'"',A,'"')") 'Interferometry input line-3: SumStrt, SumWindw, NrSlices, AmpltPlot=:',TRIM(lname)
+   write(2,"(A)") 'Interferometry input line-3: SumStrt, SumWindw, NrSlices, AmpltPlot=: "'//TRIM(lname)//'"'
    If(nxx.ne.0) then
       write(2,*) 'reading error in 3rd line:',lname
       stop 'Interferometry; reading error'
@@ -235,7 +237,7 @@ Subroutine InterferometerRun
       Close(Unit=10)
       Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(IntfRun_file)//'.sh' )
       Write(10,"(9(A,/) )") &
-         '#!/bin/bash', &
+         '#!/bin/bash -v', &
          '#','#', &
          'source ../ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
 !         'source ${UtilDir}/compile.sh',  &

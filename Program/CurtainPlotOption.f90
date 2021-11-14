@@ -2,8 +2,9 @@
 Subroutine PlotAllCurtainSpectra(CurtainWidth)
 !  Make Curtain Plots
 !  Option 'Dual' is assumed and thus only the i_eo=0 peaks are taken
+   ! peaknr is included in the naming convention when plots for multple peaks are needed (=calibration runs)
    use constants, only : dp,sample
-   use DataConstants, only : Station_nrMax, Time_dim, DataFolder  ! , ChunkNr_dim
+   use DataConstants, only : Station_nrMax, Time_dim, DataFolder, OutFileLabel  ! , ChunkNr_dim
    use ThisSource, only : PeakNrTotal, Peak_eo, Peak_start, Peakpos, SourcePos
    use Chunk_AntInfo, only : CTime_spectr, Ant_Pos, Ant_nr, Ant_RawSourceDist, Unique_StatID,  Nr_UniqueStat, Ant_Stations, RefAnt
    use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
@@ -16,16 +17,24 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    Integer :: j, Lower, Upper, Ch1, Ch2, OffSet
    Integer :: unt
    Integer :: i_ant, i_time, i_eo, i_chunk, i_stat, i_peak
-   CHARACTER(LEN=40) :: GLE_file
-   CHARACTER(LEN=6) :: txt
+   Logical :: UsePeakNr
+   CHARACTER(LEN=60) :: GLE_file
+   ! Character(len=25), save :: OutFileLabel=''
+   CHARACTER(LEN=31) :: txt      ! 6 more than length of  OutFileLabel
    !
-   !CurtainWidth=300
-   !
-   write(*,*) 'MakeAllCurtainPlots'
+   write(*,*) 'MakeAllCurtainPlots for "'//TRIM(OutFileLabel)//'"'
    write(2,*) 'curtain width=',CurtainWidth
    !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
       !write(2,*) 'number of antennas=',Ant_nr(i_chunk)
-
+   ! check if curtain plots for multiple peaks are to be made
+   UsePeakNr=.true.
+   If(PeakNrTotal.le.2) Then
+      If(PeakNrTotal.eq.1) Then
+         UsePeakNr=.false.
+      Else
+         If(Peak_eo(PeakNrTotal).eq.1) UsePeakNr=.false.
+      EndIf
+   EndIf
    Do i_peak=1,PeakNrTotal
       i_eo=Peak_eo(i_peak)
       If(i_eo .ne. 0) cycle !  Option 'Dual' is assumed and thus only the i_eo=0 peaks are taken
@@ -60,10 +69,15 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
             Ch1=Time_dim/2
             Ch2=Ch1+2
          Endif
-         write(txt,"(i3.3,'-'i2.2)") I_ant,i_peak
+         If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
+            write(txt,"(A,i3.3,'-',i2.2)") TRIM(OutFileLabel),I_ant,i_peak
+         Else
+            write(txt,"(A,i3.3)") TRIM(OutFileLabel),I_ant
+         EndIf
+         !write(2,*) 'working on curtainplot: "','LOFAR_Time'//TRIM(txt),'"'
          !
          B=maxval(real(CTime_spectr(ch1:ch2,i_Ant,i_chunk)))
-         Open(Unit=9,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'LOFAR_Time'//txt//'.dat')
+         Open(Unit=9,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'LOFAR_Time'//TRIM(txt)//'.dat')
          Do i_time=ch1,ch2
            Write(9,*) i_time-Offset, Real(CTime_spectr(i_time,i_Ant,i_chunk))/B ! written time corresponds to time at core for this source
          Enddo
@@ -71,18 +85,23 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
       Enddo
       unt=9
       write(2,*) 'SourcePos(:,i_Peak)',SourcePos(:,i_Peak)
-      Write(GLE_file,"('CuP-',i2.2)") i_peak
-      Call GLEscript_CurtainPlot(unt, GLE_file, CurtainWidth, i_Peak)
+      If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
+         Write(GLE_file,"('CuP-',A,i2.2)") TRIM(OutFileLabel),i_peak
+      Else
+         Write(GLE_file,"('CuP-',A)") TRIM(OutFileLabel)
+      EndIf
+      Write(2,*) 'GLE-file name:',TRIM(GLE_file)
+      Call GLEscript_CurtainPlot(unt, GLE_file, CurtainWidth, i_Peak, UsePeakNr)
       !Write(10,"(A)") 'gle -d pdf '//trim(GLE_file)//'.gle'
    Enddo ! i_peak
    !
-   Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//'LOFAR_Time*.dat') !  Command to delete curtain files
+   Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//'LOFAR_Time'//TRIM(OutFileLabel)//'*.dat') !  Command to delete curtain files
    Return
 End Subroutine PlotAllCurtainSpectra
 ! ===========================================================================
-Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak)
+Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
    use constants, only : dp
-    use DataConstants, only : Time_dim, DataFolder
+    use DataConstants, only : Time_dim, DataFolder, OutFileLabel
     use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
     use DataConstants, only : Station_nrMax
     use StationMnemonics, only : Station_ID2Mnem
@@ -90,10 +109,11 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak)
     use GLEplots, only : GLEplotControl
     Implicit none
     Integer, intent(in) :: unt, CurtainWidth, i_Peak
-    Character(Len=30), intent(in) :: file
+    Logical, intent(in) :: UsePeakNr
+    Character(Len=*), intent(in) :: file
     integer :: I_ant, i_stat, Stat_nr, Stations(1:Station_nrMax), i_time, i_c
     integer :: A(1), Plot_scale, ch1, ch2, VLine, i_chunk
-    Character(len=6) :: txt
+    Character(len=41) :: txt
     Character(len=5) :: Station_Mnem
     real*8 :: plot_offset,b
     !
@@ -110,9 +130,14 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak)
         'include "../Utilities/DiscreteColor.gle"',&
         'set lwidth 0.1','t_min = ',ch1,'t_max = ',ch2,'scl = ',Plot_scale
 !        'set lwidth 0.1','t_min = 13250 !12500 !0','t_max = 13350 !15000 !',Time_dim,'scl = ',Plot_scale
-    Write(unt,"(A,2(/A),i2,3(/A),i1.1,A,i2.2,A,7(/A))")  'amove 4 4','begin graph', &
+     If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
+         write(txt,"(A,i1.1,A,i2.2)") 'Chunk=',i_chunk,', peak=',i_peak
+     Else
+         write(txt,"(A)") TRIM(OutFileLabel)
+     EndIf
+    Write(unt,"(A,2(/A),i2,3(/A),7(/A))")  'amove 4 4','begin graph', &
         '   size 55 ',2*Nr_UniqueStat+1,'   vscale 1','  hscale 1',&
-        '   title  "Time Spectra, Chunk=',i_chunk,', peak=',i_peak,'"', &
+        '   title  "Time Spectra, '//TRIM(txt)//'"', &
         '   xtitle "time [samples]"','   ytitle "Amplitude"',&
         '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
         '   x2labels on',' end graph'
@@ -133,15 +158,20 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak)
             i_stat=A(1)
             !write(2,*) 'i_stat=',i_Stat,Stations(1:Stat_nr)
         endif
-        write(txt,"(i3.3,'-'i2.2)") I_ant,i_peak
+        If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
+            write(txt,"(A,i3.3,'-',i2.2)") TRIM(OutFileLabel),I_ant,i_peak
+        Else
+            write(txt,"(A,i3.3)") TRIM(OutFileLabel),I_ant
+        EndIf
+        !write(txt,"(i3.3,'-'i2.2)") I_ant,i_peak
         plot_offset=2*i_stat + 2 + mod(Ant_IDs(I_ant,i_chunk),2)
         i_c = I_Ant-11*int(I_Ant/11)
-        Write(Unt,901) plot_offset,trim(DataFolder), txt,I_Ant,I_Ant,i_c
+        Write(Unt,901) plot_offset,trim(DataFolder), TRIM(txt),I_Ant,I_Ant,i_c
 901     Format('amove 4 ',F5.2,/'begin graph',/'  size 55 2',/'  vscale 1',&
             /'  hscale 1',/'   NoBox',&
             /'   xaxis min t_min max t_max',/'   x1axis off',&
             /'   yaxis  min -scl max scl',/'   y1axis off',&
-            /'     data "',A,'LOFAR_Time',A6,'.dat" d',I0,'=c1,c2',&
+            /'     data "',A,'LOFAR_Time',A,'.dat" d',I0,'=c1,c2',&
             /'     d',I0,' line lwidth 0.04 color MyCol',i0,'$',&
             /' end graph')
         !     let d9=0

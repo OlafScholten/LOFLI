@@ -1,7 +1,7 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
    use constants, only : dp,sample ! ,Refrac,pi,ci
-   use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production  ! , ChunkNr_dim
+   use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel  ! , ChunkNr_dim
    use DataConstants, only : Polariz
    use FitParams, only : Explore
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
@@ -82,6 +82,9 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    AntNr_lw=1
    ir_file=0 ; ir_grp=0 ; ir_dst=0
    Powr_eo(:)=0.  ; NAnt_eo(:)=0
+!   !-----
+!      Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(OutFileLabel)//'_Structure.dat')
+!   !
    Do i_file=1,130 ! 10 !80
    !i_file=1 ; rewind(unit=14)
       read(14,*,IOSTAT=nxx)  Group_nr, filename
@@ -91,13 +94,18 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       Do i_grp=1,Group_nr
           read(14,*) DSet_nr, Group_Names(i_grp)
           If(Diagnostics) Write(2,"(A,i0,A,A)") 'Group#',i_grp,' : ',trim(Group_names(i_grp))
+!
+!write(24,*,IOSTAT=nxx) STATION_ID, TRIM(Statn_ID2Mnem(STATION_ID))
+!write(2,*) 'writing: ','files/'//TRIM(OutFileLabel)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat'
+!Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(OutFileLabel)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
+!write(22,*) 'StartTime[ms]=', (Sample*1000.)
+!
           Do i_dst=1,DSet_nr
               read(14,*) DSet_Names(i_dst), STATION_ID, Ant_ID
               !write(*,*) DSet_nr, Group_Names(i_grp), DSet_Names(i_dst), STATION_ID, Ant_ID
               !If(STATION_ID .eq. 150) cycle  !  throuw out RS310  ****************************
               If( COUNT(ExcludedStatID .eq. STATION_ID) .gt. 0) cycle
               StAntID= STATION_ID * 1000 + Ant_ID
-              !
               i_eo=Mod(Ant_ID,2)
               If( COUNT((PolFlp_SAI(1:PolFlp_nr)+i_eo) .eq. StAntID) .gt. 0) then
                   If(Diagnostics) &
@@ -201,6 +209,9 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Ant_Stations(Ant_nr(i_chunk),i_chunk)=STATION_ID
               Ant_pos(:,Ant_nr(i_chunk),i_chunk)=LFRAnt_crdnts(:)
               !Ant_RawSourceDist(Ant_nr(i_chunk),i_chunk)=RDist         ! units of samples
+!
+!If(i_eo.eq.0) write(22,*) Ant_ID, 'NEh=', LFRAnt_crdnts(:)
+!
               !
               sgn=+1
               If(any(SignFlp_SAI(1:SgnFlp_nr) .eq. StAntID,1) ) sgn=-1 ! Take care of sign flips
@@ -258,8 +269,12 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
           EndIf
           !
       Enddo ! i_grp=1,Group_nr
+!   !
+!   Close(unit=22)
+!   !
       !
    Enddo ! i_file=1,....
+!   Close(unit=24)
    !
    If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
       Close(Unit=30)
