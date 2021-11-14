@@ -5,6 +5,7 @@ UtilDir="../Utilities/"
 HDF5prefix="/usr/local/hdf5"   
 LIBRARY="-lm ~/NumLib/bin/libfftpack5.1d.a"
 export AntennaFun="../AntenFunct/v2-"
+#export AntennaFun="../AntenFunct/"
 export AntennaFieldsDir="../AntennaFields/"
 FlashFolder=$(pwd)
 Vrsn=""  # version number
