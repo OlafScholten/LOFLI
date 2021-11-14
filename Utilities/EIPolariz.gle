@@ -27,7 +27,7 @@ begin graph
    vscale 1
    hscale 1
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
-   yaxis log min 10. ! max +100 ! log ! min scl_min max scl log
+   yaxis log min 1. ! max +100 ! log ! min scl_min max scl log
    data DataFile$ d1=c2,c3   ignore 2 !
    d1 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
 end graph
