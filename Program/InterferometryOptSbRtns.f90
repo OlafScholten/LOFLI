@@ -398,8 +398,8 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    !
    !write(2,"(8x,A,4x,A)") "i, AveSmPow/y0, RimMx/y0,  Mx,  volume;      Barymetric pixel ;    Maximal pixel", &
    !   ';  Closest edge'
-   write(2,"(6x,A, 4x,A,9x,';', 4x,A, 4x,A)") "i, AveSmPow/y0, RimMx/y0,  Mx;","t[ms], Position=(N,E,h)[km]",&
-      "Q/I, U/I, V/I [%] ;" , "I3, Linpol*100., angle "
+   write(2,"(6x,A, 4x,A,9x,';', 4x,A, 4x,A,I5)") "i, AveSmPow/y0, RimMx/y0,  Mx;","t[ms], Position=(N,E,h)[km]",&
+      "Q/I, U/I, V/I [%] ;" , "I3, Linpol*100., angle ; nr slices=", NrPixSmPowTr
    Do i_slice=1,NrPixSmPowTr ! N_smth+1,SumWindw-N_smth,N_smth
       t_ms=(1+i_slice*N_smth)*sample*1000.+t_offsetPow  ! time stamp
 !!!!!!!!!   t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance

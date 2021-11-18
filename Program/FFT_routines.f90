@@ -1,4 +1,45 @@
       Module FFT
+!!!!!!!!!!!  Note: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  At present the convention for positive and negative frequencies is in consistent
+!     with what is generally adopted for complex FFT. This can be seen by comparing the real and complex FFT:
+!
+!            Integer( kind = 4 ) :: trace_length !! will be length of output trace
+!            Integer( kind = 4 ) :: IER=0 !! error code for FFT
+!            Real( kind = 8 ), DIMENSION(:), allocatable :: WSAVE(:), WORK(:)
+!            Integer( kind = 4 ) :: LENSAV, LENWRK
+!            Complex( kind = 8 ), DIMENSION(:),  allocatable :: waveform(:)   !! the waveform in frequeny or time space we are working with. Not specifying precision so is compatible with FFT
+!            allocate( waveform(1:NtSamples) )
+!            trace_length=NtSamples
+!            LENSAV = 2*trace_length + int ( log ( real ( trace_length, kind = 8 ) ) / log ( 2.0D+00 ) ) + 4
+!            LENWRK = 2*trace_length
+!            allocate( WSAVE(LENSAV) )
+!            allocate( WORK(LENWRK) )
+!            !
+!             call CFFT1I (trace_length, WSAVE, LENSAV, IER) !! initialize FFT
+!            if ( IER .ne. 0  )  stop 'cannot initialize FFT'
+!            !
+!            Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )  ! perform the standard real FFT
+!            write(2,*) 'Real FFT:', Abs(FTime_0(:,j_ant))
+!               waveform(:)=0.
+!               Do i_nu=inu1,inu2   ! Fill out the negative frequencies for performing CFFT
+!                  waveform(NtSamples-i_nu)=Cnu_0(i_nu)
+!               Enddo
+!            call CFFT1B (trace_length, 1, waveform, trace_length,   WSAVE,  LENSAV,  WORK, LENWRK, IER) !! DO IFFT
+!            if ( IER .ne. 0 )  stop 'cannot do iFFT'
+!            Write(2,*) 'negative frequency:',abs(waveform(:))
+!               waveform(:)=0.
+!               Do i_nu=inu1,inu2   ! Fill out the positive frequencies for performing CFFT
+!                  waveform(i_nu)=Cnu_0(i_nu)
+!               Enddo
+!            call CFFT1B (trace_length, 1, waveform, trace_length,   WSAVE,  LENSAV,  WORK, LENWRK, IER) !! DO IFFT
+!            if ( IER .ne. 0 )  stop 'cannot do iFFT'
+!            Write(2,*) 'positive frequency',abs(waveform(:))
+!
+!     To correct this one should insert - signs in C2R and in R2C
+!         C(I)=CMPLX(R(2*I),R(2*I+1))   -->     C(I)=CMPLX(R(2*I),-R(2*I+1))
+!         R(2*I+1)=DIMAG(C(I))         -->     R(2*I+1)=-DIMAG(C(I))
+!     i.e. complex conjugate the frequency spectrum
+!
     use constants, only : dp,pi,ci
     implicit none
     integer ( kind = 4 ), save :: lensav
@@ -114,6 +155,27 @@
 !
 !      ------------------------------------
 !      ------------------------------------
+  Subroutine RFTransform_CF2RT(Cnu,RD)
+! Fourier transform back to time domain
+! Cnu=input array (complex) in frequency, length=N_f
+! RD= Real output array in time domain, length=N_t
+!  use constants, only : dp,ci
+  implicit none
+  complex(dp), intent(in) :: Cnu(0:N_nu)
+  real(dp), intent(out) :: RD(1:N_Time)
+  !
+  integer ( kind = 4 ) :: ier, inr=1, lenR
+  !
+  lenR = N_Time
+!
+!  Compute inverse FFT of coefficients.
+  CALL C2R(RD,Cnu)
+  call Rfft1b ( N_Time, inR, RD, lenR, wsave, lensav, work, lenwrk, ier )
+!
+  return
+  End Subroutine RFTransform_CF2RT
+!
+!      ------------------------------------
   Subroutine RFTransform_CF2CT(Cnu,CD)
 ! Fourier transform back to time domain
 ! Cnu=input array (complex) in frequency, length=N_f
@@ -149,12 +211,12 @@
   End Subroutine RFTransform_CF2CT
 !
 !------------------------------------------------
-Subroutine R2C(R,C)
+Pure Subroutine R2C(R,C)
 ! Nc=Nr/2 note that zero and max frequency components are always real
     IMPLICIT NONE
     INTEGER I
-    REAL*8 R(1:N_Time)
-    COMPLEX*16 C(0:N_nu)
+    REAL*8, intent(in) :: R(1:N_Time)
+    COMPLEX*16, intent(out) :: C(0:N_nu)
   C(0)=R(1)
   DO I=1,N_nu-1
     C(I)=CMPLX(R(2*I),R(2*I+1))
@@ -162,12 +224,12 @@ Subroutine R2C(R,C)
   C(N_nu)=R(2*N_nu)
   RETURN
 END
-Subroutine  C2R(R,C)
+Pure Subroutine  C2R(R,C)
 ! Nc=Nr/2 note that zero and max frequency components are always real
     IMPLICIT NONE
     INTEGER I
-    REAL*8 R(1:N_Time)
-    COMPLEX*16 C(0:N_nu)
+    REAL*8, intent(out) :: R(1:N_Time)
+    COMPLEX*16, intent(in) :: C(0:N_nu)
   R(1)=DREAL(C(0))
   DO I=1,N_nu-1
     R(2*I)=DREAL(C(I))
@@ -177,7 +239,7 @@ Subroutine  C2R(R,C)
   RETURN
 END
 !      ------------------------------------
-	function ph(zzz)
+Pure function ph(zzz)
 !    use constants, only : pi
 	implicit none
 	complex*16, intent(in) :: zzz

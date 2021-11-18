@@ -121,18 +121,20 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
    EndIf  ! End preparation
    !
    ! Just for checking causality
-   write(2,*) 'central pixel from slice center for first antenna pair:'
-   j_IntFer=1
-   i_ant=IntFer_ant(j_IntFer)
-   Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-   dt_AntPix =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
-   i_s=1+i_slice*N_smth+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
-   !write(2,*) 'p_up',  (Abs(CTime_p(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth)
-   !write(2,*) 'p_dwn', (Abs(CTime_p(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth)
-   !write(2,*) 't_up',  (Abs(CTime_t(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth)
-   !write(2,*) 't_dwn', (Abs(CTime_t(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth)
-   write(2,*) 'p/t_up',  (CTime_p(IntfLead+i_s+j,j_IntFer)/CTime_t(IntfLead+i_s+j,j_IntFer), j=0,N_smth)
-   write(2,*) 'p/t_dwn', (CTime_p(IntfLead+i_s-j,j_IntFer)/CTime_t(IntfLead+i_s-j,j_IntFer), j=0,N_smth)
+   If(i_slice.eq.10) Then
+      write(2,*) 'E-field hilbert envelope for the central pixel for the first antenna pair:'
+      j_IntFer=1
+      i_ant=IntFer_ant(j_IntFer)
+      Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
+      dt_AntPix =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
+      i_s=1+i_slice*N_smth+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
+      write(2,"(A,40G12.4)") 'p_dwn', (Abs(CTime_p(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
+      write(2,*) 'p_up',  (Abs(CTime_p(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
+      write(2,*) 't_dwn', (Abs(CTime_t(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
+      write(2,*) 't_up',  (Abs(CTime_t(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
+      write(2,*) 'p/t_dwn', (CTime_p(IntfLead+i_s-j,j_IntFer)/CTime_t(IntfLead+i_s-j,j_IntFer), j=0,N_smth/2+1)
+      write(2,*) 'p/t_up',  (CTime_p(IntfLead+i_s+j,j_IntFer)/CTime_t(IntfLead+i_s+j,j_IntFer), j=0,N_smth/2+1)
+   EndIf
    !
    If(i_slice.ge.100) TestCh2=.false.
    If(TestCh2) then

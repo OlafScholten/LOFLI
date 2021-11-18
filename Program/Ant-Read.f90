@@ -237,6 +237,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
           If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
                write(30,*) STATION_ID,TRIM(Statn_ID2Mnem(STATION_ID))
                AntNr_up=Ant_nr(i_chunk)
+               Call CreateNewFolder(Simulation) ! create new folder when needed
                Open(Unit=31,STATUS='unknown',ACTION='write', &
                      FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
                Write(31,*) 'StartTime_ms= ',(Start_time(i_chunk)+WriteSimulation(1)+RDist)*sample*1000., &
@@ -278,6 +279,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
       Close(Unit=30)
+      write(2,*) 'true data written to files to be used in sumulation runs'
       Stop 'simulation'
    EndIf
    !

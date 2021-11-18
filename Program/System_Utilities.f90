@@ -101,3 +101,27 @@ Subroutine System_MemUsage(valueRSS)
    return
 end Subroutine System_MemUsage
 !======================
+Subroutine CreateNewFolder(FileName)
+! Search for folder definition in FileName and create the folder when such is present
+   Implicit none
+   Character(len=*), intent(in) :: FileName
+   character(len=:), allocatable :: Folder
+   Integer :: i, StrL, nxx
+   StrL=LEN_TRIM(FileName)
+   Folder=''
+   Do i=1,StrL-2
+      If( FileName(StrL-i:StrL-i).ne.'/') cycle
+      Folder=FileName(1:StrL-i-1)
+   EndDo
+   If(Folder.ne.'') then
+      !Call EXECUTE_COMMAND_LINE("touch "//'files/'//TRIM(Simulation)//'_Structure.dat' , WAIT=.true., &
+      !      EXITSTAT=nxx, CMDSTAT=i, CMDMSG=lname)
+      Call EXECUTE_COMMAND_LINE("mkdir -v  "//'files/'//TRIM(Folder) , WAIT=.true., EXITSTAT=nxx, CMDSTAT=i)
+      If(nxx.eq.0 .and. i.eq.0) then
+         write(2,*) "Created folder: ",'files/'//TRIM(Folder)
+      Else
+         write(2,*) 'folder "files/', TRIM(Folder),'/" probably existed already'
+      EndIf
+   EndIf
+   Return
+End Subroutine CreateNewFolder

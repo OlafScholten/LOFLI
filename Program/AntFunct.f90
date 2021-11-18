@@ -170,7 +170,7 @@ Subroutine AntFieParGen()
    !
    !WRITE (*,*) "LIBRARY=",TRIM(ldata)
    CALL get_environment_variable("AntennaFun", AntFunFile)
-   WRITE (2,*) "Using environment variable: AntennaFun; Antenna Function read from files:",' "',TRIM(AntFunFile)//'LBA_Vout_*.txt"'
+   WRITE (2,*) "Using environment variable: AntennaFun; Antenna Function from files:",' "',TRIM(AntFunFile)//'LBA_Vout_*.txt"'
    If(AntTst) Then
       open(Unit=80,Status='unknown',Action='write',File='V_t-nu.dat') !fix th=0, phi=0, nu-dependence
       open(Unit=81,Status='unknown',Action='write',File='V_p-nu.dat') !fix th=0, phi=90, nu-dependence
@@ -182,14 +182,15 @@ Subroutine AntFieParGen()
    Open(Unit=10,Status='old',Action='read',File=TRIM(AntFunFile)//'LBA_Vout_phi.txt')
    Open(Unit=11,Status='old',Action='read',File=TRIM(AntFunFile)//'LBA_Vout_theta.txt')
    read(10,*)
-   read(11,*)
+   read(11,*)  ! skip the first comment line
    PhIn_p(:,:)=0.
    PhIn_t(:,:)=0.
    Freq=0.
    nxx=0
+   write(2,*) 'causal ant fie'
    Do while(nxx.eq.0)
       i_freq=nint(Freq)
-      If(i_freq .lt. Freq_min) goto 1
+      If(i_freq .lt. Freq_min) goto 1  ! this is the case on the first pass
       If(i_freq .gt. Freq_max) exit
       !write(2,*) Freq, Thet, Phi, Vp_r, Vp_i
       it=nint(1. + thet/5.)
@@ -230,13 +231,13 @@ Subroutine AntFieParGen()
             PhIn_p(:,:)=0.
             PhIn_t(:,:)=0.
             !stop
-         Endif
-      Endif
+         Endif ! (Thet.gt.89)
+      Endif ! (Phi .lt. 359.)
    1  continue
       read(10,*,iostat=nxx) Freq0, Thet0, Phi0, Vp_r, Vp_i
       read(11,*,iostat=nxx) Freq, Thet, Phi, Vt_r, Vt_i
-      Vp=cmplx(Vp_r,Vp_i)
-      Vt=cmplx(Vt_r,Vt_i)
+      Vp=cmplx(Vp_r,-Vp_i) ! minus is because of a different convention between Python and FFTPack
+      Vt=cmplx(Vt_r,-Vt_i)
       If(AntTst) Then
          !open(Unit=80,Status='unknown',Action='write',File='V_t-nu.dat') !fix th=0, phi=0, nu-dependence
          If((NINT(Thet) .eq. 0) .and. (NINT(Phi) .eq. 0)) then
@@ -266,6 +267,26 @@ Subroutine AntFieParGen()
    Close(unit=11)
    !Ant_p=conjg(Ant_p)
    !Ant_t=conjg(Ant_t)
+   !   !
+   !   !
+   !   Open(Unit=10,Status='old',Action='read',File=TRIM(AntFunFile)//'LBA_Vout_phi.txt')
+   !   Open(Unit=11,Status='old',Action='read',File=TRIM(AntFunFile)//'LBA_Vout_theta.txt')
+   !   read(10,*)
+   !   read(11,*)
+   !   Freq=0.
+   !   nxx=0
+   !   Do while(nxx.eq.0)
+   !      !read(10,*,iostat=nxx) Freq0, Thet0, Phi0, Vp_r, Vp_i
+   !      read(11,*,iostat=nxx) Freq, Thet, Phi, Vt_r, Vt_i
+   !      i_freq=nint(Freq)
+   !      If(i_freq .lt. Freq_min) cycle
+   !      If(i_freq .gt. Freq_max) exit
+   !      Call AntFun(thet,phi-45.) ! sets ,J_0p,J_0t,J_1p,J_1t ; Jones; gives _0 & _1 voltages when contracted with (t,p) polarized field
+   !      write(2,*) Freq, Thet, Phi, Vt_r, Vt_i, J_0t(i_freq) !, J_1t(i_freq)
+   !   Enddo
+   !   stop
+   !   !
+   !!
    !Write(2,*) 'Ant_p(60,1,1)',Ant_p(60,1,1) !,' ********** Modified by a factor 1/2, not sure why !!!!!!!!!!!!!'
    !Write(2,*) 'Ant_t(60,1,1)',Ant_t(60,1,1)
    Write(2,*) 'Ant_t(30,1,1)',Ant_t(30,1,1)
@@ -303,6 +324,7 @@ Subroutine AntFieParGen()
       Enddo
       Close(Unit=80)
       Close(Unit=82)
+   !!
    Endif
    !
    Call AntFun(0.d0,0.d0) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
