@@ -65,13 +65,13 @@ Program Simulate_Data
    Integer :: NtSamples= 2**10 ! =1024 !Time_dim !
    Integer :: NnuSamples
    Real(dp), allocatable :: RTime_s(:), RTime_0(:), RTime_1(:)
-   !Complex(dp), allocatable :: FTime_0(:,:), FTime_1(:,:)
+   Complex(dp), allocatable :: CTime_0(:), CTime_1(:)
    Real(dp), allocatable :: FTime_0(:,:), FTime_1(:,:)
    Complex(dp), allocatable :: CNu_s(:), CNu_0(:), CNu_1(:), CNu_p(:), CNu_t(:)
    Real(dp), allocatable :: nu_Fltr(:) !, Av, Bv, FiltFact
    !
    Real(dp) :: Ras(1:3), Vec_p(1:3), Vec_t(1:3)
-   Real(dp) :: D, HorDist, A_p,A_t, FracGalacNoisePow, GN, IstN, TotalGain, NormPulseAmp0Bckg
+   Real(dp) :: D, HorDist, A_p,A_t, FracGalacNoisePow, GN, IstN, TotalGain, NormPulseAmp0Bckg, TimingErr_ns
    Real(dp) :: PulseRespWidth=20. !samples
    Real(dp) :: dFreq, nu, dnu, Phi_d, Phi_r, Thet_d, Thet_r, SourceGuess(3), Start_time,t_shft
    Character(len=12) :: Station_name, Lab1, Lab2, Lab3, Lab4
@@ -84,12 +84,13 @@ Program Simulate_Data
    Character(len=20) :: Utility, release, Antennas, Simulation, OutFileLabel, Folder
    INTEGER :: DATE_T(8),i
    Real :: random_stdnormal
-   NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples !, &
+   NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples, TimingErr_ns !, &
    !   SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh
    !
    Open(unit=2,STATUS='unknown',ACTION='write', FILE ="Simulate.out")
    FracGalacNoisePow=0.5
    OutFileLabel=""
+   TimingErr_ns = 1 ! [ns]
    !
    Read(*,NML = Parameters)
    !
@@ -119,6 +120,7 @@ Program Simulate_Data
    Write(2,*) 'Number of samples in the time trace = NtSamples =',NtSamples, ' =2^',i_sampl
    !write(2,"(A,o10,o10,i7)") 'i:',i_sampl,NtSamples
    allocate( RTime_s(1:NtSamples), RTime_0(1:NtSamples), RTime_1(1:NtSamples))
+   allocate( CTime_0(1:NtSamples), CTime_1(1:NtSamples) )
    allocate( FTime_0(1:NtSamples,1:AntpStat), FTime_1(1:NtSamples,1:AntpStat))
    allocate( CNu_s(0:NnuSamples), CNu_0(0:NnuSamples), CNu_1(0:NnuSamples), CNu_p(0:NnuSamples), CNu_t(0:NnuSamples))
    allocate( nu_Fltr(0:NnuSamples) )!, Av, Bv, FiltFact
@@ -159,6 +161,20 @@ Program Simulate_Data
       If(nxx.ne.0) exit
       write(24,*,IOSTAT=nxx) STATION_ID, Station_name
       Open(unit=12,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_'//TRIM(Station_name)//'.dat')
+      !If(EvenOdd.eq.-1) Then  ! Check is station numbers were specified for the first time reading a file like this
+      !   Read(12,*) Lab1
+      !   Read(12,*) Lab1
+      !   read(Lab1,*,IOSTAT=nxx) Ant_ID  ! is an integer
+      !   If(nxx.eq.0) Then ! there was a number at this place, all antennas are pairs infact
+      !      EvenOdd=1
+      !      !Signature='Dual' ! It is assumed that antanna-pairs are meant, not single antennas. Number is ignored.
+      !   Else
+      !      EvenOdd=0
+      !      Write(2,*) 'antennas should be paired', i_file,Lab1
+      !      stop 'antennas should be paired'
+      !   EndIf
+      !   rewind(unit=12)
+      !EndIf
       Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.dat')
       Read(12,*) Lab1! , StatStartTime, Lab2, i_src, lab3, NrAnt, lab4, powr  ![ms],,&  =noise power
       j_ant=0
@@ -189,6 +205,7 @@ Program Simulate_Data
       !
       Call RelDist(SourceGuess,Ant_pos(:,1),RDist)
       StatStartTime=SourcesListTms(1)/(Sample*1000.)+RDist-200 ! place first source at sample 50 in trace
+      StatStartTime=StatStartTime + TimingErr_ns * random_stdnormal()/5. ! to convert timing error to samples
       write(22,*) 'StartTime[ms]=', StatStartTime*(Sample*1000.), 'N_samples=', NtSamples, &
             'N_ant=', Ant_nr, 'P_noise= 1.'  ![ms],,&  =noise power
       write(2,"(A,I3,I9,1x,A5,A,I2,A,A,F10.5,A,F9.6)") 'Station=',i_file,STATION_ID, Station_name, &
@@ -220,6 +237,10 @@ Program Simulate_Data
          Thet_d =0.
          Phi_d =0.
          Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
+         !J_0p(:)=CONJG(J_0p(:))
+         !J_1p(:)=CONJG(J_1p(:))
+         !J_0t(:)=CONJG(J_0t(:))
+         !J_1t(:)=CONJG(J_1t(:))
          IstN=sqrt((1.-FracGalacNoisePow)*0.33)
          GN=sqrt(FracGalacNoisePow*12.) ! phenomenological factor to have similar power in GalNoise as in InstNoise (when GalacNoise=1.)
          GN= GN*(inu2+inu1)*dnu/TotalGain
@@ -268,6 +289,10 @@ Program Simulate_Data
             !Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
             Vec_p(1)=sin(Phi_r)              ; Vec_p(2)=-cos(Phi_r)        ; Vec_p(3)=0.
             Vec_t(1)=-cos(Thet_r)*Vec_p(2)  ; Vec_t(2)=cos(Thet_r)*Vec_p(1) ; Vec_t(3)=-sin(Thet_r)
+            !J_0p(:)=CONJG(J_0p(:))
+            !J_1p(:)=CONJG(J_1p(:))
+            !J_0t(:)=CONJG(J_0t(:))
+            !J_1t(:)=CONJG(J_1t(:))
             ! Amplitude in theta & phi directions
             A_p=SUM( SourcesListAmpNEh(:,i_src)*Vec_p(:) )*NormPulseAmp0Bckg/D
             A_t=SUM( SourcesListAmpNEh(:,i_src)*Vec_t(:) )*NormPulseAmp0Bckg/D
@@ -302,7 +327,29 @@ Program Simulate_Data
          EndDo ! i_src=1,SrcNr
          !Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )
          Call RFTransform_CF2RT(Cnu_0(0),FTime_0(1,j_ant) )
+         !RTime_s(:)=Real(FTime_0(:,j_ant))
+         !SubSample_Offset=0.
+         !Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s(0)) !
+         !Call RFTransform_CF2CT(Cnu_s(0),FTime_1(1,j_ant) )
+         !write(2,*) '0', FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)
+         !write(2,*) 'r',FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)/FTime_1(Sample_Offset-10:Sample_Offset+10,j_ant)
+         !write(2,*) 'a0', Abs(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant))
+         !write(2,*) 'ar',Abs(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)/FTime_1(Sample_Offset-10:Sample_Offset+10,j_ant))
+         !stop
+         !
+         !Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )  ! RFTransform_CF2RT(Cnu,RD)
+         !Call RFTransform_CF2RT(Cnu_0(0),RTime_s(1) )  ! RFTransform_CF2RT(Cnu,RD)
+         !write(2,*) 'r',Real(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant))/RTime_s(Sample_Offset-10:Sample_Offset+10)
+         !stop
          Call RFTransform_CF2RT(Cnu_1(0),FTime_1(1,j_ant) )
+         If(i_file.eq.1 .and. j_ant.eq.1) Then
+         Call RFTransform_CF2CT(Cnu_0(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
+         Call RFTransform_CF2CT(Cnu_1(0),CTime_1(1) )
+            Open(unit=23,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_RefAntTrace.dat')
+            Do i_sampl=1,NtSamples
+               write(23,*) i_sampl,REAL(CTime_0(i_sampl)), ABS(CTime_0(i_sampl)), REAL(CTime_1(i_sampl)), ABS(CTime_1(i_sampl))
+            Enddo
+         EndIf
       Enddo ! j_ant=1,NrAnt
       !
       Do i_sampl=1,NtSamples
@@ -333,9 +380,9 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Time_Interval, Sources_TS, Sources_LocNEh(1:3), Sources_AmpNEh(1:3),t_shft
    Integer :: NConstruct, nxx, i_src
-   Real(dp) :: D, Phi, Thet, Time_width, Space_width
+   Real(dp) :: D, Phi, Thet, Time_width, Space_width,R,Epsln=epsilon(Epsln)
    Character(LEN=180) :: lname
-   Real :: random_stdnormal
+   Real :: random_stdnormal,x,y,z
    !
    SrcNr=0
    Do !i_src=1,SrcNrMax
@@ -384,14 +431,19 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
          If(NConstruct.gt.(SrcNrMax-SrcNr)) NConstruct=(SrcNrMax-SrcNr)
          Do i_src=0,NConstruct-1
             SrcNr=SrcNr+1
-            call random_number(Thet)
-            call random_number(Phi)
-            D=random_stdnormal()*Space_width ! can be negative
+            call random_number(x)  ! may include zero
+            call random_number(y)
+            call random_number(z)
+            R=sqrt((0.5-x)**2+(0.5-y)**2+(0.5-z)**2+Epsln) ! to prevent zero
+            D=random_stdnormal()! can be negative
+            D=((abs(d))**(1/3.))*Space_width  ! to have distances distributed like [d^2 x gaussian(d)]
+            !D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
             SourcesListTS(SrcNr)=Sources_TS + random_stdnormal()*Time_width
-            SourcesListLocNEh(1,SrcNr)=Sources_LocNEh(1)+ D*sin(Thet*pi)
-            SourcesListLocNEh(2,SrcNr)=Sources_LocNEh(2)+ D*cos(Thet*pi)*sin(Phi*pi)
-            SourcesListLocNEh(3,SrcNr)=Sources_LocNEh(3)+ D*cos(Thet*pi)*cos(Phi*pi)
+            SourcesListLocNEh(1,SrcNr)=Sources_LocNEh(1)+ D*(0.5-x)/R
+            SourcesListLocNEh(2,SrcNr)=Sources_LocNEh(2)+ D*(0.5-y)/R
+            SourcesListLocNEh(3,SrcNr)=Sources_LocNEh(3)+ D*(0.5-z)/R
             SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
+            ! write(3,*) i_src,D,SourcesListLocNEh(:,SrcNr) ! just for checking the cloud structure using  Sources_Plots.gle
          EndDo
          cycle
       EndIf
