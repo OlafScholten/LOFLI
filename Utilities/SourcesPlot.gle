@@ -128,6 +128,9 @@ End If
               !MSzeI=MSze*sqrt(datayvalue(dI$,i)+10.*dMinInt)*FactAmp ! dMinInt
               !MSzeI=MSze*sqrt(datayvalue(dI$,i)/dMinInt)*FactAmp ! dMinInt
               MSzeI=sqrt(datayvalue(dI$,i)/dMaxInt)*FactAmp ! dMinInt
+              If(MSzeI < 0.3) then 
+               MSzeI=0.3
+              End If
               !MSzeI=MSze*(datayvalue(dI$,i)*FactAmp+ConstAmp)
            End If
            local Cscale = (dataxvalue(dt$,i)-dmin)/DDx
