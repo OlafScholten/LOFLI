@@ -365,9 +365,15 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    Complex(dp) :: Cnu0(0:IntfNuDim), Cnu1(0:IntfNuDim), Sp, St
    Real(dp) :: AntW(2),NormEven, NormOdd, NRM
    Character(len=50) :: FMT_A
+   Logical :: GainFactor=.false.
    !
    ! Get antenna function parameters
    Call AntFieParGen()
+   If(.not. GainFactor) Then
+      NRM=SUM(Gain(:))/(Freq_max - Freq_min)
+      write(2,*) 'E-field traces do not contain an additional frequency-dependent Gain factor, average=',NRM
+      Gain(:)=NRM
+   EndIf
    IntfDim=2*IntfNuDim
    !
    Cur2E(:,:)=0.
@@ -453,7 +459,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
                ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu)
             St=((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu) + &
                ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu)
-            CMCnu(j_IntFer,i_nu,:)=w*( Aip(:)* Sp + Ait(:)* St )*Gain(i_freq)
+            CMCnu(j_IntFer,i_nu,:)=w*( Aip(:)* Sp + Ait(:)* St ) *Gain(i_freq)
          Endif
       Enddo
       !

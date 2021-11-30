@@ -19,7 +19,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt,Hann
    Implicit none
    Integer, intent(in) :: i_chunk
-   logical :: file14open
+   logical :: file14open=.false.
    Real*8, intent(in) :: SourceGuess(3) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
    !
    Integer*2 :: Chunk(1:Time_dim)
@@ -76,7 +76,10 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       goto 9
    Endif
    If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
+      Call CreateNewFolder(Simulation) ! create new folder when needed
       Open(Unit=30,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
+      write(2,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
+      !write(*,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
    EndIf
    Ant_nr(i_chunk)=0
    AntNr_lw=1
@@ -237,7 +240,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
           If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
                write(30,*) STATION_ID,TRIM(Statn_ID2Mnem(STATION_ID))
                AntNr_up=Ant_nr(i_chunk)
-               Call CreateNewFolder(Simulation) ! create new folder when needed
+               !Call CreateNewFolder(Simulation) ! create new folder when needed
                Open(Unit=31,STATUS='unknown',ACTION='write', &
                      FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
                Write(31,*) 'StartTime_ms= ',(Start_time(i_chunk)+WriteSimulation(1)+RDist)*sample*1000., &
