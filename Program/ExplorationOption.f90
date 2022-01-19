@@ -5,7 +5,7 @@ Subroutine ExplorationRun
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
    use Chunk_AntInfo, only : Start_time, TimeFrame
    use FitParams, only : SpaceCov
-   use FitParams, only : PeakS_dim, MaxFitAntDistcs, MaxFitAntD_nr !, Explore, Sigma_AntT, SearchRangeFallOff
+   use FitParams, only : PeakS_dim, MaxFitAntDistcs, MaxFitAntD_nr !,
    use Explore_Pars, only : PeakS, StatsStore_SAI, StatsStore_Ave, StatsStore_RMS, StatsStore_Peak, N_ExplTimes
    use Explore_Pars, only : Alloc_Explore_Pars
    use FFT, only : RFTransform_su,DAssignFFT

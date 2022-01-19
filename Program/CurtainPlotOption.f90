@@ -5,7 +5,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    ! peaknr is included in the naming convention when plots for multple peaks are needed (=calibration runs)
    use constants, only : dp,sample
    use DataConstants, only : Station_nrMax, Time_dim, DataFolder, OutFileLabel  ! , ChunkNr_dim
-   use ThisSource, only : PeakNrTotal, Peak_eo, Peak_start, Peakpos, SourcePos
+   use ThisSource, only : PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use Chunk_AntInfo, only : CTime_spectr, Ant_Pos, Ant_nr, Ant_RawSourceDist, Unique_StatID,  Nr_UniqueStat, Ant_Stations, RefAnt
    use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    use FitParams, only : Fit_TimeOffsetStat ! , N_FitPar_max, Fit_AntOffset, Fit_TimeOffsetAnt, PulsPosCore
@@ -38,7 +38,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    Do i_peak=1,PeakNrTotal
       i_eo=Peak_eo(i_peak)
       If(i_eo .ne. 0) cycle !  Option 'Dual' is assumed and thus only the i_eo=0 peaks are taken
-      i_chunk=Peak_start(i_peak)
+      i_chunk=ChunkNr(i_peak)
       I_ant=RefAnt(i_chunk,i_eo)
       !write(2,*) 'CurtainPlot:I_peak',i_peak,PeakNrTotal,I_ant,Nr_UniqueStat,i_chunk,i_eo
       !flush(unit=2)
@@ -105,19 +105,19 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
     use DataConstants, only : Station_nrMax
     use StationMnemonics, only : Station_ID2Mnem
-    use ThisSource, only : PeakPos, Peak_start
+    use ThisSource, only : PeakPos, ChunkNr, ExclStatNr
     use GLEplots, only : GLEplotControl
     Implicit none
     Integer, intent(in) :: unt, CurtainWidth, i_Peak
     Logical, intent(in) :: UsePeakNr
     Character(Len=*), intent(in) :: file
-    integer :: I_ant, i_stat, Stat_nr, Stations(1:Station_nrMax), i_time, i_c
-    integer :: A(1), Plot_scale, ch1, ch2, VLine, i_chunk
+    integer :: I_ant, i_stat, Stat_nr, Stations(1:Station_nrMax), i_time, i_c, lstyle
+    integer :: A(1), Plot_scale, ch1, ch2, VLine, i_chunk, k
     Character(len=41) :: txt
     Character(len=5) :: Station_Mnem
     real*8 :: plot_offset,b
     !
-    i_chunk=Peak_start(i_peak)
+    i_chunk=ChunkNr(i_peak)
     Plot_scale= 2. ! int(B) + 2.
     VLine=PeakPos(i_Peak)
     ch1=PeakPos(i_Peak)-CurtainWidth
@@ -141,6 +141,9 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
         '   xtitle "time [samples]"','   ytitle "Amplitude"',&
         '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
         '   x2labels on',' end graph'
+    Write(unt,"(A,6(/A))" ) 'begin key','position tc','nobox','   offset 20. -1.5', &
+         '   text "Excluded" lstyle 4 color black lwidth 0.1', &
+         'end key','set just cc'
     Write(unt,"(A,i5.5,A,1(/A),I2)")  'amove xg(',Vline,') 4','rline 0 ',2*Nr_UniqueStat+1
     !
     Stat_nr=0
@@ -166,13 +169,23 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
         !write(txt,"(i3.3,'-'i2.2)") I_ant,i_peak
         plot_offset=2*i_stat + 2 + mod(Ant_IDs(I_ant,i_chunk),2)
         i_c = I_Ant-11*int(I_Ant/11)
-        Write(Unt,901) plot_offset,trim(DataFolder), TRIM(txt),I_Ant,I_Ant,i_c
+        !
+        lstyle=0
+        Do k=1,Station_nrMax
+            If(ExclStatNr(k,i_peak).eq.0) exit
+            If(Stations(I_stat).eq.ExclStatNr(k,i_peak)) Then
+               lstyle=4  !  ! Marks excluded station, see "ReImAtMax"
+               exit
+            EndIf
+        Enddo
+        !
+        Write(Unt,901) plot_offset,trim(DataFolder), TRIM(txt),I_Ant,I_Ant,lstyle,i_c
 901     Format('amove 4 ',F5.2,/'begin graph',/'  size 55 2',/'  vscale 1',&
             /'  hscale 1',/'   NoBox',&
             /'   xaxis min t_min max t_max',/'   x1axis off',&
             /'   yaxis  min -scl max scl',/'   y1axis off',&
             /'     data "',A,'LOFAR_Time',A,'.dat" d',I0,'=c1,c2',&
-            /'     d',I0,' line lwidth 0.04 color MyCol',i0,'$',&
+            /'     d',I0,' line lwidth 0.04 lstyle ',i1,' color MyCol',i0,'$',&
             /' end graph')
         !     let d9=0
         !     d9 line lstyle 1 lwidth 0.01 color black
@@ -202,7 +215,7 @@ Subroutine GLE_Corr()
     use DataConstants, only : Station_nrMax, DataFolder
     use DataConstants, only : Polariz, Ant_nrMax
     use Chunk_AntInfo
-    use ThisSource, only : CCorr, PeakNrTotal, CorrAntNrs, Nr_Corr, Safety, Peak_eo, Peak_start, Peakpos, CCorr_Err, RefAntErr
+    use ThisSource, only : CCorr, PeakNrTotal, CorrAntNrs, Nr_Corr, Safety, Peak_eo, ChunkNr, Peakpos, CCorr_Err, RefAntErr
     use FitParams, only : N_FitPar_max
     use constants, only : dp
     use StationMnemonics, only : Station_ID2Mnem
@@ -226,7 +239,7 @@ Subroutine GLE_Corr()
     Do i_peak=1,PeakNrTotal
       Do i_tp=0,i_tp2
         i_eo=Peak_eo(i_peak)
-        i_chunk=Peak_start(i_peak)
+        i_chunk=ChunkNr(i_peak)
         Station=Ant_Stations(CorrAntNrs(1,i_eo,i_chunk),i_chunk)
         pBase=0
         If(polariz) then
@@ -343,3 +356,137 @@ Subroutine GLE_Corr()
     Return
 End Subroutine GLE_Corr
 !=================================
+! ===========================================================================
+Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Chi2pDF)
+   use constants, only : dp
+   !use DataConstants, only : Time_dim, DataFolder, OutFileLabel
+   !use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
+   use Chunk_AntInfo, only : Ant_Stations, Nr_UniqueStat, Unique_StatID,     Ant_IDs
+   use DataConstants, only : Station_nrMax
+   Use Interferom_Pars, only : IntFer_ant,  Nr_IntferCh ! the latter gives # per chunk
+   use ThisSource, only : ChunkNr
+   use GLEplots, only : GLEplotControl
+   use StationMnemonics, only : Statn_ID2Mnem
+   Implicit none
+   Integer, intent(in) :: unt, WWidth, i_chunk
+   Real(dp), intent(in) :: dChi_ap(*), dChi_at(*), Chi2pDF
+   Character(Len=*), intent(in) :: FileA, Label
+   Character(Len=*), intent(in) :: file
+   integer :: I_ant, i_stat, Stat_ID, counter
+   integer :: j_IntFer, dn
+   !Character(len=41) :: txt
+   Character(len=5) :: Station_Mnem
+   real*8 :: dChi_sp(1:Nr_UniqueStat), dChi_st(1:Nr_UniqueStat)
+   real*8 :: plot_offset, HOffSt_p, HOffSt_t, PlotW, Sep, whiteness
+   !
+   !vsize=Nr_UniqueStat*2 34
+   PlotW=27.
+   Sep=1.
+   HOffSt_p=4
+   HOffSt_t=HOffSt_p+PlotW+Sep
+   !
+   Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
+   Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
+   Write(unt,"(A,I2,3(/A),2(/A,I0))") 'size 63 ',Nr_UniqueStat+9,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
+      'include "../Utilities/DiscreteColor.gle"',&
+      'set lwidth 0.1','t_min = ', -WWidth,'t_max = ', WWidth
+   Write(unt,"(A,F5.1,A,2(/A),i2,3(/A),7(/A))")  'amove',HOffSt_p,' 4','begin graph', &
+      '   size 27 ',Nr_UniqueStat+1,'   vscale 1','  hscale 1',&
+      '   title  "E_\phi time traces, '//TRIM(Label)//'"', &
+      '   xtitle "time [samples]"', '   ytitle "Amplitude"',&
+      '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
+      '   x2labels on',' end graph'
+   Write(unt,"(A,6(/A))" ) 'begin key','position tr','nobox', '   text \phi', &
+      !         '   text "Excluded" lstyle 4 color black lwidth 0.1', &
+      'end key','set just cc'
+   Write(unt,"(A,/A,I2)")  'amove xg(0) 4','rline 0 ',Nr_UniqueStat+1
+   Write(unt,"(A,F5.1,A,2(/A),i2,3(/A),7(/A))")  'amove',HOffSt_t,' 4','begin graph', &
+      '   size 27 ',Nr_UniqueStat+1,'   vscale 1','  hscale 1',&
+      '   title  "E_\theta time traces, '//TRIM(Label)//'"', &
+      '   xtitle "time [samples]"',  & !'   ytitle "Amplitude"',&
+      '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
+      '   x2labels on',' end graph'
+   Write(unt,"(A,6(/A))" ) 'begin key','position tr','nobox', & !'   offset 20. -1.5', &
+      '   text \theta', &
+      !         '   text "Excluded" lstyle 4 color black lwidth 0.1', &
+      'end key','set just cc'
+   Write(unt,"(A,/A,I2)")  'amove xg(0) 4','rline 0 ',Nr_UniqueStat+1
+   !
+   !write(2,*) 'Nr_UniqueStat',Nr_UniqueStat, i_chunk, Label, Nr_IntFerCh(i_chunk)
+   dChi_sp(:)=0.
+   dChi_st(:)=0.
+   !   write(2,*) 'dChi_ap',dChi_ap(:)
+   Do i_stat=1,Nr_UniqueStat
+      Stat_ID=Unique_StatID(i_stat)
+      !write(2,*) 'i_stat:',i_stat, Statn_ID2Mnem(Unique_StatID(i_stat)), Unique_StatID(i_stat)
+      plot_offset=i_stat + 2
+      Write(Unt,901) HOffSt_p, plot_offset!,trim(FileA), TRIM(Label),j_IntFer, trim(FileA), TRIM(Label),j_IntFer, i_c, i_c ! subgraph for this antenna pair ! , ADVANCE='NO'
+      dn=0
+      counter=0
+      Do j_IntFer=1,Nr_IntFerCh(i_chunk)
+         i_ant=IntFer_ant(j_IntFer,i_chunk)
+         !write(2,*) 'j_IntFer',j_IntFer,i_ant, Ant_Stations(i_ant,i_chunk), i_stat, Ant_IDs(i_ant,i_chunk)
+         If(Ant_Stations(i_ant,i_chunk).ne.Stat_ID) cycle
+         !write(2,*) 'j_IntFer-used',j_IntFer,i_ant, Ant_Stations(i_ant,i_chunk), Stat_ID
+         dn=dn+1
+         Write(Unt,902) trim(FileA)//'PhiDat_'//TRIM(Label), dn, j_IntFer+1, dn, '0', MODULO(i_ant,11)
+         dn=dn+1
+         Write(Unt,902) trim(FileA)//'PhiMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
+         counter=counter+1
+         dChi_sp(i_stat)=dChi_sp(i_stat)*(counter-1)/counter + dChi_ap(j_IntFer)/counter  ! keep running mean
+      EndDo
+      !write(2,*) 'dn:',dn,j_IntFer
+      Write(Unt,"(' end graph')")
+      plot_offset=i_stat + 2
+      Write(Unt,901) HOffSt_t, plot_offset!,trim(FileA), TRIM(Label),j_IntFer, trim(FileA), TRIM(Label),j_IntFer, i_c, i_c ! subgraph for this antenna pair ! , ADVANCE='NO'
+      dn=0
+      counter=0
+      Do j_IntFer=1,Nr_IntFerCh(i_chunk)
+         i_ant=IntFer_ant(j_IntFer,i_chunk)
+         If(Ant_Stations(I_ant,i_chunk).ne.Stat_ID) cycle
+         dn=dn+1
+         Write(Unt,902) trim(FileA)//'ThDat_'//TRIM(Label), dn, j_IntFer+1, dn, '0', MODULO(i_ant,11)
+         dn=dn+1
+         Write(Unt,902) trim(FileA)//'ThMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
+         counter=counter+1
+         dChi_st(i_stat)=dChi_st(i_stat)*(counter-1)/counter + dChi_at(j_IntFer)/counter  ! keep running mean
+      EndDo
+      Write(Unt,"(' end graph')")
+   EndDo
+901   Format('amove ',2F5.1,/'begin graph',/'  size 27 2',/'  vscale 1',&
+         /'  hscale 1',/'   NoBox',&
+         /'   xaxis min t_min max t_max',/'   x1axis off',&
+         /'   yaxis ',/'   y1axis off')
+!         /'   yaxis  min -scl max scl',/'   y1axis off')
+902   Format('     data "',A,'.dat" d',i0,'=c1,c',I0,&
+         /'     d',i0,' line lwidth 0.04 lstyle ',A,' color MyCol',i0,'$')
+    !
+    Write(unt,"(A,2F5.1,/A,F6.2,A)") 'amove ',HOffSt_t,Nr_UniqueStat+7.5, 'write "Chi^2/dof=',Chi2pDF,'"'
+    Write(unt,"('set lstyle 0',/'set lwidth 0.01',/'set hei 0.7')")
+    !write(2,*) 'Chi2pDF',Chi2pDF
+    !write(2,*) 'dChi_sp(i_stat):',dChi_sp(:)
+    Do i_stat=1,Nr_UniqueStat  ! put labels
+!   HOffSt_t=HOffSt_p+PlotW+Sep
+        plot_offset=i_stat  + 3
+        Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_p, plot_offset,    PlotW  ! hline
+        Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_p-1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'  ! text on left
+        whiteness=1/(1+2*dChi_sp(i_stat)/Chi2pDF)
+        Write(unt,904) HOffSt_p-1.5+PlotW, plot_offset+.5, whiteness, dChi_sp(i_stat)            ! text in right side
+        Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_t, plot_offset,    PlotW
+        Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_t+PlotW+1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'
+        whiteness=1/(1+2*dChi_st(i_stat)/Chi2pDF)
+        Write(unt,904) HOffSt_t+1.5, plot_offset+.5, whiteness, dChi_st(i_stat)
+    Enddo
+904   Format('amove ',2F5.1,/'set color ',F5.1,/'write "',F5.1,'"',/'Set color black')
+!        Write(unt,903) plot_offset,plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat)), &
+!            plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat))
+!903 Format('amove 4 ',F5.2,/'aline 59',F5.1,/'rmove 1.5 0 ',/'write "',A5,'"',/'amove 2.5 ',F5.2,/'write "',A5,'"')
+    !
+    Close(unit=unt)
+    !stop
+    !
+    Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
+    !
+    return
+End Subroutine GLEscript_Curtains
+!====================================

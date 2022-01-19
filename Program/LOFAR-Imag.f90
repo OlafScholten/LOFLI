@@ -181,6 +181,7 @@
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+    Include 'LOFLI_InputHandling.f90'
     Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
     Include 'GLEplotUtil.f90'
@@ -190,17 +191,16 @@
     Include 'FindCallibr.f90'   ! Station Callibration
     Include 'FitParams.f90'
     Include 'Fitter_CorrMax.f90'     ! uses chi-square mini
-    !Include 'StationPolar-v10.f90'
     Include 'FindSources.f90'
     Include 'SourceTryal.f90'  ! v16.f90' = v17.f90'  ; v17a.f90' uses grid search
     Include 'ExplorationOption.f90'
     Include 'CurtainPlotOption.f90'
+    Include 'ImpulsImagOption.f90'
     Include 'InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
     Include 'EIOption.f90'
-    !Include 'EIStokes-v21-test.f90'
-    !Include 'EIStokes-v21.f90'
     Include 'EIStokes-testW.f90'
-    Include 'SIOption.f90'
+    !Include 'SIOption.f90'
+    Include 'ECallibrOption.f90'
     Include 'System_Utilities.f90'
 !-----------------------------------
 Program LOFAR_Imaging
@@ -244,55 +244,54 @@ Program LOFAR_Imaging
 !  v19: Plotting control unified
 !
     use constants, only : dp,pi,ci,sample,Refrac
+    use LOFLI_Input
     use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
-    use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode
+    use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode, Utility, release
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, Diagnostics, EdgeOffset, Calibrations, OutFileLabel
     use DataConstants, only : Polariz
-    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainPlot
-    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, PeakPos
-    use FitParams, only : FitIncremental, Fit_AntOffset, WriteCalib, FullAntFitPrn, ImagingRun, AntennaRange
-    use FitParams, only : PeakS_dim, MaxFitAntDistcs, MaxFitAntD_nr, Explore, Sigma_AntT, SearchRangeFallOff
-    use FitParams, only : FullSourceSearch, SigmaGuess
+    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth
+    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal ! , PeakPos
+    use FitParams, only : FitIncremental, Fit_AntOffset, WriteCalib, FullAntFitPrn,  AntennaRange
+    use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
+    use FitParams, only : FullSourceSearch ! , SigmaGuess
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
-    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat   !  subroutine
+    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
-    use Explore_Pars, only : NMin, NMax, Emin, EMax
-    Use Interferom_Pars, only : IntfPhaseCheck, IntfSmoothWin, ChainRun, PixPowOpt
+    Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ChainRun, PixPowOpt, N_fit
     use GLEplots, only : GLEplotControl
     Implicit none
-    Character(len=20) :: Utility, release
-    INTEGER :: DATE_T(8),i
-    !CHARACTER*12 :: REAL_C(3)
-    !Logical :: CurtainPlot=.false.
-    !Character(len=5) :: ExcludedStat(ExcludedStat_max)
-    character(len=2) :: chj
     !
-    Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), FitRange_Samples, CurtainWidth
+    Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
     Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Integer, parameter :: lnameLen=180
+    CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
     CHARACTER(LEN=10) :: Sources
+    Character(LEN=30) :: RunOption
     Character(LEN=180) :: Sources1, Sources2
-    Character(LEN=180) :: lname
+    Character(LEN=lnameLen) :: lname
     Character(LEN=250) :: TxtIdentifier, TxtImagingPars
     Character(LEN=250) :: Txt20Identifier, Txt20ImagingPars
     Logical :: XcorelationPlot, prnt=.false. ! CrossCorrelate=.false. ,
     Logical :: Interferometry=.false.
     Logical :: E_FieldsCalc=.true.
     Integer :: i_dist, i_guess, nxx, valueRSS
-    NAMELIST /Parameters/ Explore, ImagingRun, Interferometry, FullSourceSearch, CurtainPlot, XcorelationPlot &
+    NAMELIST /Parameters/ RunOption &
+         !,  Explore, ImagingRun, Interferometry
+         , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
          , Diagnostics, Dual, FitIncremental, Fit_AntOffset, RealCorrelation &
-         , Simulation, WriteSimulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, PeakNr_dim, Calibrations, WriteCalib &
+         , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib &
          , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, E_FieldsCalc, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Version='v21'
-   release='v21 (Nov, 2021)'
-   Utility='LOFAR_Lightn.Imaging'
+   Version='v22.01'
+   release='22.01 (Jan, 2022)'
+   Utility='LOFLi-Imaging'
    CALL get_environment_variable("LIBRARY", lname)
    !WRITE (*,*) "LIBRARY=",TRIM(lname)
    CALL get_environment_variable("HOME", lname)
@@ -305,343 +304,461 @@ Program LOFAR_Imaging
    PolFlp_SAI=-2
    XcorelationPlot=.false.
    FitRange_Samples=Safety
+   RunOption="None"
    CCShapeCut_lim=0.6 ; ChiSq_lim=80. ; EffAntNr_lim=0.8
    NoiseLevel=70.
+   IntfSmoothWin=20
+   CurtainHalfWidth=-1
+   SaturatedSamplesMax=5
    Simulation=""
    !reshape((/ -1.D-10,0.d0,0.d0,0.d0,-1.D-10,0.d0,0.d0,0.d0,-1.D-10 /), shape(array))
    !AntennaRange_km=AntennaRange
-   read(*,NML = Parameters)
-   !If(CurtainPlot) Then
-   !   ChunkNr_dim=1
-   !   PeakNr_dim=2
-   !   Explore=.false.
-   !   ImagingRun=.false.
-   !   OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='CurtainPlots'//TRIM(OutFileLabel)//'.out')
-   !ElseIf(Explore) Then
-   If(Explore) Then
-      Write(*,*) 'Explore, OutFileLabel=',TRIM(OutFileLabel)
-      RunMode=1
-      ImagingRun=.false.
-      Production=.true.
-      Interferometry=.false.
-      !Production=.false.
-      FitRange_Samples=70
-      AntennaRange=2.49999999
-      Dual=.false.
-      ChunkNr_dim=1
-      PeakNr_dim=10
-      NoiseLevel=20.
-      If(Simulation.ne."") then
-         write(2,*) 'Explore is not compatible with running with a Simulation=', TRIM(Simulation)
-         stop 'Incompatible options'
-      EndIf
-      OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Explore'//TRIM(OutFileLabel)//'.out')
-   ElseIf(ImagingRun) Then
-      Write(*,*) 'ImagingRun, OutFileLabel=',TRIM(OutFileLabel)
-      RunMode=3
-      ChunkNr_dim=1
-      PeakNr_dim=2
-      FitIncremental=.true.
-      Interferometry=.false.
-      !FitRange_Samples=170
-      FitRange_Samples=86 ! 90  !  some cases 70 is better, sometimes 90, 80 seems to be worse i.e. highly non-linear!
-      OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Imaging'//TRIM(OutFileLabel)//'.out')
-   ElseIf(Interferometry) Then
-      Write(*,*) 'Interferometry, OutFileLabel=',TRIM(OutFileLabel)
-      RunMode=4
-      FitRange_Samples=7
-      Polariz=Dual  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
-      ChunkNr_dim=1
-      PeakNr_dim=2
-      OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Interferometer'//TRIM(OutFileLabel)//'.out')
-   Else     ! Calibration run
-      Write(*,*) 'Calibration, OutFileLabel=',TRIM(OutFileLabel)
-      RunMode=2
-      ChunkNr_dim=0
-      TxtIdentifier="(i3,2i2,I8,3(F10.2,1x),F8.2)"
-      Polariz=(Dual .and. RealCorrelation) .and. E_FieldsCalc
-      If(Simulation.ne."") then
-         write(2,*) 'Calibration is not compatible with running with a Simulation=', TRIM(Simulation)
-         stop 'Incompatible options'
-      EndIf
-      Do i=1,10
-         Call GetNonZeroLine(lname)
-         Read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
-         Call Convert2m(SourceGuess(:,i))
-         If(nxx.ne.0) exit
-         Read(lname,TxtIdentifier,iostat=nxx)  DATE_T(1:4),StartTime_ms, SourceGuess(:,i) ! just dummy arguments
-         If(nxx.eq.0) exit
-         ChunkNr_dim=i   ! this was a genuine chunk card
-      EndDo
-      If(ChunkNr_dim.ge.10) stop 'Chunk number too large'
-      Rewind(unit=5) ! Standard input
-      read(*,NML = Parameters) ! to reposition correctly
-      OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Calibrate'//TRIM(OutFileLabel)//'.out')
-   Endif
-   If(FitRange_Samples.lt.5) FitRange_Samples=5
-   !AntennaRange=AntennaRange_km
-   !
-   !write(2,"(3x,5(1H-),1x,'LOFAR_Imaging version ',A20,25(1H-))") release
-   !CALL DATE_AND_TIME (Values=DATE_T)
-   !WRITE(2,"(3X,5(1H-),1x,'run on ',I2,'/',I2,'/',I4,' , started at ',&
-   !    I2,':',I2,':',I2,'.',I3,1X,25(1H-))") &
-   !    DATE_T(3),DATE_T(2),DATE_T(1),(DATE_T(i),i=5,8)
+   read(*,NML = Parameters,iostat=nxx)
+   j = iachar(RunOption(1:1))  ! convert to upper case if not already
+   if (j>= iachar("a") .and. j<=iachar("z") ) then
+      RunOption(1:1) = achar(j-32)
+   end if
+      SELECT CASE (RunOption(1:1))
+   ! Explore
+   ! Calibrate
+   ! SelectData
+   ! XY-Interferometry
+   ! PolInterferometry==TRI-D imager
+   ! ImpulsiveImager
+      CASE("S")  ! SelectData
+         Write(*,*) 'SelectData run, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='SelectData'//TRIM(OutFileLabel)//'.out')
+         RunMode=0 ! GLE utilities are not called.
+         Sources1='SelectData'
+      CASE("E")  ! Explore
+         Write(*,*) 'Explore run, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Explore'//TRIM(OutFileLabel)//'.out')
+         RunMode=1
+         Sources1='Explore'
+      CASE("C")  ! Calibrate
+         Write(*,*) 'Calibration run, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Calibrate'//TRIM(OutFileLabel)//'.out')
+         RunMode=2
+         Sources1='Calibration'
+      CASE("I")  ! ImpulsiveImager
+         Write(*,*) 'Impulsive Imager run, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Imaging'//TRIM(OutFileLabel)//'.out')
+         RunMode=3
+         Sources1='Impulsive Imager'
+      CASE("X")  ! XY-Interferometry
+         Write(*,*) 'Interferometry, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Interferometer'//TRIM(OutFileLabel)//'.out')
+         RunMode=14
+         Write(2,*) 'This option has been discontinued, use "T" instead.'
+         Stop 'Discontinued option'
+         Sources1='XY- TRI-D Imager (Interferometry)'
+      CASE("T")  ! TRI-D imager==PolInterferometry
+         Write(*,*) 'Interferometry, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Interferometer'//TRIM(OutFileLabel)//'.out')
+         RunMode=24
+         Sources1='Polarimetric TRI-D Imager (Interferometry)'
+      CASE("F")  ! FieldCalibrate for TRI-D imager
+         Write(*,*) 'Interferometric Calibration for TRI-D mode, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='FC'//TRIM(OutFileLabel)//'.out')
+         RunMode=7
+         Sources1='Field Calibration for TRI-D Imager (Interferometry)'
+      CASE DEFAULT  ! Help
+         Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
+         Write(*,*) '- "Explore" for first exploration of this flash to get some idea of the layout and timing'
+         Write(*,*) '- "Calibrate" for first exploration of this flash to get some idea of the layout and timing'
+         Write(*,*) '- "ImpulsiveImager" for the impulsive Imager'
+         Write(*,*) '- "FieldCalibrate" Field Calibration for the TRI-D interferometric imager'
+         Write(*,*) '- "TRI-D" for the TRI-D imager with polarization observables, accounting for antenna function'
+         Write(*,*) '- "SelectData" to selecting real data, possibly for setup of simulation runs using program "SimulateData"'
+         Stop 'No valid RunOption specified in namelist input'
+   End SELECT
    !
    Call System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)  ! set Flash name & folder names
+   Call PrintParIntro(TRIM(Sources1), RunOption,OutFileLabel)
    !
-   CALL DATE_AND_TIME (Values=DATE_T)
-   Write(TxtIdentifier,"('Release ',A,', run on ',I2,'/',I2,'/',I4,' , at ',I2,':',I2,':',I2,'.',I3,', Flash: ',A )") &
-       TRIM(release),DATE_T(3),DATE_T(2),DATE_T(1),(DATE_T(i),i=5,8),TRIM(FlashName)
-    !
-    write(2,NML = Parameters)
-    !
-    Safety=FitRange_Samples
-    Call Alloc_Chunk_AntInfo
-    Call Alloc_ThisSource
-    Do i=-Safety,Safety
-        t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
-    Enddo
-    !Do j=1,SgnFlp_nr_max
-    !  SignFlp_SAI(j).lt.0) exit
-    !Enddo
-    write(2,*)'refractivity=',Refrac-1.
-    SgnFlp_nr=count(SignFlp_SAI.gt.0)
-    PolFlp_nr=count(PolFlp_SAI.gt.0)  !first pole-flip, then bad antenna
-    BadAnt_nr=count(BadAnt_SAI.gt.0)
-    If(any(mod(PolFlp_SAI,2) .eq. 1,1) ) stop 'PolFlp-Ant_nr should be even'
-    !write(2,*) 'signflip=',SgnFlp_nr
-    write(*,*) 'PolarizationFlips=',PolFlp_nr,'; BadAntennas=',BadAnt_nr ! , &
+   If(nxx.ne.0) Then
+      write(2,*) 'Solely use parameters in the namelist from the following list'
+      write(2,NML = Parameters)
+      Stop 'Namelist reading problem'
+   EndIf
+   !
+   N_fit=0
+   ChunkNr_dim=1
+   PeakNr_dim=1
+   SELECT CASE (RunOption(1:1))
+   ! option          runmode
+   ! Explore            1
+   ! Calibrate          2
+   ! SelectData         0, same as for RFI-Mitigate
+   ! FieldCalibrate     7
+   ! TRI-D imager       4
+   ! ImpulsiveImager    3
+   ! Other, TrackScatt  5
+   ! Other, InterfSelct 6
+   ! Other, RFI-Mitigat 0
+      CASE("S")  ! SelectData                          RunMode=0
+         If(Simulation.eq."") Simulation="Sims/Sims"
+         If(WriteSimulation(1).le.0) WriteSimulation(1)=200  ! a reasonable save buffer
+         If(WriteSimulation(2).le.0) WriteSimulation(2)=3
+         Call PrintValues(Simulation, 'Simulation', 'Naming for the "Simulation" files with the antenna info and data.' ) !
+      CASE("E")  ! Explore                          RunMode=1
+         !ImagingRun=.false.
+         Production=.true.
+         Interferometry=.false.
+         !Production=.false.
+         FitRange_Samples=70
+         AntennaRange=2.49999999
+         Dual=.false.
+         PeakNr_dim=10
+         NoiseLevel=20.
+         WriteSimulation(2)=-1
+         Simulation=""
+      CASE("C")  ! Calibrate                          RunMode=2
+         WriteSimulation(2)=-1
+         !Simulation="" ! not possible to use this option with simulated data
+         If(E_FieldsCalc) Then
+            Dual=.true.
+            RealCorrelation=.true.
+            Polariz= E_FieldsCalc
+         EndIf
+         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
+         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+         'Produce a plot of the cross-correlation functions (real or absolute).')
+         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
+         Call PrintValues(FullAntFitPrn,'FullAntFitPrn', &
+         'Print detailed information for the time deviations per antenna per pulse.')
+         Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
+         Call PrintValues(Dual,'Dual', 'Make a combined analysis of the even (Y-) and odd (X-) numbered dipoles.')
+         Call PrintValues(RealCorrelation,'RealCorrelation', &
+         'Use only the real part of the cross correlations, not the absolute value.')
+         Call PrintValues(E_FieldsCalc,'E_FieldsCalc', &
+         'Perform an unfolding of the antenna function, including source polarization.'//&
+         'Sets Dual=.t. and RealCorrelation=.t. .')
+         Call PrintValues(FullSourceSearch,'FullSourceSearch', &
+         'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
+         Call PrintValues(FitIncremental,'FitIncremental', &
+         'Slowly increasing the range of the antennas to find the source position.')
+         Call PrintValues(AntennaRange,'AntennaRange', &
+         'Maximum distance (from the core) for the range of the antennas (in [km]).')
+         Call PrintValues(FitRange_Samples,'FitRange_Samples', &
+         'Maximum deviation (in samples) for a pulse in an antenna to be included in source position fitting.')
+         Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
+         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
+         !Call PrintValues(PeakNr_dim,'PeakNr_dim', &
+         !'Maximum number of sources (counting even and odd dipoles separately) included in the input.'//&
+         !'Note: this is a bit of an annoying variable meant to allow to fit more offsets simultaneously.')
+         !
+         ! Pre-process inputdata for sources to be used in calibration
+         ChunkNr_dim=0
+         Do i=1,10 ! perform some pre-scanning of the input to now the number of chunks that will be used
+            Call GetNonZeroLine(lname)
+            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
+            Call Convert2m(SourceGuess(:,i))
+            If(nxx.ne.0) exit
+            Read(lname,"(i3,2i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+               i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
+            If(nxx.eq.0) exit
+            ChunkNr_dim=i   ! this was a genuine chunk card
+         EndDo
+         If(ChunkNr_dim.eq.0) Then
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too small'
+         EndIf
+         If(ChunkNr_dim.ge.10) Then
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too large'
+         EndIf
+         !  Determine number of peaks/sorces that are included in the calibration search
+         i_peak=0
+         Do
+            Read(lname,"(i3,2i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+               i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
+            If(nxx.ne.0) exit
+            i_peak=i_peak+1
+            Call GetNonZeroLine(lname)
+            read(lname,*)  txt  ! check for possible 'exclude' line following this
+            If(trim(txt).eq.'exclud') Then
+               Call GetNonZeroLine(lname)
+            EndIf
+         Enddo
+         If(i_peak.eq.0) Then
+            PeakNr_dim=2*NrP*ChunkNr_dim
+         Else
+            PeakNr_dim=i_peak
+         EndIf
+         !
+         Rewind(unit=5) ! Standard input
+         read(*,NML = Parameters) ! to reposition correctly
+         !
+      CASE("I")  ! ImpulsiveImager                          RunMode=3
+         !ImagingRun=.true.
+         ChunkNr_dim=1
+         PeakNr_dim=2
+         Production=.true.
+         CurtainHalfWidth=-1
+         Diagnostics=.false.
+         FullAntFitPrn=.false.
+         XcorelationPlot=.false.
+         FitIncremental=.true.
+         Interferometry=.false.
+         Polariz=.false.  ! ????
+         !FitRange_Samples=170
+         FitRange_Samples=86 ! 90  !  some cases 70 is better, sometimes 90, 80 seems to be worse i.e. highly non-linear!
+         Call PrintValues(Dual,'Dual', 'Fix pulses in the even (Y-) and odd (X-) numbered dipoles at same source position.')
+         Call PrintValues(PeaksPerChunk,'PeaksPerChunk', &
+         'Maximum number of sources searched for per chunck (of 0.5 ms).' ) !
+         Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+         Call PrintValues(AntennaRange,'AntennaRange', &
+         'Maximum distance (from the core) for the range of the antennas (in [km]).')
+         Call PrintValues(FullSourceSearch,'FullSourceSearch', &
+         'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
+         Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.')  !
+         Call PrintValues(EffAntNr_lim,'EffAntNr_lim', &
+            'minimal fraction of the total number of antennas for which the pulse is located.' ) !
+         Call PrintValues(CCShapeCut_lim,'CCShapeCut_lim', &
+            'Maximum ratio of the width of the cross correlation function by that of the self correlation.')
+         Call PrintValues(RealCorrelation,'RealCorrelation', &
+            'Use only the real part of the cross correlations, not the absolute value.')
+         Call PrintValues(ChiSq_lim,'ChiSq_lim', 'Do not save any sources with a worse chi-square.' ) !
+         Call PrintValues(SearchRangeFallOff,'SearchRangeFallOff', &
+            'Multiplier for the (parabolic) width of the pulse-search window.')
+         Call PrintValues(Sigma_AntT,'Sigma_AntT', 'Constant added to width of search window for pulses.' ) !
+      CASE("F")  ! Field Calibration; Interferometric               RunMode=7
+         Interferometry=.true.
+         FitRange_Samples=7
+         Dual=.false.
+         Polariz=Dual  !
+         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
+         N_smth=IntfSmoothWin
+         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
+         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+            'Produce a plot of the cross-correlation functions (real or absolute).')
+         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
+         !Call PrintValues(FullAntFitPrn,'FullAntFitPrn', &
+         !'Print detailed information for the time deviations per antenna per pulse.')
+         !Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
+         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
+            'Maximum number of saturates time-samples per chunk of data')
+         Call PrintValues(AntennaRange,'AntennaRange', &
+            'Maximum distance (from the core) for the range of the antennas (in [km]).')
+         Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
+         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
+         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         ! Pre-process inputdata for sources to be used in calibration
+         ChunkNr_dim=0
+         Do i=1,10 ! perform some pre-scanning of the input to now the number of chunks that will be used
+            Call GetNonZeroLine(lname)
+            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
+            Call Convert2m(SourceGuess(:,i))
+            If(nxx.ne.0) exit
+            Read(lname,"(i3,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
+               i_dist, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
+            If(nxx.eq.0) exit
+            ChunkNr_dim=i   ! this was a genuine chunk card
+         EndDo
+         If(ChunkNr_dim.eq.0) Then
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too small for FC'
+         EndIf
+         If(ChunkNr_dim.ge.10) Then
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too large for FC'
+         EndIf
+         !  Determine number of peaks/sorces that are included in the calibration search
+         i_peak=0
+         Do
+            Read(lname,"(i3,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
+               i_dist, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
+            !write(2,*) 'nxx:',nxx,trim(lname)
+            If(nxx.ne.0) exit
+            i_peak=i_peak+1
+            Call GetNonZeroLine(lname)
+            read(lname,*)  txt  ! check for possible 'exclude' line following this
+            If(trim(txt).eq.'exclud') Then
+               Call GetNonZeroLine(lname)
+            EndIf
+         Enddo
+         PeakNr_dim=i_peak
+         PeakNrTotal=i_peak  ! one of these is obsolete now
+         !
+         Rewind(unit=5) ! Standard input
+         read(*,NML = Parameters) ! to reposition correctly
+         !
+      CASE("T")  ! PolInterferometry==TRI-D imager         RunMode=24
+         Interferometry=.true.
+         FitRange_Samples=7
+         Dual=.true.
+         Polariz=Dual  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
+         PeakNr_dim=2
+         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
+         N_smth=IntfSmoothWin
+         Call PrintValues(AntennaRange,'AntennaRange', &
+            'Maximum distance (from the core) for the range of the antennas (in [km]).')
+         Call PrintValues(TimeBase,'TimeBase', &
+            'Time-offset from the start of the data, best if kept the same for all analyses for this flash')
+         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.' ) !
+         Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' )
+         Call PrintValues(ChainRun,'ChainRun', &
+            'Automatically start jobs (for - previous or + following timeslots, made to follow a negative leader.' )
+         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.' )
+         Call PrintValues(PixPowOpt,'PixPowOpt', &
+            '=0=default: Intensity=sum two transverse polarizations only; '//&
+            '=1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; '//&
+            '=2: Intensity=sum all three polarizations, including longitudinal with the full weight')
+         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
+            'Maximum number of saturates time-samples per chunk of data')
+      CASE DEFAULT  ! Help
+         Write(2,*) 'Should never reach here!'
+   End SELECT
+   !
+   Call PrintValues(Calibrations,'Calibrations', &
+   'The antenna time calibration file. Not used when running on simulated data!' )
+   Call PrintValues(SignFlp_SAI,'SignFlp_SAI', &
+   'Station-Antenna Identifiers for those where the sign of the signal should be reversed.')
+   Call PrintValues(PolFlp_SAI,'PolFlp_SAI', &
+   'Station-Antenna Identifiers for those where the even-odd signals should be interchanged.')
+   Call PrintValues(BadAnt_SAI,'BadAnt_SAI', &
+   'Station-Antenna Identifiers for those that are malfunctioning.' )
+   Call PrintValues(ExcludedStat,'ExcludedStat', &
+   'Mnemonics of the stations that should be excluded.' )
+   write(2,*) '&end'
+   write(2,"(20(1x,'='))")
+   !     Some remaining setup
+   If(FitRange_Samples.lt.5) FitRange_Samples=5
+   Safety=FitRange_Samples
+   Call Alloc_Chunk_AntInfo !  uses ChunkNr_dim
+   Call Alloc_ThisSource    !  uses ChunkNr_dim
+   Do i=-Safety,Safety
+     t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
+   Enddo
+   !write(2,*)'refractivity=',Refrac-1.
+   SgnFlp_nr=count(SignFlp_SAI.gt.0)
+   PolFlp_nr=count(PolFlp_SAI.gt.0)  !first pole-flip, then bad antenna
+   BadAnt_nr=count(BadAnt_SAI.gt.0)
+   If(any(mod(PolFlp_SAI,2) .eq. 1,1) ) Then
+      write(2,*) 'PolFlp-Ant_nr should be even'
+      write(*,*) 'PolFlp-Ant_nr should be even'
+   EndIf
+   write(2,*) '# PolarizationFlips=',PolFlp_nr,'; # BadAntennas=',BadAnt_nr,CHAR(13)//CHAR(10) ! , &
     !'Color test'//achar(27)//'[95m pink '//achar(27)//'[0m.'
 !
-    Do j=1,ExcludedStat_max
+   Do j=1,ExcludedStat_max
       If(ExcludedStat(j).eq.'     ') exit
       ExcludedStatID(j)=Statn_Mnem2ID(ExcludedStat(j))
       write(2,*) j,ExcludedStatID(j),ExcludedStat(j)
-    enddo
-    !
-    flush(unit=2)
-    !Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
-    !Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
-    !
-    Do i_dist=1,MaxFitAntD_nr  ! set the maximal distance to be fitted to AntennaRange
+   enddo
+   !
+   Do i_dist=1,MaxFitAntD_nr  ! set the maximal distance to be fitted to AntennaRange
       If(MaxFitAntDistcs(i_dist) .gt. AntennaRange) then
          MaxFitAntD_nr=i_dist
          MaxFitAntDistcs(i_dist)=AntennaRange
          exit
       endif
-    EndDo ! i_dist=1,MaxFitAntD_nr
-    Flush(unit=6)  ! standard out
-    ! =====================
-    If(Explore) Then
-    !  need to op
-      Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
-      Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
-      Call ExplorationRun
-      stop 'Normal exploration end'
-    ElseIf(Interferometry) Then
-      Call InterferometerRun
-      !Call EI_Run
-    ElseIf(ImagingRun) Then
-    ! =================================================
-      Call GetNonZeroLine(lname)
-      Read(lname,*) StartTime_ms, SourceGuess(:,1), StartingTime, StoppingTime  ! Start time offset = 1150[ms] for 2017 event
-      Call Convert2m(SourceGuess(:,1))
-      write(2,*) 'Imaging input line-1:',lname
-      Write(TxtImagingPars,"(A,I3,A,F6.1,A,F4.1,A,F4.1,A,F4.0,A,F5.0,A,F5.1,A,F6.1,A,3F5.1,A,i5)") &
-         'FitRange=',FitRange_Samples,'[samples],',AntennaRange,'[km], Sigma_AntT=',Sigma_AntT, &
-         '[samples], SearchRangeFallOff-factor=',SearchRangeFallOff,', CCShapeCut_lim=',CCShapeCut_lim*100., &
-         '%, ChiSq_lim=',ChiSq_lim,'[ns^2], EffAntNr_lim=',EffAntNr_lim*100., '%, Noise=',NoiseLevel, &
-         ', Guess(N,E,h)=(', SourceGuess(:,1)/1000.,')[km], PeaksPerChunk=',PeaksPerChunk
-      If(.not.FullSourceSearch) then
-         Call GetNonZeroLine(lname)
-         write(2,*) 'Imaging input line-2:',lname
-         read(lname,*,iostat=nxx) SigmaGuess !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
-         If(nxx.ne.0) SigmaGuess=(/ 3000.d0,3000.d0,2000.d0 /)
-         Write(2,"('Preferred source location:',3F8.2,'[km]')") SourceGuess(:,1)/1000.
-         Write(2,"('Initial error on location:',3F8.3,'[km]')") SigmaGuess(:)/1000.
-      Endif
-      Start_time(1)=(StartTime_ms/1000.)/sample  ! in sample's
-      write(*,*) 'Start Source Finding'
-      lname=' [s] ; ID, (North, East, vertical at core) [m] , t [s] , chi^2, sigma(N,E,v),    N_EffAnt, Max_EffAnt ;'
-      lname=lname//' height, l&r widths'
-      write(Txt20ImagingPars,"(A,1x,F8.2,1x,F8.2,1x, F8.2)") TRIM(FlashName), StartTime_ms, StartingTime, StoppingTime
-      write(Txt20Identifier,"('Chnk#  , t[ms] , max,found, <5^2 ,',2x,A)") TRIM(release)
-      Sources='Srcs'//release(2:3)
-      If(Dual) then
-         Sources1=TRIM(Sources)//'-dbl'//TRIM(OutFileLabel)
-         Open(unit=17,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
-         Write(17,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-         Write(17,"('! ',A)") TRIM(TxtImagingPars)
-         Write(17,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' even&odd antenna numbers'
-         Open(unit=27,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
-         write(27,*) TRIM(Txt20ImagingPars)
-         write(27,"('! ',A)") TRIM(Txt20Identifier)
-         units(2)=17
-      Else
-         Sources1=TRIM(Sources)//'-even'//TRIM(OutFileLabel)
-         Open(unit=15,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
-         Write(15,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-         Write(15,"('! ',A)") TRIM(TxtImagingPars)
-         Write(15,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' even antenna numbers'
-         Open(unit=25,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
-         write(25,*) TRIM(Txt20ImagingPars)
-         write(25,"('! ',A)") TRIM(Txt20Identifier)
-         units(0)=15
-         !
-         Sources2=TRIM(Sources)//'-odd'//TRIM(OutFileLabel)
-         Open(unit=16,STATUS='unknown',ACTION='write', FILE = TRIM(Sources2)//'.csv')
-         Write(16,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-         Write(16,"('! ',A)") TRIM(TxtImagingPars)
-         Write(16,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' odd antenna numbers'
-         Open(unit=26,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources2)//'_stat.csv')
-         write(26,*) TRIM(Txt20ImagingPars)
-         write(26,"('! ',A)") TRIM(Txt20Identifier)
-         units(1)=16
-      Endif
-      !
-      ChunkNr_start=StartingTime/(1000.*sample*(Time_dim-2*EdgeOffset))+1
-      ChunkNr_stop=StoppingTime/(1000.*sample*(Time_dim-2*EdgeOffset))+1
-      !ChunkNr_start=1501 ; ChunkNr_stop=1900 ! No Time Frame == ChunkNr
-      write(*,"(A,i5,A)") achar(27)//'[45m # of data-blocks read in=',(ChunkNr_stop-ChunkNr_start),achar(27)//'[0m'
-      If((ChunkNr_stop-ChunkNr_start).gt.3) Production=.true.
-      Do TimeFrame=ChunkNr_start, ChunkNr_stop
-         AntennaNrError=0
-         write(*,"(A,i6,A)", ADVANCE='NO') achar(27)//'[31m Processing block# ',TimeFrame,achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
+   EndDo ! i_dist=1,MaxFitAntD_nr
+   flush(unit=2)
+   !
+   ! Start the more serious stuff
+   SELECT CASE (MOD(RunMode,10))
+      ! ========0 0 0 0 0 0 0 0 0 0 0 0 0
+      CASE(0)  ! SelectData                          RunMode=0
          i_chunk=1
-         Start_Time(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
-         !Write(2,*) 'StartTime_ms=',StartTime_ms,', TimeFrame=',TimeFrame,', Start_Time=',Start_Time(1)
-         Write(2,"(A,I5,A,F8.3,A,F12.6,A,I11,A,3F10.1,A)") 'Start time for slice',TimeFrame &
-            ,' (dt=',Start_time(1)*1000.d0*sample-StartTime_ms,' [ms]) is',Start_time(1)*1000.d0*sample &
-            ,' [ms]=',Start_time(1),' [Samples]; SourceGuess=',SourceGuess(:,i_chunk),';  1=North, 2=East, 3=vertical(plumbline)'
+         Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
+         !Read(lname,*) StartTime_ms, SourceGuess(:,1), StartingTime, StoppingTime  ! Start time offset = 1150[ms] for 2017 event
+         !Call Convert2m(SourceGuess(:,1))
+         !write(2,*) 'Simulation setup input line-1:',lname
+         !Call GetNonZeroLine(lname)
+         Call GetMarkedLine(Mark,lname)
+         !Read(lname(2:lnameLen),*,iostat=nxx) WriteSimulation(1:2)
+         !write(2,"(A)") 'Input line-2: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
+         !   '" !  First/Median| sample number & window length of data written to "Simulation" files'
+         write(2,"(A)") 'Input line-2: "'//Mark//'|'//TRIM(lname)// &
+            '" !  First/Median| sample number & window length of data written to "Simulation" files'
+         Read(lname,*,iostat=nxx) WriteSimulation(1:2)
+         If(  WriteSimulation(1) .le. 0. .or.  WriteSimulation(2).le. 0) Then
+            write(2,*) 'Both window definition numbers should be positive'
+            stop 'Window definition error'
+         EndIf
+         If(nxx.ne.0) then
+            write(2,*) 'Parsing error in 2nd line:'
+            stop 'Interferometry; reading error'
+         Endif
+         If(Mark.eq.'M') Then
+            WriteSimulation(1)=WriteSimulation(1)-WriteSimulation(2)/2
+         EndIf
+         Write(2,*) 'Window start at sample#=',WriteSimulation(1), ', median at ',WriteSimulation(1)+WriteSimulation(2)/2 &
+            ,', window=',WriteSimulation(2),' [samples]'
+         Start_Time(1)=(StartTime_ms/1000.)/sample
+         write(2,"(20(1x,'='),/)")
          Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-           !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
          Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
          Call DAssignFFT()
-         If(DataReadError.ne.0) cycle  !  set in AntennaRead
-         If(AntennaNrError.gt.0) cycle  !  set in AntennaRead
+         Stop 'SelectData'
+      ! ========1 1 1 1 1 1 1 1 1 1 1
+      CASE(1)  ! Explore                          RunMode=1
+         Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
+         Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
+         Call ExplorationRun
+         stop 'Normal exploration end'
+    ! ========4 4 4 4 4 4 4 4 4 4 4
+      CASE(4)  ! PTRI-D imager         RunMode=14 & 24
+         Call InterferometerRun
+      ! =============3 3 3 3 3 3 3 3 3
+      CASE(3)  ! ImpulsiveImager                          RunMode=3
+         Call ImpulsImagRun
+       ! =====2 2 2 2 2 2 2 2
+      CASE(2)  ! Calibrate                          RunMode=2
+          Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
+          Do i_chunk=1, ChunkNr_dim
+              !StartTime_ms=1200 ! i_chunk*100.
+              !
+              !Call GetNonZeroLine(lname)
+              !read(lname,*) StartTime_ms, SourceGuess(:,i_chunk) !
+              !Call Convert2m(SourceGuess(:,i_chunk))
+              Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
+              !write(2,*) 'StartTime_ms, SourceGuess', StartTime_ms, SourceGuess(:,i_chunk)
+              If(NINT(SourceGuess(2,i_chunk)).eq.1) &
+                     write(*,"(A,i3,A)") achar(27)//'[45m # Check ChunkNr_dim',i_chunk,achar(27)//'[0m'
+              Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
+              !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
+              Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
+              !
+          EndDo !  i_chunk
+          !
+          close(unit=14)
+          close(unit=12)
+          call DAssignFFT()
+          !Ant_ID=MaxLoc(AntMnem, mask=AntMnem.eq.DSet_Names(3))
+          !
+         write(*,*) 'start fitting'
+         Call FindCallibr(SourceGuess) ! Find Station Callibrations
          !
-         Call SourceFind(TimeFrame,SourceGuess,units)
+         i_chunk=0 ! scratch
+         If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
+         If(CurtainHalfWidth.gt.0) then
+            If(CurtainHalfWidth.le.10) CurtainHalfWidth=300
+            write(2,*) 'curtainplot half width: ',CurtainHalfWidth
+            Call PlotAllCurtainSpectra(CurtainHalfWidth) ! closes unit 10
+         EndIf
+         Call GLEplotControl( Submit=.true.)
+         !
+      ! =====7 7 7 7 7 7 7 7 7
+      CASE(7)  ! Field Calibrate                          RunMode=7
+         Call E_Callibr()
          !
          !
-      EndDo !  i_chunk
-      !
-      If(Dual) Then
-         Close(Unit=17)
-         Close(Unit=27)
-      Else
-         Close(Unit=15)
-         Close(Unit=16)
-         Close(Unit=25)
-         Close(Unit=26)
-      Endif
-      close(unit=14)
-      close(unit=12)
-      !
-      write(*,*) NMin, NMax, Emin, EMax
-      If((NMax-Nmin).gt.(Emax-Emin)) Then
-         NMin=NMin -.5
-         NMax=NMax +.5
-         D=(EMax+Emin)/2.
-         EMax=D + (NMax-Nmin)/2.
-         EMin=D - (NMax-Nmin)/2.
-      Else
-         EMin=EMin -.5
-         EMax=EMax +.5
-         D=(NMax+Nmin)/2.
-         NMax=D + (EMax-Emin)/2.
-         NMin=D - (EMax-Emin)/2.
-      Endif
-      lname='AFlashImage.in'  ! temporary name holder
-      Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(lname))
-      If(Dual) then
-         write(10,"(' ',A,' 6. 2. 5.0 55  ',A,'-all ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-               '"'//TRIM(Sources1)//'"', TRIM(FlashName)//'d'//TRIM(OutFileLabel), &
-               Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-         write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0.  ! no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
-         write(10,"('======================================================')")
-      Else
-         write(10,"(' ',A,' 6. 2. 5.0 55  ',A,' ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-               '"'//TRIM(Sources1)//'"', TRIM(FlashName)//'e'//TRIM(OutFileLabel), &
-               Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-         write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0. !     no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
-         write(10,"(' ',A,' 6. 2. 5.0 55  ',A,' ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-               '"'//TRIM(Sources2)//'"', TRIM(FlashName)//'o'//TRIM(OutFileLabel), &
-               Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-         write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0. !   no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
-         write(10,"('======================================================')")
-      EndIf
-      Close(unit=10)
-      !
-      If(Dual) then
-         Call GLEplotControl(PlotType='PeakStats', PlotName='PeakStatsD'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(Sources1) )
-      Else
-         Call GLEplotControl(PlotType='PeakStats', PlotName='PeakStatsE'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(Sources1) )
-         Call GLEplotControl(PlotType='PeakStats', PlotName='PeakStatsO'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(Sources2) )
-      EndIf
-      !
-      Call GLEplotControl(SpecialCmnd='cd '//TRIM(ProgramFolder))
-      If(Windows) Then
-         Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track-'//TRIM(Version)//'.f90 %LIBRARY%')
-      Else
-         Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track-'//TRIM(Version)//'.f90 ${LIBRARY}')
-      EndIf
-      Call GLEplotControl(SpecialCmnd='cd '//TRIM(FlashFolder))
-      Call GLEplotControl(SpecialCmnd=TRIM(ProgramFolder)//'TrackExe.exe  <'//TRIM(lname))
-      !
-      If(Dual) then
-         Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'d'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'d'//TRIM(OutFileLabel), Submit=.true.)
-      Else
-         Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'e'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'e'//TRIM(OutFileLabel))
-         Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'o'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'o'//TRIM(OutFileLabel), Submit=.true.)
-      EndIf
-      !
-    ! ============================================================
-    Else   !  Calibrate & plot
-       Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-       write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
-       Do i_chunk=1, ChunkNr_dim
-           !StartTime_ms=1200 ! i_chunk*100.
-           !
-           Call GetNonZeroLine(lname)
-           ! PeakPos is used only for the plot option
-           read(lname,*) StartTime_ms, SourceGuess(:,i_chunk) !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
-           Call Convert2m(SourceGuess(:,i_chunk))
-           write(2,*) 'StartTime_ms, SourceGuess', StartTime_ms, SourceGuess(:,i_chunk)
-           If(NINT(SourceGuess(2,i_chunk)).eq.1) write(*,"(A,i3,A)") achar(27)//'[45m # Check ChunkNr_dim',i_chunk,achar(27)//'[0m'
-           Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
-           !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-           Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
-           !
-       EndDo !  i_chunk
-       !
-       close(unit=14)
-       close(unit=12)
-       call DAssignFFT()
-       !Ant_ID=MaxLoc(AntMnem, mask=AntMnem.eq.DSet_Names(3))
-       !
-      write(*,*) 'start fitting'
-      Call FindCallibr(SourceGuess) ! Find Station Callibrations
-      !
-      i_chunk=0 ! scratch
-      If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
-      If(CurtainPlot) then
-         read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,i_chunk), CurtainWidth !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
-         Call Convert2m(SourceGuess(:,i_chunk))
-         write(2,*) 'curtainplot input: ',lname
-         If(nxx.ne.0 .or. CurtainWidth.le.10) CurtainWidth=300
-         Call PlotAllCurtainSpectra(CurtainWidth) ! closes unit 10
-      EndIf
-      Call GLEplotControl( Submit=.true.)
-      !
-   Endif ! ImagingRun/Explore/Calibrate
+         i_chunk=0 ! scratch
+         If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
+         If(CurtainHalfWidth.gt.0) then
+            If(CurtainHalfWidth.le.10) CurtainHalfWidth=300
+            write(2,*) 'curtainplot half width: ',CurtainHalfWidth
+            Call PlotAllCurtainSpectra(CurtainHalfWidth) ! closes unit 10
+         EndIf
+         Call GLEplotControl( Submit=.true.)
+         !
+  End SELECT
 
-    stop
+   stop
 end program LOFAR_Imaging
 !=================================
 
@@ -697,3 +814,4 @@ Subroutine AntennaSanity()
     !
     Return
 End Subroutine AntennaSanity
+!

@@ -20,14 +20,14 @@ Subroutine InterferometerRun
     !- End antennaLoop
     !++++++++++++++++++++++
    Use Interferom_Pars, only : Polar, NewCenLoc, ChainRun, StartTime_ms, AmpltPlot, i_chunk
-   Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc, PixLoc, IntFer_ant  !, Nr_IntFer
-   Use Interferom_Pars, only : Smooth, SumStrt, SumWindw, NrSlices, SliceLen
-   Use Interferom_Pars, only : IntfPhaseCheck, IntfSmoothWin, N_smth, IntPowSpec
+   Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc, PixLoc, IntFer_ant
+   Use Interferom_Pars, only : SumStrt, SumWindw, NrSlices, SliceLen
+   Use Interferom_Pars, only : IntfPhaseCheck, N_smth, IntPowSpec, NrPixSmPowTr
    use DataConstants, only : OutFileLabel, DataFolder, Calibrations, Time_Dim !, Cnu_dim,
    !use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
    use DataConstants, only : Polariz
    use Chunk_AntInfo, only : Start_time, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
-   use ThisSource, only : Dual, CurtainPlot, PeakNrTotal, Peak_eo, Peak_start, Peakpos, SourcePos
+   use ThisSource, only : Dual, CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use FitParams, only : AntennaRange
    use constants, only : dp, ci, pi, Sample, Refrac, c_mps
    use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
@@ -35,56 +35,59 @@ Subroutine InterferometerRun
    use HDF5_LOFAR_Read, only : CloseDataFiles
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    use GLEplots, only : GLEplotControl
+    use LOFLI_Input, only : ReadSourceTimeLoc
    !use mod_test
    Implicit none
-   !real ( kind = 8 ) :: Dist
-   integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu, nxx
+   integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu, IntfSmoothWin, nxx
+   Integer, parameter ::lnameLen=180
    character(len=5) :: txt
-   Character(LEN=180) :: lname
-   !Real(dp) :: RDist, angle, angle_all, dt_AntPix
-   Real(dp) :: SmPow
-   !Real(dp) :: RMax, Rmin, Epsln=epsilon(Epsln)
-   !Complex(dp) :: dPhase, Phase, A
+   character(Len=1) :: Mark
+   Character(LEN=lnameLen) :: lname
+   Real(dp) :: SmPow, t_shft
    Integer :: Date_T(8)
-
-   !integer :: i_N, i_E, i_h !, N_h,  N_hlow, N_Eup, N_Elow
    character*100 :: shellin, IntfRun_file
    Character*7 :: PreAmble
    Logical :: Interferometry=.true., E_FieldsCalc
-   NAMELIST /Parameters/ Interferometry, Dual, E_FieldsCalc, CurtainPlot &  ! just those that are of interest for interferometry
+   NAMELIST /Parameters/ Interferometry, Dual, E_FieldsCalc  &  ! just those that are of interest for interferometry
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
          , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations &
          , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
    !    .
    E_FieldsCalc=Polariz
-   N_smth=IntfSmoothWin
-   If(N_smth.lt.2) N_smth=20
-   Allocate( Smooth(-N_smth:N_smth) )
-   Smooth(:)=0.
-   Smooth(0)=1.
-   Smooth(N_smth/2)=0.5  ! needed for block profile for even values of N_smth
-   Do i=1,N_smth
-      !Smooth(i)=(1.-(Real(i)/N_smth)**2)**2.5  ! Parabola to power to make it =0.5 at N_smth/2
-      If(i.lt.(N_smth+1)/2) Smooth(i)=1.      ! Block gives indistinguishable results from parabola; parabola has a tiny bit smaller volume around peak.
-      Smooth(-i)=Smooth(i)
-   EndDo
-   Write(2,"(1x,A,I3,A,I3,I3,A,3F6.3)") 'Width smoothing fie=', N_smth, &
-      '; relative values in range (',N_smth/2-1,N_smth/2+1,') = ',Smooth(N_smth/2-1:N_smth/2+1)/Smooth(0)
-   SmPow=SUM(Smooth(:))
-   Smooth(:)=Smooth(:)/SmPow
+   IntfSmoothWin=N_smth
    !
-   Call GetNonZeroLine(lname)
-   Read(lname,*) StartTime_ms, CenLoc  ! Start time
-   write(2,"(A)") 'Interferometry input line-1; time & position: "'//TRIM(lname)//'"'
-    flush(unit=2)
-   StartTime_ms=StartTime_ms+TimeBase
-   Call Convert2m(CenLoc)
-   !If(abs(CenLoc(1)) .lt. 100. ) CenLoc(:)=CenLoc(:)*1000.  ! convert from [km] to [m]
-   write(2,*) 'true start time (adding base)=', StartTime_ms, '[ms]'
-   Call GetNonZeroLine(lname)
-   Read(lname(2:180),*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
-   write(2,"(A)") 'Interferometry input line-2, grid specification: "'//TRIM(lname)//'"'
-   SELECT CASE (lname(1:1))
+   ! Get center voxel
+   Call ReadSourceTimeLoc(StartTime_ms, CenLoc)
+   !Call GetNonZeroLine(lname)
+   !Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
+   !write(2,"(A)") 'Interferometry input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
+   !   '" !  Source/Reference-| time, & position'
+   !flush(unit=2)
+   !Call Convert2m(CenLoc)
+   !StartTime_ms=StartTime_ms+TimeBase
+   !t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
+   !j = iachar(lname(1:1))  ! convert to upper case if not already
+   !if (j>= iachar("a") .and. j<=iachar("z") ) then
+   !   lname(1:1) = achar(j-32)
+   !end if
+   !SELECT CASE (lname(1:1))
+   !   CASE("S")  ! time at Source (central voxel) is given
+   !      StartTime_ms=StartTime_ms+t_shft
+   !   CASE DEFAULT  ! time at reference antenna is given
+   !End SELECT
+   !write(2,"(A,F12.6,A,F12.6,A)") &
+   !   ' Ttrue start time trace, adding base, in ref antenna (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]'
+   !
+   ! Get grid:
+   Call GetMarkedLine(Mark,lname)
+   write(2,"(A)") 'Input line-2: "'//Mark//'|'//TRIM(lname)// &
+      '" !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)'
+   Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
+   If(nxx.ne.0) then
+      write(2,*) 'reading error in 2nd line:'
+      stop 'Interferometry; reading error'
+   Endif
+   SELECT CASE (Mark(1:1))
       CASE("P")  ! polar option is selected
          Polar=.true.
       CASE("C")   ! Cartesian option
@@ -101,6 +104,38 @@ Subroutine InterferometerRun
    d_loc(2)=d_loc(2)*pi/180.   ! convert to radian
    Endif
    !
+   ! Start with interferometry setup
+   !
+   ! Summing regions
+   Call GetMarkedLine(Mark,lname)
+   !Read(lname,*,iostat=nxx) SumStrt, SumWindw, NrSlices, AmpltPlot
+   Read(lname,*,iostat=nxx) SumStrt, SumWindw, AmpltPlot ! rough slicing by NrSlices, is depreciated, Dec 2021
+   write(2,"(A)") 'Input line-3: "'//Mark//'|'//TRIM(lname)//'"  !  First/Median| SumStrt, SumWindw, AmpltPlot'
+   If(nxx.ne.0) then
+      write(2,*) 'reading error in 3rd line:'
+      stop 'Interferometry; reading error'
+   Endif
+   NrSlices=1  !  depreciated, Dec 2021; option may be removed completely someday
+   !If(NrSlices.gt.NS_max) NrSlices=NS_max ;  NrPixSmPowTr=(SumWindw-1)/N_smth-1
+   !If(NrSlices.lt.1) NrSlices=1  ! This is for the rough slicing, still implemented but depreciated
+   If(SumWindw .lt. 3*N_smth) Then
+      SumWindw=3*N_smth
+      write(2,*) 'SumWindw was smaller than 3 times slicing window of',N_smth
+   EndIf
+   NrPixSmPowTr=SumWindw/N_smth-1  ! The number of fine slices for TRI-D imaging
+   SumWindw=N_smth*(NrPixSmPowTr+1) ! set to an integer multiple of N_smth and allow for initial and final trailing
+   If(Mark.eq.'M') Then
+      If(MOD(NrPixSmPowTr,2).eq.0) NrPixSmPowTr=NrPixSmPowTr+1 ! Make total number of slices=NrPixSmPowTr odd
+      SumWindw=N_smth*(NrPixSmPowTr+1) ! set to an integer multiple of N_smth
+      SumStrt=SumStrt-SumWindw/2-1 ! make sure there is a slice centered around this sample
+   EndIf
+   SliceLen=SumWindw/NrSlices ! obsolete
+   If(SliceLen.lt.1) SliceLen=1 ! obsolete
+   NrSlices=SumWindw/SliceLen ! obsolete
+   write(2,"(A,I5,A,I5,A,F6.3)") 'Adjusted TRI-D window, SumStrt=',SumStrt, ', SumWindw=', SumWindw, ', AmpltPlot=', AmpltPlot
+   write(2,"(20(1x,'='))")
+   !
+   !  Read the time traces
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), 'initializing'
    i_chunk=1
@@ -113,25 +148,7 @@ Subroutine InterferometerRun
    EndIf
    call DAssignFFT()                   !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
    !
-   ! Start with interferometry setup
-   !
-   ! Summing regions
-   Call GetNonZeroLine(lname)
-   Read(lname,*,iostat=nxx) SumStrt, SumWindw, NrSlices, AmpltPlot
-   write(2,"(A)") 'Interferometry input line-3: SumStrt, SumWindw, NrSlices, AmpltPlot=: "'//TRIM(lname)//'"'
-   If(nxx.ne.0) then
-      write(2,*) 'reading error in 3rd line:',lname
-      stop 'Interferometry; reading error'
-   Endif
    If(NoiseLevel.lt.0) NoiseLevel=0.2
-   !If(NrSlices.gt.NS_max) NrSlices=NS_max
-   If(NrSlices.lt.1) NrSlices=1
-   SliceLen=NINT(SumWindw*1./NrSlices)
-   If(SliceLen.lt.1) SliceLen=1
-   SumWindw=NrSlices*SliceLen
-   write(2,*) 'Adapted window slices',SumWindw, NrSlices, SliceLen, AmpltPlot
-   If(SumWindw .lt. 5*N_smth) IntPowSpec=.false.
-   write(2,*) 'SumWindw:',SumWindw,IntPowSpec
    !
    ! ----------------------------------------------------
    ! Extract polar coordinates;  1=N=phi; 2=E=theta; 3=h=Radial distance
@@ -159,35 +176,35 @@ Subroutine InterferometerRun
    !trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat'
    !------------------------------------
    ! main loop over direction antennas
-   If(Dual) Then
+!   If(Dual) Then
       Write(2,*) 'performing E-field Interferometry'
       Call EI_run
       PreAmble='EI'
-   Else
-      Write(2,*) 'performing even/odd antenna-Signal Interferometry'
-      Call SI_run
-      PreAmble='Interf'
-   EndIf
+!   Else
+!      Write(2,*) 'performing even/odd antenna-Signal Interferometry'
+!      Call SI_run
+!      PreAmble='Interf'
+!   EndIf
 
 
-   DeAllocate( Smooth )
+   !DeAllocate( Smooth )
    !
    !------------------------------------------
    !
    !trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat'
    !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
    !write(2,*) 'PlotAllCurtainSpectra=',CurtainPlot,SumStrt,SumWindw
-   If(CurtainPlot) then
+   If(CurtainHalfWidth.gt.0) then
       !read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,i_chunk), CurtainWidth !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
       PeakNrTotal=2
       Peak_eo(1)=0   ; Peak_eo(2)=1  ! only the i_eo=0 peaks are used for curtainplotting
-      Peak_start(1)=1   ; Peak_start(2)=1 ! chunk nr
-      RefAnt(1,0)=IntFer_ant(1)
+      ChunkNr(1)=1   ; ChunkNr(2)=1 ! chunk nr
+      RefAnt(1,0)=IntFer_ant(1,1)
       !RefAnt(i_chunk,i_eo)
       !Unique_StatID(i_stat)  ! stations that will be used ???
       PeakPos(1)=SumStrt+SumWindw/2  ; PeakPos(2)=SumStrt+SumWindw/2  ! take a single peak at the center of the window
       !SourcePos(1,i_Peak)
-      Call PlotAllCurtainSpectra(SumWindw/2)
+      Call PlotAllCurtainSpectra(CurtainHalfWidth)
    EndIf
    !
    If(NrSlices.gt.1 .and. Polar) Call GLEplotControl(PlotType=TRIM(PreAmble)//'Track', &

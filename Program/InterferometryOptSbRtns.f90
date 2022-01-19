@@ -55,7 +55,7 @@ Subroutine PixBoundingBox()
    use constants, only : dp !, pi, Sample, Refrac, c_mps
    use DataConstants, only : Time_Dim
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
-   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFer
+   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerMx, Nr_IntFerCh
    Use Interferom_Pars, only : CenLoc, CenLocPol, Polar, d_loc, Diff, N_pix
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax
    Use Interferom_Pars, only : SumStrt, SumWindw, IntfDim, IntfNuDim, IntfLead, IntfBase
@@ -63,11 +63,12 @@ Subroutine PixBoundingBox()
    !Integer, intent(in) :: i_chunk
    Real(dp) :: PixLoc(1:3), PixLocPol(1:3), t_shft, RDist
    Real(dp) :: t_n, t_p, mean, RMS, Err(3)
-   Integer :: i, i_ant, j_IntFer
+   Integer :: i, i_ant, j_IntFer, Nr_IntFer
    !
    PixLoc(:)=CenLoc(:)
    xMin=+99999 ; xMax=-99999; yMin=+99999; yMax=-99999; zMin=+99999; zMax=-99999 !; tMin, tMax,
    Err(:)=0.
+   Nr_IntFer=Nr_IntFerCh(i_chunk)
    Do i=1,3
       If(polar) then
          PixLocPol(:)=CenLocPol(:)
@@ -81,7 +82,7 @@ Subroutine PixBoundingBox()
       t_n=0.   ; t_p=0
       Mean=0. ; RMS=0.
       Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-         i_ant=IntFer_ant(j_IntFer)
+         i_ant=IntFer_ant(j_IntFer,i_chunk)
          Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
          t_shft=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
          Mean=Mean+t_shft
@@ -116,7 +117,6 @@ Subroutine PixBoundingBox()
    IntfDim=2*IntfNuDim ! Length of time trace used for interference
    IntfLead=(IntfDim-SumWindw)/2
    IntfBase=SumStrt - IntfLead
-   !write(2,*) 'diagnostics;(lead,dim):', IntfLead, IntfDim
    !write(*,"(A,o10,b20)") '(lead,dim):', IntfLead, IntfDim
    If((IntfBase+IntfDim .gt. Time_dim) .or. (IntfBase .lt. 1)) then
       write(2,*) 'dimensions for interferometry out of range: ', IntfBase, IntfBase+IntfDim, Time_dim
@@ -134,14 +134,14 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    !--------------------------------------------
    use constants, only : dp, pi, Sample  ! , Refrac, c_mps
    use DataConstants, only : DataFolder, OutFileLabel, Time_Dim
-   use Chunk_AntInfo, only : TimeBase
+   !use Chunk_AntInfo, only : TimeBase
    use Chunk_AntInfo, only : CTime_spectr
-   Use Interferom_Pars, only : CTime_sum, SumStrt, SumWindw, polar, N_pix, d_loc, IntFer_ant, IntfLead, CenLocPol, CenLoc, RimSmPow
+   Use Interferom_Pars, only : CTime_sum, SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
    Use Interferom_Pars, only : PixelPower, MaxSmPow, N_smth, StartTime_ms
    Use FitParams, only : AntennaRange
    Use ThisSource, only : Dual
    !Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax
-   Use Interferom_Pars, only : i_chunk, NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, t_shft, NewCenLoc
+   Use Interferom_Pars, only : i_chunk, MaxSmPowGrd, PixSmPowTr, t_shft, NewCenLoc
    !Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
    Implicit none
    Integer, intent(in) :: RefAntSAI, i_eo
@@ -250,7 +250,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpeceo.csv')
       Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,F9.2,' 0')") StartTime_ms, CenLoc/1000., AntennaRange, SSm, i, &
          t_shft*1000., SMPowMx
-      Do i=0,Time_Dim/SSm
+      Do i=0,Time_Dim/SSm-1
          Pref=0.
          Psum=0.
          Do j=1,SSm
@@ -265,7 +265,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpec'//TRIM(txt)//'.csv')
       Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,F9.2,' 0')") StartTime_ms, CenLoc/1000., AntennaRange, SSm, i, &
          t_shft*1000., SMPowMx
-      Do i=0,Time_Dim/SSm
+      Do i=0,Time_Dim/SSm-1
          Pref=0.
          Psum=0.
          Do j=1,SSm
@@ -290,13 +290,13 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    use constants, only : dp, pi, Sample, Refrac, c_mps
    use DataConstants, only : DataFolder, OutFileLabel
    use Chunk_AntInfo, only : TimeBase
-   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntFer_ant, IntfLead, CenLocPol, CenLoc, RimSmPow
-   Use Interferom_Pars, only : PixLoc, PixelPower, MaxSmPow, N_smth, Nr_IntFer, IntfNuDim
+   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
+   Use Interferom_Pars, only : PixLoc, PixelPower, MaxSmPow, N_smth, Nr_IntFerMx, Nr_IntFerCh, i_chunk, IntfNuDim
    Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
-   Use Interferom_Pars, only : alpha, PolBasis, PowerScale
+   Use Interferom_Pars, only : alpha, PolBasis !, PowerScale
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax, AmpltPlot, t_offsetPow
    Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RatMax, PixPowOpt
-   Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2
+   Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
    use Chunk_AntInfo, only : NoiseLevel
    use ThisSource, only : Dual
@@ -328,12 +328,18 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       xMax=y0+(yMax-yMin)/2.
       xMin=y0-(yMax-yMin)/2.
    EndIf
-   write(2,*) xMin/1000.-.05, xMax/1000.+.05, yMin/1000.-.05, yMax/1000.+.05, zMin/1000.-.05, zMax/1000.+.05
+   !write(2,*) xMin/1000.-.05, xMax/1000.+.05, yMin/1000.-.05, yMax/1000.+.05, zMin/1000.-.05, zMax/1000.+.05
    !
    If(Dual) Then
       OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat')
-      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
-         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt , 0.0        ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
+         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      Write(2,*) 'In OutputIntfPowrMxPos, data written to file:', &
+            trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat'
+      write(2,*) 'Header:tMin-.0005-TimeBase, tMax+.0005-TimeBase,  TimeBase,  CenLoc(:), ', &
+            'TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth; data range=', 1, (1+NrPixSmPowTr)*N_smth
+      write(2,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
+         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
       Write(28,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
          '!   nr,  time[ms] ;','StI','StI12', '  StQ','  StU','  StV',' StI3',' StU1',' StV1',' StU2',' StV2', 'Chi^2/DoF'
    Else
@@ -345,8 +351,8 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    EndIf
    OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat')
    write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
-      zMin/1000.-.05, zMax/1000.+.05, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-   Write(29,*) '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel, PowerScale, ' !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+      zMin/1000.-.005, zMax/1000.+.005, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+   Write(29,*) '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel,  '1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
    ! True bounding Box
    Do i_1=1,2   ! or azimuth Phi
       Do i_2=1,2   ! or elevation angle theta
@@ -391,9 +397,9 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    ! get angle of PolBasis(:,1) with VerVec(:)
    X=SUM(PolBasis(:,1)*VerVec(:)) ; Y=SUM(PolBasis(:,1)*HorVec(:)) ; AngOff=ATAN2(Y,X)
    ! N.B. PolBasis is by construction lefthanded in the real world
-   Write(2,*) 'CenLoc(:)',CenLoc(:)
-   Write(2,*) 'HorVec(:)',HorVec(:)
-   Write(2,*) 'VerVec(:)',VerVec(:), AngOff*180./pi
+   !Write(2,*) 'CenLoc(:):',CenLoc(:)
+   !Write(2,*) 'HorVec(:):',HorVec(:)
+   !Write(2,*) 'VerVec(:):',VerVec(:), AngOff*180./pi
    !y0Max=0.
    !
    !write(2,"(8x,A,4x,A)") "i, AveSmPow/y0, RimMx/y0,  Mx,  volume;      Barymetric pixel ;    Maximal pixel", &
@@ -430,13 +436,14 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_Mx(:) !, BarySet
          ! calculate polarization for maximum intensity location
          !Call EI_Polariz(Nr_IntFer, IntfNuDim, i_slice)
-         Call EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
-         Write(28,"(i6,',',f11.5,',', 2(g12.4,','), 19(f8.3,',') )") i_slice, t_ms-t_shft, &
+         Call EI_PolarizSlice(i_slice)
+         !Call EI_PolarizW(Nr_IntFerCh(i_chunk), IntfNuDim, i_slice)
+         Write(28,"(i6,',',f11.5,',', 2(g12.4,','), 22(f8.3,',') )") (1+i_slice*N_smth), t_ms-t_shft, &
             StI, dStI, 100*StI12/StI, 100*dStI12/StI, 100*StQ/StI, 100*dStQ/StI, &
             100*StU/StI, 100*dStU/StI, 100*StV/StI, 100*dStV/StI, &
             100*StI3/StI, 100*dStI3/StI, 100*StU1/StI, 100*dStU1/StI, 100*StV1/StI, 100*dStV1/StI, &
             100*StU2/StI, 100*dStU2/StI, 100*StV2/StI , 100*dStV2/StI, &
-            Chi2pDF
+            Chi2pDF, 100.*P_un, 100.*P_lin, 100.*P_circ
          !
       Else
          ! =======================================================================
@@ -469,11 +476,12 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       !                  'AveSmPow', i, QualBar(3), QualBar(1), SMPowMx, QualBar(2), ';', &
       !                  d_Bar(:), d_Mx(:)!, RimMaxPix(1:3)
       If(Dual) Then
-         write(2,"(A,I6, 2F7.3, F10.2, A, 4F10.5, ';',3F7.1, '%;',3F7.1)") &
-                           'MxPow', i_slice, QualBar(3), QualBar(1), SMPowMx, ';', &
-                           Y, PixLoc(1)/1000., PixLoc(2)/1000., PixLoc(3)/1000., &
-                           100.*MaxSmPowQ(i_slice), 100.*MaxSmPowU(i_slice), 100.*MaxSmPowV(i_slice), &
-                           MaxSmPowI3(i_slice) ,100.*s,X
+         !write(2,"(A,I6, 2F7.3, F10.2, A, 4F10.5, ';',3F7.1, '%;',3F7.1)") &
+         !                  'MxPow', i_slice, QualBar(3), QualBar(1), SMPowMx, ';', &
+         !                  Y, PixLoc(1)/1000., PixLoc(2)/1000., PixLoc(3)/1000., &
+         !                  100.*MaxSmPowQ(i_slice), 100.*MaxSmPowU(i_slice), 100.*MaxSmPowV(i_slice), &
+         !                  MaxSmPowI3(i_slice) ,100.*s,X
+         t_ms=t_ms+0.0
       Else
          write(2,"(A,I6, 2F7.3, F10.2, A, 4F10.5, ';',3F7.1, '%;',3F7.1)") &
                            'MxPow', i_slice, QualBar(3), QualBar(1), SMPowMx, ';', &
@@ -516,10 +524,10 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    ! Do a 3D parabolic fit to interpolate around the maximal pixel
    !--------------------------------------------
    use constants, only : dp
-   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, IntFer_ant
-   Use Interferom_Pars, only : PixelPower, MaxSmPow
+   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix !, IntFer_ant
+   Use Interferom_Pars, only : PixelPower, MaxSmPow !,    NrPixSmPowTr, MaxIntfIntenLoc ! Nr of smoothed slices
    !Use Interferom_Pars, only : PowrThresh
-   Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr
+   Use Interferom_Pars, only : MaxSmPowGrd, PixSmPowTr
    !Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
    Implicit none
    Integer, intent(in) :: i
@@ -635,8 +643,8 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
                   Valu(i_h)=1.-(PixSmPowTr(i,i_gr(1)+i_N,i_gr(2)+i_E,i_gr(3)+i_h))/y0
                   Parb(i_h)=1.-Paraboloid(y0,Ay,By,Ry,c_gr)/y0
                Enddo
-               write(2,"(A, 2i3,5F6.2,'; ',5F6.2)") 'area i_h,i_n',i_h,i_N, Valu(:), Parb(:)
-               flush(unit=2)
+               !write(2,"(A, 2i3,5F6.2,'; ',5F6.2)") 'area i_h,i_n',i_h,i_N, Valu(:), Parb(:)
+               !flush(unit=2)
             Enddo
          Enddo
          !      write(2,"(/,A, 2i3,5F6.2,'; ',5F6.2,'; ',F9.1)") 'area i_h=-2:2,i_n=0',i_h,i_N, Valu(:), Parb(:),y0
@@ -647,8 +655,8 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Det3=Ay(1)*Ay(2)*Ay(3)+2*Ry(1)*Ry(2)*Ry(3)-Ay(1)*Ry(1)*Ry(1)-Ay(2)*Ry(2)*Ry(2)-Ay(3)*Ry(3)*Ry(3) !-Ay()*R()*R()
    If(Det3.ge.0.) then  ! all eigenvalues should be negative for a real maximum (should always be fulfilled)
       B=Ay(1)*Ay(2)*Ay(3)
-      Write(2,*) i,'Det3', Det3, Ay(:), (4*Ry(j)*Ry(j)*Ay(j)/B ,j=1,3)
-      flush(unit=2)
+      !Write(2,*) i,'Det3', Det3, Ay(:), (4*Ry(j)*Ry(j)*Ay(j)/B ,j=1,3)
+      !flush(unit=2)
       !write(2,*) 'B:',B, Ry(:),i_gr(:)
       !write(2,*) 'surroundings:',  PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)+1)-y0, PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)-1)-y0 &
       !   , PixSmPowTr(i,i_gr(1),i_gr(2)+1,i_gr(3)-1)-y0, PixSmPowTr(i,i_gr(1),i_gr(2)-1,i_gr(3)+1)-y0 &
@@ -678,7 +686,7 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !
    !write(2,*) 'y0:',y0,det3
    !write(2,*) 'FindInterpolMx:', i_gr(:), d_gr(:)
-   B=sqrt(SUM(d_gr(:)*d_gr(:)))
+   B=sqrt(SUM(d_gr(:)*d_gr(:)))  ! Limit the max distance from the most intense voxel
    If(B.gt.D0) Then
       write(2,*) 'Interpolation distance shortend:',B
       d_gr(:)=d_gr(:)*D0/B
@@ -711,10 +719,10 @@ Subroutine FindBarycenter(i,Baryd,SMPow,Qualty)
    !     File 30 opened
    !--------------------------------------------
    use constants, only : dp, pi, Sample  ! , Refrac, c_mps
-   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntFer_ant, IntfLead, CenLocPol, CenLoc, RimSmPow
+   Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
    Use Interferom_Pars, only : PixelPower, MaxSmPow, N_smth
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax
-   Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RatMax
+   Use Interferom_Pars, only : MaxSmPowGrd, PixSmPowTr, RatMax
    use Chunk_AntInfo, only : NoiseLevel
    !Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
    Implicit none
@@ -814,7 +822,7 @@ Subroutine OutputIntfSlices(i_eo)
    EndIf
    Do i=0, SumWindw
       j=i+SumStrt
-      write(29,"(i6,',',g12.4,',',g12.4)") i, (ABS(CTime_spectr(j,IntFer_ant(1),i_chunk)) )**2, ABS(CTime_sum(j))**2
+      write(29,"(i6,',',g12.4,',',g12.4)") i, (ABS(CTime_spectr(j,IntFer_ant(1,i_chunk),i_chunk)) )**2, ABS(CTime_sum(j))**2
    Enddo
    Close(Unit=29)
    !

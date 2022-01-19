@@ -23,6 +23,28 @@ Function random_stdnormal() Result(x)
    Return
 end Function random_stdnormal
 !-----------------------------------
+Subroutine random_stdnormal3D(x)
+!  https://masuday.github.io/fortran_tutorial/random.html
+! General interest: https://en.wikibooks.org/wiki/Fortran/Fortran_procedures_and_functions
+   implicit none
+   real, intent(out) :: x(1:3)
+   real :: R,D, Epsln=epsilon(Epsln)
+   real :: u1,u2,u3
+   Real :: random_stdnormal
+   ! call random_number(r) gives 0=< r < 1 i.e. including 0, excluding 1
+   call random_number(u1)  ! may include zero
+   call random_number(u2)
+   call random_number(u3)
+   R=sqrt((0.5-u1)**2+(0.5-u2)**2+(0.5-u3)**2+Epsln) ! to prevent zero
+   D=random_stdnormal()! can be zero
+   D=((abs(d))**(1/3.))  ! to have distances distributed like [d^2 x gaussian(d)]
+   !D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
+   x(1)= D*(0.5-u1)/R
+   x(2)= D*(0.5-u2)/R
+   x(3)= D*(0.5-u3)/R
+   Return
+end Subroutine random_stdnormal3D
+!-----------------------------------
 Program Simulate_Data
    use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
    use DataConstants, only : Station_nrMax
@@ -149,8 +171,9 @@ Program Simulate_Data
    !
    Call RFTransform_su(NtSamples)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    dnu=100./NnuSamples   ! [MHz] Jones matrix is stored on 1MHz grid
-   inu1=Int(Freq_min/dnu)
-   inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu1=Int(Freq_min/dnu)+1
+   inu2=Int(Freq_max/dnu)-1
+   !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
    nu_Fltr(:)=0.
    nu_Fltr(inu1:inu2)=1.
    !
@@ -346,6 +369,7 @@ Program Simulate_Data
          Call RFTransform_CF2CT(Cnu_0(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
          Call RFTransform_CF2CT(Cnu_1(0),CTime_1(1) )
             Open(unit=23,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_RefAntTrace.dat')
+            write(2,*) 'spectrum of ant=',j_ant,' written to:','files/'//TRIM(Simulation)//'_RefAntTrace.dat'
             Do i_sampl=1,NtSamples
                write(23,*) i_sampl,REAL(CTime_0(i_sampl)), ABS(CTime_0(i_sampl)), REAL(CTime_1(i_sampl)), ABS(CTime_1(i_sampl))
             Enddo
@@ -369,6 +393,7 @@ End Program Simulate_Data
 !=====================================
 Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr)
    use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
+   !Use RandomFunc, only : random_stdnormal, random_stdnormal3D
    Implicit none
    !
    Integer, intent(in) :: SrcNrMax
@@ -380,9 +405,10 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Time_Interval, Sources_TS, Sources_LocNEh(1:3), Sources_AmpNEh(1:3),t_shft
    Integer :: NConstruct, nxx, i_src
-   Real(dp) :: D, Phi, Thet, Time_width, Space_width,R,Epsln=epsilon(Epsln)
+   Real(dp) :: D, Phi, Thet, Time_width, Space_width, PolSpread, R,Epsln=epsilon(Epsln)
    Character(LEN=180) :: lname
-   Real :: random_stdnormal,x,y,z
+   Real :: x,y,z, RGV(1:3) ! Random Gaussian distributed Vector
+   Real :: random_stdnormal
    !
    SrcNr=0
    Do !i_src=1,SrcNrMax
@@ -415,9 +441,9 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
       EndIf
       ! check for source cloud
       If((Lab1(1:3) .eq. 'Clo') .or. (Lab1(1:3) .eq. 'clo')) Then ! Cloud
-         Read(lname,*,IOSTAT=nxx) Lab1, Time_width, Space_width, NConstruct
+         Read(lname,*,IOSTAT=nxx) Lab1, Time_width, Space_width, PolSpread, NConstruct
          If(nxx.ne.0) then
-            Write(2,*) 'Expected: "Lab1, Time_width[samples], Space_width, NConstruct" but got ',TRIM(lname)
+            Write(2,*) 'Expected: "Lab1, Time_width[samples], Space_width, PolSpread, NConstruct" but got ',TRIM(lname)
             stop
          Endif
          Call GetNonZeroLine(lname)
@@ -428,21 +454,25 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
          Endif
          Call Convert2m(Sources_LocNEh)
          write(2,*) 'Form a cloud around:', Sources_TS, Sources_LocNEh(:)/1000., Sources_AmpNEh(:)
+         write(2,*) 'Spread in time, pos, pol=',Time_width, Space_width, PolSpread
          If(NConstruct.gt.(SrcNrMax-SrcNr)) NConstruct=(SrcNrMax-SrcNr)
          Do i_src=0,NConstruct-1
             SrcNr=SrcNr+1
-            call random_number(x)  ! may include zero
-            call random_number(y)
-            call random_number(z)
-            R=sqrt((0.5-x)**2+(0.5-y)**2+(0.5-z)**2+Epsln) ! to prevent zero
-            D=random_stdnormal()! can be negative
-            D=((abs(d))**(1/3.))*Space_width  ! to have distances distributed like [d^2 x gaussian(d)]
-            !D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
+            !call random_number(x)  ! may include zero
+            !call random_number(y)
+            !call random_number(z)
+            !R=sqrt((0.5-x)**2+(0.5-y)**2+(0.5-z)**2+Epsln) ! to prevent zero
+            !D=random_stdnormal()! can be negative
+            !D=((abs(d))**(1/3.))*Space_width  ! to have distances distributed like [d^2 x gaussian(d)]
+            !!D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
             SourcesListTS(SrcNr)=Sources_TS + random_stdnormal()*Time_width
-            SourcesListLocNEh(1,SrcNr)=Sources_LocNEh(1)+ D*(0.5-x)/R
-            SourcesListLocNEh(2,SrcNr)=Sources_LocNEh(2)+ D*(0.5-y)/R
+            !SourcesListLocNEh(1,SrcNr)=Sources_LocNEh(1)+ D*(0.5-x)/R
+            !SourcesListLocNEh(2,SrcNr)=Sources_LocNEh(2)+ D*(0.5-y)/R
             SourcesListLocNEh(3,SrcNr)=Sources_LocNEh(3)+ D*(0.5-z)/R
-            SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
+            Call random_stdnormal3D(RGV)
+            SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)+ Space_width*RGV(:)
+            Call random_stdnormal3D(RGV)
+            SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:) + PolSpread*RGV(:)
             ! write(3,*) i_src,D,SourcesListLocNEh(:,SrcNr) ! just for checking the cloud structure using  Sources_Plots.gle
          EndDo
          cycle

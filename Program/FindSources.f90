@@ -26,10 +26,10 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
 !        and that 'FitRange_Samples=??' is optimal
 !  v18: Peak-location statistics file written
 !  v18: 'PeaksPerChunk' introduced as a parameter
-   use DataConstants, only : Production
+   use DataConstants, only : Production, Time_dim, EdgeOffset
    use Chunk_AntInfo, only : Ant_Stations, Start_time, NoiseLevel
    use Chunk_AntInfo, only : MaxPeaksPerChunk, PeaksPerChunk!, PeakSP, PeakSWl, PeakSWu, PeakSAmp, PeakD_nr
-   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, TotPeakNr, PeakPos, Peak_eo, Peak_start
+   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, TotPeakNr, PeakPos, Peak_eo, ChunkNr
    use ThisSource, only : RefAntErr, SourcePos, Dual, Peak_Offst, CCShapeCut
    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim
    use FitParams, only : MaxFitAntDistcs, FitIncremental, Fit_PeakNrTotal, FitQual, Sigma, MaxFitAntD_nr
@@ -53,7 +53,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    Integer :: Date_T(8)
    Integer :: PeakSP(MaxPeaksPerChunk,0:2), PeakSWl(MaxPeaksPerChunk,0:2), PeakSWu(MaxPeaksPerChunk,0:2)
    Integer :: PeakSAmp(MaxPeaksPerChunk,0:2), PeakD_nr
-   Integer :: Wu,Wl
+   Integer :: Wu,Wl, CalSource(10),i_cal
    Integer :: Peakpos_0, PeakNrSearched, PeakNrFound, PeakNrGood ! pulse position for an virtual antenna at the core of CS002
    !integer, external :: XIndx
    !       Initialize
@@ -67,9 +67,10 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    N_FitStatTim= 0   ! Do not fit any station/antenna timing
    Nr_TimeOffset=1
    Fit_PeakNrTotal=1     ! Fit only a single source at a time
+   i_cal=0
    !
-   Peak_start(1) =1
-   Peak_start(2) =1
+   ChunkNr(1) =1
+   ChunkNr(2) =1
    Peak_eo(2)=1
    If(Dual) then
       i_eo_s=2
@@ -188,6 +189,30 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                EMax = Max(EMax,SourcePos(2,1)/1000.)
                PeakNrGood=PeakNrGood+1
             Endif
+            !
+            !searching for good peaks to be used for improving calibration
+            If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then
+               If(PeakSAmp(i_peakS,i_eo).gt.PeakSAmp(1,i_eo)/10.) then
+            !Start_Time(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
+               write(2,*) 'got a good one!!!!!!!!!!!!!!!'
+                  write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start_Time[ms]:', &
+                     1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, Peakpos_0, &
+                     SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
+                  If(i_eo.eq.0) Then
+                     i_cal=i_cal+1
+                     if(i_cal.le.10) CalSource(i_cal)=Peakpos_0
+                  Else
+                     Do i=1,i_cal
+                        If(abs(Peakpos_0-CalSource(i_cal)).lt.6) Then
+                           Write(18,"(A,I8, F13.5, I7, 3F11.2)") '*****', (TimeFrame*1000+i_peakS), &
+                              1000.*Start_Time(1)*sample,  (Peakpos_0+CalSource(i_cal))/2, SourcePos(:,1)
+                           exit
+                        EndIf
+                     Enddo
+                  EndIf
+               EndIf
+            EndIf
+            !
             write(2,*) '================',i_peakS,' is located ===============', Sigma(1:3), &
                N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
          Else
@@ -206,6 +231,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
       WRITE(*,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), achar(27)//'[0m'
       !write(*,*) ' ', achar(27)//'[0m'
    Enddo ! i_eo=0,1
+   flush(unit=18)
     !
     !
     ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
@@ -288,6 +314,7 @@ Subroutine SourceFitCycle(StatMax,DistMax)
 End Subroutine SourceFitCycle
 !=====================================
 Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu)
+!  Zero spectrum at the good peak inorder not to find it twice
 !  v13:  Zeroing window is made peak dependent
    use ThisSource, only : Nr_Corr, CorrAntNrs, Tref_dim, RefAntErr, Peak_Offst
    use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Ant_RawSourceDist, Ant_Stations

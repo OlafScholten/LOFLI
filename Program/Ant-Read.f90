@@ -1,14 +1,14 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
    use constants, only : dp,sample ! ,Refrac,pi,ci
-   use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel  ! , ChunkNr_dim
-   use DataConstants, only : Polariz
-   use FitParams, only : Explore
+   use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
+   !use DataConstants, only : Polariz
+   !use FitParams, only : Explore
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
-    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
+    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
     use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
     use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist, Simulation, WriteSimulation
-    use Chunk_AntInfo, only : Powr_eo,NAnt_eo
+    use Chunk_AntInfo, only : NormOdd, NormEven ! Powr_eo,NAnt_eo
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    use HDF5_LOFAR_Read, only : filename, Group_names, Group_nr ! , Group_max
    use HDF5_LOFAR_Read, only : DSet_names, DSet_nr, Ant_ID, STATION_ID !, DSet_max, ANTENNA_POSITION
@@ -25,9 +25,9 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim)
    Complex(dp) :: CNu_s(0:Cnu_dim)  ! CTime_s(1:Time_dim),
-   integer :: Dset_offset, Sample_Offset, DataReadErr
+   integer :: Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
+   Real*8 :: Powr, Powr_eo(0:1)
    Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
-   Real*8 :: Powr
    Integer, save :: WallCount
    Real,save :: CPUstartTime, CPUstopTime=-1., WallstartTime=0, WallstopTime=-1.
    Real,save :: TotCPURead=0., TotCPUFit=0., TotWallRead=0., TotWallFit=0.
@@ -36,6 +36,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Integer :: i_ant, i_time, i_eo, unt, nxx, StAntID, sgn    ,  AntNr_lw, AntNr_up
    Real*8 :: SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset,StatAnt_Calib !,StartTime_ms
    Logical :: Dubbel
+   Logical, save :: FirstPass=.true.
    !character*80 :: lname
    !
    ! time recording
@@ -51,13 +52,14 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    !
    !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-   Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this slice is set at ',Start_time(i_chunk)*1000.d0*sample &
-      ,' [ms] =',Start_time(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
+   !Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',Start_time(i_chunk)*1000.d0*sample &
+   !   ,' [ms] =',Start_time(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    !Write(2,*) 'SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    write(*,"(A,f8.2,A)") achar(27)//'[33m @',Start_time(i_chunk)*1000.*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
+   write(2,*) 'Simulation,WriteSimulation(2):', Simulation,WriteSimulation(:), 'file14open:',file14open
    If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then
       If(file14open) then
          Rewind(unit=14)
@@ -66,7 +68,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
          Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
          Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
       EndIf
-   Else
+   Else  ! simulation ne '' and width <0; run on simulation data
       If(file14open) then
          write(2,*) '****Error in SimulationRead, file 14 already open'
          Stop ' SimulationRead'
@@ -85,24 +87,19 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    AntNr_lw=1
    ir_file=0 ; ir_grp=0 ; ir_dst=0
    Powr_eo(:)=0.  ; NAnt_eo(:)=0
-!   !-----
-!      Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(OutFileLabel)//'_Structure.dat')
-!   !
    Do i_file=1,130 ! 10 !80
    !i_file=1 ; rewind(unit=14)
       read(14,*,IOSTAT=nxx)  Group_nr, filename
       If(nxx.ne.0) exit
-      If(.not. Production) write(2,*) 'file #=',i_file,', name=',filename
+      If(FirstPass) Then
+         FirstPass=.false.
+         write(2,*) 'First data file #=',i_file,', name=',filename
+      EndIf
+      If(Production) write(2,*) 'file #=',i_file,', name=',filename
       If(.not. Production) write(*,"(A,i3)", ADVANCE='NO') achar(27)//'[100D'//'file#=',i_file  ! [1000D    !  //achar(27)//'[0m.'
       Do i_grp=1,Group_nr
           read(14,*) DSet_nr, Group_Names(i_grp)
           If(Diagnostics) Write(2,"(A,i0,A,A)") 'Group#',i_grp,' : ',trim(Group_names(i_grp))
-!
-!write(24,*,IOSTAT=nxx) STATION_ID, TRIM(Statn_ID2Mnem(STATION_ID))
-!write(2,*) 'writing: ','files/'//TRIM(OutFileLabel)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat'
-!Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(OutFileLabel)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
-!write(22,*) 'StartTime[ms]=', (Sample*1000.)
-!
           Do i_dst=1,DSet_nr
               read(14,*) DSet_Names(i_dst), STATION_ID, Ant_ID
               !write(*,*) DSet_nr, Group_Names(i_grp), DSet_Names(i_dst), STATION_ID, Ant_ID
@@ -147,7 +144,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Call RelDist(SourceGuess,LFRAnt_crdnts,RDist)
               Ant_RawSourceDist(Ant_nr(i_chunk)+1,i_chunk)=RDist         ! units of samples
               If(WriteSimulation(2).gt.0) Then
-                  write(2,*) 'RDist',RDist,AntNr_lw,Ant_nr(i_chunk)+1
+                  !write(2,*) 'RDist',RDist,AntNr_lw,Ant_nr(i_chunk)+1
                   RDist=Ant_RawSourceDist(AntNr_lw,i_chunk)
               EndIf
               !RDist=0.
@@ -196,6 +193,21 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   cycle       ! get next DSet
               endif
               !
+              If( RunMode.eq.7 .or. RunMode.eq.24) Then
+                  N_one=COUNT( Chunk(:).gt.2045 .or. Chunk(:).lt.-2045)  !! saturates at 2047
+                  !NZero=COUNT( Chunk(:).lt.-2020)  !! saturates at 2047
+                  If(N_one.gt.SaturatedSamplesMax) Then
+                     write(2,"(A,I4,', chunk#',I4,A,I3,', @')",ADVANCE='NO') &
+                           Statn_ID2Mnem(STATION_ID), Ant_ID, i_chunk, ', #Saturated Samples=',N_one
+                     Do i_time=1,Time_dim
+                        If(Chunk(i_time).gt.2020 .or. Chunk(i_time).lt.-2020) Then
+                           Write(2,"(1x,I6,':',I5)",ADVANCE='NO') i_time, Chunk(i_time)
+                        EndIf
+                     EndDo
+                     Write(2,*) ' '
+                     cycle
+                  EndIf
+              EndIf
               ChMax=MaxVal(Chunk)
               ChMin=MinVal(Chunk)
               If(Diagnostics) write(2,*) StAntID,' min & max=', ChMin, ChMax,', RDist=',RDist, &
@@ -212,14 +224,11 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Ant_Stations(Ant_nr(i_chunk),i_chunk)=STATION_ID
               Ant_pos(:,Ant_nr(i_chunk),i_chunk)=LFRAnt_crdnts(:)
               !Ant_RawSourceDist(Ant_nr(i_chunk),i_chunk)=RDist         ! units of samples
-!
-!If(i_eo.eq.0) write(22,*) Ant_ID, 'NEh=', LFRAnt_crdnts(:)
-!
               !
               sgn=+1
               If(any(SignFlp_SAI(1:SgnFlp_nr) .eq. StAntID,1) ) sgn=-1 ! Take care of sign flips
               If(WriteSimulation(2).le.0) Then
-                 If(Explore) then
+                 If(RunMode.eq.1) then
                   RTime_s(:)=Chunk(:)*Hann(:)*sgn
                  Else
                   RTime_s(:)=Chunk(:)*Hann(:)*sgn*100./sqrt(Powr) !  sqrt(power) level is normalized to 100.
@@ -265,6 +274,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   EndIf
                EndDo
                !Write(31,*) '===   0 0. 0. 0.'
+               !write(2,*) WriteSimulation(1),(WriteSimulation(1)+WriteSimulation(2)),AntNr_lw,AntNr_up,i_chunk
                Do i_time=WriteSimulation(1),(WriteSimulation(1)+WriteSimulation(2))
                   write(31,*) Real( CTime_spectr(i_time,AntNr_lw:AntNr_up,i_chunk) )
                EndDo
@@ -295,10 +305,13 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       Endif
    Endif
    !
-9  Continue
    write(*,*) ' '
    Powr_eo(:)=Powr_eo(:)/NAnt_eo(:)
-   write(2,*) 'ratio of average background power for all even/odd antennas',Powr_eo(0)/Powr_eo(1)
+   NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
+   NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
+9  Continue
+   write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd
+   !write(2,*) 'NAnt_eo:',NAnt_eo(:)
    !
    ! time recording
    call cpu_time(CPUstopTime)
@@ -499,7 +512,7 @@ Subroutine SimulationRead(SourceGuess)
    use Chunk_AntInfo, only : Start_time
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
    use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist
-   use Chunk_AntInfo, only : Powr_eo,NAnt_eo
+   use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use AntFunCconst, only : Freq_min, Freq_max
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt!,Hann
@@ -520,20 +533,25 @@ Subroutine SimulationRead(SourceGuess)
    !Open(unit=14,STATUS='old',ACTION='read', FILE = TRIM(Simulation)//'_Structure.dat')
    !
    dnu=100./Cnu_dim   ! [MHz] Jones matrix is stored on 1MHz grid
-   inu1=Int(Freq_min/dnu)
-   inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu1=Int(Freq_min/dnu)+1
+   !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu2=Int(Freq_max/dnu)-1
    nu_Fltr(:)=0.
    nu_Fltr(inu1:inu2)=1.
    Ant_nr(i_chunk)=0
    Station_name(:)='CXnnn'
    Station_number(:)=0
-   Powr_eo(:)=0.  ; NAnt_eo(:)=0
+   !Powr_eo(:)=0.  ; NAnt_eo(:)=0
    AntNr_lw=0
    AntNr_up=0
    Do i_file=1,Station_NrMax ! 10 !80
       read(14,*,IOSTAT=nxx) STATION_ID, Station_name(i_file)
       If(nxx.ne.0) exit
       Station_number(i_file)=STATION_ID
+      If(i_file.eq.1) Then
+         write(2,*) 'Reading simulated data from files like= "', &
+               'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat','"'
+      EndIf
       Open(unit=12,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat')
       If(EvenOdd.eq.-1) Then
          Read(12,*) Lab1
@@ -594,8 +612,8 @@ Subroutine SimulationRead(SourceGuess)
          !
          !flush(Unit=2)
       EndDo
-      Powr_eo(0)=Powr_eo(0)+ (AntNr_up-AntNr_lw)*Powr
-      NAnt_eo(0)=NAnt_eo(0)+ AntNr_up-AntNr_lw
+      !Powr_eo(0)=Powr_eo(0)+ (AntNr_up-AntNr_lw)*Powr
+      !NAnt_eo(0)=NAnt_eo(0)+ AntNr_up-AntNr_lw
       Ant_nr(i_chunk)=AntNr_up
       !write(2,*) 'Ant_IDs',Ant_IDens(1:Ant_nr(i_chunk),i_chunk)
       RTime_s(:)=0.
@@ -636,8 +654,9 @@ Subroutine SimulationRead(SourceGuess)
       write(2,*) 'number of antennas=',AntNr_up,' less than lower limit.'
       stop 'too few antennas'
    EndIf
-   Powr_eo(1)=Powr_eo(0)
-   NAnt_eo(1)=NAnt_eo(0)
+   !Powr_eo(1)=Powr_eo(0)
+   !NAnt_eo(1)=NAnt_eo(0)
+   NormOdd=1. ; NormEven=1.
    !
    ! stop
    !

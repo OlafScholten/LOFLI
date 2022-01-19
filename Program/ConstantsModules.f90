@@ -30,6 +30,7 @@ Module DataConstants
     Character(len=40), save :: FlashName='' ! Short name for this flash, like 20A-1, set equal to the name of the folder
     Character(len=25), save :: OutFileLabel=''
     Character(len=85), save :: Calibrations=''  ! Name of the file containing the calibration data
+    Character(len=20), save :: Utility, release
     Logical, save :: Diagnostics=.false.  !  Print diagnostic info on LOFAR-data
     Logical, save :: Production=.false.
     Logical, save :: Windows=.false.  ! Check if run on a windows machine

@@ -83,7 +83,6 @@ Subroutine Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib)
     use DataConstants, only : Station_nrMax, DataFolder, Diagnostics, Ant_nrMax, Calibrations
     use DataConstants, only : Polariz
     use StationMnemonics, only : Station_ID2Mnem
-    use FitParams, only : Explore
     Implicit none
     Integer, intent(in) :: STATION_ID
     Integer, intent(in) :: Ant_ID
@@ -221,7 +220,7 @@ Subroutine Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib)
       Return
     Endif
     SAI=1000*station_ID + Ant_ID
-    Ant=MAXLOC(SAI_AntDelay(1:Nr_AntDelay), MASK = SAI_AntDelay .eq. SAI)
+    Ant=MAXLOC(SAI_AntDelay(1:Nr_AntDelay), MASK = SAI_AntDelay(1:Nr_AntDelay) .eq. SAI)
     If(SAI_AntDelay(Ant(1)) .eq. SAI) StatAnt_Calib= StatAnt_Calib + Fine_AntDelay(Ant(1))
     Return
 End Subroutine Station_ID2Calib
@@ -413,9 +412,9 @@ Subroutine Double_sort(a)
     End DO
 End Subroutine Double_sort
 !-----------------------
-Subroutine Double_IR_sort(N,a,R)
+Pure Subroutine Double_IR_sort(N,a,R)
 ! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-!  sorts integer array a according to the first element
+!  sorts integer array a according to the first dimension
 ! sort also the additional real array
     use constants, only : dp
     implicit none
@@ -437,10 +436,9 @@ Subroutine Double_IR_sort(N,a,R)
     End DO
 End Subroutine Double_IR_sort
 !-----------------------
-Subroutine Double_RI_sort(N,a,R)
+Pure Subroutine Double_RI_sort(N,a,R)
 ! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-!  sorts integer array a according to the first element
-! sort also the additional real array
+!  sorts integer array a (min first) and reorders the additional real array in the same way
     use constants, only : dp
     implicit none
     INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
@@ -497,6 +495,30 @@ End Module unque
          if(eof.lt.0) exit
       enddo
     End Subroutine GetNonZeroLine
+!===============================================
+    Subroutine GetMarkedLine(Mark,lineTXT)
+    implicit none
+    character(LEN=*), intent(inout) :: lineTXT
+    character(LEN=*), intent(out) :: Mark
+    Character(len=6) :: FMT
+    integer :: eof,N,j
+      N=LEN(lineTXT)
+      write(FMT,"(A,I3.3,A)") '(A',N,')'
+      !write(2,*) 'GetNonZeroLine2:', FMT, N
+   1  continue
+      lineTXT=''
+      Do while (trim(lineTXT).eq.'')
+         read(*,FMT,iostat=eof) lineTXT
+         if(eof.lt.0) Return
+      enddo
+      If(lineTXT(1:1).eq.'!') goto 1   ! skip comment lines
+      j = iachar(lineTXT(1:1))
+      if (j>= iachar("a") .and. j<=iachar("z") ) then
+         j = (j-32)   ! convert to upper case if not already
+      end if
+      Mark=achar(j)
+      lineTXT(1:N-1)=lineTXT(2:N)
+    End Subroutine GetMarkedLine
 !==========================================
 !==========================================
 Module ansi_colors
@@ -574,3 +596,23 @@ Subroutine Convert2m(CenLoc)
    Endif
    Return
 End Subroutine Convert2m
+!--------------------
+Pure Subroutine SetSmooth(N_Smth, Smooth)
+   use constants, only : dp
+   Implicit none
+   Integer, intent(in) :: N_Smth
+   Real(dp), intent(out) :: Smooth(-N_smth:N_smth)
+   integer :: i
+   !Allocate( Smooth(-N_smth:N_smth) )
+   Smooth(:)=0.
+   Smooth(0)=1.
+   Smooth(N_smth/2)=0.5  ! needed for block profile for even values of N_smth
+   Do i=1,N_smth
+      !Smooth(i)=(1.-(Real(i)/N_smth)**2)**2.5  ! Parabola to power to make it =0.5 at N_smth/2
+      If(i.lt.(N_smth+1)/2) Smooth(i)=1.      ! Block gives indistinguishable results from parabola; parabola has a tiny bit smaller volume around peak.
+      Smooth(-i)=Smooth(i)
+   EndDo
+   !SmPow=SUM(Smooth(:))
+   Smooth(:)=Smooth(:)/SUM(Smooth(:))
+   Return
+End Subroutine SetSmooth

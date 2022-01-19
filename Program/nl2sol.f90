@@ -1586,7 +1586,7 @@ end
 !
 !  ARRAY ARGUMENTS
       DOUBLE PRECISION &
-        D(P),DIG(P),DIHDI(1),L(1),STEP(P),V(21),W(*)
+        D(P),DIG(P),DIHDI(*),L(*),STEP(P),V(21),W(*)
 !
 !  LOCAL SCALARS
       DOUBLE PRECISION &
@@ -4647,6 +4647,7 @@ subroutine nl2sno ( n, p, x, calcr, iv, v, uiparm, urparm, ufparm, error )
   real ( kind = 8 ) x(p)
   real ( kind = 8 ) xk
 
+  error=0
   d1 = 94 + 2 * n + ( p * ( 3 * p + 31 ) ) / 2
   iv(d) = d1
   r1 = d1 + p
@@ -4751,7 +4752,10 @@ subroutine nl2sno ( n, p, x, calcr, iv, v, uiparm, urparm, ufparm, error )
 80 continue
 
   call nl2itr ( v(d1), iv, v(j1), n, n, p, v(r1), v, x, error )
-  If(error.gt.0) return
+  If(error.gt.0) Then
+      write(2,*) 'error from nl2itr in nl2sno', error
+      return
+  EndIf
 
   if ( iv(1) < 2 ) then
     go to 10
@@ -4927,7 +4931,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
   parameter ( vsave1=78, wscale=48)
 
   i = iv(1)
-!   write(*,*) 'i',i
+   !    write(2,*) 'nl2itr,entry',error,i,X(1:p)
 
   if (i == 1) go to 20
   if (i == 2) go to 50
@@ -4943,7 +4947,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
         return
       end if
 
-!   write(*,*) 'i2',i
+   ! write(2,*) 'nl2itr,entry,i',error,i
 
       go to (350, 350, 350, 350, 350, 350, 195, 160, 195, 10), i
 !
@@ -5104,6 +5108,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
  150  continue
 
       call itsmry(d, iv, p, v, x)
+      !write(2,*) 'nl2itr-150:',error, X(1:p)
 
  160  continue
 
@@ -5127,6 +5132,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
          call itsmry ( d, iv, p, v, x )
          return
       end if
+      !write(2,*) 'nl2itr-160:',error,X(1:p)
 
 170   continue
       iv(niter) = k + 1
@@ -5187,6 +5193,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
            call itsmry ( d, iv, p, v, x )
            return
          end if
+      write(2,*) 'nl2itr-205:',X(1:p)
 !
 !  In case of STOPX or function evaluation limit with
 !  improved V(F), evaluate the gradient at X.
@@ -5203,7 +5210,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 !
 !  Compute Levenberg-Marquardt step.
 !
-!write(*,*) '210-iv(model)',iv(model),model
+      !write(2,*) '210-iv(model)',iv(model),model,error
       if ( iv(model) /= 2 ) then
 
          qtr1 = iv(qtr)
@@ -5348,7 +5355,10 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 
         call gqtstp ( d, v(dig1), v(h1), iv(kagqt), v(lmat1), p, v(step1), &
                   v, v(w1), error)
-        If(error.gt.0) return
+        If(error.gt.0) Then
+            write(2,*) 'error from gqtstp',error
+            return
+        EndIf
 
       end if
       !
@@ -5374,6 +5384,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
         iv(nfcall) = iv(nfcall) + 1
         iv(1) = 1
         iv(toobig) = 0
+        ! write(2,*) 'nl2itr-310:',error,X(1:p)
         return
       end if
 !
@@ -5385,6 +5396,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
       lstgst = iv(stlstg)
       x01 = iv(x0)
       call assess ( d, iv, p, v(step1), v(lstgst), v, x, v(x01) )
+      !write(2,*) 'nl2itr-350:',X(1:p)
 !
 !  If necessary, switch models and/or restore R.
 !
@@ -5657,6 +5669,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 !
  640  iv(1) = 14
       call itsmry ( d, iv, p, v, x )
+      write(2,*) 'nl2itr-640:',X(1:p)
       return
 !
 !  Convergence obtained.  Compute covariance matrix if desired.
@@ -5669,6 +5682,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
         iv(1) = iv(cnvcod)
         iv(cnvcod) = 0
         call itsmry(d, iv, p, v, x)
+      !write(2,*) 'nl2itr-700:',X(1:p)
         return
       end if
 
@@ -5678,6 +5692,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 
       call covclc(i, d, iv, j, n, nn, p, r, v, x)
 
+      write(2,*) 'nl2itr-710:',i,X(1:p)
       if ( i == 3 ) then
 
         iv(ngcov) = iv(ngcov) + 1

@@ -13,7 +13,8 @@
 Module HDF5_LOFAR_Read
   USE HDF5
   USE ISO_C_BINDING
-  use FitParams, only :  ImagingRun
+  use DataConstants, only : Production
+  !use FitParams, only :  ImagingRun
   IMPLICIT NONE
   Integer, parameter :: Group_max=10
   Integer           :: Group_nr
@@ -520,8 +521,8 @@ Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, 
    DataReadErr=0
     Call DataRead(dset_id_list(List_nr), Chunk, DSet_offset, DSet_dim)
     If(hdferr.ne.0) then ! set in call to 'h5dread_f' in 'GetDataChunk'
-        If(.not. ImagingRun) write(*,*) '!!HDF5 error captured for antenna ',trim(DSetName),', no problem!!!'
-        If(.not. ImagingRun) write(2,*) 'error in call to h5dread_f, data for antenna ',trim(DSetName),' are zeroed'
+        If(.not. Production) write(*,*) '!!HDF5 error captured for antenna ',trim(DSetName),', no problem!!!'
+        If(.not. Production) write(2,*) 'error in call to h5dread_f, data for antenna ',trim(DSetName),' are zeroed'
         Chunk=0
         DataReadErr=-1
     endif

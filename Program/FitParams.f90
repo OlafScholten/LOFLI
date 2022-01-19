@@ -9,7 +9,7 @@
   Subroutine SetFitParamsLMA(X,first,FitPos)
     use unque
     use FitParams
-    use DataConstants, only : Station_nrMax, Ant_nrMax
+    use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode
     use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CorrAntNrs, SourcePos, RefAntErr, PeakNrTotal
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt, Unique_SAI
@@ -26,6 +26,7 @@
     Character(len=5) :: FP_MNem(0:N_FitPar_max)
     character*180 :: lname
     character*4 :: option
+    Logical :: FitNoSources
     !integer,dimension(:),allocatable :: Station_IDs
     integer, external :: XIndx
     !
@@ -42,29 +43,8 @@
         !Unique_Nr=size(Station_IDs)
         !Unique_StatID(:)=Station_IDs(:)
         FP_MNem(:)=' '
-        If(Explore) goto 1
-        Call GetNonZeroLine(lname)
-        write(2,*) 'timing offset-fit option="',lname,'"'
-        read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
-        Do i=1,N_FitPar_max
-            If(FP_Mnem(i).eq.'     ') exit
-            If(TRIM(FP_Mnem(i)).eq.'!') exit
-            Call Station_Mnem2ID(FP_Mnem(i),k)
-            If(k.eq.0) exit
-            FP_s(i)=k
-            !write(2,*) i,FP_Mnem(i),FP_s(i)
-        Enddo
-        !read(lname,*,iostat=nxx) option, FP_s(1:N_FitPar_max) ! option=abut,only
-        If(option .eq. 'abut') then
-            mask=.true.
-            Do i=1,Nr_UniqueStat
-                if ( any(Unique_StatID(i)==FP_s) ) mask(i) = .false.
-            enddo
-            !write(2,*) 'mask=',mask(1:size(Station_IDs))
-            !write(2,*) 'Station_IDs=',Station_IDs(1:size(Station_IDs))
-            FP_s(1:Nr_UniqueStat)=pack(Unique_StatID, mask)
-            !write(2,*) 'FP_s',FP_s(0:size(Station_IDs))
-        endif
+        If(RunMode.eq.1) goto 1
+        Call GetStationFitOption(FP_s, FitNoSources)
     endif
   1   Continue
     !
@@ -150,11 +130,11 @@
 Subroutine PrntFitPars(X)
     use FitParams
     !use FittingParameters
-    use ThisSource, only : PeakPos, PeakNrTotal, Peak_eo, Peak_start, PeakChiSQ, PeakRMS, ExclStatNr, Dropped
+    use ThisSource, only : PeakPos, PeakNrTotal, Peak_eo, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped
     use Chunk_AntInfo, only : Unique_StatID, Start_time
     use StationMnemonics, only : Station_ID2Mnem
     use StationMnemonics, only : Statn_ID2Mnem
-    use DataConstants, only : ChunkNr_dim
+    !use DataConstants, only : ChunkNr_dim
     use Constants, only : Sample
     Implicit none
     real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
@@ -166,18 +146,18 @@ Subroutine PrntFitPars(X)
     If(N_FitStatTim .gt. 0) then
         Do i=1,N_FitStatTim
             Call Station_ID2Mnem(Unique_StatID(FitParam(i)),Station_Mnem)
-            write(2,"(A,i2,'), ',A5,50F11.3)") 'Fit_TimeOffsets(',i,Station_Mnem,(X(j),j= X_Offset(i),X_Offset(i+1)-1)
+            write(2,"(A,i2,'), ',A5,50F11.3)") 'Fit_TimeOffsets[samples](',i,Station_Mnem,(X(j),j= X_Offset(i),X_Offset(i+1)-1)
         enddo
     endif
     i_chunk=0
     If((N_FitPar-N_FitStatTim) .gt. 0) then
         Do i_Peak = 1,PeakNrTotal
-            If(i_chunk.ne.Peak_start(i_Peak)) then
-               i_chunk=Peak_start(i_Peak)
+            If(i_chunk.ne.ChunkNr(i_Peak)) then
+               i_chunk=ChunkNr(i_Peak)
                write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',Start_time(i_chunk),&
                   '[samples]=',Start_time(i_chunk)*Sample*1000.,'[ms]'
             Endif
-            Write(2,"(i3,2i2,A,I6,A)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),Peak_start(i_Peak),&
+            Write(2,"(i3,2i2,A,I6,A)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),ChunkNr(i_Peak),&
                 ', PeakPos',PeakPos(i_Peak),', source@'
             Do i=1,N_FitPar-N_FitStatTim
                 Write(2,"(A1,'=',F9.2,',')", ADVANCE='NO') &
@@ -208,8 +188,8 @@ End Subroutine PrntFitPars
 Subroutine PrntNewSources()
     !use FitParams, only : station_nrMax
     !use FittingParameters
-    !use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, Peak_start, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
-   use ThisSource, only : PeakNrTotal, Peak_start, Peak_eo
+    !use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
+   use ThisSource, only : PeakNrTotal, ChunkNr, Peak_eo
    use Chunk_AntInfo, only : Start_time
     !use StationMnemonics, only : Statn_ID2Mnem
    use Constants, only : Sample
@@ -223,8 +203,8 @@ Subroutine PrntNewSources()
    !
    i_chunk=0
    Do i_Peak = 1,PeakNrTotal
-   If(i_chunk.ne.Peak_start(i_Peak)) then
-      i_chunk=Peak_start(i_Peak)
+   If(i_chunk.ne.ChunkNr(i_Peak)) then
+      i_chunk=ChunkNr(i_Peak)
       write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',Start_time(i_chunk),&
          '[samples]=',Start_time(i_chunk)*Sample*1000.,'[ms]'
    Endif
@@ -235,7 +215,7 @@ Subroutine PrntNewSources()
       i_chunk=1
       j=0
       Do i_Peak = 1,PeakNrTotal
-         If(i_chunk.eq.Peak_start(i_Peak)) Then
+         If(i_chunk.eq.ChunkNr(i_Peak)) Then
             j=j+1
          Else
             i_eo=1
@@ -244,7 +224,7 @@ Subroutine PrntNewSources()
             Enddo
             j=1
          EndIf
-         i_chunk=Peak_start(i_Peak)
+         i_chunk=ChunkNr(i_Peak)
          i_eo=0
          Call PrntCompactSource(i_Peak,i_eo)
       Enddo  !  i_Peak = 1,PeakNrTotal
@@ -262,7 +242,7 @@ End Subroutine PrntNewSources
 Subroutine PrntCompactSource(i_Peak,i_eo)
     use FitParams, only : station_nrMax
     !use FittingParameters
-    use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, Peak_start, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
+    use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
     use Chunk_AntInfo, only : Unique_StatID
     use StationMnemonics, only : Statn_ID2Mnem
     Implicit none
@@ -271,7 +251,7 @@ Subroutine PrntCompactSource(i_Peak,i_eo)
     Character(len=5) :: Station_Mnem
     !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
     !
-   Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,i_eo,Peak_start(i_Peak),PeakPos(i_Peak)
+   Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,i_eo,ChunkNr(i_Peak),PeakPos(i_Peak)
    Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
    Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
    write(2,"(';',F7.2,',',F7.2)", ADVANCE='NO') PeakRMS(i_Peak),sqrt(PeakChiSQ(i_Peak))
@@ -381,7 +361,7 @@ Subroutine Find_unique_StatAnt()
     Endif
     Do i_chunk=1, ChunkNr_dim
         !write(2,*) 'ant#=',Ant_nr(i_chunk),k
-        vec(k+1:Ant_nr(i_chunk))=Ant_Stations(1:Ant_nr(i_chunk),i_chunk)
+        vec(k+1:k+Ant_nr(i_chunk))=Ant_Stations(1:Ant_nr(i_chunk),i_chunk)
         k=k+Ant_nr(i_chunk)
     enddo
     Call unique(vec,Station_IDs)
@@ -408,11 +388,12 @@ Subroutine Find_unique_StatAnt()
             EndIf
          Enddo
       Else
-        vec(k+1:Ant_nr(i_chunk))= &  !  How can this work? should this rather be vec(k+1:k+Ant_nr(i_chunk)); it does work however!
+        vec(k+1:k+Ant_nr(i_chunk))= &  !  How can this work? should this rather be vec(k+1:k+Ant_nr(i_chunk)); it does work however!
             1000*Ant_Stations(1:Ant_nr(i_chunk),i_chunk) + Ant_IDs(1:Ant_nr(i_chunk),i_chunk)
         !write(2,*) 'Find_unique, CHECK!!!!', k, Ant_nr(i_chunk), Ant_IDs(1,i_chunk),'--',Ant_IDs(Ant_nr(i_chunk),i_chunk), &
         !       ' ; ',vec(k+1),'--',vec(Ant_nr(i_chunk)),'--', vec(k+Ant_nr(i_chunk))
         k=k+Ant_nr(i_chunk)
+        write(2,*) 'vec(k+1:k+Ant_nr(i_chunk)):',k,Ant_nr(i_chunk)
       Endif
     enddo
     Call unique(vec,Station_IDs)
@@ -462,7 +443,7 @@ End Subroutine Find_unique_StatAnt
 !===================================
 Integer Function XIndx(i,i_peak)
     use FitParams
-    use DataConstants, only : PeakNr_dim
+    use DataConstants, only : PeakNr_dim, RunMode
     !use FittingParameters
     use ThisSource, only : PeakNrTotal, PeakPos, Dual, Unique_pos
     use unque, only : unique
@@ -494,7 +475,7 @@ Integer Function XIndx(i,i_peak)
                 exit
             endif
         enddo
-        If(ImagingRun) i_pk=1
+        If(RunMode.eq.3) i_pk=1
         k=0
         If(i.gt.1) then
             If(any(FitParam(N_FitStatTim+1:N_FitStatTim+i-1)==4)) k=PeakNrTotal-Fit_PeakNrTotal
@@ -502,7 +483,7 @@ Integer Function XIndx(i,i_peak)
     endif
     !
     !i_eo=Peak_eo(i_peak)
-    !i_chunk=Peak_start(i_peak)
+    !i_chunk=ChunkNr(i_peak)
     !k=i_peak - TotPeakNr(i_eo,i_chunk) + PeakNr(i_eo,i_chunk)       ! number of peaks for this (i_eo,i_chunk)
     !write(*,*) 'XIndx', FitParam(N_FitStatTim+i),i,Fit_PeakNrTotal,k,i_Peak, i_Pk,Dual
     XIndx = Nr_TimeOffset-1 +(i-1)*Fit_PeakNrTotal+k + i_Pk

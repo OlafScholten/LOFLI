@@ -19,18 +19,19 @@ Subroutine EI_Run
     ! - End pixelLoop
     !- End antennaLoop
     !++++++++++++++++++++++
-   Use Interferom_Pars, only : polar, N_pix, d_loc, CenLocPol, CenLoc, PixLoc, Nr_IntFer, IntFer_ant, IntfNuDim
+   Use Interferom_Pars, only : polar, N_pix, d_loc, CenLocPol, CenLoc, PixLoc, Nr_IntFerMx, Nr_IntFerCh, IntFer_ant, IntfNuDim
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, SumWindw !, MaxIntfIntenLoc
-   Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !, SlcInten, NrSlices, SliceLen, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt
+   Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !
+   Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, Nr_IntFerCh
    Use Interferom_Pars, only : PixPowOpt
    use constants, only : dp, ci, pi !, Sample, Refrac, c_mps
    use StationMnemonics, only : Statn_ID2Mnem
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    !use GLEplots, only : GLEplotControl
-   Use Interferom_Pars, only : Alloc_EInterferom_Pars, DeAlloc_EInterferom_Pars
+   Use Interferom_Pars, only : Alloc_EInterfImag_Pars, DeAlloc_EInterfImag_Pars
    use mod_test
    Implicit none
-   integer :: i_eo, i !,j, i_s, i_loc(1), i_ant, j_corr, Station, j_IntFer, i_nu, nxx
+   integer :: i_eo, i, Nr_IntFer !,j, i_s, i_loc(1), i_ant, j_corr, Station, j_IntFer, i_nu, nxx
    Real(dp) :: PixLocPol(1:3) !, SmPow
    Integer :: Date_T(8)
    integer :: i_N, i_E, i_h !, N_h,  N_hlow, N_Eup, N_Elow
@@ -40,11 +41,14 @@ Subroutine EI_Run
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' start Interferometry'
    WRITE(*,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), achar(27)//'[0m'
    !
-   Call EISelectAntennas()  ! select antennas for which there is an even and an odd one.
-   Call PixBoundingBox()      !  allocate array space
-   Call Alloc_EInterferom_Pars
+   i_chunk=1
+   Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
+   Nr_IntFer=Nr_IntFerCh(i_chunk)
+   Call PixBoundingBox()      !  allocate array space, sets IntfNuDim
+   Call Alloc_EInterfImag_Pars
    Allocate( CMCnu(Nr_IntFer,0:IntfNuDim,1:3),  CMTime_pix(1:2*IntfNuDim,1:3) )
    Call EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
+   !Nr_IntFerMx=Nr_IntFerCh(i_chunk) since there is only a single chunk
    !
    !------------------------------------
    ! main loop over Voxel location
@@ -104,13 +108,13 @@ Subroutine EI_Run
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' analyze'
    WRITE(*,"(A,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' analyze',(DATE_T(i),i=5,8), achar(27)//'[0m'
    i_eo=0
-   Call OutputIntfPowrTotal(IntFer_ant(1), i_eo)  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   Call OutputIntfPowrTotal(IntFer_ant(1,1), i_eo)  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)
    Call OutputIntfSlices(i_eo)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry',i_eo
-   Call DeAlloc_EInterferom_Pars
+   Call DeAlloc_EInterfImag_Pars
    Return
     !
 End Subroutine EI_Run
@@ -210,49 +214,96 @@ Subroutine EigvecS33(A,E,ev)
    Return
 End Subroutine EigvecS33
 !++++++++++++++++++++++++++
-Subroutine EISelectAntennas()
+Subroutine EISelectAntennas(i_chunk)
    ! Select antennas within a range of 'AntennaRange' from the core
    ! And put the condition the both dipoles are at same location
    !--------------------------------------------
    use constants, only : dp !, pi, Sample, Refrac, c_mps
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
-   use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat ! for curtainplot
-   Use Interferom_Pars, only : Nmax_IntFer
-   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFer
+   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
+   Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntferCh, Nmax_IntFer ! the latter gives # per chunk
    use FitParams, only : AntennaRange
+   use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
    use StationMnemonics, only : Statn_ID2Mnem
+    use unque, only : unique
    Implicit none
+   Integer, intent(IN) :: i_chunk
    real ( kind = 8 ) :: Dist
-   integer :: i_ant, Station, j_IntFer ! , MLoc, Mloc_all
+   integer :: i_ant, Station, j_IntFer, k ! , MLoc, Mloc_all
+    Integer :: vec(Ant_nrMax*(ChunkNr_dim+1))
+    integer,dimension(:),allocatable :: Station_IDs  ! scratch array
    !
-   Station=0
-   j_IntFer=0
-   Nr_UniqueStat=0
-   Do i_ant=1,Ant_nr(i_chunk)         ! Select the antennas for Interferometry
-      If(Ant_Stations(i_ant,i_chunk) .ne. Station) then
-        Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
-        Station=Ant_Stations(i_ant,i_chunk)
-        Nr_UniqueStat=Nr_UniqueStat+1
-        Unique_StatID(Nr_UniqueStat)=Station  ! for Curtainplot
-        !write(2,*) Statn_ID2Mnem(Station), Ant_pos(:,i_ant,i_chunk)/1000.
-        ! write(2,*) '-->',j_IntFer+1, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
-      endif
-      !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
-      If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
-      if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. 0) cycle       ! First select the even,
-      if(Ant_IDs(i_ant+1,i_chunk) .ne. (Ant_IDs(i_ant,i_chunk)+1) ) cycle       ! then check if the odd antenna is there too
-      j_IntFer=j_IntFer+1
-      IntFer_ant(j_IntFer)=i_ant
-      !write(2,*) j_IntFer, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
-      If(j_IntFer .ge. Nmax_IntFer) then
-         Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
-         exit
-      Endif
-   EndDo
-   !stop
-   Nr_Intfer=j_IntFer
-!   SlcNrm=1./(SliceLen*Nr_IntFer*Nr_IntFer)
-   !RefAnt(i_chunk)=IntFer_ant(1)  ! for curtainplot
+   !Do i_chunk=1,ChunkNr_dim
+   If (.not. allocated(IntFer_ant)) Allocate( IntFer_ant(Nmax_IntFer,1:ChunkNr_dim), Nr_IntFerCh(1:ChunkNr_dim))
+      Station=0
+      j_IntFer=0
+      Nr_UniqueStat=0
+      Do i_ant=1,Ant_nr(i_chunk)         ! Select the antennas for Interferometry
+         If(Ant_Stations(i_ant,i_chunk) .ne. Station) then
+           Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
+           Station=Ant_Stations(i_ant,i_chunk)
+           !write(2,*) Statn_ID2Mnem(Station), Ant_pos(:,i_ant,i_chunk)/1000.
+           ! write(2,*) '-->',j_IntFer+1, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
+         endif
+         !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
+         If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
+         if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. 0) cycle       ! First select the even,
+         if(Ant_IDs(i_ant+1,i_chunk) .ne. (Ant_IDs(i_ant,i_chunk)+1) ) cycle       ! then check if the odd antenna is there too
+         j_IntFer=j_IntFer+1
+         IntFer_ant(j_IntFer,i_chunk)=i_ant  ! keep track of the even ones only
+         !write(2,*) j_IntFer, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
+         If(j_IntFer .ge. Nmax_IntFer) then
+            Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
+            exit
+         Endif
+      EndDo
+      Nr_IntferCh(i_chunk)=j_IntFer
+      If(j_IntFer .gt. Nr_IntFerMx) Nr_IntFerMx=j_IntFer  ! =max number for all chunks
+   !EndDo
+   !
+    vec(:)=0
+    k=0
+    If(Nr_UniqueStat.gt.0) then
+      Vec(1:Nr_UniqueStat)=Unique_StatID(1:Nr_UniqueStat)
+      k=Nr_UniqueStat
+      !write(2,*) 'How is this possible?????'
+    Endif
+    !Do i_chunk=1, ChunkNr_dim
+        !write(2,*) 'ant#=',Ant_nr(i_chunk),k
+     vec(k+1:k+Nr_IntferCh(i_chunk))=Ant_Stations(IntFer_ant(1:Nr_IntferCh(i_chunk),i_chunk),i_chunk)
+     k=k+Nr_IntferCh(i_chunk)
+    !enddo
+    Call unique(vec,Station_IDs)
+    Nr_UniqueStat=size(Station_IDs)-1
+    Unique_StatID(1:Nr_UniqueStat)=Station_IDs(2:Nr_UniqueStat+1)  ! get rid of leading 0
+    Deallocate(Station_IDs)
+    !
+    !Write(2,*) 'Nr_UniqueStat1=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
+    !  Find Unique antenna SAI-numbers
+    k=0
+    vec(:)=0
+    If(Nr_UniqueAnt.gt.0) then
+      Vec(1:Nr_UniqueAnt)=Unique_SAI(1:Nr_UniqueAnt)
+      k=Nr_UniqueAnt
+      !write(2,*) 'This should not be possible!?!??!??'
+    Endif
+    !Do i_chunk=1, ChunkNr_dim
+   Do j_IntFer=1,Nr_IntferCh(i_chunk)
+   i_ant=IntFer_ant(j_IntFer,i_chunk)
+        vec(k+1)= 1000*Ant_Stations(i_ant,i_chunk)+Ant_IDs(i_ant,i_chunk)
+        vec(k+2)=vec(k+1)+1
+        k=k+2
+   Enddo
+    !enddo
+    Call unique(vec,Station_IDs)
+    Nr_UniqueAnt=size(Station_IDs) -1
+    if(Ant_nrMax.lt.Nr_UniqueAnt) then
+      write(2,*) 'max number of unique antennas is exceeded',Nr_UniqueAnt,Ant_nrMax
+      Nr_UniqueAnt=Ant_nrMax
+    endif
+    Unique_SAI(1:Nr_UniqueAnt)=Station_IDs(2:Nr_UniqueAnt+1)  ! get rid of leading 0
+    Deallocate(Station_IDs)
+    !
    Return
 End Subroutine EISelectAntennas
 !------------------------
@@ -267,7 +318,7 @@ Subroutine EIPixBoundingBox()
    use constants, only : dp !, pi, Sample, Refrac, c_mps
    use DataConstants, only : Time_Dim
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
-   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFer
+   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerCh
    Use Interferom_Pars, only : CenLoc, CenLocPol, Polar, d_loc, Diff, N_pix
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax
    Use Interferom_Pars, only : SumStrt, SumWindw, IntfDim, IntfNuDim, IntfLead, IntfBase
@@ -289,8 +340,8 @@ Subroutine EIPixBoundingBox()
       Endif
       !write(2,*) 'PixLoc-carthesian',PixLoc(:)
       t_n=0.   ; t_p=0
-      Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-         i_ant=IntFer_ant(j_IntFer)
+      Do j_IntFer=1,Nr_IntFerCh(i_chunk)   ! Loop over selected antennas
+         i_ant=IntFer_ant(j_IntFer,i_chunk)
          Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
          t_shft=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
          if(t_shft.lt.t_n) t_n=t_shft
@@ -318,7 +369,6 @@ Subroutine EIPixBoundingBox()
    IntfDim=2*IntfNuDim ! Length of time trace used for interference
    IntfLead=(IntfDim-SumWindw)/2
    IntfBase=SumStrt - IntfLead
-   !write(2,*) 'diagnostics;(lead,dim):', IntfLead, IntfDim
    !write(*,"(A,o10,b20)") '(lead,dim):', IntfLead, IntfDim
    If((IntfBase+IntfDim .gt. Time_dim) .or. (IntfBase .lt. 1)) then
       write(2,*) 'dimensions for interferometry out of range: ', IntfBase, IntfBase+IntfDim, Time_dim
@@ -341,18 +391,19 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    use DataConstants, only : Time_Dim, Cnu_dim
    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
    use Chunk_AntInfo, only : Start_time, TimeBase
-   use Chunk_AntInfo, only : Powr_eo,NAnt_eo
+   use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use FFT, only : RFTransform_CF !, RFTransform_CF2CT
    use StationMnemonics, only : Statn_ID2Mnem
-   Use Interferom_Pars, only : IntfBase, IntfPhaseCheck, SumStrt, IntfLead, SumWindw
+   Use Interferom_Pars, only : IntfBase, SumStrt, IntfLead, SumWindw  !, IntfPhaseCheck
+   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerCh, Nr_IntFerMx
    Use Interferom_Pars, only : IntFer_ant
-   Use Interferom_Pars, only : i_chunk, CenLoc, t_shft, t_offsetPow, tMin, tMax
-   Use Interferom_Pars, only : alpha, PolBasis, PowerScale
+   Use Interferom_Pars, only : CenLoc, t_shft, t_offsetPow, tMin, tMax
+   Use Interferom_Pars, only : alpha, PolBasis !, PowerScale
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain ! J_0p,J_0t,J_1p,J_1t,
    Implicit none
    Integer, intent(in) :: Nr_IntFer, IntfNuDim
    Complex(dp), intent(out) :: CMCnu(1:Nr_IntFer,0:IntfNuDim,1:3)
-   integer :: i_ant, j_IntFer, MLoc, Mloc_all, i, j, i_s, i_freq, i_nu, IntfDim, inu1, inu2
+   integer :: i_ant, j_IntFer, MLoc, Mloc_all, i, j, i_freq, i_nu, IntfDim, inu1, inu2
    !Real(dp) :: angle, angle_all, HorAng, AziAng, D, RD,  AbsAmp, NRM, SmPow  ! elevation
    !Complex(dp) :: CNu_s(0:Cnu_dim)  ! CTime_s(1:Time_dim),
    !
@@ -363,23 +414,19 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    Real(dp) :: AntSourceD(1:Nr_IntFer), Weight(1:Nr_IntFer), thet_d(1:Nr_IntFer), Phi_d(1:Nr_IntFer)
    Real(dp) :: Rtime(1:2*IntfNuDim), AntennaNorm=1.! e-4
    Complex(dp) :: Cnu0(0:IntfNuDim), Cnu1(0:IntfNuDim), Sp, St
-   Real(dp) :: AntW(2),NormEven, NormOdd, NRM
+   Real(dp) :: AntW(2), NRM
    Character(len=50) :: FMT_A
-   Logical :: GainFactor=.false.
+   !Logical :: GainFactor=.false.
+   !Logical :: GainFactor=.true.
    !
    ! Get antenna function parameters
-   Call AntFieParGen()
-   If(.not. GainFactor) Then
-      NRM=SUM(Gain(:))/(Freq_max - Freq_min)
-      write(2,*) 'E-field traces do not contain an additional frequency-dependent Gain factor, average=',NRM
-      Gain(:)=NRM
-   EndIf
    IntfDim=2*IntfNuDim
+   !Nr_IntFer=Nr_IntFerCh(i_chunk)
    !
    Cur2E(:,:)=0.
    write(2,*) 'Nr_IntFer=',Nr_IntFer
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-      i_ant=IntFer_ant(j_IntFer)  ! Refers to even antenna
+      i_ant=IntFer_ant(j_IntFer,i_chunk)  ! Refers to even antenna
       !write(2,*) i_ant, j_IntFer, Ant_pos(:,i_ant,i_chunk)
       Ras(1)=(CenLoc(1)-Ant_pos(1,i_ant,i_chunk))/1000.
       Ras(2)=(CenLoc(2)-Ant_pos(2,i_ant,i_chunk))/1000.
@@ -416,15 +463,16 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    FMT_A="(A,F7.3,A,'(',2(F7.3,','),F7.3,')',A,F7.3)"
    write(2,FMT_A) 'a3:', alpha(3),', ev3:', PolBasis(:,3), ', Trace A=',alpha(1)+alpha(2)+alpha(3)
    !
-   Call AntFun_Inv(thet_d(1),Phi_d(1)) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
-   w=SUM(ABS(Ji_p0(Freq_min:Freq_max))**2)+SUM(ABS(Ji_p1(Freq_min:Freq_max))**2)+ &
-      SUM(ABS(Ji_t0(Freq_min:Freq_max))**2)+SUM(ABS(Ji_t1(Freq_min:Freq_max))**2)
-   PowerScale=1.e4/W  ! 100 to off-set the value at moderate height
-   write(2,*) 'weight (in power) inverse Jones=',PowerScale,thet_d(1),Phi_d(1),Freq_min,Freq_max
-   Flush(unit=2)
+   !Call AntFun_Inv(thet_d(1),Phi_d(1)) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
+   !w=SUM(ABS(Ji_p0(Freq_min:Freq_max))**2)+SUM(ABS(Ji_p1(Freq_min:Freq_max))**2)+ &
+   !   SUM(ABS(Ji_t0(Freq_min:Freq_max))**2)+SUM(ABS(Ji_t1(Freq_min:Freq_max))**2)
+   !PowerScale=1.e4/W  ! 100 to off-set the value at moderate height
+   !write(2,*) 'weight (in power) inverse Jones=',PowerScale,thet_d(1),Phi_d(1),Freq_min,Freq_max
+   !Flush(unit=2)
    !
-   NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
-   NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
+   !PowerScale=1.
+   !NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
+   !NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
    write(2,*) 'Amplitude NormEven,odd',NormEven,NormOdd,', ratio=',NormEven/NormOdd
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
       Call AntFun_Inv(thet_d(j_IntFer),Phi_d(j_IntFer)) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
@@ -439,10 +487,10 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
          Ait(i)=SUM(PolBasis(:,i)*Vec_t(:))/alpha(i)
       Enddo
       !
-      i_ant=IntFer_ant(j_IntFer)  ! Refers to even antenna
-      RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant,i_chunk))*NormEven
+      i_ant=IntFer_ant(j_IntFer,i_chunk)  ! Refers to even antenna
+      RTime(:)=REAL(CTime_spectr(IntfBase+1:IntfBase+IntfDim,i_ant,i_chunk))*NormEven
       Call RFTransform_CF(RTime,Cnu0(0))
-      RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant+1,i_chunk))*NormOdd
+      RTime(:)=REAL(CTime_spectr(IntfBase+1:IntfBase+IntfDim,i_ant+1,i_chunk))*NormOdd
       Call RFTransform_CF(RTime,Cnu1(0))
       !
       AntW(:)=0.
@@ -467,7 +515,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !
    !write(2,*) 'CMCnu(Nr_IntFer/2,1:2,IntfNuDim/2)', IntfNuDim/2,  IntFer_ant(Nr_IntFer/2),  CMCnu(Nr_IntFer/2,1,IntfNuDim/2) &
    !   , IntFer_ant(Nr_IntFer/2+1),CMCnu(Nr_IntFer/2+1,1,IntfNuDim/2)
-   i_ant=IntFer_ant(1)
+   i_ant=IntFer_ant(1,1)
    t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
    write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
       ', time difference with central pixel=',t_shft*1000.,'[ms]'
@@ -488,7 +536,7 @@ Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
    use constants, only : dp, ci, pi
    !use DataConstants, only : Time_Dim, Cnu_dim, DataFolder, OutFileLabel, Calibrations
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist
-   Use Interferom_Pars, only : i_chunk, IntFer_ant, IntfLead, PixLoc  ! ,Nr_IntFer
+   Use Interferom_Pars, only : i_chunk, IntFer_ant, IntfLead, PixLoc
    use AntFunCconst, only : Freq_min, Freq_max
    use FFT, only : RFTransform_CF2CT
    Implicit none
@@ -501,10 +549,11 @@ Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
    !InterfEngine
    CMnu_pix(:,:)=0.
    dnu=100./IntfNuDim   ! [MHz] Jones matrix is stored on 1MHz grid
-   inu1=Int(Freq_min/dnu)
-   inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu1=Int(Freq_min/dnu)+1
+   !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu2=Int(Freq_max/dnu)-1
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-      i_ant=IntFer_ant(j_IntFer)
+      i_ant=IntFer_ant(j_IntFer,i_chunk)
       Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
       dt_AntPix=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
       ! check dt_AntPix in range
@@ -536,7 +585,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    ! Analyze the trace of this pixel
    !--------------------------------------------
    use constants, only : dp, pi !ci !, , Sample, Refrac, c_mps
-   Use Interferom_Pars, only : i_chunk, Nr_IntFer, IntfLead, PixLoc, polar, N_pix
+   Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, IntfLead, PixLoc, polar, N_pix
    Use Interferom_Pars, only : IntPowSpec, MaxSmPow, N_smth, smooth
    Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, MaxIntfIntenLoc
