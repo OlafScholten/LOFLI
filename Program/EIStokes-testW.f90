@@ -11,7 +11,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
    use Chunk_AntInfo, only : Start_time, TimeBase
    use Chunk_AntInfo, only : Powr_eo,NAnt_eo
    use FFT, only : RFTransform_CF, RFTransform_CF2CT
-   Use Interferom_Pars, only : IntfBase, IntfLead, N_smth, smooth, PowerScale
+   Use Interferom_Pars, only : IntfBase, IntfLead, SumWindw, N_smth, smooth, PowerScale
    Use Interferom_Pars, only : IntFer_ant
    Use Interferom_Pars, only : i_chunk, t_shft, PixLoc, CenLoc
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2
@@ -96,7 +96,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
          !   noise=100./W  ! in 100./W Factor 100 to copy the factor that was introduces in Antenna_Read
          Noise_p(j_IntFer)=W_p*1.4d5  ! *10.
          Noise_t(j_IntFer)=W_t*1.4d5  ! *10. ! such a scaling factor changes the chi-square value but not the error-bars         !
-         RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant,i_chunk))*NormEven
+         RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant,i_chunk))*NormEven  ! IntfBase=SumStrt - IntfLead
          Call RFTransform_CF(RTime,Cnu0(0,j_IntFer))
          RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant+1,i_chunk))*NormOdd
          Call RFTransform_CF(RTime,Cnu1(0,j_IntFer))
@@ -114,27 +114,35 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
             ! Gain(i_freq)=sqrt( SUM(J^2) )/(Freq_max-Freq_min) ; to neutralize effect Ji on frequency, calculated in antenna_function
          Enddo
          ! convert to time
-         Call RFTransform_CF2CT(nu_p(0),CTime_p(1,j_IntFer) )
+         Call RFTransform_CF2CT(nu_p(0),CTime_p(1,j_IntFer) )  ! needed for the peak/background estimate
          Call RFTransform_CF2CT(nu_t(0),CTime_t(1,j_IntFer) )
       Enddo    !  j_IntFer=1,Nr_IntFer
       !
-   EndIf  ! End preparation
-   !
-   ! Just for checking causality
-   If(i_slice.eq.10) Then
-      write(2,*) 'E-field hilbert envelope for the central pixel for the first antenna pair:'
+      ! Just for checking causality on the first pass
       j_IntFer=1
       i_ant=IntFer_ant(j_IntFer)
       Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
       dt_AntPix =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
-      i_s=1+i_slice*N_smth+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
-      write(2,"(A,40G12.4)") 'p_dwn', (Abs(CTime_p(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
-      write(2,*) 'p_up',  (Abs(CTime_p(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
-      write(2,*) 't_dwn', (Abs(CTime_t(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
-      write(2,*) 't_up',  (Abs(CTime_t(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
-      write(2,*) 'p/t_dwn', (CTime_p(IntfLead+i_s-j,j_IntFer)/CTime_t(IntfLead+i_s-j,j_IntFer), j=0,N_smth/2+1)
-      write(2,*) 'p/t_up',  (CTime_p(IntfLead+i_s+j,j_IntFer)/CTime_t(IntfLead+i_s+j,j_IntFer), j=0,N_smth/2+1)
-   EndIf
+      i_s=1+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
+      write(txt,"(I2.2)") j_IntFer
+      write(2,*) 'E-field hilbert envelope for the central pixel for the antenna pair ',TRIM(txt),' written to:',&
+            trim(DataFolder)//TRIM(OutFileLabel)//'Trace_'//TRIM(txt)//'.dat',' shift=',NINT(dt_AntPix ),' samples'
+      OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'Trace_'//TRIM(txt)//'.dat')
+      Do i=i_s,i_s+SumWindw
+         write(30,"(i5,40G12.4)") i,ABS(CTime_spectr(IntfBase+IntfLead+i,i_ant,i_chunk))*NormEven &
+            ,ABS(CTime_spectr(IntfBase+IntfLead+i,i_ant+1,i_chunk))*NormOdd &
+            ,Abs(CTime_p(IntfLead+i,j_IntFer)), Abs(CTime_t(IntfLead+i,j_IntFer))
+      EndDo
+      Close(Unit=30)
+      !i_s=1+i_slice*N_smth+NINT(dt_AntPix )  ! approximately correct, upto rounding errors for dt
+      !write(2,"(A,40G12.4)") 'p_dwn', (Abs(CTime_p(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
+      !write(2,"(A,40G12.4)") 'p_up',  (Abs(CTime_p(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
+      !write(2,"(A,40G12.4)") 't_dwn', (Abs(CTime_t(IntfLead+i_s-j,j_IntFer))**2, j=0,N_smth/2+1)
+      !write(2,"(A,40G12.4)") 't_up',  (Abs(CTime_t(IntfLead+i_s+j,j_IntFer))**2, j=0,N_smth/2+1)
+      !write(2,"(A,40G12.4)") 'p/t_dwn', (CTime_p(IntfLead+i_s-j,j_IntFer)/CTime_t(IntfLead+i_s-j,j_IntFer), j=0,N_smth/2+1)
+      !write(2,"(A,40G12.4)") 'p/t_up',  (CTime_p(IntfLead+i_s+j,j_IntFer)/CTime_t(IntfLead+i_s+j,j_IntFer), j=0,N_smth/2+1)
+      !
+   EndIf  ! End preparation
    !
    If(i_slice.ge.100) TestCh2=.false.
    If(TestCh2) then
@@ -237,7 +245,7 @@ Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
             ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu,j_IntFer)
          St=((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu,j_IntFer) + &
             ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu,j_IntFer)
-         Fnu_PB(i_nu,:)=Fnu_PB(i_nu,:) + phase *( p_PB(:)* Sp*w_p + t_PB(:)* St*w_t )*Gain(i_freq)/D
+         Fnu_PB(i_nu,:)=Fnu_PB(i_nu,:) + phase *( p_PB(:)* Sp*w_p + t_PB(:)* St*w_t ) *Gain(i_freq)/D
          If(TestCh2) Then
             wEnu_p(i_nu)= wEnu_p(i_nu)+ phase * Sp*sw_p *Gain(i_freq)
             wEnu_t(i_nu)= wEnu_t(i_nu)+ phase * St*sw_t *Gain(i_freq)

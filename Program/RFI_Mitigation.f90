@@ -2,6 +2,7 @@
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'
+    Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
     Include 'System_Utilities.f90'
     Include 'GLEplotUtil.f90'
