@@ -1,0 +1,50 @@
+size 22 10
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+fontSz=0.8
+
+verSz=5
+horSz=19
+space=2
+set lwidth 0.04
+set font pstr
+set hei .6
+set hei 0.7
+MarkSz = 0.1
+
+labl$='../19A-1/simulated'
+DataFile$="files/Tst_RefAntTrace.dat"    ! DLsIntfSpecPolrz_d.dat
+
+xmin=200
+!xmax=xmin+200
+xmax=800
+
+MarkSz = 0.2
+amove 2.  2
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min xmin max xmax ! hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis !min 0  ! log ! min scl_min max scl log
+   data DataFile$ d2=c1,c2 d3=c1,c3  d4=c1,c4 d5=c1,c5 !  ignore 1 !
+   !d2 marker circle  msize MarkSz  color magenta
+   d3 lstyle 0  color red
+   d5 lstyle 0  color blue
+   !d4 marker dot  msize MarkSz  color green
+end graph
+!set just TR
+!amove xg(Nr_IntFer)-0.3 yg(1)-0.3
+!write 'chi^2/DoF=' ChiSq
+begin key
+   position tl
+   lstyle 0  color red text Y-dipole
+   lstyle 0  color blue text X-dipole
+end key
+
+
+
+set hei .7
+amove 2+0.5*HorSz  0.9
+set just Tc
+write 'time slice' i_slice '; chi^2/DoF=' ChiSq
+
