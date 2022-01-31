@@ -31,7 +31,7 @@ Subroutine E_Callibr()
    use DataConstants, only : Ant_nrMax
    use ThisSource, only : SourcePos
    use ThisSource, only : PeakNr, PeakNrTotal
-   use ThisSource, only : PeakPos, ChunkNr
+   use ThisSource, only : ChunkNr
    use FitParams, only : N_FitPar, N_FitPar_max, Nr_TimeOffset, WriteCalib
    use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
    Use Interferom_Pars, only : IntFer_ant, StartTime_ms, Nr_IntferCh ! the latter gives # per chunk
@@ -39,6 +39,7 @@ Subroutine E_Callibr()
    use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
     use LOFLI_Input, only : ReadSourceTimeLoc
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
+   Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp) :: SourceGuess(3,10)
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
@@ -74,7 +75,7 @@ Subroutine E_Callibr()
    write(2,"(A,I4,2x,50(1x,A5))") 'Nr_UniqueAnt=',Nr_UniqueAnt, (Statn_ID2Mnem(Unique_StatID(k)),k=1,Nr_UniqueStat)
     !
    Call Alloc_EInterfCalib_Pars()
-   Call EIReadPeakInfo()
+   Call EIReadPeakInfo() ! get peak positions as they would be seen in a trace at the center of the core
    !Get fitoption:
    Call GetStationFitOption(FP_s, FitNoSources)
    write(2,*) 'reading for calibration finalized, FitNoSources=', FitNoSources
@@ -160,7 +161,7 @@ Subroutine E_Callibr()
    Call EIPrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
    If(WriteCalib) then
-      Call MergeFine
+      Call WriteCalibration ! was MergeFine
    Endif
    !
    Return

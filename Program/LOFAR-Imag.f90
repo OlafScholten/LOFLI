@@ -242,7 +242,7 @@ Program LOFAR_Imaging
 !  v18: Zero-data criterium as well as normalization modified (in 'AntRead')
 !  v18: Produce plots of interferometric maxima for automatic-slices; units= 28, 29 used locally
 !  v19: Plotting control unified
-!
+! v22.01: chi^2 fitting of antenna delays in TRI-D mode for calibration
     use constants, only : dp,pi,ci,sample,Refrac
     use LOFLI_Input
     use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
@@ -255,7 +255,7 @@ Program LOFAR_Imaging
     use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
     use FitParams, only : FullSourceSearch ! , SigmaGuess
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
-    use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation
+    use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
     use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax
     use FFT, only : RFTransform_su,DAssignFFT
@@ -281,12 +281,12 @@ Program LOFAR_Imaging
     Logical :: E_FieldsCalc=.true.
     Integer :: i_dist, i_guess, nxx, valueRSS
     NAMELIST /Parameters/ RunOption &
-         !,  Explore, ImagingRun, Interferometry
+         !,  Explore, ImagingRun, Interferometry !, RealCorrelation, E_FieldsCalc &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
-         , Diagnostics, Dual, FitIncremental, Fit_AntOffset, RealCorrelation &
-         , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib &
-         , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, E_FieldsCalc, PixPowOpt, OutFileLabel, ChainRun &
+         , Diagnostics, Dual, FitIncremental, Fit_AntOffset &
+         , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
+         , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    Version='v22.01'
@@ -311,6 +311,7 @@ Program LOFAR_Imaging
    CurtainHalfWidth=-1
    SaturatedSamplesMax=5
    Simulation=""
+   CalibratedOnly=.true.
    !reshape((/ -1.D-10,0.d0,0.d0,0.d0,-1.D-10,0.d0,0.d0,0.d0,-1.D-10 /), shape(array))
    !AntennaRange_km=AntennaRange
    read(*,NML = Parameters,iostat=nxx)
@@ -416,11 +417,11 @@ Program LOFAR_Imaging
       CASE("C")  ! Calibrate                          RunMode=2
          WriteSimulation(2)=-1
          !Simulation="" ! not possible to use this option with simulated data
-         If(E_FieldsCalc) Then
-            Dual=.true.
-            RealCorrelation=.true.
-            Polariz= E_FieldsCalc
-         EndIf
+         CalibratedOnly=.False.
+         E_FieldsCalc=.false.
+         RealCorrelation=.False.
+         CalibratedOnly=.False.
+         Polariz= E_FieldsCalc
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
          Call PrintValues(XcorelationPlot,'XcorelationPlot', &
          'Produce a plot of the cross-correlation functions (real or absolute).')
@@ -429,11 +430,11 @@ Program LOFAR_Imaging
          'Print detailed information for the time deviations per antenna per pulse.')
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
          Call PrintValues(Dual,'Dual', 'Make a combined analysis of the even (Y-) and odd (X-) numbered dipoles.')
-         Call PrintValues(RealCorrelation,'RealCorrelation', &
-         'Use only the real part of the cross correlations, not the absolute value.')
-         Call PrintValues(E_FieldsCalc,'E_FieldsCalc', &
-         'Perform an unfolding of the antenna function, including source polarization.'//&
-         'Sets Dual=.t. and RealCorrelation=.t. .')
+         !Call PrintValues(RealCorrelation,'RealCorrelation', &
+         !'Use only the real part of the cross correlations, not the absolute value.')
+         !Call PrintValues(E_FieldsCalc,'E_FieldsCalc', &
+         !'Perform an unfolding of the antenna function, including source polarization.'//&
+         !'Sets Dual=.t. and RealCorrelation=.t. .')
          Call PrintValues(FullSourceSearch,'FullSourceSearch', &
          'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
          Call PrintValues(FitIncremental,'FitIncremental', &
@@ -455,8 +456,8 @@ Program LOFAR_Imaging
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
             If(nxx.ne.0) exit
-            Read(lname,"(i3,2i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
-               i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
+            Read(lname,"(A1,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+               Mark, i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
             If(nxx.eq.0) exit
             ChunkNr_dim=i   ! this was a genuine chunk card
          EndDo
@@ -502,12 +503,15 @@ Program LOFAR_Imaging
          FitIncremental=.true.
          Interferometry=.false.
          Polariz=.false.  ! ????
+         RealCorrelation=.false.
          !FitRange_Samples=170
          FitRange_Samples=86 ! 90  !  some cases 70 is better, sometimes 90, 80 seems to be worse i.e. highly non-linear!
          Call PrintValues(Dual,'Dual', 'Fix pulses in the even (Y-) and odd (X-) numbered dipoles at same source position.')
          Call PrintValues(PeaksPerChunk,'PeaksPerChunk', &
          'Maximum number of sources searched for per chunck (of 0.5 ms).' ) !
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+         Call PrintValues(CalibratedOnly,'CalibratedOnly', &
+            'Use only antennas that have been calibrated.')
          Call PrintValues(AntennaRange,'AntennaRange', &
          'Maximum distance (from the core) for the range of the antennas (in [km]).')
          Call PrintValues(FullSourceSearch,'FullSourceSearch', &
@@ -517,8 +521,8 @@ Program LOFAR_Imaging
             'minimal fraction of the total number of antennas for which the pulse is located.' ) !
          Call PrintValues(CCShapeCut_lim,'CCShapeCut_lim', &
             'Maximum ratio of the width of the cross correlation function by that of the self correlation.')
-         Call PrintValues(RealCorrelation,'RealCorrelation', &
-            'Use only the real part of the cross correlations, not the absolute value.')
+         !Call PrintValues(RealCorrelation,'RealCorrelation', &
+         !   'Use only the real part of the cross correlations, not the absolute value.')
          Call PrintValues(ChiSq_lim,'ChiSq_lim', 'Do not save any sources with a worse chi-square.' ) !
          Call PrintValues(SearchRangeFallOff,'SearchRangeFallOff', &
             'Multiplier for the (parabolic) width of the pulse-search window.')
@@ -528,6 +532,7 @@ Program LOFAR_Imaging
          FitRange_Samples=7
          Dual=.false.
          Polariz=Dual  !
+         CalibratedOnly=.False.
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
@@ -537,8 +542,6 @@ Program LOFAR_Imaging
          !Call PrintValues(FullAntFitPrn,'FullAntFitPrn', &
          !'Print detailed information for the time deviations per antenna per pulse.')
          !Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
-         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
-            'Maximum number of saturates time-samples per chunk of data')
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core) for the range of the antennas (in [km]).')
          Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
@@ -605,12 +608,15 @@ Program LOFAR_Imaging
             '=0=default: Intensity=sum two transverse polarizations only; '//&
             '=1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; '//&
             '=2: Intensity=sum all three polarizations, including longitudinal with the full weight')
-         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
-            'Maximum number of saturates time-samples per chunk of data')
+         Call PrintValues(CalibratedOnly,'CalibratedOnly', &
+            'Use only antennas that have been calibrated.')
+         Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'
    End SELECT
    !
+   Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
+      'Maximum number of saturates time-samples per chunk of data')
    Call PrintValues(Calibrations,'Calibrations', &
    'The antenna time calibration file. Not used when running on simulated data!' )
    Call PrintValues(SignFlp_SAI,'SignFlp_SAI', &
@@ -621,6 +627,8 @@ Program LOFAR_Imaging
    'Station-Antenna Identifiers for those that are malfunctioning.' )
    Call PrintValues(ExcludedStat,'ExcludedStat', &
    'Mnemonics of the stations that should be excluded.' )
+         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
+            'Maximum number of saturates time-samples per chunk of data')
    write(2,*) '&end'
    write(2,"(20(1x,'='))")
    !     Some remaining setup

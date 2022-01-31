@@ -184,7 +184,7 @@ Subroutine EI_PolarizPeak(i_Peak)
    Windw=3*N_Smth
    Call GetInterfFitDelay(i_chunk, FitDelay)
    Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(1,i_Peak), &
-      AntPeak_OffSt(1,i_Peak), Cnu0(0,1,i_Peak), Cnu1(0,1,i_Peak))
+      AntPeak_OffSt(1,i_Peak), Cnu0(0,1,i_Peak), Cnu1(0,1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
    Windw=3*N_Smth
    Call EI_Weights(Nr_IntFerCh(i_chunk), IntfNuDim, i_chunk, SourcePos(1,i_Peak), &
       AntPeak_OffSt(1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))

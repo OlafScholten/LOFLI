@@ -34,6 +34,7 @@ Module Chunk_AntInfo
     Integer, save :: ExcludedStatID(ExcludedStat_max)
     Character(len=5), save :: ExcludedStat(ExcludedStat_max)
     Integer, save :: SaturatedSamplesMax  ! Max nr of saturated samples per chunk
+    Logical, save :: CalibratedOnly
     Integer, save :: RefStat_ID
     Integer, save :: DataReadError
     Integer, save :: AntennaNrError=-1

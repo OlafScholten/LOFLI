@@ -132,7 +132,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          Else
             i_distmin=2
             Do i_Peak=1,PeakNrTotal
-            SourcePos(:,i_Peak)=SourceGuess
+               SourcePos(:,i_Peak)=SourceGuess
             Enddo
             Do i=1,3
                SpaceCov(i,i)=SigmaGuess(i)*SigmaGuess(i)

@@ -18,7 +18,7 @@ Subroutine EI_PolarizSlice(i_slice)
       First=.false.
       Write(2,*) ' IntfBase, IntfNuDim:', IntfBase, IntfNuDim, Nr_IntFerMx
       Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, CenLoc(:), &
-         AntPeak_OffSt(1,1), Cnu0(0,1,1), Cnu1(0,1,1))
+         AntPeak_OffSt(1,1), Cnu0(0,1,1), Cnu1(0,1,1), W_ap(1,1), W_at(1,1))
       j_IntFer=1
       write(Label,"(i2.2)") j_IntFer
       Call TimeTracePlot(j_IntFer, IntfBase, i_chunk, CenLoc, SumWindw, Label) ! window width around central sample

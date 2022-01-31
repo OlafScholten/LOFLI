@@ -952,7 +952,7 @@ Subroutine GetRefAnt
          Enddo
          If(j.eq.0) stop 'No reference antenna found, Dual'
          Call Double_sort(Ant(1:j,0:2))
-         write(2,*) 'reference antenna distance [0.1m] and numbers:',Ant(1,:)
+         write(2,*) 'relative reference antenna distance [0.1m] and numbers:',Ant(1,:)
          j=1
       Else
          Do i_ante=1,MaxRefAnt ! do NOT build table of relative distances

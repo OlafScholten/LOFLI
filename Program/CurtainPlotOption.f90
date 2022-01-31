@@ -357,7 +357,7 @@ Subroutine GLE_Corr()
 End Subroutine GLE_Corr
 !=================================
 ! ===========================================================================
-Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Chi2pDF)
+Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
    use constants, only : dp
    !use DataConstants, only : Time_dim, DataFolder, OutFileLabel
    !use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
@@ -369,7 +369,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: unt, WWidth, i_chunk
-   Real(dp), intent(in) :: dChi_ap(*), dChi_at(*), Chi2pDF
+   Real(dp), intent(in) :: dChi_ap(*), dChi_at(*), Chi2pDF, Power_p(*), Power_t(*)
    Character(Len=*), intent(in) :: FileA, Label
    Character(Len=*), intent(in) :: file
    integer :: I_ant, i_stat, Stat_ID, counter
@@ -377,6 +377,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !Character(len=41) :: txt
    Character(len=5) :: Station_Mnem
    real*8 :: dChi_sp(1:Nr_UniqueStat), dChi_st(1:Nr_UniqueStat)
+   Real*8 :: StPowr_p(1:Nr_UniqueStat), StPowr_t(1:Nr_UniqueStat)
    real*8 :: plot_offset, HOffSt_p, HOffSt_t, PlotW, Sep, whiteness
    !
    !vsize=Nr_UniqueStat*2 34
@@ -396,7 +397,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
       '   xtitle "time [samples]"', '   ytitle "Amplitude"',&
       '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
       '   x2labels on',' end graph'
-   Write(unt,"(A,6(/A))" ) 'begin key','position tr','nobox', '   text \phi', &
+   Write(unt,"(A,6(/A))" ) 'begin key','position tl','nobox', '   text \phi', &
       !         '   text "Excluded" lstyle 4 color black lwidth 0.1', &
       'end key','set just cc'
    Write(unt,"(A,/A,I2)")  'amove xg(0) 4','rline 0 ',Nr_UniqueStat+1
@@ -415,6 +416,8 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !write(2,*) 'Nr_UniqueStat',Nr_UniqueStat, i_chunk, Label, Nr_IntFerCh(i_chunk)
    dChi_sp(:)=0.
    dChi_st(:)=0.
+   StPowr_p(:)=0.
+   StPowr_t(:)=0.
    !   write(2,*) 'dChi_ap',dChi_ap(:)
    Do i_stat=1,Nr_UniqueStat
       Stat_ID=Unique_StatID(i_stat)
@@ -434,6 +437,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
          Write(Unt,902) trim(FileA)//'PhiMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
          counter=counter+1
          dChi_sp(i_stat)=dChi_sp(i_stat)*(counter-1)/counter + dChi_ap(j_IntFer)/counter  ! keep running mean
+         StPowr_p(i_stat)=StPowr_p(i_stat)*(counter-1)/counter + Power_p(j_IntFer)/counter  ! keep running mean
       EndDo
       !write(2,*) 'dn:',dn,j_IntFer
       Write(Unt,"(' end graph')")
@@ -450,6 +454,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
          Write(Unt,902) trim(FileA)//'ThMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
          counter=counter+1
          dChi_st(i_stat)=dChi_st(i_stat)*(counter-1)/counter + dChi_at(j_IntFer)/counter  ! keep running mean
+         StPowr_t(i_stat)=StPowr_t(i_stat)*(counter-1)/counter + Power_t(j_IntFer)/counter  ! keep running mean
       EndDo
       Write(Unt,"(' end graph')")
    EndDo
@@ -471,13 +476,16 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
         Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_p, plot_offset,    PlotW  ! hline
         Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_p-1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'  ! text on left
         whiteness=1/(1+2*dChi_sp(i_stat)/Chi2pDF)
-        Write(unt,904) HOffSt_p-1.5+PlotW, plot_offset+.5, whiteness, dChi_sp(i_stat)            ! text in right side
+        Write(unt,904) HOffSt_p-4.0+PlotW, plot_offset+.5, 1.-whiteness, whiteness, dChi_sp(i_stat)            ! text in right side
+        Write(unt,905) HOffSt_p-1.5+PlotW, plot_offset+.5,  sqrt(StPowr_p(i_stat))            ! text in right side
         Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_t, plot_offset,    PlotW
         Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_t+PlotW+1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'
         whiteness=1/(1+2*dChi_st(i_stat)/Chi2pDF)
-        Write(unt,904) HOffSt_t+1.5, plot_offset+.5, whiteness, dChi_st(i_stat)
+        Write(unt,904) HOffSt_t+1.5, plot_offset+.5, 1.-whiteness, whiteness, dChi_st(i_stat)
+        Write(unt,905) HOffSt_t+3.5, plot_offset+.5,  sqrt(StPowr_t(i_stat))            ! text in right side
     Enddo
-904   Format('amove ',2F5.1,/'set color ',F5.1,/'write "',F5.1,'"',/'Set color black')
+904   Format('amove ',2F5.1,/'set color rgb(',F3.1,',0.0,',F3.1,') ',/'write "',F5.1,'"',/'Set color black')
+905   Format('amove ',2F5.1,/'write "',F5.0,'"')
 !        Write(unt,903) plot_offset,plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat)), &
 !            plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat))
 !903 Format('amove 4 ',F5.2,/'aline 59',F5.1,/'rmove 1.5 0 ',/'write "',A5,'"',/'amove 2.5 ',F5.2,/'write "',A5,'"')

@@ -234,31 +234,34 @@ Subroutine EISelectAntennas(i_chunk)
     integer,dimension(:),allocatable :: Station_IDs  ! scratch array
    !
    !Do i_chunk=1,ChunkNr_dim
-   If (.not. allocated(IntFer_ant)) Allocate( IntFer_ant(Nmax_IntFer,1:ChunkNr_dim), Nr_IntFerCh(1:ChunkNr_dim))
-      Station=0
-      j_IntFer=0
+   If (.not. allocated(IntFer_ant)) Then
       Nr_UniqueStat=0
-      Do i_ant=1,Ant_nr(i_chunk)         ! Select the antennas for Interferometry
-         If(Ant_Stations(i_ant,i_chunk) .ne. Station) then
-           Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
-           Station=Ant_Stations(i_ant,i_chunk)
-           !write(2,*) Statn_ID2Mnem(Station), Ant_pos(:,i_ant,i_chunk)/1000.
-           ! write(2,*) '-->',j_IntFer+1, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
-         endif
-         !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
-         If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
-         if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. 0) cycle       ! First select the even,
-         if(Ant_IDs(i_ant+1,i_chunk) .ne. (Ant_IDs(i_ant,i_chunk)+1) ) cycle       ! then check if the odd antenna is there too
-         j_IntFer=j_IntFer+1
-         IntFer_ant(j_IntFer,i_chunk)=i_ant  ! keep track of the even ones only
-         !write(2,*) j_IntFer, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
-         If(j_IntFer .ge. Nmax_IntFer) then
-            Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
-            exit
-         Endif
-      EndDo
-      Nr_IntferCh(i_chunk)=j_IntFer
-      If(j_IntFer .gt. Nr_IntFerMx) Nr_IntFerMx=j_IntFer  ! =max number for all chunks
+      Allocate( IntFer_ant(Nmax_IntFer,1:ChunkNr_dim), Nr_IntFerCh(1:ChunkNr_dim))
+   EndIf
+   Station=0
+   j_IntFer=0
+   Do i_ant=1,Ant_nr(i_chunk)         ! Select the antennas for Interferometry
+      If(Ant_Stations(i_ant,i_chunk) .ne. Station) then
+        Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
+        Station=Ant_Stations(i_ant,i_chunk)
+        !write(2,*) Statn_ID2Mnem(Station), Ant_pos(:,i_ant,i_chunk)/1000.
+        ! write(2,*) '-->',j_IntFer+1, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
+      endif
+      !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
+      If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
+      if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. 0) cycle       ! First select the even,
+      if(Ant_IDs(i_ant+1,i_chunk) .ne. (Ant_IDs(i_ant,i_chunk)+1) ) cycle       ! then check if the odd antenna is there too
+      j_IntFer=j_IntFer+1
+      IntFer_ant(j_IntFer,i_chunk)=i_ant  ! keep track of the even ones only
+      !write(2,*) j_IntFer, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
+      If(j_IntFer .ge. Nmax_IntFer) then
+         Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
+         exit
+      Endif
+   EndDo
+   Nr_IntferCh(i_chunk)=j_IntFer
+   If(j_IntFer .gt. Nr_IntFerMx) Nr_IntFerMx=j_IntFer  ! =max number for all chunks
+   write(2,*) 'first antenna pair in station',Ant_Stations(IntFer_ant(1,i_chunk),i_chunk),' for chunk=',i_chunk
    !EndDo
    !
     vec(:)=0
@@ -267,15 +270,18 @@ Subroutine EISelectAntennas(i_chunk)
       Vec(1:Nr_UniqueStat)=Unique_StatID(1:Nr_UniqueStat)
       k=Nr_UniqueStat
       !write(2,*) 'How is this possible?????'
+      !write(2,*) 'EISelectAntennas:vec(1:k)=', Nr_UniqueStat, Vec(1:Nr_UniqueStat)
     Endif
     !Do i_chunk=1, ChunkNr_dim
         !write(2,*) 'ant#=',Ant_nr(i_chunk),k
-     vec(k+1:k+Nr_IntferCh(i_chunk))=Ant_Stations(IntFer_ant(1:Nr_IntferCh(i_chunk),i_chunk),i_chunk)
-     k=k+Nr_IntferCh(i_chunk)
+    vec(k+1:k+Nr_IntferCh(i_chunk))=Ant_Stations(IntFer_ant(1:Nr_IntferCh(i_chunk),i_chunk),i_chunk)
+    !write(2,*) 'EISelectAntennas:vec(k+1:k+Nr_IntferCh(i_chunk))=', k, vec(k+1:k+Nr_IntferCh(i_chunk))
+    !k=k+Nr_IntferCh(i_chunk)
     !enddo
-    Call unique(vec,Station_IDs)
+    Call unique(vec,Station_IDs) ! allocated in this routine
     Nr_UniqueStat=size(Station_IDs)-1
     Unique_StatID(1:Nr_UniqueStat)=Station_IDs(2:Nr_UniqueStat+1)  ! get rid of leading 0
+    !write(2,*) 'EISelectAntennas:Unique_StatID=', Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
     Deallocate(Station_IDs)
     !
     !Write(2,*) 'Nr_UniqueStat1=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)

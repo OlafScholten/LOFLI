@@ -6,7 +6,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !use FitParams, only : Explore
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
-    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
+    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos, CalibratedOnly
     use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist, Simulation, WriteSimulation
     use Chunk_AntInfo, only : NormOdd, NormEven ! Powr_eo,NAnt_eo
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
@@ -17,6 +17,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    use HDF5_LOFAR_Read, only : GetDataChunk
    Use StationMnemonics, only : Statn_ID2Mnem
    use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt,Hann
+   Use Calibration, only : Station_ID2Calib
    Implicit none
    Integer, intent(in) :: i_chunk
    logical :: file14open=.false.
@@ -24,7 +25,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim)
-   Complex(dp) :: CNu_s(0:Cnu_dim)  ! CTime_s(1:Time_dim),
+   Complex(dp) :: CNu_s(0:Cnu_dim), CTime_s(1:Time_dim)
    integer :: Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
    Real*8 :: Powr, Powr_eo(0:1)
    Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
@@ -33,7 +34,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Real,save :: TotCPURead=0., TotCPUFit=0., TotWallRead=0., TotWallFit=0.
    !
    Integer :: j,NZero, N_one, ChMax, ChMin,i_file,i_grp,i_dst, ir_file,ir_grp,ir_dst
-   Integer :: i_ant, i_time, i_eo, unt, nxx, StAntID, sgn    ,  AntNr_lw, AntNr_up
+   Integer :: i_ant, i_time, i_eo, unt, nxx, StAntID, sgn, Calibrated,  AntNr_lw, AntNr_up
    Real*8 :: SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset,StatAnt_Calib !,StartTime_ms
    Logical :: Dubbel
    Logical, save :: FirstPass=.true.
@@ -149,8 +150,11 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               EndIf
               !RDist=0.
               !Get LOFAR Station calibrations = negative of delays
-              Call Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib) ! StatAnt_Calib in units of samples
-              !write(2,*) 'STATION_ID,Ant_ID,StatAnt_Calib',STATION_ID,Ant_ID,StatAnt_Calib
+              Call Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib, Calibrated) ! StatAnt_Calib in units of samples
+              If(CalibratedOnly .and. Calibrated.eq.0) Then
+               !write(2,*) 'STATION_ID,Ant_ID was not calibrated',STATION_ID,Ant_ID,StatAnt_Calib
+               cycle
+              EndIf
               !
               !Absolute_TIME  ! should be the same for all
               !SAMPLE_NUMBER_first  ! Number of samples, after 'Absolute_TIME' for the first recording
@@ -193,7 +197,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   cycle       ! get next DSet
               endif
               !
-              If( RunMode.eq.7 .or. RunMode.eq.24) Then
+              If( RunMode.eq.7 .or. RunMode.eq.24 .or. Runmode.eq.2) Then
                   N_one=COUNT( Chunk(:).gt.2045 .or. Chunk(:).lt.-2045)  !! saturates at 2047
                   !NZero=COUNT( Chunk(:).lt.-2020)  !! saturates at 2047
                   If(N_one.gt.SaturatedSamplesMax) Then
@@ -208,11 +212,13 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                      cycle
                   EndIf
               EndIf
-              ChMax=MaxVal(Chunk)
-              ChMin=MinVal(Chunk)
-              If(Diagnostics) write(2,*) StAntID,' min & max=', ChMin, ChMax,', RDist=',RDist, &
-                  ', Calibr=', - DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib, &
-                  ', SampNrFrst=',SAMPLE_NUMBER_first,', norm=',sqrt(Powr)
+              If(Diagnostics) Then
+                 ChMax=MaxVal(Chunk)
+                 ChMin=MinVal(Chunk)
+                 write(2,*) StAntID,' min & max=', ChMin, ChMax,', RDist=',RDist, &
+                     ', Calibr=', - DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib, &
+                     ', SampNrFrst=',SAMPLE_NUMBER_first,', norm=',sqrt(Powr)
+              EndIf
               !
               Ant_nr(i_chunk)=Ant_nr(i_chunk)+1
               If(Ant_nr(i_chunk) .gt. Ant_nrMax) then
@@ -223,7 +229,6 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Ant_IDs(Ant_nr(i_chunk),i_chunk)=Ant_ID
               Ant_Stations(Ant_nr(i_chunk),i_chunk)=STATION_ID
               Ant_pos(:,Ant_nr(i_chunk),i_chunk)=LFRAnt_crdnts(:)
-              !Ant_RawSourceDist(Ant_nr(i_chunk),i_chunk)=RDist         ! units of samples
               !
               sgn=+1
               If(any(SignFlp_SAI(1:SgnFlp_nr) .eq. StAntID,1) ) sgn=-1 ! Take care of sign flips
@@ -243,9 +248,28 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               !    Av=MaxVal(RTime_s)
               !    Bv=MinVal(RTime_s)
               !    write(2,*) 'Normalized: min & max=', Bv, Av
+              ! write(2,*) 'STATION_ID,Ant_ID',STATION_ID,Ant_ID,StatAnt_Calib
               !
           1   continue
           EndDo  ! i_dst=1,DSet_nr
+          ! re-order neighboring antennas according to increasing antenna ID (assumed in interferometric imaging)
+          ! re-order : CTime_spectr(1,i_ant,i_chunk) ; Ant_IDs(i_ant,i_chunk) ; Ant_pos(:,i_ant,i_chunk), only for this STATION_ID
+          Do i_ant=2,Ant_nr(i_chunk)
+            If(Ant_Stations(i_ant-1,i_chunk).eq.Ant_Stations(i_ant,i_chunk)) Then ! apply to antennas from a single station only
+               If(Ant_IDs(i_ant-1,i_chunk).gt.Ant_IDs(i_ant,i_chunk)) Then  ! flip order
+                  write(2,*) 'change order ',i_ant-1,Ant_IDs(i_ant-1,i_chunk),' and ',i_ant,Ant_IDs(i_ant,i_chunk)
+                  CTime_s(1:Time_dim)=CTime_spectr(1:Time_dim,i_ant,i_chunk)
+                  Ant_ID=Ant_IDs(i_ant,i_chunk)
+                  LFRAnt_crdnts(:)=Ant_pos(:,i_ant,i_chunk)
+                  CTime_spectr(1:Time_dim,i_ant,i_chunk)=CTime_spectr(1:Time_dim,i_ant-1,i_chunk)
+                  Ant_IDs(i_ant,i_chunk)=Ant_IDs(i_ant-1,i_chunk)
+                  Ant_pos(:,i_ant,i_chunk)=Ant_pos(:,i_ant-1,i_chunk)
+                  CTime_spectr(1:Time_dim,i_ant-1,i_chunk)=CTime_s(1:Time_dim)
+                  Ant_IDs(i_ant-1,i_chunk)=Ant_ID
+                  Ant_pos(:,i_ant-1,i_chunk)=LFRAnt_crdnts(:)
+               EndIf
+            EndIf
+          Enddo
           If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
                write(30,*) STATION_ID,TRIM(Statn_ID2Mnem(STATION_ID))
                AntNr_up=Ant_nr(i_chunk)

@@ -137,7 +137,7 @@ MODULE LOFLI_Input
       Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
       !Call PrintValues(lname,'input line-1', 'time & position' )
       write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
-         '" !  Reference/Source-| time, & position'
+         '" !  Core/Source-| time, & position'
       Call Convert2m(CenLoc)
       StartTime_ms=StartTime_ms+TimeBase
       t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
@@ -152,7 +152,7 @@ MODULE LOFLI_Input
          CASE DEFAULT  ! time at reference antenna is given
       End SELECT
       write(2,"(A,F12.6,A,F12.6,A,A,2(F9.4,','),F9.4,A)") &
-         ' True start time trace, adding base, in ref antenna (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]',&
+         ' True start time trace, adding base, at core (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]',&
          ' for source @(N,E,h)=(', CenLoc(1:3)/1000., ' ) km'
       Return
    End Subroutine ReadSourceTimeLoc
