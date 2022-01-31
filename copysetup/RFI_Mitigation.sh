@@ -8,7 +8,7 @@ source ${UtilDir}compile.sh
 echo "Flash Folder:" ${FlashFolder}
 echo "start RFI mitigation"
 ${ProgramDir}$Prog ${AntennaFieldsDir} 2
-source GLE-plots.sh
+#source GLE-plots.sh
 echo "Start exploration run"
 nohup ./Explore.sh  >Explore.log 2>&1  &   
 echo "Explore was submitted, now wait."

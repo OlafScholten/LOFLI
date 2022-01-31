@@ -1,0 +1,24 @@
+&Parameters 
+ RunOption='Impulsive'
+ AntennaRange=100
+ FitRange_Samples=70 ! 20
+ Sigma_AntT= 3          ! 3=S ;  2=T
+ SearchRangeFallOff=4.0  ! 4.5=v ; 4=w ; 3.5=def
+ ChiSq_lim= 80
+! Fit_AntOffset=.true. 
+ Dual=.false.
+ SaturatedSamplesMax=1 ,
+! CalibratedOnly=.false.
+
+ NoiseLevel = 200.
+ Calibrations = "Calibrations202011221739.dat" ! updated for v18  chi^2=5.66
+ BadAnt_SAI=   007093, 005092, 005093, 011088, 011089, 011090, 011091, 013088, 013089, 032086, 032087
+             103092, 103093, 121091, 125088, 125089, 125092, 125093, 130092, 130093, 130094, 130095
+             145084, 145085, 145088, 145089, 166094, 166095
+ OutFileLabel="SE"  
+&end 
+
+  669 , -20000.07, +40123.33,   7713.12, 0 2100 ! SE StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  669 , -20000.07, -43123.33,   5713.12, 0 2100 ! SW StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+
+

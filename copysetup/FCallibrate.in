@@ -1,0 +1,70 @@
+&Parameters 
+ RunOption='FieldCallibrate'
+! CurtainHalfWidth=50  ! should not be possible for this option
+ AntennaRange=100
+! Fit_AntOffset=.true. 
+ IntfSmoothWin= 19 !19     ! Width (in samples) of the slices for TRI-D imaging.
+! Diagnostics=.true.
+! Calibrations="Calibrations202201231106.dat"    ! 19A-5:only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS307 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 ! NoSrc 6.97
+ SaturatedSamplesMax=3 ,
+! WriteCalib=.true.
+ Calibrations="Calibrations202201311806.dat" ! FldCal only RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509  NoSrc !
+! Calibrations= "Calibrations202108032244.dat"  ! Hilbert chisq=2.17 best first round
+! SignFlp_SAI=   21078, 125028, 142092, 142093, 145032, 145033, 166015 
+! PolFlp_SAI=   021092,  30028,  32092, 106044, 106064, 125028 
+!               145032, 146092, 166014, 181092,  189076 
+! BadAnt_SAI=    003054, 003055, 032049 
+ ExcludedStat= 'RS210'
+ BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+             181055, 106063, 130049, 130063, 130091, 145048, 145054, 145084, 146072, 169072
+             188049, 188091, 189054, 189084, !130054, 
+ SignFlp_SAI=   161072, 161073, ! 130085  !, 130054, 130084
+ !PolFlp_SAI=    130084 ! 150090 ! 
+ OutFileLabel="-19" &end 
+
+  1030, -3564.02, -34166.84,   3950.86, 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  1240, -4000., -35000,  4000. , 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  1310, -9000., -23000,  4000. , 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  1440, -9000., -23000,  4000. , 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  1480, -9000., -23000,  4000. , 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  1770, -9000., -25000,  4000. , 20 50 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+
+  1   1   24523  -5511.71, -33858.24,   3968.42,;   0.88
+  2   1   48520  -5517.18, -33845.63,   3962.84,;   0.54
+  3   1   48912  -5512.96, -33848.03,   3966.99,;   0.89
+  4   2   41636  -1315.15, -33363.80,   4763.91,;   2.44
+  5   2   44339  -1315.57, -33367.92,   4765.80,;   3.94
+  6   3   19794 -10093.68, -24288.52,   4293.38,;   6.98
+  7   4   43121  -9296.00, -23480.51,   4860.98,;   2.61
+  8   5   16608 -10896.39, -21488.32,   3294.45,;   5.34
+  9   5   41190 -10645.20, -21529.99,   3505.62,;   8.78
+ 10   6   15953  -7697.73, -23469.93,   1645.10,;   8.57
+ New: Calibrations="Calibrations202201242037.dat"
+only RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509  !
+only CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 !
+only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 !
+Nr_UniqueStat= 34       1     2     3     4     5     6    11    13    17    21    24    26    28    30    31    32   101   103   106   125   128   130   141   142   145   146   150   161   166   167   181   183   188   189
+Nr_UniqueAnt= 324   CS001 CS002 CS003 CS004 CS005 CS006 CS011 CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509
+!For Calibrations="Calibrations202201242100.dat" ! FC only CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509 NoSrc ! 2.30 *29
+ 11   6   15913  -7697.73, -23469.93,   1645.10,;   8.57  ! noise
+ 12   6   15993  -7697.73, -23469.93,   1645.10,;   8.57    ! noise
+
+
+  1 0 1   24523  -5511.36, -33858.31,   3975.43,   -0.15;   1.14,   1.16 RS407 RS508 RS509
+  2 0 1   48520  -5516.65, -33845.71,   3957.99,   -0.00;   6.28,   0.95 RS208 RS210
+  3 0 1   48912  -5512.68, -33847.65,   3960.96,   -0.05;   1.04,   1.08 RS205 RS406
+  4 0 2   41636  -1315.59, -33364.55,   4759.10,   -0.17;   0.59,   0.63 RS208 RS210 RS310 RS409
+  5 0 2   44339  -1315.65, -33368.03,   4756.15,   -0.31;   3.59,   3.19 CS030 RS208 RS409
+  6 0 3   19794 -10094.33, -24288.99,   4282.47,   -0.12;   0.66,   0.69 RS210 RS310 RS409
+  7 0 4   43121  -9296.36, -23480.05,   4853.95,   -0.01;   0.83,   0.84 RS409
+  8 0 5   16608 -10895.93, -21486.99,   3293.99,   -0.07;   0.89,   0.90 RS310
+  9 0 5   41190 -10644.71, -21528.27,   3503.83,   -0.03;   0.88,   0.89 RS406
+ 10 0 6   15953  -7696.76, -23470.84,   1628.68,   -0.15;   3.24,   1.73 RS106 RS310
+ Afig-Cal.sh  is submitted
+only CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 ! NoSrc !
+only CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 !
+only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 !
+Nr_UniqueStat= 35       1     2     3     4     5     6    11    13    17    21    24    26    28    30    31    32   101   103   106   125   128   130   141   142   145   146   150   161   166   167   169   181   183   188   189
+Nr_UniqueAnt= 334   CS001 CS002 CS003 CS004 CS005 CS006 CS011 CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509
+
+
