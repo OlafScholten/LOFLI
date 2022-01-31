@@ -1,0 +1,29 @@
+!Similation input
+&Parameters 
+ Antennas="simulation/DLTst", 
+ Simulation="simulation/Tst"
+!NtSamples=1000
+SrcNrMax = 1000
+TimingErr_ns = 1.
+!FracGalacNoisePow=0.0001
+! FracGalacNoisePow=0.999999
+!OutFileLabel="tst"
+&end
+
+  0.0  -10.22, -24.12,  5.36,      -24.0 10. 30.       !  "Slant_50"     
+  60.0  -10.22, -24.12,  5.36,      -240.0 100. 300.       !  "Slant_50"     
+ Cloud 40. 10. 1000                                       !  cloud
+  300.0  -10.22, -24.12,  5.36,      -24.0 10. 30.       !  "Slant_50"     
+!  0.0  20.35,   18.65,    4.15,      00.0 0. 500.       !  "Vert_500"     
+ Cloud 40. 10. 100                                       !  cloud
+  300.0  20.35,   18.65,    4.15,      0000.0 50. 0000.       !  "East_50"     
+! Repeat 130. 5         !  "ASync"
+  0.0  -20000., +40120.5,   7713.,      0000.0 50000. 0000.       !  "H50000"     
+ Repeat 260. 3         !  "ASync"
+  65.0  -20000., +40120.5,   7713.,     40000.0 20000. 0000.0       !  "H50000"     
+ Repeat 260. 2         !  "ASync"
+  195.0  -20000., +40120.5,   7713.,     0000.0  0000. 50000.0       !  "H50000"     
+ Repeat 130. 5         !  "ASync"
+ Repeat 65. 10         !  "ASync"
+
+

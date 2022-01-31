@@ -12,21 +12,23 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
    !
    !inquire(unit=10, opened=itsopen)  ; if ( itsopen ) then okay  ; logical itsopen
    If(BatchFile.eq. '' .and. (present(PlotType) .or. present(SpecialCmnd))) Then  ! Open unit 10
-      SELECT CASE (RunMode)  ! 1=Explore; 2=Calibrate; 3=Impulsive imager; 4=Interferometry
+      SELECT CASE (MOD(RunMode,10))  ! 1=Explore; 2=Calibrate; 3=Impulsive imager; 4=Interferometry
          CASE(0)  ! RFI-Mitigation
             BatchFile='Afig-RFIM'  ! Automatic Run of GLE -
          CASE(1)  ! Explore
             BatchFile='Afig-Expl'  ! Automatic Run of GLE -
          CASE(2)  ! Calibrate
             BatchFile='Afig-Cal'
-         CASE(3)  ! Explore
+         CASE(3)  ! Impulsive Imager
             BatchFile='Afig-ImpIm'
          CASE(4)  ! Interf Imager TRID
             BatchFile='Afig-Intf'//TRIM(OutFileLabel)
          CASE(5)  ! TrackScatter; Impulsive imager
             BatchFile='AImp'
-         CASE(6)  ! Select; TRID imager
+         CASE(6)  ! InterfSelect; TRID imager
             BatchFile='ATRID'
+         CASE(7)  ! InterfSelect; TRID imager
+            BatchFile='Afig-FldCal'
          CASE DEFAULT
             write(2,*) 'not a foreseen plotting RunMode:',RunMode
             write(*,*) 'not a foreseen plotting RunMode:',RunMode

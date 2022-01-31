@@ -5,7 +5,7 @@ Subroutine SourceTryal(DistMax)
 !     the link " X(  XIndx(i,i_Peak) ) = SourcePos(FitPos(i),i_Peak)" is not implemented.
    !use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
    use DataConstants, only : Production
-   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal , PeakPos  ! , Peak_eo, Peak_start
+   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal , PeakPos  ! , Peak_eo, ChunkNr
    use ThisSource, only : CorrAntNrs, CCorr_max, SourcePos
    use FitParams, only : Sigma, SpaceCov, CalcHessian
    use DataConstants, only : Production
@@ -168,7 +168,7 @@ Subroutine CheckAntInRange(SourceTrPos,N_try,N_ActAnt)
 ! Checks which antennat in the list "CorrAntNrs(2:j_corr,i_eo, i_chunk)" are able to see pulses from
 !     all source locations given in "SourceTrPos(3,1:N_try)".
    !use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
-   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, Peak_start
+   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, ChunkNr
    use ThisSource, only : CorrAntNrs, CCorr_max, SourcePos, Safety
    use constants, only : dp
    Implicit none
@@ -182,7 +182,7 @@ Subroutine CheckAntInRange(SourceTrPos,N_try,N_ActAnt)
    N_ActAnt=0
    Do i_Peak=1,PeakNrTotal
       i_eo=Peak_eo(i_peak)
-      i_chunk=Peak_start(i_peak)
+      i_chunk=ChunkNr(i_peak)
       j_corr=1
       i_ref=CorrAntNrs(j_corr,i_eo, i_chunk)
       Do j_corr=2,Nr_Corr(i_eo,i_chunk)
@@ -204,9 +204,9 @@ Subroutine AntInRangeChk(i_peak,j_corr,i_ref,SourceTrPos,N_try,TS_max,TS_min)
 !  Calculates max and min of pulse position shift for a given antenna (w.r.t. reference) and
 !     list of source positions
    !use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
-   !use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, Peak_start
+   !use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, ChunkNr
    !use ThisSource, only : CorrAntNrs, CCorr_max, SourcePos, Safety
-   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, Peak_start, T_Offset, CorrAntNrs
+   use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, T_Offset, CorrAntNrs
    use constants, only : dp
    Implicit none
    integer, intent(IN) :: i_peak,j_corr,i_ref, N_try
@@ -217,7 +217,7 @@ Subroutine AntInRangeChk(i_peak,j_corr,i_ref,SourceTrPos,N_try,TS_max,TS_min)
    Real(dp), external :: SubRelDist
    !
    !i_ref=CorrAntNrs(j_corr,i_eo, i_chunk)
-   i_chunk=Peak_start(i_peak)
+   i_chunk=ChunkNr(i_peak)
    i_ant=CorrAntNrs(j_corr,Peak_eo(i_peak), i_chunk)
    Do k=1,N_try
       TS(k)=SubRelDist(SourceTrPos(1,k),i_ant,i_chunk) - SubRelDist(SourceTrPos(1,k),i_ref,i_chunk) - T_Offset(j_corr,i_Peak)
@@ -232,7 +232,7 @@ End Subroutine AntInRangeChk
 Subroutine OptSrcPos(SourceTrPos,N_try,ChiSq_min)
    !use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
    use DataConstants, only : Production
-   use ThisSource, only : Nr_Corr, PeakNrTotal, PeakPos, Peak_eo, Peak_start ! , PeakNr
+   use ThisSource, only : Nr_Corr, PeakNrTotal, PeakPos, Peak_eo, ChunkNr ! , PeakNr
    use ThisSource, only : CorrAntNrs, CCorr_max, SourcePos, T_Offset ! , Safety
    use constants, only : dp
    Implicit none
@@ -247,7 +247,7 @@ Subroutine OptSrcPos(SourceTrPos,N_try,ChiSq_min)
    CS(:)=0.
    Do i_Peak=1,PeakNrTotal
       i_eo=Peak_eo(i_peak)
-      i_chunk=Peak_start(i_peak)
+      i_chunk=ChunkNr(i_peak)
       j_corr=1
       i_ref=CorrAntNrs(j_corr,i_eo, i_chunk)
     !  R(:)=0.

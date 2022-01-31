@@ -25,17 +25,18 @@ Subroutine FindCallibr(SourceGuess)
    use Chunk_AntInfo, only : Unique_SAI, Start_time, TimeFrame, tot_uniqueant
    use DataConstants, only : Polariz, Ant_nrMax
    use ThisSource, only : Dual, RealCorrelation
-   use ThisSource, only : NrP, t_ccorr, SourcePos, RefAntErr, ExclStatNr, Peak_eo, Peak_start, TotPeakNr
+   use ThisSource, only : NrP, t_ccorr, SourcePos, RefAntErr, ExclStatNr, Peak_eo, ChunkNr, TotPeakNr
    use ThisSource, only : Nr_corr, PeakNr, PeakNrTotal, PlotCCPhase, Safety, PolBasis, Tref_dim, T2_Dim
    use ThisSource, only : PeakPos, Peak_eo, PeakRMS, PeakChiSQ
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
-   use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Explore, FitIncremental, PulsPosCore, WriteCalib, N_EffAnt, Max_EffAnt
+   use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, FitIncremental, PulsPosCore, WriteCalib, N_EffAnt, Max_EffAnt
    use FitParams, only : FullSourceSearch
    use constants, only : dp,sample
-   use DataConstants, only : PeakNr_dim, ChunkNr_dim
+   use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode
    use FitParams, only : MeanCircPol, Cnu01, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
    !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
+   Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp), intent(in) :: SourceGuess(3,10)
    !
@@ -71,19 +72,19 @@ Subroutine FindCallibr(SourceGuess)
 !   flush(unit=2)
    Nr_Corr=0
    ExclStatNr(:,:)=0
-   Call GetRefAnt      ! works in polariz mode
+   Call GetRefAnt      ! works also in polariz mode
    !
    i_peak=0
    PeakNr1=0
-   If(Explore) then ! To prevent reading from input
-   ReadErr=-1
+   If(RunMode.eq.1) then ! To prevent reading from input in Explore
+      ReadErr=-1
    Else
-   Call ReadPeakInfo(ReadErr)
+      Call ReadPeakInfo(ReadErr)
    Endif
-!   write(2,*) 'ReadErrh: ',ReadErr
-!   flush(unit=2)
+   !write(2,*) 'ReadErrh: ',ReadErr
+   !flush(unit=2)
    If(ReadErr.ne.0) then  ! Find peak positions instead of reading them from input
-      Do i_chunk=1, ChunkNr_dim     ! get the 4 strongest peaks in this time block
+      Do i_chunk=1, ChunkNr_dim     ! get the NrP strongest peaks in this time block
         Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
         Do i_eo=0,1
             If((PeakNr1 + NrP) .gt. PeakNr_dim) then
@@ -94,7 +95,7 @@ Subroutine FindCallibr(SourceGuess)
             Do i_peak=PeakNr1+1,PeakNr1 + NrP
                 Peakpos(i_peak)=PeakSP(i_peak-PeakNr1,i_eo)
                 Peak_eo(i_peak)=i_eo
-                Peak_start(i_peak)=i_chunk
+                ChunkNr(i_peak)=i_chunk
                SourcePos(:,i_Peak) = SourceGuess(:,i_chunk)
                RefAntErr(i_Peak) = 0.
             Enddo
@@ -113,8 +114,8 @@ Subroutine FindCallibr(SourceGuess)
       write(2,*) 'Use theta polarization for antenna correlations'
       Allocate( PolBasis(1:3,1:3,1:PeakNrTotal) )
    Endif
-!   write(2,*) 'FullSourceSearch: ', FullSourceSearch
-!   flush(unit=2)
+   write(2,*) 'FullSourceSearch: ', FullSourceSearch
+   flush(unit=2)
    FitNoSources=.not.FullSourceSearch
    PulsPosCore=.false.
    If(FitIncremental) then
@@ -132,18 +133,18 @@ Subroutine FindCallibr(SourceGuess)
       Call FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !write(2,*) 'RefAntErr---Y', RefAntErr(1)
       !Call PrntNewSources()
-!   write(2,*) 'i_dist: ', i_dist
-!   flush(unit=2)
+   write(2,*) 'i_dist: ', i_dist
+   flush(unit=2)
       !Write(2,*) 'Average RMS=',SUM(PeakRMS(1:PeakNrTotal))/PeakNrTotal
-      If(Explore .and. (MINVAL(PeakRMS(1:PeakNrTotal)).gt.30.)) then
+      If((RunMode.eq.1) .and. (MINVAL(PeakRMS(1:PeakNrTotal)).gt.30.)) then
          write(2,"(A,F7.2,A,10F6.0)") 'chi-square too poor for max antenna distance=',DistMax &
             ,'[m], PeakRMS(1:PeakNrTotal):',PeakRMS(1:PeakNrTotal)
          Return
       Endif
    EndDo ! i_dist=1,MaxFitAntD_nr
-!   flush(unit=2)
+   flush(unit=2)
     !
-    If(explore) then
+    If(RunMode.eq.1) then  ! =Explore
       !write(2,*) 'PeakNrTotal=',PeakNrTotal
       Do i_peak=1,PeakNrTotal
          If(PeakRMS(i_Peak).gt. 25.) cycle
@@ -234,7 +235,7 @@ Subroutine FindCallibr(SourceGuess)
    Call PrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
    If(WriteCalib) then
-      Call MergeFine
+      Call WriteCalibration ! was MergeFine
    Endif
    !
    !Call GLE_Corr()
@@ -247,49 +248,44 @@ Subroutine ReadPeakInfo(ReadErr)
 !   Read-in the peakpos and source guesses for individual pulses.
 !
 !
-    use Chunk_AntInfo, only : Station_nrMax
-    use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, Peak_start !NrP, t_ccorr,
+    use constants, only : dp,sample,Refrac,c_mps
+    use Chunk_AntInfo, only : Station_nrMax, RefAnt, Ant_pos, Ant_RawSourceDist
+    use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs
+    use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, ChunkNr !NrP, t_ccorr,
     use ThisSource, only : Dual, PeakNr, PeakNrTotal !, PlotCCPhase, Safety, Nr_corr
     use ThisSource, only : PeakPos, Peak_eo
-!    use FitParams
-    use constants, only : dp,sample
     use DataConstants, only : PeakNr_dim, ChunkNr_dim
     use DataConstants, only : Polariz
     use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
     Implicit none
     !Character(len=80), intent(out) :: lname
     Integer, intent(out) :: ReadErr
-    !logical, intent(in) :: WriteCalib
-    !real ( kind = 8 ) :: X(N_FitPar_max)
     !
-    integer :: i_eo, i_chunk, i_dist, i, k, i_c,i_ca,i_eoa
+    integer :: i_eo, i_chunk, i_dist, i, j, k, i_c,i_ca,i_eoa
     !logical :: Fitfirst !,TraceFirst
     Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
-    !Integer, parameter :: PeakS_dim=NrP
     integer :: i_Peak, nxx, PeakNr1
     character*80 :: lname  ! Should be 80 to be compatible with "GetNonZeroLine"
     character*10 :: txt
+    character*1 :: Label
     character*35 :: Frmt
     real(dp) :: x1,x2,x3,t
     !
    ReadErr=0
    Call GetNonZeroLine(lname)
-!      Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),Peak_start(i_Peak),PeakPos(i_Peak)
+!      Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),ChunkNr(i_Peak),PeakPos(i_Peak)
 !      Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
 !      Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
-   Frmt="(i3,2i2,I8,3(F10.2,1x),F8.2)"
-   read(lname,Frmt,iostat=nxx)  i,i_eoa,i_ca, k, x1,x2,x3,t
+   Frmt="(A1,3i2,I8,3(F10.2,1x),F8.2)"
+   read(lname,Frmt,iostat=nxx)  Label,i,i_eoa,i_ca, k, x1,x2,x3,t
    If(nxx.ne.0) then
-      write(2,*) 'in:"',lname,'"'
+      write(2,*) 'Error reading in line: "',lname,'"'
       ReadErr=-1
       Return
    Endif
     !
     !
-   Do i_Peak=1,PeakNr_dim      ! initialize
-     !SourcePos(:,i_Peak) = SourceGuess(:)
-     RefAntErr(i_Peak) = 0.
-   Enddo
+   RefAntErr(1:PeakNr_dim) = 0.
    i_peak=0
    TotPeakNr=0
    PeakNr=0
@@ -297,20 +293,33 @@ Subroutine ReadPeakInfo(ReadErr)
    PeakNr1=0
    Do      ! Read source positions from input. There should be at least one un-readable line in the input.
       !write(2,*) 'lname="',lname,'"'
-      read(lname,Frmt,iostat=nxx)  i,i_eo,i_c, k, x1,x2,x3,t
+      j = iachar(lname(1:1))  ! convert to upper case if not already
+      if (j>= iachar("a") .and. j<=iachar("z") ) then
+         lname(1:1) = achar(j-32)
+      end if
+      read(lname,Frmt,iostat=nxx)  Label,i,i_eo,i_c, k, x1,x2,x3,t
       !write(2,*) k, x1,x2,x3,t
       If(nxx.ne.0) exit
       if((i_eo.lt.0) .or. (i_eo.gt.1) ) exit
       i_peak=i_peak+1
       If(i_peak .gt. PeakNr_dim) then
          write(2,*) 'PeakNr_dim will be exceeded',i_peak
+         Write(2,*) 'Expected:   Core/Reference antenna |i |i_eo |i_c |k |N |E |h | dt " in format ',FrMT
          stop 'FindCallibr:ReadPeakInfo'
       endif
       SourcePos(1,i_Peak)=x1
       SourcePos(2,i_Peak)=x2
       SourcePos(3,i_Peak)=x3
       RefAntErr(i_Peak) = t
-      Peakpos(i_Peak)=k
+      If(Label.eq.'C') Then
+         !x1=sqrt(sum((Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk)-SourcePos(:,i_Peak))**2))*Refrac/c_mps/sample
+         !x2=sqrt(sum(SourcePos(:,i_Peak)**2))*Refrac/c_mps/sample
+         Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk),x3) !distance to ant - distance to core in samples
+         k=k+NINT(x3-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
+         !write(2,*) i_peak,RefAnt(i_chunk,i_eo),k,x3, Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk), &
+         !      ' ref station=',Ant_Stations(RefAnt(i_chunk,i_eo),i_chunk)
+      EndIf
+      Peakpos(i_Peak)=k  ! peakposition in reference antenna
       Peak_eo(i_peak)=i_eo
       If(i_eoa .ne. i_eo) then
           PeakNr1= i_peak-1
@@ -330,8 +339,8 @@ Subroutine ReadPeakInfo(ReadErr)
          Endif
       Enddo
      endif
-     write(2,*) 'i_eo=',i_eo,i_chunk,SourcePos(:,i_Peak),t
-     Peak_start(i_peak)=i_chunk
+     !write(2,*) 'Source ',i_Peak, ' searched near ',SourcePos(:,i_Peak)
+     ChunkNr(i_peak)=i_chunk
      TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
      PeakNr(i_eo,i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_eo,i_chunk)
      PeakNrTotal=i_peak
@@ -353,7 +362,8 @@ Subroutine ReadPeakInfo(ReadErr)
         k=k-1
         !read(lname,*,iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)  Statn_Mnem2ID
         !If(nxx.ne.0 .or. txt.ne.'exclude') cycle
-        write(2,*) 'excluded:',k,(ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
+        write(2,"(A,I3,A,I2,20(I4,A,A,',  '))") 'excluded for source',i_peak,' #',k, &
+               (ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
         Call GetNonZeroLine(lname)
      EndIf
      If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only
@@ -391,7 +401,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !logical :: FitNoSources=.false.
     !
     !
-    !write(2,*) '=== New Round ============================================================'
+    write(2,*) '=== New Round ============================================================'
+    flush(unit=2)
     CalcHessian=.false.
     SpaceCov(1,1)=-.1 ; SpaceCov(2,2)=-.1 ; SpaceCov(3,3)=-.1 ;
     Call BuildCC(StatMax,DistMax)
@@ -408,7 +419,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
         FitPos(1)=-1 ; FitPos(2)=-2 ; FitPos(3)=-3 ; FitPos(4)=-4
     endif
     Call SetFitParamsLMA(X,Fitfirst,FitPos) ! Important to call 'SetFitParamsLMA' after 'GetCorrSingAnt'
-    !write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
+    write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
+    flush(unit=2)
     !
     !stop 'FitCycle'
     !write(2,*) 'Fit with Nr_Corr=',Nr_Corr,'============================================================'
@@ -425,6 +437,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
 !        ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
     Call FitCCorr(X)  ! fit source
     write(2,*) 'chi-square=',FitQual, ', Average RMS=',SUM(PeakRMS(1:PeakNrTotal))/PeakNrTotal, PeakRMS(1:PeakNrTotal)
+    flush(unit=2)
     Call X2Source(X)
     !
 End Subroutine FitCycle
@@ -488,194 +501,52 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
     Return
 End Subroutine GetLargePeaks
 !============================
-Subroutine MergeFine
-! Merge values of FineOffset with input from 'FineCalibrations.dat'
-    use DataConstants, only : Station_nrMax, Ant_nrMax, Calibrations  ! , DataFolder
-    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Tot_UniqueAnt
-    use FitParams, only : Explore, Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt
-    use unque,only : Double_IR_sort
-    use constants, only : dp
-    use StationMnemonics, only : Station_ID2Mnem
-    Implicit none
-    Real(dp) :: Delay, Fine_STDelay(Station_nrMax), UpDate_STDelay(1:Ant_nrMax)=0.
-    character(len=5) :: txt, Station_Mnem, Fine_STMnm(Station_nrMax)
-    integer :: i, k, nxx, i_fine, SAI, n, i_unq
-    Real(dp) :: Fine_AntDelay(1:Ant_nrMax), mean(Station_nrMax)
-    Integer :: SAI_AntDelay(1:Ant_nrMax),Nr_AntDelay, Ant(1), i_stat, i_SAI
-    INTEGER :: DATE_T(8)
-    Character(len=12) :: Date_mn
-    Logical :: Old, Core
-    !
-    CALL DATE_AND_TIME (Values=DATE_T)
-    WRITE(Date_mn,"(I4,I2.2,I2.2, I2.2,I2.2)") &
-          DATE_T(1),DATE_T(2),DATE_T(3),(DATE_T(i),i=5,6)
-    !
-   i_fine=0
-   Fine_AntDelay=0.
-   SAI_AntDelay=0
-   Old=.false.
-   If(trim(Calibrations).eq.'') Old=.true.
-   If(Old) then
-      Open(unit=9,STATUS='old',ACTION='read', FILE = 'Book/AntCalibrations.dat', IOSTAT=nxx) ! trim(DataFolder)//
-   Else
-      write(2,*) 'Calibration input from: ',trim(Calibrations)
-      Open(unit=9,STATUS='old',ACTION='read', FILE = 'Book/'//trim(Calibrations), IOSTAT=nxx)
-   Endif
-   If(nxx.ne.0) then
-     write(2,*) 'problems with file=','Book/AntCalibrations.dat', ' or ' , trim(Calibrations)
-     write(*,*) 'problems with file=','AntCalibrations.dat'
-   else
-     Do
-         read(9,*,IOSTAT=nxx) SAI, Delay
-         if(nxx.ne.0) then
-             If(Old) close(unit=9)
-             exit
-         else
-             i_fine=i_fine+1
-             !write(2,*) i_fine, SAI, Delay
-             SAI_AntDelay(i_fine) = SAI
-             Fine_AntDelay(i_fine)= Delay
-         endif
-     enddo
+!----------------------------------
+Subroutine GetStationFitOption(FP_s, FitNoSources)
+   use DataConstants, only : Station_nrMax
+   use FitParams, only : N_FitPar_max
+   use Chunk_AntInfo, only : Nr_UniqueStat, Unique_StatID
+   use StationMnemonics, only : Station_Mnem2ID
+   Implicit none
+   integer, Intent(OUT)::  FP_s(0:N_FitPar_max)
+   Logical, Intent(out) ::  FitNoSources
+   Character(len=5) :: FP_MNem(0:N_FitPar_max)
+   logical,dimension(Station_nrMax) :: mask
+   character*180 :: lname
+   character*4 :: option
+   Integer :: i, nxx, k, N_FitPar
+   !
+   FP_s(:)=0
+   FP_MNem(:)=' '
+   FitNoSources=.false.
+   N_FitPar=0
+   Call GetNonZeroLine(lname)
+   write(2,*) 'timing offset-fit option="',lname,'"'
+   read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
+   Do i=1,N_FitPar_max
+      If(FP_Mnem(i).eq.'     ') exit
+      If(TRIM(FP_Mnem(i)).eq.'!') exit
+      If(FP_Mnem(i).eq.'NoSrc') Then
+          FitNoSources=.true.
+          cycle
+      EndIf
+      Call Station_Mnem2ID(FP_Mnem(i),k)
+      If(k.eq.0) exit
+      N_FitPar=N_FitPar+1
+      FP_s(N_FitPar)=k
+      !write(2,*) i,FP_Mnem(i),FP_s(i)
+   Enddo
+   !read(lname,*,iostat=nxx) option, FP_s(1:N_FitPar_max) ! option=abut,only
+   If(option .eq. 'abut') then
+      mask=.true.
+      Do i=1,Nr_UniqueStat
+          if ( any(Unique_StatID(i)==FP_s) ) mask(i) = .false.
+      enddo
+      !write(2,*) 'mask=',mask(1:size(Station_IDs))
+      !write(2,*) 'Station_IDs=',Station_IDs(1:size(Station_IDs))
+      FP_s(1:Nr_UniqueStat)=pack(Unique_StatID, mask)
+      !write(2,*) 'FP_s',FP_s(0:size(Station_IDs))
    endif
+   Return
    !
-   UpDate_STDelay=0.
-   Nr_AntDelay=i_fine
-   If(Fit_AntOffset) then
-      Do i_stat=1,Nr_UniqueStat  ! set fine-offset to obtained value from previous fit
-        !Stat_ID=Unique_StatID(i_stat)
-        !write(*,*) 'i-asai',Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)
-        Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
-            SAI=Unique_SAI(i_SAI)  !     SAI=1000*station_ID + Ant_ID
-            Ant=MAXLOC(SAI_AntDelay(1:i_fine), MASK = SAI_AntDelay .eq. SAI)
-            !write(2,*) 'i_SAI=',i_SAI,SAI,SAI_AntDelay(Ant(1)),Ant(1)
-            If(SAI_AntDelay(Ant(1)) .eq. SAI) then  ! this antenna was already in the list
-               UpDate_STDelay(Ant(1))= Fit_TimeOffsetAnt(i_SAI)
-            else  ! append this antenna to the end of the list
-               Nr_AntDelay=Nr_AntDelay+1
-               If(Nr_AntDelay .gt. Ant_nrMax) Then
-                  write(2,*) 'extent length antenna-delay list, ',Ant_nrMax,' is too small'
-                  stop 'MergeFine'
-               Endif
-               SAI_AntDelay(Nr_AntDelay) = SAI
-               UpDate_STDelay(Nr_AntDelay)= Fit_TimeOffsetAnt(i_SAI)
-            endif
-            !write(2,*) 'UpDate_STDelay',i_SAI,SAI,Nr_AntDelay, UpDate_STDelay(Nr_AntDelay)
-        Enddo
-      Enddo
-   Endif    ! (Fit_AntOffset)
-   ! Sort antennas
-   Fine_AntDelay(1:Nr_AntDelay)=Fine_AntDelay(1:Nr_AntDelay) + UpDate_STDelay(1:Nr_AntDelay)
-   Call Double_IR_sort(Nr_AntDelay,SAI_AntDelay,Fine_AntDelay)
-   !
-   ! set mean offset per station to zero
-   Mean=0.
-   i_stat=-1 !NINT(SAI_AntDelay(1)/1000.)
-   i_unq=1
-   n=1
-   Do i=1,Nr_AntDelay
-      k=NINT(SAI_AntDelay(i)/1000.)
-      If(k.eq.i_stat) then  ! update running sum for this station
-         Mean(i_unq)=Mean(i_unq)+ Fine_AntDelay(i)
-         n=n+1
-      Else
-         Mean(i_unq)=Mean(i_unq)/n ! Calculate mean from running sum for previous station
-         i_stat=k          ! Store ID new station
-         If(i-n.ge.1) then
-            Do k=i-n,i-1      ! Set neam antenna delay to zero for previous stattion
-             Fine_AntDelay(k)=Fine_AntDelay(k)-Mean(i_unq)
-            Enddo
-         endif
-         Ant=MAXLOC(Unique_StatID(1:Nr_UniqueStat), MASK = Unique_StatID .eq. i_stat) ! FINDLOC(Unique_StatID(1:Nr_UniqueStat), i_stat) !
-         i_unq=Ant(1)
-         If(i_unq.eq.0) then  ! If station not in the list, add it
-            Nr_UniqueStat=Nr_UniqueStat+1
-            If(Nr_UniqueStat.gt.Station_nrMax) then
-               write(2,*) 'nr of unique stations exceeded for',i_stat
-               stop 'MergeFine'
-            Endif
-            Unique_StatID(Nr_UniqueStat)= i_stat ! add to the unique station list
-            Fit_TimeOffsetStat(Nr_UniqueStat)=0.
-            i_unq=Nr_UniqueStat
-         Endif
-         n=1
-         Mean(i_unq)=Fine_AntDelay(i)  ! Start running sum for this station
-      Endif
-   Enddo  !   i=1,Nr_AntDelay
-   Mean(i_unq)=Mean(i_unq)/n  ! for the last one
-   Do k=Nr_AntDelay-n,Nr_AntDelay
-    Fine_AntDelay(k)=Fine_AntDelay(k)-Mean(i_unq)
-   Enddo
-   ! get unique filename
-   Open(unit=19,STATUS='unknown',ACTION='write', FILE = 'Book/Calibrations'//Date_mn//'.dat', IOSTAT=nxx)  !  trim(DataFolder)//
-   write(2,*) 'calibration data written to: ','Calibrations'//Date_mn//'.dat'  ! trim(DataFolder)//
-   Do i=1,Nr_AntDelay
-      k=NINT(SAI_AntDelay(i)/1000.)
-      Call Station_ID2Mnem(k,Station_Mnem)
-      If(Explore .and. (Station_Mnem(1:2) .eq. 'CS')) Then
-         Fine_AntDelay(i)=0.
-      Endif
-      !Fine_AntDelay(i)= Fine_AntDelay(i) +UpDate_STDelay(i)
-      write(19,*) SAI_AntDelay(i),Fine_AntDelay(i)
-   Enddo
-   write(19,*) '============ =========== =============== ======='
-   !Do i=1,Nr_UniqueStat
-   !   write(2,*) '',i,Unique_StatID(i),Mean(i)
-   !enddo
-   !close(unit=19)
-    !
-    i_fine=0
-    nxx=0
-    If(Old) Open(unit=9,STATUS='old',ACTION='read', FILE = 'Book/FineCalibrations.dat', IOSTAT=nxx) ! trim(DataFolder)//
-    If(nxx.ne.0) then
-        write(2,*) 'problems with file=','Book/FineCalibrations.dat'
-    else
-        Do
-            read(9,*,IOSTAT=nxx) txt, Delay
-            if(nxx.ne.0) then
-                close(unit=9)
-                exit
-            else
-                ! write(2,*) txt, Delay
-                i_fine=i_fine+1
-                Fine_STMnm(i_fine) = txt
-                Fine_STDelay(i_fine)= Delay
-            endif
-        enddo
-    endif
-    !
-    Do k=1,Nr_UniqueStat
-        If(Unique_StatID(k).le. 0) exit
-        Call Station_ID2Mnem(Unique_StatID(k),Station_Mnem)
-        !write(2,*) 'mnem',k,Unique_StatID(k),Station_Mnem
-        core=(Explore .and. (Station_Mnem(1:2) .eq. 'CS'))  ! zero the calibration timings for the core stations
-        nxx=1
-        Do i=1,i_fine
-            If(Station_Mnem .eq. Fine_STMnm(i)) then
-                UpDate_STDelay(i)=Fit_TimeOffsetStat(k) + Mean(k)
-                Fine_STDelay(i)  =Fine_STDelay(i) + UpDate_STDelay(i)
-                If(core) Fine_STDelay(i) = 0
-               !write(2,*) 'i',i,UpDate_STDelay(i)
-                nxx=0
-                exit
-            endif
-        enddo
-        If(nxx.ne.0) then       ! New station that was not in the original file 'FineCalibrations.dat'
-            i_fine=i_fine+1
-            Fine_STMnm(i_fine) = Station_Mnem
-            UpDate_STDelay(i_fine)=Fit_TimeOffsetStat(k)+ Mean(k)
-            Fine_STDelay(i_fine)  = UpDate_STDelay(i_fine)
-            If(core) Fine_STDelay(i_fine) = 0
-            !write(2,*) 'i_fine',i_fine,UpDate_STDelay(i_fine)
-        endif
-    enddo
-    !
-    write(2,"(' station',1x,'NewFineCalibrations',5x,'Updated with')")
-    Do i=1,i_fine
-        write(2,"(1x,A5,3F13.3)") Fine_STMnm(i), Fine_STDelay(i), UpDate_STDelay(i)
-         write(19,"(1x,A5,F14.4)") Fine_STMnm(i), Fine_STDelay(i)
-    enddo
-    Close(unit=19)
-    !
-    Return
-End Subroutine MergeFine
+End Subroutine GetStationFitOption

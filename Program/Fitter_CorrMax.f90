@@ -13,7 +13,7 @@ Subroutine FitCCorr(X)
     ! v17 : offset in Nr_TimeOffset reduced by 1 in nvar
 !
     use FitParams, only : FitParam, N_FitPar, N_FitStatTim, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset, N_FitPar_max
-    use FitParams, only : CalcHessian, Sigma, SpaceCov, FitQual, ParamScaleFac, N_EffAnt, Max_EffAnt, ImagingRun
+    use FitParams, only : CalcHessian, Sigma, SpaceCov, FitQual, ParamScaleFac, N_EffAnt, Max_EffAnt !, ImagingRun
     use DataConstants, only : ChunkNr_dim, Production
     use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, CCorr_Err, Peak_eo, Safety
     Implicit none
@@ -271,7 +271,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
     use constants, only : dp,sample,c_mps,Refrac
     use DataConstants, only : Station_nrMax, Ant_nrMax, Production
     use DataConstants, only : Polariz
-    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, Peak_start, PeakRMS, PeakChiSQ
+    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
     use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos, Ant_RawSourceDist
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
@@ -361,7 +361,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
     Do i_Peak=1,PeakNrTotal
         Cnt=0
         i_eo=Peak_eo(i_peak)
-        i_chunk=Peak_start(i_peak)
+        i_chunk=ChunkNr(i_peak)
         !
         Do j_corr=1,Nr_Corr(i_eo,i_chunk)
             i_ant=CorrAntNrs(j_corr,i_eo,i_chunk)

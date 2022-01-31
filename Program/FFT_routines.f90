@@ -1,45 +1,4 @@
       Module FFT
-!!!!!!!!!!!  Note: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!  At present the convention for positive and negative frequencies is in consistent
-!     with what is generally adopted for complex FFT. This can be seen by comparing the real and complex FFT:
-!
-!            Integer( kind = 4 ) :: trace_length !! will be length of output trace
-!            Integer( kind = 4 ) :: IER=0 !! error code for FFT
-!            Real( kind = 8 ), DIMENSION(:), allocatable :: WSAVE(:), WORK(:)
-!            Integer( kind = 4 ) :: LENSAV, LENWRK
-!            Complex( kind = 8 ), DIMENSION(:),  allocatable :: waveform(:)   !! the waveform in frequeny or time space we are working with. Not specifying precision so is compatible with FFT
-!            allocate( waveform(1:NtSamples) )
-!            trace_length=NtSamples
-!            LENSAV = 2*trace_length + int ( log ( real ( trace_length, kind = 8 ) ) / log ( 2.0D+00 ) ) + 4
-!            LENWRK = 2*trace_length
-!            allocate( WSAVE(LENSAV) )
-!            allocate( WORK(LENWRK) )
-!            !
-!             call CFFT1I (trace_length, WSAVE, LENSAV, IER) !! initialize FFT
-!            if ( IER .ne. 0  )  stop 'cannot initialize FFT'
-!            !
-!            Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )  ! perform the standard real FFT
-!            write(2,*) 'Real FFT:', Abs(FTime_0(:,j_ant))
-!               waveform(:)=0.
-!               Do i_nu=inu1,inu2   ! Fill out the negative frequencies for performing CFFT
-!                  waveform(NtSamples-i_nu)=Cnu_0(i_nu)
-!               Enddo
-!            call CFFT1B (trace_length, 1, waveform, trace_length,   WSAVE,  LENSAV,  WORK, LENWRK, IER) !! DO IFFT
-!            if ( IER .ne. 0 )  stop 'cannot do iFFT'
-!            Write(2,*) 'negative frequency:',abs(waveform(:))
-!               waveform(:)=0.
-!               Do i_nu=inu1,inu2   ! Fill out the positive frequencies for performing CFFT
-!                  waveform(i_nu)=Cnu_0(i_nu)
-!               Enddo
-!            call CFFT1B (trace_length, 1, waveform, trace_length,   WSAVE,  LENSAV,  WORK, LENWRK, IER) !! DO IFFT
-!            if ( IER .ne. 0 )  stop 'cannot do iFFT'
-!            Write(2,*) 'positive frequency',abs(waveform(:))
-!
-!     To correct this one should insert - signs in C2R and in R2C
-!         C(I)=CMPLX(R(2*I),R(2*I+1))   -->     C(I)=CMPLX(R(2*I),-R(2*I+1))
-!         R(2*I+1)=DIMAG(C(I))         -->     R(2*I+1)=-DIMAG(C(I))
-!     i.e. complex conjugate the frequency spectrum
-!
     use constants, only : dp,pi,ci
     implicit none
     integer ( kind = 4 ), save :: lensav

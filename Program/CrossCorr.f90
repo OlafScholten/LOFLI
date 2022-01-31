@@ -5,13 +5,13 @@ Subroutine BuildCC(StatMax,DistMax)
 !  v20: Include Polariz mode where cross correlations are calculated for the t (i_tp=1=Theta) and p (i_tp=0=phi) modes
 !        This requires treating the even and odd antennas at the same level and it will be assumed that the
 !        i_eo=0 (even=Y-dipoles) peak positions hold for the two antenna orientations.
-    use DataConstants, only : ChunkNr_dim, Production, DataFolder
+    use DataConstants, only : ChunkNr_dim, Production, DataFolder, RunMode
     use DataConstants, only : Polariz
     use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Nr_UniqueStat, RefAnt, Nr_UniqueAnt, Unique_SAI
     use ThisSource, only : Nr_Corr, Peakpos, PlotCCPhase, CCPhase_ave, Stat_pos, TotPeakNr
     use ThisSource, only : T2_dim, Tref_dim, PeakNrTotal
     use constants, only : dp
-    use FitParams, only : ImagingRun, Fit_TimeOffsetAnt
+    use FitParams, only : Fit_TimeOffsetAnt ! ImagingRun,
     use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
     Use Interferom_Pars, only : dtAnt_tp, NSrc_tp
     Implicit none
@@ -49,6 +49,7 @@ Subroutine BuildCC(StatMax,DistMax)
     !
     call RFTransform_su(T2_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     !write(2,*) 'BuildCC:', T2_dim
+    !flush(unit=2)
     Nr_Corr(:,:)=0
     Do i_chunk=1, ChunkNr_dim
         Do i_eo=0,i_eo1
@@ -67,7 +68,8 @@ Subroutine BuildCC(StatMax,DistMax)
                     Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
                     Station=Ant_Stations(i_ant,i_chunk)
                 endif
-                !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
+                ! write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
+                ! flush(unit=2)
                 !
                 If(Ant_Stations(i_ant,i_chunk) .gt. StatMax) cycle  ! Limit to antennas near the superterp
                 If(Dist .gt. DistMax*1000.) cycle  ! Limit to antennas near the superterp
@@ -75,11 +77,14 @@ Subroutine BuildCC(StatMax,DistMax)
                 If(Polariz) Then
                   if((Ant_IDs(i_ant+1,i_chunk)-Ant_IDs(i_ant,i_chunk)) .ne. 1) cycle       ! limit to even-odd antenna pairss
                 EndIf
-                !write(2,*) 'GetCorrSingAnt:',i_ant, J_Corr, i_eo, i_chunk
+                ! write(2,*) 'GetCorrSingAnt:',i_ant, J_Corr, i_eo, i_chunk
+                ! flush(unit=2)
                 !
                 Call GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk) ! will infact be for a coupl when "Polariz=.true."
                 !
             Enddo
+            ! write(2,*) 'Nr_Corr(i_eo,i_chunk):',i_eo,i_chunk,j_corr
+            ! flush(unit=2)
             Nr_Corr(i_eo,i_chunk)=j_corr
             If(PlotCCPhase) then
                Close(UNIT=30)
@@ -214,6 +219,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
             If(PulsPosCore) StLoc=StLoc+ NINT(Peak_Offst(i_Peak)) ! Peak_Offset corrects for ref-antanna not at the center of CS002;
             !  Correction should be negligible for ref antennas in CS002 since the position shift is crudely corrected for by RawSourceDist
             !write(2,*) 'StLoc=',StLoc
+            !flush(unit=2)
             !RTTraceRef(1:Tref_dim) = Real(CTime_spectr(StLoc+1:StLoc+Tref_dim,i_ant,i_chunk))
             If(Polariz) Then
                !RTTraceRef1(1:Tref_dim) = Real(CTime_spectr(StLoc+1:StLoc+Tref_dim,i_ant+1,i_chunk))
@@ -241,7 +247,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
               endif
            endif
         EndIf  ! (j_corr .eq. 1)
-        !write(2,*) 'start corr'
+        !write(2,*) 'start corr',i_ant, J_Corr, i_eo, i_chunk
         !    flush(unit=2)
          !
         RDist=RDist - Peak_Offst(i_Peak)
@@ -283,13 +289,19 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
          EndIf
         !
         Call SearchWin(Peak_IRef(i_Peak), i_ant, i_chunk, SourcePos(1,i_Peak), SearchRange)
+        ! write(2,*) 'Before  CrossCorr_Max', SearchRange, Polariz, Ant_nrMax, j_corr,Safety
+        !    flush(unit=2)
    !call cpu_time(CPUCC)
    !TotSW=TotSW+CPUCC
    !TotCCM=TotCCM-CPUCC
         If(j_corr .eq. 1) SearchRange=Safety !  i_Peak, CrCor, ACCorr, RCCorr, RtMax, Aval, Rval, Ival, SearchRange, Error)
         If(Polariz) Then
             Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCorp, ACCorr, RtMaxp, CC_val, CC_Phase, SearchRange, Errorp)
+            !write(2,*) 'j_corr+Ant_nrMax/2=', j_corr+Ant_nrMax/2, i_Peak, CC_val, Ant_nrMax, j_corr
+            !flush(unit=2)
             CCorr(:,j_corr+Ant_nrMax/2,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
+            !write(2,*) 'inbetween  CrossCorr_Max', SearchRange, Polariz
+            !flush(unit=2)
             Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
             CCorr(:,j_corr,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
             !If(Abs(RtMaxp-RtMax) .gt. .1) then
@@ -297,7 +309,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
             !         ,Errorp-Error
             !EndIf
             If(Abs(RtMaxp-RtMax) .lt. 1.) then
-               dtAnt_tp(i_SAI/2)=dtAnt_tp(i_SAI/2)+ RtMax-RtMaxp
+               dtAnt_tp(i_SAI/2)=dtAnt_tp(i_SAI/2)+ RtMax-RtMaxp  ! difference in timing for theta and phi pol; Obsolete
                NSrc_tp(i_SAI/2)=NSrc_tp(i_SAI/2)+  1
             endif
         Else
@@ -468,7 +480,7 @@ Subroutine GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, T_dim, T2_dim, PolBas
     use Chunk_AntInfo, only : Ant_Stations, Ant_IDs
     use FitParams, only : MeanCircPol, Cnu01, i_SAI
    use Chunk_AntInfo, only : CTime_spectr
-   use Chunk_AntInfo, only : Powr_eo,NAnt_eo
+   use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain !, J_0p,J_0t,J_1p,J_1t
    Implicit none
    Real(dp), intent(in) :: Thet_d, Phi_d
@@ -476,15 +488,18 @@ Subroutine GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, T_dim, T2_dim, PolBas
    Real(dp), intent(in) :: PolBasis(1:3,1:3), alpha(1:3), W  ! PolBasis(:,i), alpha(i) ;  i=1,3
    Complex(dp), intent(out) :: CnuPol(0:T2_dim/2,1:3)
    integer, parameter :: HW_size=5
-   Real(dp) :: Hi, RTime(T2_dim,0:1), dNu, NormEven, NormOdd
+   Real(dp) :: Hi, RTime(T2_dim,0:1), dNu !, NormEven, NormOdd
    Real(dp) :: Thet_r, Phi_r, dfreq
    Real(dp) :: Vec_p(1:3), Vec_t(1:3), Aip(1:3), Ait(1:3), Pp, Pt
    integer :: i, strt, NuDim, i_freq, i_nu, inu1, inu2, inuPh
    Complex(dp) :: Cnu0(0:T2_dim/2), Cnu1(0:T2_dim/2), Sp, St !,CTst(1:T2_dim)
    ! Get antenna function parameters
    ! Call AntFieParGen()
-   NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/1000.  ! to undo the factor 100 (and more) that was introduced in antenna-read
-   NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/1000.  ! to undo the factor that was introduced in antenna-read
+   !PowerScale=1.
+   !NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
+   !NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
+   !NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/1000.  ! to undo the factor 100 (and more) that was introduced in antenna-read
+   !NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/1000.  ! to undo the factor that was introduced in antenna-read
    Call AntFun_Inv(thet_d,Phi_d) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
    Thet_r = Thet_d*pi/180  ! Zenith angle
    Phi_r  = Phi_d*pi/180   ! \phi=0 = north
@@ -523,8 +538,8 @@ Subroutine GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, T_dim, T2_dim, PolBas
    CnuPol(:,:)=0.
    NuDim=T2_dim/2
    dnu=100./NuDim   ! [MHz] Jones matrix is stored on 1MHz grid
-   inu1=Int(Freq_min/dnu)
-   inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   inu1=Int(Freq_min/dnu)+1
+   inu2=Int(Freq_max/dnu)-1  ! set integration regime to frequencies within filter band
    Pp=0.  ; Pt=0.
    Do i_nu=inu1,inu2
       i_freq=Int(i_nu*dnu)
@@ -641,12 +656,14 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
    Real(dp), intent(out) :: TrueCC(-Safety:Safety)
    Real(dp), intent(out) :: Error, RtMax, CCval, CCPhase
    !
-   integer :: i_loc(1), t_Max, i,i1, Range, j
+   integer :: i_loc(1), t_Max, i,k, Range, j
    Real(dp) :: TrueCC_pp(-Safety:Safety), RCCorr_pp(-Safety:Safety), ICCorr_pp(-Safety:Safety)
-   Real(dp) :: RCCorr(-Safety:Safety), ICCorr(-Safety:Safety), Max_Time(1:Safety), Max_Val(1:Safety)
+   Real(dp) :: RCCorr(-Safety:Safety), ICCorr(-Safety:Safety), Max_Time(1:2*Safety), Max_Val(1:2*Safety)
    !Real(dp) :: SearchRangeFallOff=5.D0 ! as multiple of SearchRange
    Real(dp), save :: tA,B,Yp, dt, Rval, Ival
    !
+   !write(2,*) 'Entering CrossCorr_Max', i_ant,i_chunk, i_Peak, SearchRange !, ', CrCor=', CrCor
+   !flush(unit=2)
    If(RealCorrelation) then
       TrueCC(0:Safety) = Real(CrCor(1:Safety+1))
       TrueCC(-Safety:-1) = Real(CrCor(T2_dim-Safety+1:T2_dim))  ! correct for upsampling
@@ -660,7 +677,6 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
     CC_Max = MAXVAL( TrueCC(-i:i) )
     CC_Wid = CC_Max / CC_Int
    !
-   !write(2,*) 'SearchRange & SearchRangeFallOff', SearchRange,SearchRangeFallOff,CC_Int,CC_Max
    Do i=1,Safety ! (flat part upto error, lin decreasing beyond) is changed to parabola
       B=(1. - i*i/(SearchRange*SearchRange*SearchRangeFallOff*SearchRangeFallOff))
       TrueCC(i) = TrueCC(i)*B
@@ -743,6 +759,7 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
    !If(i_peak.eq.1) write(2,*) i_ant,TrueCC(:)
    !if(i_ant.eq.5) stop
    !Write(2,*) 't_max:',t_max,TrueCC(t_max),CC_Max
+   !         flush(unit=2)
    !If(Unique_StatID(i_stat).eq.147) Write(2,*) '147,i,j',i_ant,j_corr,'Corrected Rdist=',Rdist,t_max
    !
    CCPhase = 0.
@@ -793,7 +810,10 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
       !write(2,"(A,i3,I5,A,A5,A,I2,F7.1,F11.1,f8.1)") ' ant#=',Ant_IDs(i_ant,i_chunk),Ant_Stations(i_ant,i_chunk),'=', &
       !      Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
       !      ', peak#=',i_Peak, RtMax, CCval, atan2(Ival, Rval)*180./pi
+      !flush(unit=2)
    endif
+   !write(2,*) 'Exit  CrossCorr_Max', RtMax, CCval, CCPhase, Error, '; TrueCC=', TrueCC
+   !flush(unit=2)
    !
    Return
 End Subroutine CrossCorr_Max
@@ -818,7 +838,7 @@ Subroutine ReImAtMax(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RCCorr, RtMax, Aval, 
    Real(dp), intent(out) :: RtMax, Aval, Rval, Ival
    Real(dp), intent(inout) :: Error, SearchRange
    !
-   integer :: i_loc(1), t_Max, i,i1
+   integer :: i_loc(1), t_Max, i,k
    Real(dp) :: ACCorr_pp(-Safety:Safety), RCCorr_pp(-Safety:Safety), ICCorr_pp(-Safety:Safety), ICCorr(-Safety:Safety)
    !Real(dp) :: SearchRangeFallOff=5.D0 ! as multiple of SearchRange
    Real(dp), save :: tA,B,Yp, dt
@@ -932,7 +952,7 @@ Subroutine GetRefAnt
          Enddo
          If(j.eq.0) stop 'No reference antenna found, Dual'
          Call Double_sort(Ant(1:j,0:2))
-         write(2,*) 'reference antenna distance [0.1m] and numbers:',Ant(1,:)
+         write(2,*) 'relative reference antenna distance [0.1m] and numbers:',Ant(1,:)
          j=1
       Else
          Do i_ante=1,MaxRefAnt ! do NOT build table of relative distances
@@ -952,7 +972,7 @@ Subroutine GetRefAnt
       RefAnt(i_chunk,0)=Ant(j,2)
       RefAnt(i_chunk,1)=Ant(j,1)
    9  Continue
-      If(Dual) write(2,*) j,'reference antenna* distancebetween',Dist,'[m], and numbers:',RefAnt(i_chunk,0),RefAnt(i_chunk,1)
+      !If(Dual) write(2,*) j,'reference antenna* distancebetween',Dist,'[m], and numbers:',RefAnt(i_chunk,0),RefAnt(i_chunk,1)
    Enddo
    Return
 End Subroutine GetRefAnt

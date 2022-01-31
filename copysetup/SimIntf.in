@@ -1,0 +1,16 @@
+
+&Parameters 
+ RunOption='TRI-D' ,
+ IntfSmoothWin= 19  ! 20
+ CurtainPlot=.true.
+ Simulation="simulation/Tst"  ,
+!  WriteSimulation=2000,20
+! TimeBase=1221
+ AntennaRange=100  ! [km]
+
+ NoiseLevel=0.01,  OutFileLabel="CSlant50_10nn"  &end  !  Ia=00.1      
+   0.0 , -10.22, -24.12,  5.36  , 50 !  "Sim Test" with many stations excluded
+C   40 2., 40 2., 20 2.  ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   17700  740 10 20  ! Ini [samples] starting loc & window for summing power & slice number & powerthresh & PlotAmplitude
+   --- ---------- -------- ------------- -   nohup ./Simulate.sh  >InterferometrySim0.log 2>&1  &         
+

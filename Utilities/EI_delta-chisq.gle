@@ -45,7 +45,7 @@ begin graph
    d4 lstyle 0 marker dot  msize MarkSz/2  color magenta
 end graph
 set just TR
-amove xg(20)-0.3 yg(0)+2.3
+amove 1. yg(0)
 write '\phi' 
 begin key
    position tl
@@ -70,8 +70,13 @@ begin graph
    d4 lstyle 0 marker dot  msize MarkSz/2  color magenta
 end graph
 set just TR
-amove xg(20)-0.3 yg(0)+2.3
+amove 0.7 yg(0)
 write '\theta' 
+begin key
+   position tl
+   marker circle msize MarkSz color blue text data
+   marker circle msize MarkSz color green text fit
+end key
 amove 2+0.5*HorSz  2.+verSz+space-0.9
 set just Tc
 write "Sample"
