@@ -508,7 +508,7 @@ End Subroutine GetLargePeaks
 !----------------------------------
 Subroutine GetStationFitOption(FP_s, FitNoSources)
    use DataConstants, only : Station_nrMax
-   use FitParams, only : N_FitPar_max
+   use FitParams, only : Fit_AntOffset, N_FitPar_max
    use Chunk_AntInfo, only : Nr_UniqueStat, Unique_StatID
    use StationMnemonics, only : Station_Mnem2ID
    Implicit none
@@ -523,6 +523,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    FP_s(:)=0
    FP_MNem(:)=' '
    FitNoSources=.false.
+   Fit_AntOffset=.false.
    N_FitPar=0
    Call GetNonZeroLine(lname)
    write(2,*) 'timing offset-fit option="',lname,'"'
@@ -550,6 +551,9 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       !write(2,*) 'Station_IDs=',Station_IDs(1:size(Station_IDs))
       FP_s(1:Nr_UniqueStat)=pack(Unique_StatID, mask)
       !write(2,*) 'FP_s',FP_s(0:size(Station_IDs))
+   ElseIf(option.eq. 'ante') Then
+      Fit_AntOffset=.true.
+      write(2,*) 'fit single antenna calibration'
    endif
    !
    If(FitNoSources) Write(2,*) 'No source parameters are being fitted'

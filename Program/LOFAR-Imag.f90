@@ -251,7 +251,7 @@ Program LOFAR_Imaging
     use DataConstants, only : Polariz
     use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth
     use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal ! , PeakPos
-    use FitParams, only : FitIncremental, Fit_AntOffset, WriteCalib, FullAntFitPrn,  AntennaRange
+    use FitParams, only : FitIncremental, WriteCalib, FullAntFitPrn,  AntennaRange
     use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
     use FitParams, only : FullSourceSearch ! , SigmaGuess
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
@@ -284,7 +284,7 @@ Program LOFAR_Imaging
          !,  Explore, ImagingRun, Interferometry !, RealCorrelation, E_FieldsCalc &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
-         , Diagnostics, Dual, FitIncremental, Fit_AntOffset &
+         , Diagnostics, Dual, FitIncremental &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
          , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
@@ -443,7 +443,7 @@ Program LOFAR_Imaging
          'Maximum distance (from the core) for the range of the antennas (in [km]).')
          Call PrintValues(FitRange_Samples,'FitRange_Samples', &
          'Maximum deviation (in samples) for a pulse in an antenna to be included in source position fitting.')
-         Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
+         !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          !Call PrintValues(PeakNr_dim,'PeakNr_dim', &
          !'Maximum number of sources (counting even and odd dipoles separately) included in the input.'//&
@@ -546,7 +546,7 @@ Program LOFAR_Imaging
          !Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core) for the range of the antennas (in [km]).')
-         Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
+         !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
          ! Pre-process inputdata for sources to be used in calibration
