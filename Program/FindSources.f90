@@ -26,6 +26,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
 !        and that 'FitRange_Samples=??' is optimal
 !  v18: Peak-location statistics file written
 !  v18: 'PeaksPerChunk' introduced as a parameter
+   use constants, only : dp,sample,Refrac,c_mps
    use DataConstants, only : Production, Time_dim, EdgeOffset
    use Chunk_AntInfo, only : Ant_Stations, Start_time, NoiseLevel
    use Chunk_AntInfo, only : MaxPeaksPerChunk, PeaksPerChunk!, PeakSP, PeakSWl, PeakSWu, PeakSAmp, PeakD_nr
@@ -35,7 +36,6 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    use FitParams, only : MaxFitAntDistcs, FitIncremental, Fit_PeakNrTotal, FitQual, Sigma, MaxFitAntD_nr
    use FitParams, only : N_FitPar_max, N_FitStatTim, Nr_TimeOffset, PulsPosCore, CalcHessian, N_EffAnt, Max_EffAnt
    use FitParams, only : FullSourceSearch, SigmaGuess, SpaceCov
-   use constants, only : dp,sample,Refrac,c_mps
    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    use Explore_Pars, only : NMin, NMax, Emin, EMax
    Implicit none

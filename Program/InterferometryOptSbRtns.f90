@@ -437,7 +437,6 @@ Subroutine OutputIntfPowrMxPos(i_eo)
          ! calculate polarization for maximum intensity location
          !Call EI_Polariz(Nr_IntFer, IntfNuDim, i_slice)
          Call EI_PolarizSlice(i_slice)
-         !Call EI_PolarizW(Nr_IntFerCh(i_chunk), IntfNuDim, i_slice)
          Write(28,"(i6,',',f11.5,',', 2(g12.4,','), 22(f8.3,',') )") (1+i_slice*N_smth), t_ms-t_shft, &
             StI, dStI, 100*StI12/StI, 100*dStI12/StI, 100*StQ/StI, 100*dStQ/StI, &
             100*StU/StI, 100*dStU/StI, 100*StV/StI, 100*dStV/StI, &
@@ -881,3 +880,92 @@ Subroutine OutputIntfSlices(i_eo)
    !
    Return
 End Subroutine OutputIntfSlices
+!-----------------------------------------------
+Subroutine EI_PolarizSlice(i_slice)
+   use constants, only : dp
+   use DataConstants, only : Ant_nrMax
+   use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
+   use Interferom_Pars, only : W_ap, W_at, Cnu0, Cnu1, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t, AntPeak_OffSt
+   Use Interferom_Pars, only : IntfBase, IntfLead, SumWindw, N_Smth
+   Use Interferom_Pars, only : i_chunk, PixLoc, CenLoc
+   Implicit none
+   Integer, intent(in) :: i_slice
+   Integer :: i_sample, i_1, i_2, Output, j_IntFer
+   Real(dp) :: ChiSq, DelChi(-N_Smth:+N_Smth,1:Nr_IntFerMx)
+   Real(dp) :: FitDelay(1:Ant_nrMax), VoxLoc(1:3), del_1, del_2
+   Character(len=8) :: Label
+   logical :: First=.true.
+   If(First) Then
+      First=.false.
+      Write(2,*) ' IntfBase, IntfNuDim:', IntfBase, IntfNuDim, Nr_IntFerMx
+      Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, CenLoc(:), &
+         AntPeak_OffSt(1,1), Cnu0(0,1,1), Cnu1(0,1,1), W_ap(1,1), W_at(1,1))
+      j_IntFer=1
+      write(Label,"(i2.2)") j_IntFer
+      Call TimeTracePlot(j_IntFer, IntfBase, i_chunk, CenLoc, SumWindw, Label) ! window width around central sample
+   EndIf
+   !
+   Output=2
+   If(SumWindw/N_Smth.ge.5) Output=1
+   i_sample=IntfLead + 1+i_slice*N_smth
+   FitDelay(:)=0.
+   write(Label,"('Slc ',i4.2)") i_slice
+   write(2,"(1x,A,i4,A,I5,A,2(F9.4,','),F9.4,A)") 'Slice',i_slice,', Ref. ant. sample=',IntfBase+i_sample, &
+      ', Max Intensity @ (N,E,h)=(',PixLoc(:)/1000.,') [km]'
+   Call EI_Weights(Nr_IntFerCh(i_chunk), i_sample, i_chunk, PixLoc(:), AntPeak_OffSt(1,1), W_ap, W_at)
+   !write(2,*) ' i_sample, i_chunk, :', i_sample, i_chunk, Nr_IntFerCh(:),'fitdelay:',FitDelay
+   Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, i_sample, i_chunk, PixLoc(:), &
+      AntPeak_OffSt(1,1), W_ap(1,1), W_at(1,1), Cnu0(0,1,1), Cnu1(0,1,1), Output, DelChi, Label)
+   !
+   Return
+   If(SumWindw/N_Smth.ge.5) Return
+   !i_sample=IntfLead + i_slice*N_smth  ! approximately correct, upto rounding errors for dt
+   Del_1=2  ! in meter
+   Del_2=2
+   Output=1
+      write(2,*) i_slice, i_sample,'Del_1=',Del_1,', Del_2=',Del_2, ' [m]'
+   Do i_1=-2,2
+      Do i_2=-2,2
+         VoxLoc(1)=PixLoc(1) + i_1*del_1
+         VoxLoc(2)=PixLoc(2) + i_2*del_2
+         VoxLoc(3)=PixLoc(3)
+         write(Label,"('Gr ',I2,',',i2)") i_1,i_2
+         Call EI_Weights(Nr_IntFerCh(i_chunk), i_sample, i_chunk, VoxLoc(:), AntPeak_OffSt(1,1), W_ap, W_at)
+         Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, i_sample, i_chunk, VoxLoc(:), &
+            AntPeak_OffSt(1,1), W_ap(1,1), W_at(1,1), Cnu0(0,1,1), Cnu1(0,1,1), Output, DelChi, Label)
+      Enddo
+   Enddo
+   !
+   Return
+End Subroutine EI_PolarizSlice
+!-----------------------------------------------
+!-----------------------------------------------
+
+ Subroutine matinv3(A,B)
+   use constants, only : dp
+    !! Performs a direct calculation of the inverse of a 3×3 matrix.
+    !complex(wp), intent(in) :: A(3,3)   !! Matrix
+    !complex(wp)             :: B(3,3)   !! Inverse matrix
+    !complex(wp)             :: detinv
+    Real(dp), intent(in) :: A(3,3)   !! Matrix
+    Real(dp)             :: B(3,3)   !! Inverse matrix
+    Real(dp)             :: detinv
+
+    ! Calculate the inverse determinant of the matrix
+    detinv = 1/(A(1,1)*A(2,2)*A(3,3) - A(1,1)*A(2,3)*A(3,2)&
+              - A(1,2)*A(2,1)*A(3,3) + A(1,2)*A(2,3)*A(3,1)&
+              + A(1,3)*A(2,1)*A(3,2) - A(1,3)*A(2,2)*A(3,1))
+
+    ! Calculate the inverse of the matrix
+    B(1,1) = +detinv * (A(2,2)*A(3,3) - A(2,3)*A(3,2))
+    B(2,1) = -detinv * (A(2,1)*A(3,3) - A(2,3)*A(3,1))
+    B(3,1) = +detinv * (A(2,1)*A(3,2) - A(2,2)*A(3,1))
+    B(1,2) = -detinv * (A(1,2)*A(3,3) - A(1,3)*A(3,2))
+    B(2,2) = +detinv * (A(1,1)*A(3,3) - A(1,3)*A(3,1))
+    B(3,2) = -detinv * (A(1,1)*A(3,2) - A(1,2)*A(3,1))
+    B(1,3) = +detinv * (A(1,2)*A(2,3) - A(1,3)*A(2,2))
+    B(2,3) = -detinv * (A(1,1)*A(2,3) - A(1,3)*A(2,1))
+    B(3,3) = +detinv * (A(1,1)*A(2,2) - A(1,2)*A(2,1))
+    Return
+End Subroutine matinv3
+!----------------------------------------------

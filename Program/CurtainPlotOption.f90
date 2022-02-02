@@ -489,12 +489,17 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
 !        Write(unt,903) plot_offset,plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat)), &
 !            plot_offset,Statn_ID2Mnem(Unique_StatID(i_stat))
 !903 Format('amove 4 ',F5.2,/'aline 59',F5.1,/'rmove 1.5 0 ',/'write "',A5,'"',/'amove 2.5 ',F5.2,/'write "',A5,'"')
-    !
-    Close(unit=unt)
-    !stop
-    !
-    Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
-    !
-    return
+   !
+   Close(unit=unt)
+   !stop
+   !
+   Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiDat_'//TRIM(Label) !    remove files; clean-up
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
+   !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder) !    remove files; clean-up
+   !
+   return
 End Subroutine GLEscript_Curtains
 !====================================

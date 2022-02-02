@@ -191,10 +191,8 @@ Subroutine EIReadPeakInfo()
     real(dp) :: x1,x2,x3,t
     !
    Call GetNonZeroLine(lname)
-!      Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),ChunkNr(i_Peak),PeakPos(i_Peak)
-!      Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
-!      Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
-   Frmt="(i3,2x,i2,I8,3(F10.2,1x))"
+   !write(2,*) 'EIReadPeakInfo:',lname
+   Frmt="(1x,I2,2x,i2,I8,3(F10.2,1x))"
    i_peak=0
    TotPeakNr(0,:)=0
    !PeakNr(:)=0
@@ -203,7 +201,6 @@ Subroutine EIReadPeakInfo()
    Do i_Peak=1,PeakNr_dim       ! Read source positions from input. There should be at least one un-readable line in the input.
       !write(2,*) 'lname="',lname,'"'
       read(lname,Frmt,iostat=nxx)  i, i_c, k, x1,x2,x3
-      !write(2,*) k, x1,x2,x3,t
       If(nxx.ne.0) Then
          Write(2,*) 'error when reading source info for #',i_Peak
          Write(2,*) 'Culprit: "',trim(lname),'"'
@@ -214,24 +211,25 @@ Subroutine EIReadPeakInfo()
       SourcePos(3,i_Peak)=x3
       Peakpos(i_Peak)=k
       ChunkNr(i_Peak)=i_c
+      !write(2,*) k,i_c,i_peak, i_chunk
       if(i_chunk.gt.ChunkNr_dim .or. i_c.lt.i_chunk) Then
          Write(2,*) 'Chunk nr error when reading source info for #',i_Peak
          Write(2,*) 'Culprit: "',trim(lname),'"'
          Stop 'EI-sources chunk nr error'
       EndIf
       i_chunk=i_c
-     TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk); not really used and obsolete
-     !PeakNr(i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_chunk)
-     !
-     ExclStatNr(:,i_peak)=0
-     Call GetNonZeroLine(lname)
-     !write(2,*) 'lname="',lname,'"'
-     !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
-     ExclStMnem='     '
-     read(lname,*,iostat=nxx)  txt,ExclStMnem
-     !write(2,*) 'excl',txt,';',ExclStMnem
-     !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
-     If(trim(txt).eq.'exclude') Then
+      TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk); not really used and obsolete
+      !PeakNr(i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_chunk)
+      !
+      ExclStatNr(:,i_peak)=0
+      Call GetNonZeroLine(lname)
+      !write(2,*) 'lname="',lname,'"'
+      !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
+      ExclStMnem='     '
+      read(lname,*,iostat=nxx)  txt,ExclStMnem
+      !write(2,*) 'excl',txt,';',ExclStMnem
+      !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
+      If(trim(txt).eq.'exclude') Then
         Do k=1,Station_nrMax
             If(ExclStMnem(k).eq.'     ') exit
             Call Station_Mnem2ID(ExclStMnem(k),ExclStatNr(k,i_peak))
@@ -245,13 +243,13 @@ Subroutine EIReadPeakInfo()
         Call GetNonZeroLine(lname)
      EndIf
    Enddo
-    write(2,*) 'PeakNrTotal=',PeakNrTotal  ! total # of pulses
-    !write(2,*) 'TotPeakNr',TotPeakNr(0,:)         ! array giving number of peaks for this (i_eo,i_chunk)
-    !
-    !write(2,*) 'SourcePos=',SourcePos
-    !
-    !
-    Return
+   write(2,*) 'PeakNrTotal=',PeakNrTotal  ! total # of pulses
+   !write(2,*) 'TotPeakNr',TotPeakNr(0,:)         ! array giving number of peaks for this (i_eo,i_chunk)
+   !
+   !write(2,*) 'SourcePos=',SourcePos
+   !
+   !
+   Return
 End Subroutine EIReadPeakInfo
 !================================
 !=====================================
