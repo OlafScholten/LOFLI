@@ -2,7 +2,6 @@
  RunOption='FieldCallibrate'
 ! CurtainHalfWidth=50  ! should not be possible for this option
  AntennaRange=100
-! Fit_AntOffset=.true. 
  IntfSmoothWin= 19 !19     ! Width (in samples) of the slices for TRI-D imaging.
 ! Diagnostics=.true.
 ! Calibrations="Calibrations202201231106.dat"    ! 19A-5:only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS307 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 ! NoSrc 6.97
@@ -40,7 +39,7 @@
   9   5   41190 -10645.20, -21529.99,   3505.62,;   8.78
  10   6   15953  -7697.73, -23469.93,   1645.10,;   8.57
  New: Calibrations="Calibrations202201242037.dat"
-only RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509  !
+Antennas  CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509 NoSrc !
 only CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 !
 only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 !
 Nr_UniqueStat= 34       1     2     3     4     5     6    11    13    17    21    24    26    28    30    31    32   101   103   106   125   128   130   141   142   145   146   150   161   166   167   181   183   188   189

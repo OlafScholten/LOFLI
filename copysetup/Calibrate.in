@@ -6,7 +6,6 @@
  FitIncremental=.false.  ,
  AntennaRange=20
  FitRange_Samples=70
-! Fit_AntOffset=.true.
 ! Dual=.false.
  SaturatedSamplesMax=1 ,
  Calibrations = "Calibrations_ZERO.dat"
@@ -30,5 +29,8 @@ only !
   1 0 1    5868   8196.54, -15215.28,   2838.11,    0.09 ;   1.33, sqrt(chi^2/df)=   1.33 Excluded:  
   2 0 1   10757   8192.76, -15219.59,   2828.85,    0.17 ;   0.65, sqrt(chi^2/df)=   0.69 Excluded: RS310 RS407 RS406 RS508  
 exclude  RS310 RS407    RS406  RS508               
+Antennas  CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 CS501 RS503 RS508 RS509 NoSrc !
+only CS013 CS017 CS021 CS024 CS026 CS028 CS030 CS031 CS032 CS101 CS103 RS106 RS205 RS208 RS210 CS301 CS302 RS305 !
+only RS106 RS205 RS208 RS210 CS301 CS302 RS305 RS306 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509 !
 
  
