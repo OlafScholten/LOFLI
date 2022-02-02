@@ -473,7 +473,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
        !  '! i_ant, j; Ep-data;  model , Et-data, model, d_chi_p','d_chi_t'
       !
       write(FMT,"(A,I4,A)") '(I4,',Nr_IntFer,'G13.3)'
-      OPEN(UNIT=31,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'PhiDat_'//TRIM(txt)//'.dat')
+      OPEN(UNIT=31,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'PhiDat_'//TRIM(txt)//'.dat') ! for curtain plots
       OPEN(UNIT=32,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ThDat_'//TRIM(txt)//'.dat')
       OPEN(UNIT=33,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'PhiMod_'//TRIM(txt)//'.dat')
       OPEN(UNIT=34,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ThMod_'//TRIM(txt)//'.dat')
@@ -605,7 +605,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       write(2,"(A,2(A,G12.4),10(A,F7.2))") Label,': I123=',StI,', I12=',StI12, ', Q/I=',StQ/StI, &
             ', U/I=',StU/StI, ', V/I=',StV/StI, ', I3/I=',StI3/StI,', angle=',W,', chi^2=',Chi2pDF &
             ,', P_unpol=',P_un, ', P_lin=',P_lin, ', P_circ=',P_circ
-      If(TestCh2) then
+      If(TestCh2 .and. Outpt.lt.1) then  !  i.e. always skip this part
          SumSq=SumSq/(2.*Nr_IntFer)
          !txt(1:2)=Label(7:8) !  write(txt,"(I2.2)") i_sample
          OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE', &
@@ -629,8 +629,8 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
          !      PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//' "'//TRIM(txt)//'"' ) ! does NOT work in windows
          !Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//TRIM(OutFileLabel)//'DelChi2_'//TRIM(txt)//'.dat') !  Command to delete files
          !Plot of chi^2 value per antenna-pair:
-         !Call GLEplotControl(PlotType='EI_chisq', PlotName='EI_chisq_'//TRIM(txt)//TRIM(OutFileLabel), &
-          !     PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//' "'//TRIM(txt)//'"' ) ! does NOT work in windows
+         Call GLEplotControl(PlotType='EI_chisq', PlotName='EI_chisq_'//TRIM(txt)//TRIM(OutFileLabel), &
+               PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//' "'//TRIM(txt)//'"' ) ! does NOT work in windows
          Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//TRIM(OutFileLabel)//'IntfSpecChi2_'//TRIM(txt)//'.dat') !  Command to delete files
       EndIf
    EndIf

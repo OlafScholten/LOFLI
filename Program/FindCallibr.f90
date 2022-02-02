@@ -307,29 +307,33 @@ Subroutine ReadPeakInfo(ReadErr)
          Write(2,*) 'Expected:   Core/Reference antenna |i |i_eo |i_c |k |N |E |h | dt " in format ',FrMT
          stop 'FindCallibr:ReadPeakInfo'
       endif
+      If(i_eoa .ne. i_eo) then
+          PeakNr1= i_peak-1
+          If(i_eo.eq. 0) i_chunk=i_chunk+1
+      Elseif(i_ca.ne.i_c) then ! i_eo did not jump
+          TotPeakNr(1,i_chunk)=i_peak-1 ! last peak# for this (i_eo,i_chunk)
+          PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
+          i_chunk=i_chunk+1
+      Endif
+      if(i_chunk.gt.ChunkNr_dim) Then
+         write(2,*) 'error when reading peak info, chunk number problems',i_c,i_ca,i_chunk
+         stop 'ReadPeakInfo'
+      EndIf
       SourcePos(1,i_Peak)=x1
       SourcePos(2,i_Peak)=x2
       SourcePos(3,i_Peak)=x3
-      RefAntErr(i_Peak) = t
       If(Label.eq.'C') Then
          !x1=sqrt(sum((Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk)-SourcePos(:,i_Peak))**2))*Refrac/c_mps/sample
          !x2=sqrt(sum(SourcePos(:,i_Peak)**2))*Refrac/c_mps/sample
          Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk),x3) !distance to ant - distance to core in samples
          k=k+NINT(x3-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
-         !write(2,*) i_peak,RefAnt(i_chunk,i_eo),k,x3, Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk), &
-         !      ' ref station=',Ant_Stations(RefAnt(i_chunk,i_eo),i_chunk)
+         !write(2,*) i_peak,RefAnt(i_chunk,i_eo),k,x3, Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk),  &
+         !      ' ref station=',Ant_Stations(RefAnt(i_chunk,i_eo),i_chunk), Ant_IDs(RefAnt(i_chunk,i_eo),i_chunk)
+         !write(2,*) Label,i,i_eo,i_c,i_ca,i_chunk
       EndIf
       Peakpos(i_Peak)=k  ! peakposition in reference antenna
+      RefAntErr(i_Peak) = t
       Peak_eo(i_peak)=i_eo
-      If(i_eoa .ne. i_eo) then
-          PeakNr1= i_peak-1
-          If(i_eo.eq. 0) i_chunk=i_chunk+1
-      Elseif(i_ca.ne.i_c) then ! i_eo did not jump
-           TotPeakNr(1,i_chunk)=i_peak-1 ! last peak# for this (i_eo,i_chunk)
-           PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
-         i_chunk=i_chunk+1
-      Endif
-      if(i_chunk.gt.ChunkNr_dim) exit
       If(Dual .and. (i_eo.eq.1)) then
       Do i=0,PeakNr(0,i_chunk)-1
          !write(2,*) 'peakpos-i',i,TotPeakNr(0,i_chunk)-i,Peakpos(TotPeakNr(0,i_chunk)-i),k
@@ -338,51 +342,51 @@ Subroutine ReadPeakInfo(ReadErr)
             exit
          Endif
       Enddo
-     endif
-     !write(2,*) 'Source ',i_Peak, ' searched near ',SourcePos(:,i_Peak)
-     ChunkNr(i_peak)=i_chunk
-     TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
-     PeakNr(i_eo,i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_eo,i_chunk)
-     PeakNrTotal=i_peak
-     !write(2,*) i_eo,i_chunk,'PeakNr(i_eo,i_chunk)=',PeakNr(i_eo,i_chunk)
-     ExclStatNr(:,i_peak)=0
-     Call GetNonZeroLine(lname)
-     !write(2,*) 'lname="',lname,'"'
-     !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
-     ExclStMnem='     '
-     read(lname,*,iostat=nxx)  txt,ExclStMnem
-     !write(2,*) 'excl',txt,';',ExclStMnem
-     !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
-     If(trim(txt).eq.'exclude') Then
-        Do k=1,Station_nrMax
+      endif
+      !write(2,*) 'Source ',i_Peak, ' searched near ',SourcePos(:,i_Peak)
+      ChunkNr(i_peak)=i_chunk
+      TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
+      PeakNr(i_eo,i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_eo,i_chunk)
+      PeakNrTotal=i_peak
+      !write(2,*) i_eo,i_chunk,'PeakNr(i_eo,i_chunk)=',PeakNr(i_eo,i_chunk)
+      ExclStatNr(:,i_peak)=0
+      Call GetNonZeroLine(lname)
+      !write(2,*) 'lname="',lname,'"'
+      !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
+      ExclStMnem='     '
+      read(lname,*,iostat=nxx)  txt,ExclStMnem
+      !write(2,*) 'excl',txt,';',ExclStMnem
+      !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
+      If(trim(txt).eq.'exclude') Then
+         Do k=1,Station_nrMax
             If(ExclStMnem(k).eq.'     ') exit
             Call Station_Mnem2ID(ExclStMnem(k),ExclStatNr(k,i_peak))
             If(ExclStatNr(k,i_peak).eq.0) exit
-        Enddo
-        k=k-1
-        !read(lname,*,iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)  Statn_Mnem2ID
-        !If(nxx.ne.0 .or. txt.ne.'exclude') cycle
-        write(2,"(A,I3,A,I2,20(I4,A,A,',  '))") 'excluded for source',i_peak,' #',k, &
+         Enddo
+         k=k-1
+         !read(lname,*,iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)  Statn_Mnem2ID
+         !If(nxx.ne.0 .or. txt.ne.'exclude') cycle
+         write(2,"(A,I3,A,I2,20(I4,A,A,',  '))") 'excluded for source',i_peak,' #',k, &
                (ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
-        Call GetNonZeroLine(lname)
-     EndIf
-     If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only
-        i_peak=TotPeakNr(0,i_chunk)
-        TotPeakNr(1,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
-        PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
-        PeakNrTotal=i_peak
-        PeakNr1=i_peak
-     EndIf
+         Call GetNonZeroLine(lname)
+      EndIf
+      If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only
+         i_peak=TotPeakNr(0,i_chunk)
+         TotPeakNr(1,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
+         PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
+         PeakNrTotal=i_peak
+         PeakNr1=i_peak
+      EndIf
       i_eoa=i_eo
       i_ca=i_c
    Enddo
-    write(2,*) 'PeakNrTotal=',PeakNrTotal
-    write(2,*) 'TotPeakNr',TotPeakNr
-    !
-    !write(2,*) 'SourcePos=',SourcePos
-    !
-    !
-    Return
+   write(2,*) 'PeakNrTotal=',PeakNrTotal
+   write(2,*) 'TotPeakNr',TotPeakNr
+   !
+   !write(2,*) 'SourcePos=',SourcePos
+   !
+   !
+   Return
 End Subroutine ReadPeakInfo
 !================================
 Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
@@ -547,6 +551,8 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       FP_s(1:Nr_UniqueStat)=pack(Unique_StatID, mask)
       !write(2,*) 'FP_s',FP_s(0:size(Station_IDs))
    endif
+   !
+   If(FitNoSources) Write(2,*) 'No source parameters are being fitted'
    Return
    !
 End Subroutine GetStationFitOption

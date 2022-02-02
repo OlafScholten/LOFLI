@@ -257,7 +257,8 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
           Do i_ant=2,Ant_nr(i_chunk)
             If(Ant_Stations(i_ant-1,i_chunk).eq.Ant_Stations(i_ant,i_chunk)) Then ! apply to antennas from a single station only
                If(Ant_IDs(i_ant-1,i_chunk).gt.Ant_IDs(i_ant,i_chunk)) Then  ! flip order
-                  write(2,*) 'change order ',i_ant-1,Ant_IDs(i_ant-1,i_chunk),' and ',i_ant,Ant_IDs(i_ant,i_chunk)
+                  write(2,*) 'change order ',i_ant-1,Ant_IDs(i_ant-1,i_chunk),' and ',i_ant,Ant_IDs(i_ant,i_chunk), &
+                     ' for station',Ant_Stations(i_ant,i_chunk)
                   CTime_s(1:Time_dim)=CTime_spectr(1:Time_dim,i_ant,i_chunk)
                   Ant_ID=Ant_IDs(i_ant,i_chunk)
                   LFRAnt_crdnts(:)=Ant_pos(:,i_ant,i_chunk)

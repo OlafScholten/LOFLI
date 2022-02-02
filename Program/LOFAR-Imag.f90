@@ -198,7 +198,7 @@
     Include 'ImpulsImagOption.f90'
     Include 'InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
     Include 'EIOption.f90'
-    Include 'EIStokes-testW.f90'
+    !Include 'EIStokes-testW.f90'
     !Include 'SIOption.f90'
     Include 'ECallibrOption.f90'
     Include 'System_Utilities.f90'
@@ -456,23 +456,25 @@ Program LOFAR_Imaging
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
             If(nxx.ne.0) exit
-            Read(lname,"(A1,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
-               Mark, i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
+            Read(lname,"(1x,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+                i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
             If(nxx.eq.0) exit
             ChunkNr_dim=i   ! this was a genuine chunk card
          EndDo
          If(ChunkNr_dim.eq.0) Then
+            Write(2,*) lname
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too small'
          EndIf
          If(ChunkNr_dim.ge.10) Then
+            Write(2,*) lname
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too large'
          EndIf
          !  Determine number of peaks/sorces that are included in the calibration search
          i_peak=0
          Do
-            Read(lname,"(i3,2i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+            Read(lname,"(1x,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
                i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
             If(nxx.ne.0) exit
             i_peak=i_peak+1
@@ -553,9 +555,11 @@ Program LOFAR_Imaging
             Call GetNonZeroLine(lname)
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
+            !Write(2,*) nxx, 'A:', lname
             If(nxx.ne.0) exit
-            Read(lname,"(i3,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
-               i_dist, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
+            Read(lname,"(A1,i2,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
+               Mark, i_dist, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
+            !Write(2,*) nxx, 'B:', lname
             If(nxx.eq.0) exit
             ChunkNr_dim=i   ! this was a genuine chunk card
          EndDo
@@ -570,7 +574,7 @@ Program LOFAR_Imaging
          !  Determine number of peaks/sorces that are included in the calibration search
          i_peak=0
          Do
-            Read(lname,"(i3,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
+            Read(lname,"(1x,i2,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
                i_dist, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
             !write(2,*) 'nxx:',nxx,trim(lname)
             If(nxx.ne.0) exit

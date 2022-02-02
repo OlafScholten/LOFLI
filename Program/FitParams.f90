@@ -26,7 +26,7 @@
     Character(len=5) :: FP_MNem(0:N_FitPar_max)
     character*180 :: lname
     character*4 :: option
-    Logical :: FitNoSources
+    Logical,save :: FitNoSources
     !integer,dimension(:),allocatable :: Station_IDs
     integer, external :: XIndx
     !
@@ -90,7 +90,7 @@
     N_FitPar=N_FitStatTim
     !write(*,*) 'FP',FP(:),N_FitPar
     !write(2,"(A,40('(',i2,i3,')'))") '(FitParam,X_Offset)=',(FitParam(i),X_Offset(i),i=1,N_FitStatTim+1)
-    if(FitPos(1).gt.0) then
+    if(.not. FitNoSources .and. FitPos(1).gt.0) then
         Do i=1,4        ! aug19: changed from 3 to 4 where 4 is the error in the reference antenna due to noise for this peak
             if((FitPos(i) .le. 0) .or. (FitPos(i) .gt. 4) ) exit
             N_FitPar = N_FitPar +1
@@ -240,18 +240,25 @@ Subroutine PrntNewSources()
 End Subroutine PrntNewSources
 !==========================================
 Subroutine PrntCompactSource(i_Peak,i_eo)
-    use FitParams, only : station_nrMax
-    !use FittingParameters
-    use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
-    use Chunk_AntInfo, only : Unique_StatID
-    use StationMnemonics, only : Statn_ID2Mnem
-    Implicit none
-    Integer, intent(in) :: i_Peak,i_eo
-    integer ( kind = 4 ) :: i
-    Character(len=5) :: Station_Mnem
-    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
-    !
-   Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,i_eo,ChunkNr(i_Peak),PeakPos(i_Peak)
+   use constants, only : dp
+   use FitParams, only : station_nrMax
+   !use FittingParameters
+   use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
+   use Chunk_AntInfo, only : Unique_StatID, Ant_pos, Ant_RawSourceDist, RefAnt
+   use StationMnemonics, only : Statn_ID2Mnem
+   Implicit none
+   Integer, intent(in) :: i_Peak,i_eo
+   integer ( kind = 4 ) :: i,k, i_chunk
+   Character(len=5) :: Station_Mnem
+   Real(dp) :: RDist
+   !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
+   !
+   ! translate peakposition in the reference antenna to one for a (virtual) antenna at the core
+   i_chunk=ChunkNr(i_Peak)
+   Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk),RDist) !distance to ant - distance to core in samples
+   k=PeakPos(i_Peak)-NINT(RDist-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
+   !
+   Write(2,"('C',3i2,I8)", ADVANCE='NO') i_Peak,i_eo,ChunkNr(i_Peak),k
    Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
    Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
    write(2,"(';',F7.2,',',F7.2)", ADVANCE='NO') PeakRMS(i_Peak),sqrt(PeakChiSQ(i_Peak))
