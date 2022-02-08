@@ -279,9 +279,14 @@ Subroutine ReadPeakInfo(ReadErr)
    Frmt="(A1,3i2,I8,3(F10.2,1x),F8.2)"
    read(lname,Frmt,iostat=nxx)  Label,i,i_eoa,i_ca, k, x1,x2,x3,t
    If(nxx.ne.0) then
-      write(2,*) 'Error reading in line: "',lname,'"'
-      ReadErr=-1
-      Return
+      If(lname(49:49) .eq. ';') then
+         Read(lname,"(A1,3i2,I8,3(F10.2,1x))")  Label,i,i_eoa,i_ca, k, x1,x2,x3
+         t=0.
+      Else
+         write(2,*) 'Error reading in line: "',lname,'"'
+         ReadErr=-1
+         Return
+      EndIf
    Endif
     !
     !
@@ -446,7 +451,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !
 End Subroutine FitCycle
 !=====================================
-Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
+Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)  ! Obsolete, not used anymore
     use DataConstants, only : Time_dim
     use Chunk_AntInfo, only : CTime_spectr, Ant_IDs
     use ThisSource, only : NrP  ! PeakNr
@@ -455,7 +460,7 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
     Integer, intent(in) :: i_ant, i_chunk
     Integer, intent(out) :: Peakposs(1:NrP)
     !
-    real(dp) :: HEnvel(Time_dim), peakStr(1:9),A
+    real(dp) :: HEnvel(Time_dim), peakStr(1:9), AvePos,AvePosSq,AveAmpl, StDev
     integer :: i, j, k, PeakN,Offst
     integer :: i_loc(1), PeakPos(0:9), NPeakPos(0:9)
     !
@@ -464,7 +469,7 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
     PeakPos(0)=0
     PeakPos(PeakN)=Time_dim
     Offst=103
-    Do i=1,3
+    Do i=1,3 ! get 3 largest peaks
         k=0
         NPeakPos(0)= 0
         Do j=1,PeakN
@@ -482,12 +487,23 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
         enddo
         PeakPos(:)=NPeakPos(:)
         PeakN=k
-        !write(2,*) 'PeakPos(:)',PeakPos(0:k)
+        write(2,*) i,k,'PeakPos(:)',PeakPos(0:k)
     enddo ! i
     !
     peakStr=0
     Do j=1,PeakN-1
         peakStr(j) = HEnvel(PeakPos(j))
+        AvePos=0. ; AvePosSq=0.  ; AveAmpl=0.
+        Do i=PeakPos(j)-Offst/2,PeakPos(j)+Offst/2
+            AvePos=AvePos + i*HEnvel(i)
+            AvePosSq=AvePosSq + i*i*HEnvel(i)
+            AveAmpl=AveAmpl + HEnvel(i)
+        Enddo
+        AvePos=AvePos/AveAmpl
+        AvePosSq=AvePosSq/AveAmpl
+        StDev= sqrt(AvePosSq-AvePos**2)
+        write(2,*) j,'position offset=',PeakPos(j)-AvePos,', StDev=',StDev, &
+         ', power=',StDev*peakStr(j), ' or', AveAmpl
     enddo
     !Write(2,*) 'PeakPos',peakpos
     !Write(2,*) 'PeakStr',peakstr
@@ -508,14 +524,14 @@ End Subroutine GetLargePeaks
 !----------------------------------
 Subroutine GetStationFitOption(FP_s, FitNoSources)
    use DataConstants, only : Station_nrMax
-   use FitParams, only : N_FitPar_max
+   use FitParams, only : Fit_AntOffset, N_FitPar_max
    use Chunk_AntInfo, only : Nr_UniqueStat, Unique_StatID
    use StationMnemonics, only : Station_Mnem2ID
    Implicit none
    integer, Intent(OUT)::  FP_s(0:N_FitPar_max)
    Logical, Intent(out) ::  FitNoSources
    Character(len=5) :: FP_MNem(0:N_FitPar_max)
-   logical,dimension(Station_nrMax) :: mask
+   logical,dimension(Nr_UniqueStat) :: mask
    character*180 :: lname
    character*4 :: option
    Integer :: i, nxx, k, N_FitPar
@@ -523,6 +539,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    FP_s(:)=0
    FP_MNem(:)=' '
    FitNoSources=.false.
+   Fit_AntOffset=.false.
    N_FitPar=0
    Call GetNonZeroLine(lname)
    write(2,*) 'timing offset-fit option="',lname,'"'
@@ -545,11 +562,19 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       mask=.true.
       Do i=1,Nr_UniqueStat
           if ( any(Unique_StatID(i)==FP_s) ) mask(i) = .false.
+          !write(2,*) i,Unique_StatID(i),mask(i)
       enddo
+      i=count(mask)
+      !write(2,*) N_FitPar_max, Nr_UniqueStat, size(Unique_StatID), Station_nrMax,i
+      !Flush(unit=2)
       !write(2,*) 'mask=',mask(1:size(Station_IDs))
       !write(2,*) 'Station_IDs=',Station_IDs(1:size(Station_IDs))
-      FP_s(1:Nr_UniqueStat)=pack(Unique_StatID, mask)
-      !write(2,*) 'FP_s',FP_s(0:size(Station_IDs))
+      FP_s(1:i)=pack(Unique_StatID(1:Nr_UniqueStat), mask(1:Nr_UniqueStat) )
+      !write(2,*) 'FP_s',FP_s(0:Nr_UniqueStat)
+      !Flush(unit=2)
+   ElseIf(option.eq. 'ante') Then
+      Fit_AntOffset=.true.
+      write(2,*) 'fit single antenna calibration'
    endif
    !
    If(FitNoSources) Write(2,*) 'No source parameters are being fitted'

@@ -1,11 +1,11 @@
 &Parameters 
  RunOption='Impulsive'
- AntennaRange=100
- FitRange_Samples=70 ! 20
+ NoiseLevel = 150.  ! minimal height for peaks to attempt localization, note [abitrary nits]
+ AntennaRange=100	! maximal distance of antennas to the reference antenna [km]
+ FitRange_Samples=70 ! 50 ! not used in imaging mode; important for calibration since there automatic windowing is not working
  Sigma_AntT= 3          ! 3=S ;  2=T
  SearchRangeFallOff=4.0  ! 4.5=v ; 4=w ; 3.5=def
- ChiSq_lim= 80
-! Fit_AntOffset=.true. 
+ ChiSq_lim= 80 ! max value for chi^2 of a source for it to be stored (RMS=sqrt(chi^2))
  Dual=.false.
  SaturatedSamplesMax=1 ,
 ! CalibratedOnly=.false.

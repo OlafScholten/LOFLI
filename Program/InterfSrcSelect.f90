@@ -80,7 +80,7 @@ PROGRAM InterfSrcSel
             If(.not. Windows) call system_mem_usage(valueRSS)
             First28=.true.
             Do i_datfil=1,NDataFil
-               If(datafile(i_datfil).eq."") exit
+               If((i_datfil.gt.1).and. (datafile(i_datfil).eq."")) exit
                datfile=TRIM(DataFolder)//trim(datafile(i_datfil))//'IntfSpecPow'//TRIM(extension)//'.dat'  ! IntfSpecPowMx
                OPEN(unit=28,FILE=trim(datfile), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
                If(nxx.ne.0) then

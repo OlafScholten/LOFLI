@@ -70,7 +70,7 @@ Subroutine EIPrntNewSources()
    i_chunk=1
    j=0
    Do i_Peak = 1,PeakNrTotal
-      Write(2,"(i3,2x,i2,I8)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),PeakPos(i_Peak)
+      Write(2,"('C',i2,' 0',i2,I8)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),PeakPos(i_Peak)
       Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
       write(2,"(';',F7.2)") PeakChiSQ(i_Peak)
    Enddo  !  i_Peak = 1,PeakNrTotal
@@ -105,18 +105,18 @@ End Subroutine EIPrntCompactSource
 !==========================================
 Subroutine EIX2Source(X)
 ! Move fit results fron X to Sourcepos and FineOffset_
-    use DataConstants, only : Station_nrMax
-    use DataConstants, only : Polariz
-    use ThisSource, only : SourcePos, RefAntErr, PeakNrTotal
-    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt,  Unique_SAI
-    use FitParams
+    !use DataConstants, only : Station_nrMax
     use constants, only : dp
+    use ThisSource, only : SourcePos ! , RefAntErr, PeakNrTotal
+    use Chunk_AntInfo, only : Tot_UniqueAnt
+   use FitParams, only : Fit_TimeOffsetAnt, Fit_AntOffset, X_Offset, Fit_TimeOffsetStat, FitParam
+   use FitParams, only : N_FitPar, N_FitStatTim,N_FitPar_max
     Implicit none
     real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
     integer :: i_Peak
-    integer, external :: XIndx
+    !integer, external :: XIndx
     integer :: i, k,j
-    Real(dp) :: dt
+    !Real(dp) :: dt
     !
     !Call EI_PrntFitPars(X)
     !write(2,*) 'SourcePos:',SourcePos(:,1)
@@ -218,6 +218,78 @@ Subroutine EI_PolarizPeak(i_Peak)
    !
    Return
 End Subroutine EI_PolarizPeak
+!==========================================
+Subroutine EISource2X_Stoch(X,Time_width, Space_Spread)
+! Move fit results fron X to Sourcepos and FineOffset_
+   use constants, only : dp
+   use ThisSource, only : SourcePos ! , RefAntErr, PeakNrTotal
+   use Chunk_AntInfo, only : Tot_UniqueAnt
+   use FitParams, only : Fit_TimeOffsetAnt, Fit_AntOffset, X_Offset, Fit_TimeOffsetStat, FitParam
+   use FitParams, only : N_FitPar, N_FitStatTim,N_FitPar_max
+   Implicit none
+   real ( kind = 8 ), intent(inout) :: X(N_FitPar_max)
+   Real(dp), intent(in) :: Time_width, Space_Spread(1:3)
+   integer :: i_Peak
+   integer :: i, k,j
+   Real :: RGV(1:3) ! Random Gaussian distributed Vector
+   Real :: random_stdnormal
+   ! ----- variables for portable seed setting -----
+   Logical, save :: first=.true.
+  INTEGER :: i_seed
+  INTEGER, DIMENSION(:), ALLOCATABLE :: a_seed
+  INTEGER, DIMENSION(1:8) :: dt_seed
+  ! ----- end of variables for seed setting -----
+  REAL :: r
+
+  ! ----- Set up random seed portably -----
+  If(first) Then
+     CALL RANDOM_SEED(size=i_seed)
+     ALLOCATE(a_seed(1:i_seed))
+     CALL RANDOM_SEED(get=a_seed)
+     CALL DATE_AND_TIME(values=dt_seed)
+     a_seed(i_seed)=dt_seed(8); a_seed(1)=dt_seed(8)*dt_seed(7)*dt_seed(6)
+     CALL RANDOM_SEED(put=a_seed)
+     DEALLOCATE(a_seed)
+     ! ----- Done setting up random seed -----
+     CALL RANDOM_NUMBER(r)
+     WRITE(2,*) 'random number is ',r
+     first=.false.
+  EndIf
+  !
+  If(Time_width.le.0.) Return
+  Write(2,*) 'stochastic parameters:', Time_width, Space_Spread(1:3), N_FitStatTim
+   write(2,"(A,25(3F9.1,1x))") 'before',X( X_Offset(N_FitStatTim):X_Offset(N_FitPar)-1 )
+   If(N_FitPar .gt. N_FitStatTim) then  ! sources are fitted also
+        Do i=N_FitStatTim+1 , N_FitPar  != number of fitted sources=i_peak
+         i_Peak=i-N_FitStatTim
+         Call random_stdnormal3D(RGV)
+         X( X_Offset(i-1):X_Offset(i)-1 )= SourcePos(1:3,i_Peak) + RGV(1:3)*Space_Spread(1:3)
+        enddo
+   endif
+   write(2,"(A,25(3F9.1,1x))") 'after:',X( X_Offset(N_FitStatTim):X_Offset(N_FitPar)-1 )
+   !
+   If(N_FitStatTim .gt. 0) then
+      write(2,"(A,70F7.2)") 'before-t',X( 1:X_Offset(N_FitStatTim)-1 )
+      Do i=1, N_FitStatTim
+         k = FitParam(i)   ! =Station number
+         If(Fit_AntOffset) then
+              Do j= 1,(Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1))  ! there is same fit_timeoffset for even and odd
+                  Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j)=0.
+                 X(X_Offset(i-1)+j-1)= Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j) + random_stdnormal()*Time_width
+              Enddo
+         Else
+            Fit_TimeOffsetStat(k)=0.
+            X(X_Offset(i-1))= Fit_TimeOffsetStat(k) + random_stdnormal()*Time_width
+         endif
+      Enddo  ! i=1, N_FitStatTim
+      write(2,"(A,70F7.2)") 'after-t:',X( 1:X_Offset(N_FitStatTim)-1 )
+   endif
+   !
+   !Call EI_PrntFitPars(X)
+   !write(2,*) 'x2s;Fit_TimeOffsetAnt',Fit_TimeOffsetAnt(150:180)
+   !write(2,*) 'Fit_TimeOffsetStat=',Fit_TimeOffsetStat(1:10)
+   return
+End Subroutine EISource2X_Stoch
 
 
 !===================================
