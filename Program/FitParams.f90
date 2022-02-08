@@ -7,8 +7,9 @@
 !=================================
 !-----------------------------------------------
   Subroutine SetFitParamsLMA(X,first,FitPos)
-    use unque
-    use FitParams
+    !use unque
+    use FitParams, only : FitParam, X_Offset, Fit_TimeOffsetAnt, ParamScaleFac, Fit_TimeOffsetStat
+    use FitParams, only : N_FitPar_max, N_FitPar, N_FitStatTim, Nr_TimeOffset, Fit_AntOffset
     use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode
     use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CorrAntNrs, SourcePos, RefAntErr, PeakNrTotal
@@ -345,7 +346,7 @@ End Subroutine X2Source
 !===================================
 Subroutine Find_unique_StatAnt()
 !  Update list of unique stations and antennas.
-    use FitParams
+    use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt
     use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
     use DataConstants, only : Polariz
     !use ThisSource, only : Fit_TimeOffsetStat, Unique_StatID
@@ -400,7 +401,7 @@ Subroutine Find_unique_StatAnt()
         !write(2,*) 'Find_unique, CHECK!!!!', k, Ant_nr(i_chunk), Ant_IDs(1,i_chunk),'--',Ant_IDs(Ant_nr(i_chunk),i_chunk), &
         !       ' ; ',vec(k+1),'--',vec(Ant_nr(i_chunk)),'--', vec(k+Ant_nr(i_chunk))
         k=k+Ant_nr(i_chunk)
-        write(2,*) 'vec(k+1:k+Ant_nr(i_chunk)):',k,Ant_nr(i_chunk)
+        !write(2,*) 'vec(k+1:k+Ant_nr(i_chunk)):',k,Ant_nr(i_chunk)
       Endif
     enddo
     Call unique(vec,Station_IDs)
@@ -449,7 +450,7 @@ Subroutine Find_unique_StatAnt()
 End Subroutine Find_unique_StatAnt
 !===================================
 Integer Function XIndx(i,i_peak)
-    use FitParams
+    use FitParams, only : FitParam, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset
     use DataConstants, only : PeakNr_dim, RunMode
     !use FittingParameters
     use ThisSource, only : PeakNrTotal, PeakPos, Dual, Unique_pos

@@ -181,6 +181,7 @@
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+    Include 'InterferomPars.f90'
     Include 'LOFLI_InputHandling.f90'
     Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
@@ -271,7 +272,7 @@ Program LOFAR_Imaging
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
     CHARACTER(LEN=10) :: Sources
-    Character(LEN=30) :: RunOption
+    Character(LEN=30) :: RunOption, FMTSrces
     Character(LEN=180) :: Sources1, Sources2
     Character(LEN=lnameLen) :: lname
     Character(LEN=250) :: TxtIdentifier, TxtImagingPars
@@ -366,11 +367,11 @@ Program LOFAR_Imaging
       CASE DEFAULT  ! Help
          Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
          Write(*,*) '- "Explore" for first exploration of this flash to get some idea of the layout and timing'
-         Write(*,*) '- "Calibrate" for first exploration of this flash to get some idea of the layout and timing'
+         Write(*,*) '- "Calibrate" for performing time calibration using the Hilbert envelopes of the cross correlations'
          Write(*,*) '- "ImpulsiveImager" for the impulsive Imager'
          Write(*,*) '- "FieldCalibrate" Field Calibration for the TRI-D interferometric imager'
          Write(*,*) '- "TRI-D" for the TRI-D imager with polarization observables, accounting for antenna function'
-         Write(*,*) '- "SelectData" to selecting real data, possibly for setup of simulation runs using program "SimulateData"'
+         Write(*,*) '- "SelectData" to select real data, possibly for setup of simulation runs using program "SimulateData"'
          Stop 'No valid RunOption specified in namelist input'
    End SELECT
    !
@@ -386,6 +387,7 @@ Program LOFAR_Imaging
    N_fit=0
    ChunkNr_dim=1
    PeakNr_dim=1
+   FMTSrces="(1x,3i2,I8,3(F10.2,1x))"
    SELECT CASE (RunOption(1:1))
    ! option          runmode
    ! Explore            1
@@ -440,7 +442,7 @@ Program LOFAR_Imaging
          Call PrintValues(FitIncremental,'FitIncremental', &
          'Slowly increasing the range of the antennas to find the source position.')
          Call PrintValues(AntennaRange,'AntennaRange', &
-         'Maximum distance (from the core) for the range of the antennas (in [km]).')
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(FitRange_Samples,'FitRange_Samples', &
          'Maximum deviation (in samples) for a pulse in an antenna to be included in source position fitting.')
          !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
@@ -456,9 +458,10 @@ Program LOFAR_Imaging
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
             If(nxx.ne.0) exit
-            Read(lname,"(1x,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
-                i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
+            Read(lname,FMTSrces,iostat=nxx) &
+                i_dist, i_guess,j ,i_chunk,  SourceGuess(:,i) ! just dummy arguments
             If(nxx.eq.0) exit
+            write(2,*) i, nxx, lname
             ChunkNr_dim=i   ! this was a genuine chunk card
          EndDo
          If(ChunkNr_dim.eq.0) Then
@@ -474,7 +477,7 @@ Program LOFAR_Imaging
          !  Determine number of peaks/sorces that are included in the calibration search
          i_peak=0
          Do
-            Read(lname,"(1x,3i2,I8,3(F10.2,1x),F8.2)",iostat=nxx) &
+            Read(lname,FMTSrces,iostat=nxx) &
                i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
             If(nxx.ne.0) exit
             i_peak=i_peak+1
@@ -510,12 +513,12 @@ Program LOFAR_Imaging
          FitRange_Samples=86 ! 90  !  some cases 70 is better, sometimes 90, 80 seems to be worse i.e. highly non-linear!
          Call PrintValues(Dual,'Dual', 'Fix pulses in the even (Y-) and odd (X-) numbered dipoles at same source position.')
          Call PrintValues(PeaksPerChunk,'PeaksPerChunk', &
-         'Maximum number of sources searched for per chunck (of 0.5 ms).' ) !
+         'Maximum number of sources searched for per chunk (of 0.3 ms).' ) !
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(AntennaRange,'AntennaRange', &
-         'Maximum distance (from the core) for the range of the antennas (in [km]).')
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(FullSourceSearch,'FullSourceSearch', &
          'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.')  !
@@ -523,8 +526,6 @@ Program LOFAR_Imaging
             'minimal fraction of the total number of antennas for which the pulse is located.' ) !
          Call PrintValues(CCShapeCut_lim,'CCShapeCut_lim', &
             'Maximum ratio of the width of the cross correlation function by that of the self correlation.')
-         !Call PrintValues(RealCorrelation,'RealCorrelation', &
-         !   'Use only the real part of the cross correlations, not the absolute value.')
          Call PrintValues(ChiSq_lim,'ChiSq_lim', 'Do not save any sources with a worse chi-square.' ) !
          Call PrintValues(SearchRangeFallOff,'SearchRangeFallOff', &
             'Multiplier for the (parabolic) width of the pulse-search window.')
@@ -545,8 +546,7 @@ Program LOFAR_Imaging
          !'Print detailed information for the time deviations per antenna per pulse.')
          !Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
          Call PrintValues(AntennaRange,'AntennaRange', &
-            'Maximum distance (from the core) for the range of the antennas (in [km]).')
-         !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
          ! Pre-process inputdata for sources to be used in calibration
@@ -557,8 +557,8 @@ Program LOFAR_Imaging
             Call Convert2m(SourceGuess(:,i))
             !Write(2,*) nxx, 'A:', lname
             If(nxx.ne.0) exit
-            Read(lname,"(A1,i2,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
-               Mark, i_dist, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
+            Read(lname,FMTSrces,iostat=nxx) &
+               i_dist, i_guess, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
             !Write(2,*) nxx, 'B:', lname
             If(nxx.eq.0) exit
             ChunkNr_dim=i   ! this was a genuine chunk card
@@ -574,8 +574,8 @@ Program LOFAR_Imaging
          !  Determine number of peaks/sorces that are included in the calibration search
          i_peak=0
          Do
-            Read(lname,"(1x,i2,2x,i2,I8,3(F10.2,1x))",iostat=nxx) &
-               i_dist, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
+            Read(lname,FMTSrces,iostat=nxx) &
+               i_dist, i_guess, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
             !write(2,*) 'nxx:',nxx,trim(lname)
             If(nxx.ne.0) exit
             i_peak=i_peak+1
@@ -600,7 +600,7 @@ Program LOFAR_Imaging
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
          Call PrintValues(AntennaRange,'AntennaRange', &
-            'Maximum distance (from the core) for the range of the antennas (in [km]).')
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(TimeBase,'TimeBase', &
             'Time-offset from the start of the data, best if kept the same for all analyses for this flash')
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.' ) !
@@ -619,8 +619,6 @@ Program LOFAR_Imaging
          Write(2,*) 'Should never reach here!'
    End SELECT
    !
-   Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
-      'Maximum number of saturates time-samples per chunk of data')
    Call PrintValues(Calibrations,'Calibrations', &
    'The antenna time calibration file. Not used when running on simulated data!' )
    Call PrintValues(SignFlp_SAI,'SignFlp_SAI', &
@@ -631,8 +629,8 @@ Program LOFAR_Imaging
    'Station-Antenna Identifiers for those that are malfunctioning.' )
    Call PrintValues(ExcludedStat,'ExcludedStat', &
    'Mnemonics of the stations that should be excluded.' )
-         Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
-            'Maximum number of saturates time-samples per chunk of data')
+   Call PrintValues(SaturatedSamplesMax,'SaturatedSamplesMax', &
+      'Maximum number of saturates time-samples per chunk of data')
    write(2,*) '&end'
    write(2,"(20(1x,'='))")
    !     Some remaining setup

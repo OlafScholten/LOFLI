@@ -1,5 +1,5 @@
 !=================================
-Subroutine EI_Fitter(X)
+Subroutine EI_Fitter(X, Time_width, Space_Spread)
 !   Use method of steepest descent by calling routine PRAXIS
     !use constants, only : dp
 !  v13: Introduce a dynamic search window based on the covariance matrix 'SpaceCov'
@@ -11,13 +11,15 @@ Subroutine EI_Fitter(X)
 !
     use constants, only : dp
     use FitParams, only : FitParam, N_FitPar, N_FitStatTim, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset, N_FitPar_max
-    use FitParams, only : X_Offset
+    use FitParams, only : X_Offset, WriteCalib
     use Interferom_Pars, only :  N_Smth, N_fit, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     !use DataConstants, only : ChunkNr_dim, Production
     use Interferom_Pars, only : W_ap, W_at, Cnu0, Cnu1, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t, AntPeak_OffSt
     use ThisSource, only :  PeakNr, PeakNrTotal, ChunkNr, PeakPos, sourcepos, PeakChiSQ
     Implicit none
     real ( kind = 8 ), intent(inout) :: X(N_FitPar_max)
+    Real(dp), intent(in) :: Time_width
+    Real(dp), intent(inout) :: Space_Spread(1:3)
     integer ( kind = 4 ) :: i, j, k
     integer :: v_dim, i_chunk, error
     integer ( kind = 4 ) :: nvar    ! number of parameters
@@ -30,6 +32,7 @@ Subroutine EI_Fitter(X)
     real ( kind = 8 ),allocatable :: v(:) !  in NL@SOL: real ( kind = 8 ) v(93 + n*p + 3*n + (p*(3*p+33))/2)
     integer ( kind = 4 ) :: prin, NF
     Integer :: i_peak, IntfBase
+    Real(dp) :: Chi2_start, Chi2StopRatio=1.0
     !
     !
 !stop
@@ -61,6 +64,15 @@ Subroutine EI_Fitter(X)
     NF=-1
     call CompareEI ( meqn, nvar, x, NF, v, uiparm, urparm, ufparm )
     !
+    Chi2_start=SUM(PeakChiSQ(1:PeakNrTotal))/PeakNrTotal
+    write(2,*) 'mean chi^2=',Chi2_start
+    !Time_width=2.  ! [samples]
+    !Space_Spread(1:3)=0. ! Time_width*(/ 1.d0,1.d0,3.d0 /)     ![m]
+1   Continue
+    If(Time_width.gt.0.) Then
+      Call EISource2X_Stoch(X,Time_width, Space_Spread)  ! Zeros FitTimeOffsetsndIf
+    EndIf
+    !
     call dfault( iv, v)
     iv(1) = 12 ! 12= do not call dfault again
     iv(14) = 0 ! 1: means print a covariance matrix at the solution.
@@ -91,7 +103,7 @@ Subroutine EI_Fitter(X)
     !             the covariance matrix) to iv(mxiter) + 1.  if iv(mxiter)
     !             iterations do not suffice, then nl2sol returns with
     !             iv(1) = 10.  default = 150.
-    !    iv(18)=1
+   iv(18)=120
    !  iv(26) if (iv(covmat) is positive, then the lower triangle of the covariance matrix is stored rowwise in v starting at
    !             v(iv(covmat)).  if iv(covmat) = 0, then no attempt was made.
     ! iv(nfcov).... iv(40) is the number of calls made on calcr when
@@ -141,11 +153,27 @@ Subroutine EI_Fitter(X)
    call CompareEI ( meqn, nvar, x, NF, v, uiparm, urparm, ufparm )
    Call EI_PrntFitPars(X)
    !N_fit=-1
-   Do i_Peak=1,PeakNrTotal
-      Call EI_PolarizPeak(i_Peak)
-   Enddo
 9  Continue
     !
+    If(error.gt.0) Then
+      WriteCalib=.false.
+      goto 8
+    EndIf
+    If(Time_width.gt.0.) Then
+      write(2,*) 'mean chi^2 start and after=',Chi2_start, SUM(PeakChiSQ(1:PeakNrTotal))/PeakNrTotal
+      If(SUM(PeakChiSQ(1:PeakNrTotal))/PeakNrTotal .gt. Chi2StopRatio*Chi2_start ) Then
+      !If(.not. any(X( 1:X_Offset(N_FitStatTim)-1 ) .gt. Time_width/2.)) Then
+         !WriteCalib=.false.
+         Space_Spread(1:3)=0.0
+         write(2,"(50(' ='))")
+         Flush(unit=2)
+         Goto 1
+      EndIf
+    EndIf
+    Do i_Peak=1,PeakNrTotal
+      Call EI_PolarizPeak(i_Peak)
+    Enddo
+8  Continue
     Deallocate( v )
     N_fit=-1
     !Call DAssignFFT

@@ -1,4 +1,143 @@
-!    Include 'HDF5_LOFAR_Read.f90'
+!=================================
+Module unque
+contains
+Subroutine unique(vec,vec_unique)
+! copied from http://degenerateconic.com/unique/
+! Return only the unique values from vec.
+
+implicit none
+
+integer,dimension(:),intent(in) :: vec
+integer,dimension(:),allocatable,intent(out) :: vec_unique
+
+integer :: i,num
+logical,dimension(size(vec)) :: mask
+
+mask = .false.
+
+do i=1,size(vec)
+
+    !count the number of occurrences of this element:
+    num = count( vec(i)==vec )
+
+    if (num==1) then
+        !there is only one, flag it:
+        mask(i) = .true.
+    else
+        !flag this value only if it hasn't already been flagged:
+        if (.not. any(vec(i)==vec .and. mask) ) mask(i) = .true.
+    End if
+
+End do
+
+!return only flagged elements:
+allocate( vec_unique(count(mask)) )
+vec_unique = pack( vec, mask )
+
+!if you also need it sorted, then do so.
+call Selection_sort(vec_unique)
+
+End Subroutine unique
+!-----------------------
+  Subroutine Selection_sort(a)
+  ! From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
+    INTEGER, INTENT(IN OUT) :: a(:)
+    INTEGER :: i, minIndex, temp
+
+    DO i = 1, SIZE(a)-1
+       minIndex = MINLOC(a(i:), 1) + i - 1
+       IF (a(i) > a(minIndex)) THEN
+          temp = a(i)
+          a(i) = a(minIndex)
+          a(minIndex) = temp
+       End IF
+    End DO
+  End Subroutine Selection_sort
+!-----------------------
+Subroutine Double_sort(a)
+! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
+!  Double sorts a double array a according to the first element
+    INTEGER, INTENT(IN OUT) :: a(:,:)
+    INTEGER :: i, minIndex, temp(SIZE(a,2))
+    !
+    DO i = 1, SIZE(a,1)-1
+       minIndex = MINLOC(a(i:,1), 1) + i - 1
+       IF (a(i,1) > a(minIndex,1)) THEN ! sort on first column
+          temp(:) = a(i,:)
+          a(i,:)= a(minIndex,:)
+          a(minIndex,:) = temp(:)
+       End IF
+    End DO
+End Subroutine Double_sort
+!-----------------------
+Pure Subroutine Double_IR_sort(N,a,R)
+! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
+!  sorts integer array a according to the first dimension
+! sort also the additional real array
+    use constants, only : dp
+    implicit none
+    INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
+    INTEGER, INTENT(IN OUT) :: a(:)
+    Real(dp), INTENT(IN OUT) :: R(:)
+    INTEGER :: i, minIndex, temp, Rtemp
+
+    DO i = 1, N-1
+       minIndex = MINLOC(a(i:N), 1) + i - 1
+       IF (a(i) > a(minIndex)) THEN
+          temp = a(i)
+          a(i) = a(minIndex)
+          a(minIndex) = temp
+          Rtemp = R(i)
+          R(i) = R(minIndex)
+          R(minIndex) = Rtemp
+       End IF
+    End DO
+End Subroutine Double_IR_sort
+!-----------------------
+Pure Subroutine Double_RI_sort(N,a,R)
+! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
+!  sorts integer array a (min first) and reorders the additional real array in the same way
+    use constants, only : dp
+    implicit none
+    INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
+    Real(dp), INTENT(IN OUT) :: a(:)
+    Integer, INTENT(IN OUT) :: R(:)
+    INTEGER :: i, minIndex
+    Real(dp) :: temp
+    Integer :: Rtemp
+
+    DO i = 1, N-1
+       minIndex = MINLOC(a(i:N), 1) + i - 1
+       IF (a(i) > a(minIndex)) THEN
+          temp = a(i)
+          a(i) = a(minIndex)
+          a(minIndex) = temp
+          Rtemp = R(i)
+          R(i) = R(minIndex)
+          R(minIndex) = Rtemp
+       End IF
+    End DO
+End Subroutine Double_RI_sort
+!-------------------------------------
+Subroutine sort(n, a)
+! From  https://rosettacode.org/wiki/Sorting_algorithms/Insertion_sort#Fortran
+    implicit none
+    integer :: n, i, j
+    real :: a(n), x
+
+    do i = 2, n
+        x = a(i)
+        j = i - 1
+        do while (j >= 1)
+            if (a(j) <= x) exit
+            a(j + 1) = a(j)
+            j = j - 1
+        End do
+        a(j + 1) = x
+    End do
+End Subroutine sort
+! -----------------------------------
+End Module unque
 !=================================
 Module StationMnemonics
     Use Chunk_AntInfo, only : Station_name, Station_number
@@ -500,146 +639,6 @@ Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
       Call RelDist(SrcPos(1),Ant_pos(1,i_ant,i_chunk),RDist)  ! source position may have changed compared to previous
       SubRelDist=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
 End Function SubRelDist
-!=================================
-Module unque
-contains
-Subroutine unique(vec,vec_unique)
-! copied from http://degenerateconic.com/unique/
-! Return only the unique values from vec.
-
-implicit none
-
-integer,dimension(:),intent(in) :: vec
-integer,dimension(:),allocatable,intent(out) :: vec_unique
-
-integer :: i,num
-logical,dimension(size(vec)) :: mask
-
-mask = .false.
-
-do i=1,size(vec)
-
-    !count the number of occurrences of this element:
-    num = count( vec(i)==vec )
-
-    if (num==1) then
-        !there is only one, flag it:
-        mask(i) = .true.
-    else
-        !flag this value only if it hasn't already been flagged:
-        if (.not. any(vec(i)==vec .and. mask) ) mask(i) = .true.
-    End if
-
-End do
-
-!return only flagged elements:
-allocate( vec_unique(count(mask)) )
-vec_unique = pack( vec, mask )
-
-!if you also need it sorted, then do so.
-call Selection_sort(vec_unique)
-
-End Subroutine unique
-!-----------------------
-  Subroutine Selection_sort(a)
-  ! From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-    INTEGER, INTENT(IN OUT) :: a(:)
-    INTEGER :: i, minIndex, temp
-
-    DO i = 1, SIZE(a)-1
-       minIndex = MINLOC(a(i:), 1) + i - 1
-       IF (a(i) > a(minIndex)) THEN
-          temp = a(i)
-          a(i) = a(minIndex)
-          a(minIndex) = temp
-       End IF
-    End DO
-  End Subroutine Selection_sort
-!-----------------------
-Subroutine Double_sort(a)
-! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-!  Double sorts a double array a according to the first element
-    INTEGER, INTENT(IN OUT) :: a(:,:)
-    INTEGER :: i, minIndex, temp(SIZE(a,2))
-    !
-    DO i = 1, SIZE(a,1)-1
-       minIndex = MINLOC(a(i:,1), 1) + i - 1
-       IF (a(i,1) > a(minIndex,1)) THEN ! sort on first column
-          temp(:) = a(i,:)
-          a(i,:)= a(minIndex,:)
-          a(minIndex,:) = temp(:)
-       End IF
-    End DO
-End Subroutine Double_sort
-!-----------------------
-Pure Subroutine Double_IR_sort(N,a,R)
-! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-!  sorts integer array a according to the first dimension
-! sort also the additional real array
-    use constants, only : dp
-    implicit none
-    INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
-    INTEGER, INTENT(IN OUT) :: a(:)
-    Real(dp), INTENT(IN OUT) :: R(:)
-    INTEGER :: i, minIndex, temp, Rtemp
-
-    DO i = 1, N-1
-       minIndex = MINLOC(a(i:N), 1) + i - 1
-       IF (a(i) > a(minIndex)) THEN
-          temp = a(i)
-          a(i) = a(minIndex)
-          a(minIndex) = temp
-          Rtemp = R(i)
-          R(i) = R(minIndex)
-          R(minIndex) = Rtemp
-       End IF
-    End DO
-End Subroutine Double_IR_sort
-!-----------------------
-Pure Subroutine Double_RI_sort(N,a,R)
-! Adepted From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
-!  sorts integer array a (min first) and reorders the additional real array in the same way
-    use constants, only : dp
-    implicit none
-    INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
-    Real(dp), INTENT(IN OUT) :: a(:)
-    Integer, INTENT(IN OUT) :: R(:)
-    INTEGER :: i, minIndex
-    Real(dp) :: temp
-    Integer :: Rtemp
-
-    DO i = 1, N-1
-       minIndex = MINLOC(a(i:N), 1) + i - 1
-       IF (a(i) > a(minIndex)) THEN
-          temp = a(i)
-          a(i) = a(minIndex)
-          a(minIndex) = temp
-          Rtemp = R(i)
-          R(i) = R(minIndex)
-          R(minIndex) = Rtemp
-       End IF
-    End DO
-End Subroutine Double_RI_sort
-!-------------------------------------
-Subroutine sort(n, a)
-! From  https://rosettacode.org/wiki/Sorting_algorithms/Insertion_sort#Fortran
-    implicit none
-    integer :: n, i, j
-    real :: a(n), x
-
-    do i = 2, n
-        x = a(i)
-        j = i - 1
-        do while (j >= 1)
-            if (a(j) <= x) exit
-            a(j + 1) = a(j)
-            j = j - 1
-        End do
-        a(j + 1) = x
-    End do
-End Subroutine sort
-! -----------------------------------
-End Module unque
 !===============================================
     Subroutine GetNonZeroLine(lineTXT)
     implicit none
@@ -776,3 +775,39 @@ Pure Subroutine SetSmooth(N_Smth, Smooth)
    Smooth(:)=Smooth(:)/SUM(Smooth(:))
    Return
 End Subroutine SetSmooth
+!-----------------------------------
+Function random_stdnormal() Result(x)
+!  https://masuday.github.io/fortran_tutorial/random.html
+! General interest: https://en.wikibooks.org/wiki/Fortran/Fortran_procedures_and_functions
+   implicit none
+   real :: x
+   real,parameter :: pi=3.14159265
+   real :: u1,u2
+   ! call random_number(r) gives 0=< r < 1 i.e. including 0, excluding 1
+   call random_number(u1)
+   call random_number(u2)
+   x = sqrt(-2*log(1-u1))*cos(2*pi*u2)
+   Return
+end Function random_stdnormal
+!-----------------------------------
+Subroutine random_stdnormal3D(x)
+!  https://masuday.github.io/fortran_tutorial/random.html
+! General interest: https://en.wikibooks.org/wiki/Fortran/Fortran_procedures_and_functions
+   implicit none
+   real, intent(out) :: x(1:3)
+   real :: R,D, Epsln=epsilon(Epsln)
+   real :: u1,u2,u3
+   Real :: random_stdnormal
+   ! call random_number(r) gives 0=< r < 1 i.e. including 0, excluding 1
+   call random_number(u1)  ! may include zero
+   call random_number(u2)
+   call random_number(u3)
+   R=sqrt((0.5-u1)**2+(0.5-u2)**2+(0.5-u3)**2+Epsln) ! to prevent zero
+   D=random_stdnormal()! can be zero
+   D=((abs(d))**(1/3.))  ! to have distances distributed like [d^2 x gaussian(d)]
+   !D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
+   x(1)= D*(0.5-u1)/R
+   x(2)= D*(0.5-u2)/R
+   x(3)= D*(0.5-u3)/R
+   Return
+end Subroutine random_stdnormal3D
