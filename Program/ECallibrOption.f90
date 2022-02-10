@@ -45,12 +45,12 @@ Subroutine E_Callibr()
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
    real ( kind = 8 ) :: X(N_FitPar_max)
    !
-   integer :: i, j, k, i_ant, i_eo, i_chunk, i_stat, StatID
+   integer :: i, j, k, i_ant, i_eo, i_chunk, i_stat, StatID, nxx
    integer :: i_loc(1), i_Peak
    Logical :: FitNoSources
    character*10 :: txt
-   !character*35 :: Frmt
-   real(dp) :: x1,x2,x3,t
+   character*80 :: lname
+   real(dp) :: x1,x2,x3,t, Time_width, Space_Spread(1:3)
    !real(dp) :: dt,B, MTC, dtI
    Integer :: i_SAI
    !
@@ -134,7 +134,7 @@ Subroutine E_Callibr()
           If(k .gt. N_FitPar_max) Then
             write(2,*) 'Too many fit parameters, ',k, &
                'exceeds max of', N_FitPar_max,' for i,i_peak=',i,i_Peak
-            stop 'SetFitParamsLMA'
+            stop 'SetFitParamsLMA: too many parameters'
           Endif
           X( k:k+2 ) = SourcePos(1:3,i_Peak)
           N_FitPar= N_FitPar +1
@@ -147,11 +147,17 @@ Subroutine E_Callibr()
        ', # of stations fitted',N_FitStatTim,' , # of station parameters fitted=',X_Offset(N_FitStatTim)-1
     flush(unit=2)
     !
+    Call GetNonZeroLine(lname)
+    Read(lname,*, iostat=nxx) Time_width, Space_Spread
+    If(nxx.ne.0) Then
+      Time_width=0.
+      Space_Spread(1:3)=0.
+    EndIf
     !stop 'FitCycle'
 !    write(2,"(A,I4,A,I3,A,i4,A,F7.2,A)") 'N_FitPar=',N_FitPar ,', N_FitStatTim=', N_FitStatTim, &
 !        ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
-   Call EI_PrntFitPars(X)
-    Call EI_Fitter(X)  ! fit source
+    Call EI_PrntFitPars(X)
+    Call EI_Fitter(X, Time_width, Space_Spread)  ! fit source
     flush(unit=2)
     Call EIX2Source(X)
     !
@@ -180,44 +186,49 @@ Subroutine EIReadPeakInfo()
     use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
     Implicit none
     !
-    integer :: i_eo, i_chunk, i, k, i_c !,i_ca,i_eoa
+    integer :: i_eo, i_chunk, i, k, i_c ,i_ca  !,i_eoa
     !logical :: Fitfirst !,TraceFirst
     Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
     !Integer, parameter :: PeakS_dim=NrP
     integer :: i_Peak, nxx
-    character*80 :: lname  ! Should be 80 to be compatible with "GetNonZeroLine"
+    character*80 :: lname
     character*10 :: txt
     character*35 :: Frmt
     real(dp) :: x1,x2,x3,t
     !
    Call GetNonZeroLine(lname)
    !write(2,*) 'EIReadPeakInfo:',lname
-   Frmt="(1x,I2,2x,i2,I8,3(F10.2,1x))"
+   Frmt="(1x,3I2,I8,3(F10.2,1x))"
    i_peak=0
    TotPeakNr(0,:)=0
    !PeakNr(:)=0
-   i_chunk=1
+   i_chunk=0
+   i_ca=-1
    PeakNrTotal=PeakNr_dim
    Do i_Peak=1,PeakNr_dim       ! Read source positions from input. There should be at least one un-readable line in the input.
       !write(2,*) 'lname="',lname,'"'
-      read(lname,Frmt,iostat=nxx)  i, i_c, k, x1,x2,x3
+      read(lname,Frmt,iostat=nxx)  i, i_eo, i_c, k, x1,x2,x3
       If(nxx.ne.0) Then
          Write(2,*) 'error when reading source info for #',i_Peak
          Write(2,*) 'Culprit: "',trim(lname),'"'
          Stop 'EI-sources read'
       EndIf
+      If(i_eo.ne.0) cycle
+      If(i_c.ne.i_ca) then
+         i_chunk=i_chunk+1
+         i_ca=i_c
+      EndIf
       SourcePos(1,i_Peak)=x1
       SourcePos(2,i_Peak)=x2
       SourcePos(3,i_Peak)=x3
       Peakpos(i_Peak)=k
-      ChunkNr(i_Peak)=i_c
+      ChunkNr(i_Peak)=i_chunk
       !write(2,*) k,i_c,i_peak, i_chunk
-      if(i_chunk.gt.ChunkNr_dim .or. i_c.lt.i_chunk) Then
+      if(i_chunk.gt.ChunkNr_dim) Then
          Write(2,*) 'Chunk nr error when reading source info for #',i_Peak
          Write(2,*) 'Culprit: "',trim(lname),'"'
          Stop 'EI-sources chunk nr error'
       EndIf
-      i_chunk=i_c
       TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk); not really used and obsolete
       !PeakNr(i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_chunk)
       !

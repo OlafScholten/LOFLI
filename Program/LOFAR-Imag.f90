@@ -182,11 +182,11 @@
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
     Include 'InterferomPars.f90'
+    Include 'AntFunct.f90'
     Include 'LOFLI_InputHandling.f90'
     Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
     Include 'GLEplotUtil.f90'
-    Include 'AntFunct.f90'
     Include 'Ant-Read.f90'
     Include 'CrossCorr.f90'
     Include 'FindCallibr.f90'   ! Station Callibration
