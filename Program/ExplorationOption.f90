@@ -131,8 +131,8 @@ Subroutine GetSpectStats(i_chunk, i_expl)
    ! ave/RMS = sqrt(pi/4)
    !Chance amplitude > 4 sigma = 1/15787.2 !	
    !with 65536-2*Edge samples: numerically: ~ 4 times amplitude gt 3*RMS=4.24 s
-   write(2,*) 'stats:',i_expl,StatsStore_SAI(i_expl,1),StatsStore_Ave(i_expl,1),StatsStore_RMS(i_expl,1) &
-      ,StatsStore_Peak(i_expl,1,1:PeakS)
+   !write(2,*) 'stats:',i_expl,StatsStore_SAI(i_expl,1),StatsStore_Ave(i_expl,1),StatsStore_RMS(i_expl,1) &
+   !   ,StatsStore_Peak(i_expl,1,1:PeakS)
    Return
 End Subroutine GetSpectStats
 ! =============================

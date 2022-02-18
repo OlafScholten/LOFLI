@@ -146,7 +146,7 @@ Module ThisSource
        Allocate( Peak_IRef(1:PeakNr_dim))
        Allocate( Peak_Offst(1:PeakNr_dim)) ! Set in 'GetCorrSingAnt',
        !          pulse arrival time shift (w.r.t. core CS002) of pulse in reference antenna depending on source position
-       Allocate( ExclStatNr(1:10,1:PeakNr_dim))
+       Allocate( ExclStatNr(1:30,1:PeakNr_dim))
        Allocate( PeakPos(1:PeakNr_dim))  ! peak position in the reference antenna
        Allocate( SourcePos(3,1:PeakNr_dim))
        Allocate( RefAntErr(1:PeakNr_dim))

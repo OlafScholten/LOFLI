@@ -28,8 +28,8 @@ Program CompareCalibr
    Fine_STDelayB(:)=Fine_STDelay(:)-Fine_STDelayA(:)
    !
    write(2,*) TRIM(CalibrationsB),' minus ',TRIM(CalibrationsA), ' in [ns]'
-   write(2,"(40A7)") Fine_STMnm(:)
-   write(2,"(40F7.2)") 5*Fine_STDelayB(:)
+   !write(2,"(40A7)") Fine_STMnm(:)
+   !write(2,"(40F7.2)") 5*Fine_STDelayB(:)
    Do i=1,Station_nrMax
       If(Fine_STMnm(i)(1:1).eq.'C') Then
          write(2,"(A6)", ADVANCE='no') Fine_STMnm(i)

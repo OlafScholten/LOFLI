@@ -89,7 +89,7 @@ MODULE LOFLI_Input
       Do i=1,N
          write(VarCh,"(A)") Var(i)
          If(Var(i).eq.Var(N)) exit
-         write(2,"(A,A)", ADVANCE='NO') '"',Trim(VarCh),'", '
+         write(2,"(A,A,A)", ADVANCE='NO') '"',Trim(VarCh),'", '
       Enddo
       If(present(Label)) Then
          write(2,"(I3,A,A,A,5x,'! ',A)") N-i+1,'*( "',Trim(VarCh),'" )',Label

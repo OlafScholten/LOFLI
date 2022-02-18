@@ -54,7 +54,7 @@
     if(FP_s(1).GT.0) then
      Do i=1,N_FitPar_max
         if(FP_s(i) .le. 0) exit
-        If(.not. any(FP_s(i)==Ant_Stations(CorrAntNrs(:,0,1),1)) ) cycle  ! check if this station included in present fit
+        If(.not. any(FP_s(i)==Ant_Stations(CorrAntNrs(1:Nr_Corr(0,1),0,1),1)) ) cycle  ! check if this station included in present fit    Nr_Corr(i_eo,i_chunk)
         Do k=1, Nr_UniqueStat
           If(Unique_StatID(k).eq. FP_s(i)) then
             N_FitStatTim= N_FitStatTim + 1 ! position in 'FitParam'
@@ -103,7 +103,7 @@
                 If(k .gt. N_FitPar_max) Then
                   write(2,*) 'Too many fit parameters, ',k, &
                      'exceeds max of', N_FitPar_max,' for i,i_peak=',i,i_Peak
-                  stop 'SetFitParamsLMA'
+                  stop 'SetFitParamsLMA; Too many fit parameters'
                 Endif
                 If(FitPos(i).eq.4) then
                     X( k ) = RefAntErr(i_Peak)
@@ -374,6 +374,7 @@ Subroutine Find_unique_StatAnt()
     enddo
     Call unique(vec,Station_IDs)
     Nr_UniqueStat=size(Station_IDs)-1
+    Write(2,*) 'Find_unique_StatAnt:Nr_UniqueStat=',Nr_UniqueStat
     Unique_StatID(1:Nr_UniqueStat)=Station_IDs(2:Nr_UniqueStat+1)  ! get rid of leading 0
     Deallocate(Station_IDs)
     !
