@@ -365,12 +365,12 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
       let d6 = hist d5 step dMin !!!dm [from x1] [to x2] [bins n] [step n]
       d6 line hist
       If(a1>0) then
-         let d7 = dMin*b1*exp(-a1*x-c1/(x*x)) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n
+         let d7 = dMin*b1*exp(-a1*x-c1/(x*x)) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n
          d7 line color red
       end If
       If(a2>0) then
          !let d8 = b2*exp(-a2*x-c2/(x*sqrt(x))) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n
-         let d8 = dMin*b2*(x)^(-a2)*exp(-c2/x-d2/x^2) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
+         let d8 = dMin*b2*(x)^(-a2)*exp(-c2/x-d2/x^2) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
          d8 line color blue
       End If
    end graph
