@@ -6,7 +6,10 @@ UtilDir="Utilities"
 ParentDir="copysetup"
 #FlashFolder='18F-1'
 #FlashFolder='18D-1'
-FlashFolder='20B-10'
+#FlashFolder='20B-10'
+FlashFolder='21C-1'
+
+
 #Year="2020"
 #D20200814T143241.768Z
 #FlashFolder="D20200814T143241"
