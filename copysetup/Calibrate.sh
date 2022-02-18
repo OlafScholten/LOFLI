@@ -9,4 +9,4 @@ source ${UtilDir}compile.sh
 # start Calibration run
 ${ProgramDir}$Prog  ${FlashFolder} <Calibrate.in
 exit
-# read -rsp $'Press enter to continue...\n'
+# read -rsp $'Pausing. Press enter to continue...\n'

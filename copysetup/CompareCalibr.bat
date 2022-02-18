@@ -2,11 +2,10 @@
 call ..\ShortCuts.bat
 
   cd %ProgramDir%
-  gfortran -o InterfSrcSelect.exe InterfSrcSelect.f90
+  gfortran -o ComCal.exe CompareCalibrations.f90
   cd %FlashFolder%
 
-%ProgramDir%InterfSrcSelect  <InterfSrcSel.in
+%ProgramDir%ComCal  <CompareCalibr.in
 :: pause
-call RunGLEplots.bat
 :: pause
 exit
