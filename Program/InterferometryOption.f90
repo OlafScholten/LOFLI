@@ -196,6 +196,8 @@ Subroutine InterferometerRun
    !write(2,*) 'PlotAllCurtainSpectra=',CurtainPlot,SumStrt,SumWindw
    If(CurtainHalfWidth.gt.0) then
       !read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,i_chunk), CurtainWidth !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
+      write(2,*) 'PlotAllCurtainSpectra:',CurtainHalfWidth
+      Flush(unit=2)
       PeakNrTotal=2
       Peak_eo(1)=0   ; Peak_eo(2)=1  ! only the i_eo=0 peaks are used for curtainplotting
       ChunkNr(1)=1   ; ChunkNr(2)=1 ! chunk nr

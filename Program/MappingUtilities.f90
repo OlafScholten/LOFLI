@@ -390,7 +390,7 @@ Subroutine WriteCalibration ! MergeFine
    Real(dp) :: Delay, mean(Station_nrMax), UpDate_STDelay(1:Ant_nrMax)=0.
    character(len=5) :: txt, Station_Mnem!, Fine_STMnm(Station_nrMax), LOFAR_STMnm(Station_nrMax)
    integer :: i, k, nxx, i_fine, SAI, n, i_unq
-   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI
+   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI, Nr_WriteStat
    Character(len=12) :: Date_mn
    Character(len=7) :: cmnt
    !
@@ -433,6 +433,7 @@ Subroutine WriteCalibration ! MergeFine
    i_stat=-1 !NINT(SAI_AntDelay(1)/1000.)
    i_unq=1
    n=1
+   Nr_WriteStat=Nr_UniqueStat
    Do i=1,Nr_AntDelay
       k=NINT(SAI_AntDelay(i)/1000.)
       If(k.eq.i_stat) then  ! update running sum for this station
@@ -446,17 +447,17 @@ Subroutine WriteCalibration ! MergeFine
              Fine_AntDelay(k)=Fine_AntDelay(k)-Mean(i_unq)
             Enddo
          endif
-         Ant=MAXLOC(Unique_StatID(1:Nr_UniqueStat), MASK = Unique_StatID(1:Nr_UniqueStat) .eq. i_stat) ! FINDLOC(Unique_StatID(1:Nr_UniqueStat), i_stat) !
+         Ant=MAXLOC(Unique_StatID(1:Nr_WriteStat), MASK = Unique_StatID(1:Nr_WriteStat) .eq. i_stat) ! FINDLOC(Unique_StatID(1:Nr_UniqueStat), i_stat) !
          i_unq=Ant(1)
          If(i_unq.eq.0) then  ! If station not in the list, add it
-            Nr_UniqueStat=Nr_UniqueStat+1
-            If(Nr_UniqueStat.gt.Station_nrMax) then
+            Nr_WriteStat=Nr_WriteStat+1
+            If(Nr_WriteStat.gt.Station_nrMax) then
                write(2,*) 'nr of unique stations exceeded for',i_stat
                stop 'WriteCalibration:exceed'
             Endif
-            Unique_StatID(Nr_UniqueStat)= i_stat ! add to the unique station list
-            Fit_TimeOffsetStat(Nr_UniqueStat)=0.
-            i_unq=Nr_UniqueStat
+            Unique_StatID(Nr_WriteStat)= i_stat ! add to the unique station list
+            Fit_TimeOffsetStat(Nr_WriteStat)=0.
+            i_unq=Nr_WriteStat
          Endif
          n=1
          Mean(i_unq)=Fine_AntDelay(i)  ! Start running sum for this station
@@ -485,7 +486,7 @@ Subroutine WriteCalibration ! MergeFine
    write(19,*) '============ =========== =============== ======= all in units of samples'
    !
    i_fine=Nr_StatDelay
-   Do k=1,Nr_UniqueStat    ! Write stationdelays
+   Do k=1,Nr_WriteStat    ! Write stationdelays
      If(Unique_StatID(k).le. 0) exit  ! should not happen
      Call Station_ID2Mnem(Unique_StatID(k),Station_Mnem)
      !write(2,*) 'mnem',k,Unique_StatID(k),Station_Mnem
@@ -750,7 +751,7 @@ End Module ansi_colors
 Subroutine Convert2m(CenLoc)
    Implicit none
    real*8, intent(inout) :: CenLoc(3)
-   If((abs(CenLoc(1)) .lt. 100.) .and. (abs(CenLoc(1)) .lt. 100.) .and. (abs(CenLoc(1)) .lt. 100.) ) Then
+   If((abs(CenLoc(1)) .lt. 100.) .and. (abs(CenLoc(2)) .lt. 100.) .and. (abs(CenLoc(3)) .lt. 50.) ) Then
       CenLoc(:)=CenLoc(:)*1000.  ! convert from [km] to [m]
    Endif
    Return

@@ -167,7 +167,7 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
          Space_Spread(1:3)=0.0
          write(2,"(50(' ='))")
          Flush(unit=2)
-         Goto 1
+         Goto 1  ! for a continuous loop to try to improve the fit using stochastic deviations
       EndIf
     EndIf
     Do i_Peak=1,PeakNrTotal
@@ -887,7 +887,7 @@ End Subroutine EI_Weights
 Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
     use constants, only : dp
     use DataConstants, only : Station_nrMax, Ant_nrMax
-    use ThisSource, only :  PeakNrTotal, PeakPos, Peak_eo, ChunkNr
+    use ThisSource, only :  PeakNrTotal, PeakPos,  ChunkNr
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
@@ -922,7 +922,7 @@ End Subroutine GetInterfFitDelay
 Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
    use constants, only : dp
    use DataConstants, only : Station_nrMax, Ant_nrMax
-   use ThisSource, only :  PeakNrTotal, PeakPos, Peak_eo, ChunkNr
+   use ThisSource, only :  PeakNrTotal, PeakPos, ChunkNr
    Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh, N_fit
    use Chunk_AntInfo, only : Ant_Stations, Ant_pos
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
