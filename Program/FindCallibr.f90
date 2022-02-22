@@ -38,7 +38,7 @@ Subroutine FindCallibr(SourceGuess)
    !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
-   Real(dp), intent(in) :: SourceGuess(3,10)
+   Real(dp), intent(in) :: SourceGuess(3,*)
    !
    integer :: i, j, k, i_ant, j_corr, i_eo, i_chunk, i_dist, MinFitAntD_nr
    logical, save :: Fitfirst=.true.
@@ -536,6 +536,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    write(2,*) 'timing offset-fit option="',lname,'"'
    read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
    Do i=1,N_FitPar_max
+      !write(2,*) 'FP_Mnem(i):',i,FP_Mnem(i)
       If(FP_Mnem(i).eq.'     ') exit
       If(TRIM(FP_Mnem(i)).eq.'!') exit
       If(FP_Mnem(i).eq.'NoSrc') Then
@@ -543,6 +544,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
           cycle
       EndIf
       Call Station_Mnem2ID(FP_Mnem(i),k)
+      !write(2,*) 'FP_Mnem(i)2:',i, FP_Mnem(i),k
       If(k.eq.0) exit
       N_FitPar=N_FitPar+1
       FP_s(N_FitPar)=k
@@ -565,7 +567,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       !Flush(unit=2)
    ElseIf(option.eq. 'ante') Then
       Fit_AntOffset=.true.
-      write(2,*) 'fit single antenna calibration'
+      write(2,*) 'fit calibration for antennas in stations separately'
    endif
    !
    If(FitNoSources) Write(2,*) 'No source parameters are being fitted'

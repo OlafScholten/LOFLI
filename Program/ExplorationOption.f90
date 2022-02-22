@@ -15,7 +15,7 @@ Subroutine ExplorationRun
    !
    Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), FitRange_Samples, i_expl
    Real*8 :: StartTime_ms, StartingTime, StoppingTime, dt_ms
-   Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
+   Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
    Integer :: ir_file,ir_grp,ir_dst, DATA_LENGTH, SAMPLE_NUMBER_first, i_dist, i_guess, TimeFr
    Real*8 :: LFRAnt_crdnts(3), powr, T_Offset !,StatAnt_Calib !,StartTime_ms
 !

@@ -139,9 +139,6 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   cycle   ! get next DSet
               Endif
               !
-              Powr_eo(i_eo)=Powr_eo(i_eo)+Powr
-              NAnt_eo(i_eo)=NAnt_eo(i_eo)+1
-              !
               Call RelDist(SourceGuess,LFRAnt_crdnts,RDist)
               Ant_RawSourceDist(Ant_nr(i_chunk)+1,i_chunk)=RDist         ! units of samples
               If(WriteSimulation(2).gt.0) Then
@@ -155,6 +152,9 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                !write(2,*) 'STATION_ID,Ant_ID was not calibrated',STATION_ID,Ant_ID,StatAnt_Calib
                cycle
               EndIf
+              !
+              Powr_eo(i_eo)=Powr_eo(i_eo)+Powr
+              NAnt_eo(i_eo)=NAnt_eo(i_eo)+1
               !
               !Absolute_TIME  ! should be the same for all
               !SAMPLE_NUMBER_first  ! Number of samples, after 'Absolute_TIME' for the first recording
@@ -262,12 +262,17 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   CTime_s(1:Time_dim)=CTime_spectr(1:Time_dim,i_ant,i_chunk)
                   Ant_ID=Ant_IDs(i_ant,i_chunk)
                   LFRAnt_crdnts(:)=Ant_pos(:,i_ant,i_chunk)
+                  RDist=Ant_RawSourceDist(i_ant,i_chunk)
+                  !
                   CTime_spectr(1:Time_dim,i_ant,i_chunk)=CTime_spectr(1:Time_dim,i_ant-1,i_chunk)
                   Ant_IDs(i_ant,i_chunk)=Ant_IDs(i_ant-1,i_chunk)
                   Ant_pos(:,i_ant,i_chunk)=Ant_pos(:,i_ant-1,i_chunk)
+                  Ant_RawSourceDist(i_ant,i_chunk)=Ant_RawSourceDist(i_ant-1,i_chunk)
+                  !
                   CTime_spectr(1:Time_dim,i_ant-1,i_chunk)=CTime_s(1:Time_dim)
                   Ant_IDs(i_ant-1,i_chunk)=Ant_ID
                   Ant_pos(:,i_ant-1,i_chunk)=LFRAnt_crdnts(:)
+                  Ant_RawSourceDist(i_ant-1,i_chunk)=RDist
                EndIf
             EndIf
           Enddo

@@ -494,10 +494,20 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
             !', power=',StDev*PeakSAmp(j,i_eo), ' or', TotAmpl
             If(StDev.lt.25) Then
                i=i+1
+               PSP=PeakSP(i,i_eo)
+               Wu=PeakSWu(i,i_eo)
+               Wl=PeakSWl(i,i_eo)
+               w=PeakSAmp(i,i_eo)
+               !
                PeakSP(i,i_eo)=PeakSP(j,i_eo)
                PeakSWu(i,i_eo)=PeakSWu(j,i_eo)
                PeakSWl(i,i_eo)=PeakSWl(j,i_eo)
                PeakSAmp(i,i_eo)=PeakSAmp(j,i_eo)
+               !
+               PeakSP(j,i_eo)=PSP
+               PeakSWu(j,i_eo)=Wu
+               PeakSWl(j,i_eo)=Wl
+               PeakSAmp(j,i_eo)=w
             EndIf
          EndDo
          write(2,*)

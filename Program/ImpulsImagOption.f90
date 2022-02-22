@@ -2,7 +2,7 @@ Subroutine ImpulsImagRun
    use constants, only : dp,pi,ci,sample,Refrac,c_mps
    use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
    use DataConstants, only : Time_dim, Production, release  ! , Cnu_dim, RunMode, Utility
-   use DataConstants, only : Calibrations, OutFileLabel, EdgeOffset 
+   use DataConstants, only : Calibrations, OutFileLabel, EdgeOffset
    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Dual !, PeakPos
    use FitParams, only : FullSourceSearch, SigmaGuess, AntennaRange, SearchRangeFallOff, Sigma_AntT
    use Chunk_AntInfo, only : Start_time, AntennaNrError, DataReadError, TimeFrame !, BadAnt_nr, BadAnt_SAI ExcludedStatID,
@@ -15,7 +15,7 @@ Subroutine ImpulsImagRun
    Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), FitRange_Samples!, CurtainWidth
    Integer :: i_dist, i_guess, nxx, valueRSS
    Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
-   Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+   Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
    CHARACTER(LEN=1) :: Mark
    CHARACTER(LEN=10) :: Sources
    Character(LEN=180) :: Sources1, Sources2
@@ -59,7 +59,7 @@ Subroutine ImpulsImagRun
    lname=lname//' height, l&r widths'
    write(Txt20ImagingPars,"(A,1x,F8.2,1x,F8.2,1x, F8.2)") TRIM(FlashName), StartTime_ms, StartingTime, StoppingTime
    write(Txt20Identifier,"('Chnk#  , t[ms] , max,found, <5^2 ,',2x,A)") TRIM(release)
-   Sources='Srcs'//release(2:3)
+   Sources='Srcs'//release(1:2)
    If(Dual) then
       Sources1=TRIM(Sources)//'-dbl'//TRIM(OutFileLabel)
       Open(unit=17,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
@@ -97,7 +97,7 @@ Subroutine ImpulsImagRun
    !ChunkNr_start=1501 ; ChunkNr_stop=1900 ! No Time Frame == ChunkNr
    write(*,"(A,i5,A)") achar(27)//'[45m # of data-blocks read in=',(ChunkNr_stop-ChunkNr_start),achar(27)//'[0m'
    If((ChunkNr_stop-ChunkNr_start).gt.3) Production=.true.
-   Open(unit=18,STATUS='unknown',ACTION='write', FILE = TRIM(Sources)//'-strong-'//TRIM(OutFileLabel)//'.dat')
+   Open(unit=18,STATUS='unknown',ACTION='write', FILE = TRIM(Sources)//'-5star-'//TRIM(OutFileLabel)//'.dat')
    write(18,*) '! Start_Time[ms]:', '1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
    Do TimeFrame=ChunkNr_start, ChunkNr_stop

@@ -27,7 +27,7 @@ Subroutine E_Callibr()
    use constants, only : dp,sample
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode, Time_Dim
    use Chunk_AntInfo, only : Unique_SAI, Start_time, Tot_UniqueAnt, Ant_Stations
-   use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat, Nr_UniqueAnt
+   use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat, Nr_UniqueAnt, N_Chunk_max
    use DataConstants, only : Ant_nrMax
    use ThisSource, only : SourcePos
    use ThisSource, only : PeakNr, PeakNrTotal
@@ -41,7 +41,7 @@ Subroutine E_Callibr()
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
-   Real(dp) :: SourceGuess(3,10)
+   Real(dp) :: SourceGuess(3,N_Chunk_max)
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
    real ( kind = 8 ) :: X(N_FitPar_max)
    !
@@ -134,7 +134,7 @@ Subroutine E_Callibr()
           If(k .gt. N_FitPar_max) Then
             write(2,*) 'Too many fit parameters, ',k, &
                'exceeds max of', N_FitPar_max,' for i,i_peak=',i,i_Peak
-            stop 'SetFitParamsLMA: too many parameters'
+            stop 'ECallibrate: too many parameters'
           Endif
           X( k:k+2 ) = SourcePos(1:3,i_Peak)
           N_FitPar= N_FitPar +1

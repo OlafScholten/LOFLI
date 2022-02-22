@@ -23,6 +23,7 @@ Module Chunk_AntInfo
     Real(dp), save, allocatable :: Ant_pos(:,:,:)
     Complex(dp), save, allocatable :: CTime_spectr(:,:,:)
     Integer, parameter :: ExcludedStat_max=35
+    integer, parameter :: N_Chunk_max=20
     Integer, save :: Unique_StatID(1:Station_nrMax), Nr_UniqueStat=0
     Integer, save :: Unique_SAI(1:Ant_nrMax), Nr_UniqueAnt=0
     Integer, save :: Tot_UniqueAnt(0:Station_nrMax)      ! highest ranknr in Unique_SAI of unique_antenna for station Unique_StatID(i_stat)

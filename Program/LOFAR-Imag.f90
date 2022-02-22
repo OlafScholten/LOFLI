@@ -296,7 +296,7 @@ Program LOFAR_Imaging
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
-    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax
+    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
     Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ChainRun, PixPowOpt, N_fit
@@ -305,7 +305,7 @@ Program LOFAR_Imaging
     !
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
-    Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Real*8 :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
@@ -456,7 +456,7 @@ Program LOFAR_Imaging
          Simulation=""
       CASE("C")  ! Calibrate                          RunMode=2
          ChunkNr_dim=0
-         Do i=1,12 ! perform some pre-scanning of the input to now the number of chunks that will be used
+         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
             Call GetNonZeroLine(lname)
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,1)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,1))
@@ -472,7 +472,7 @@ Program LOFAR_Imaging
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too small'
          EndIf
-         If(ChunkNr_dim.gt.12) Then
+         If(ChunkNr_dim.gt.N_Chunk_max) Then
             Write(2,*) lname
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too large'
@@ -567,7 +567,7 @@ Program LOFAR_Imaging
       CASE("F")  ! Field Calibration; Interferometric               RunMode=7
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=0
-         Do i=1,12 ! perform some pre-scanning of the input to now the number of chunks that will be used
+         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
             Call GetNonZeroLine(lname)
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
@@ -583,7 +583,7 @@ Program LOFAR_Imaging
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too small for FC'
          EndIf
-         If(ChunkNr_dim.gt.12) Then
+         If(ChunkNr_dim.gt.N_Chunk_max) Then
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too large for FC'
          EndIf
