@@ -15,7 +15,7 @@ Subroutine ExplorationRun
    !
    Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), FitRange_Samples, i_expl
    Real*8 :: StartTime_ms, StartingTime, StoppingTime, dt_ms
-   Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
+   Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
    Integer :: ir_file,ir_grp,ir_dst, DATA_LENGTH, SAMPLE_NUMBER_first, i_dist, i_guess, TimeFr
    Real*8 :: LFRAnt_crdnts(3), powr, T_Offset !,StatAnt_Calib !,StartTime_ms
 !
@@ -131,8 +131,8 @@ Subroutine GetSpectStats(i_chunk, i_expl)
    ! ave/RMS = sqrt(pi/4)
    !Chance amplitude > 4 sigma = 1/15787.2 !	
    !with 65536-2*Edge samples: numerically: ~ 4 times amplitude gt 3*RMS=4.24 s
-   write(2,*) 'stats:',i_expl,StatsStore_SAI(i_expl,1),StatsStore_Ave(i_expl,1),StatsStore_RMS(i_expl,1) &
-      ,StatsStore_Peak(i_expl,1,1:PeakS)
+   !write(2,*) 'stats:',i_expl,StatsStore_SAI(i_expl,1),StatsStore_Ave(i_expl,1),StatsStore_RMS(i_expl,1) &
+   !   ,StatsStore_Peak(i_expl,1,1:PeakS)
    Return
 End Subroutine GetSpectStats
 ! =============================

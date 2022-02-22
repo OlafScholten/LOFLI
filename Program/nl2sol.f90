@@ -5193,7 +5193,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
            call itsmry ( d, iv, p, v, x )
            return
          end if
-      write(2,*) 'nl2itr-205:',X(1:p)
+      !write(2,*) 'nl2itr-205:',X(1:p)
 !
 !  In case of STOPX or function evaluation limit with
 !  improved V(F), evaluate the gradient at X.
@@ -5669,7 +5669,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 !
  640  iv(1) = 14
       call itsmry ( d, iv, p, v, x )
-      write(2,*) 'nl2itr-640:',X(1:p)
+      !write(2,*) 'nl2itr-640:',X(1:p)
       return
 !
 !  Convergence obtained.  Compute covariance matrix if desired.
@@ -5692,7 +5692,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 
       call covclc(i, d, iv, j, n, nn, p, r, v, x)
 
-      write(2,*) 'nl2itr-710:',i,X(1:p)
+      !write(2,*) 'nl2itr-710:',i,X(1:p)
       if ( i == 3 ) then
 
         iv(ngcov) = iv(ngcov) + 1

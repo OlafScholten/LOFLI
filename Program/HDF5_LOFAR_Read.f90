@@ -514,7 +514,9 @@ Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, 
       write(2,*) '****** Error in GetDataChunk, h5dopen_f: ', trim(DSetName)
       write(2,*) 'Probably due to a broken SSHFS connection to the data repository; retry or restore'
       write(*,*) 'Lost SSHFS connection to data repository???'
-      Stop 'GetDataChunk: data-open problem'
+      DataReadErr=10
+      Return
+      !Stop 'GetDataChunk: data-open problem'
    Endif
    !write(2,*) 'Call DataRead'
    !write(*,*) 'Call DataRead'

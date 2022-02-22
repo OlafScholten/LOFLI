@@ -2,7 +2,7 @@
 call ..\ShortCuts.bat
 
   cd %ProgramDir%
-  gfortran -o TrackExe.exe Track%Vrsn%.f90 %LIBRARY%
+  gfortran -o TrackExe.exe Track.f90 %LIBRARY%
   cd %FlashFolder%
 
 %ProgramDir%TrackExe  <FlashImage.in

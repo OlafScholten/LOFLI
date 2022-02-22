@@ -38,7 +38,7 @@ Subroutine FindCallibr(SourceGuess)
    !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
-   Real(dp), intent(in) :: SourceGuess(3,10)
+   Real(dp), intent(in) :: SourceGuess(3,*)
    !
    integer :: i, j, k, i_ant, j_corr, i_eo, i_chunk, i_dist, MinFitAntD_nr
    logical, save :: Fitfirst=.true.
@@ -133,8 +133,8 @@ Subroutine FindCallibr(SourceGuess)
       Call FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !write(2,*) 'RefAntErr---Y', RefAntErr(1)
       !Call PrntNewSources()
-   write(2,*) 'i_dist: ', i_dist
-   flush(unit=2)
+   !write(2,*) 'i_dist: ', i_dist
+   !flush(unit=2)
       !Write(2,*) 'Average RMS=',SUM(PeakRMS(1:PeakNrTotal))/PeakNrTotal
       If((RunMode.eq.1) .and. (MINVAL(PeakRMS(1:PeakNrTotal)).gt.30.)) then
          write(2,"(A,F7.2,A,10F6.0)") 'chi-square too poor for max antenna distance=',DistMax &
@@ -142,7 +142,7 @@ Subroutine FindCallibr(SourceGuess)
          Return
       Endif
    EndDo ! i_dist=1,MaxFitAntD_nr
-   flush(unit=2)
+   !flush(unit=2)
     !
     If(RunMode.eq.1) then  ! =Explore
       !write(2,*) 'PeakNrTotal=',PeakNrTotal
@@ -416,13 +416,13 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     SpaceCov(1,1)=-.1 ; SpaceCov(2,2)=-.1 ; SpaceCov(3,3)=-.1 ;
     Call BuildCC(StatMax,DistMax)
     !
-    FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=4  !(4=timing error, 1-3 is N,E,h)
+    FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=-4  !(4=timing error, 1-3 is N,E,h)
     If(DistMax.le. 0.30) then
         FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=-1 ; FitPos(4)=-1 ! single station, fit direction only
     ElseIf(DistMax.le. 1.0) then
         FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=-1 ! Superterp, fit direction and curvature front
     ElseIf(DistMax.le. 5) then
-        FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=4
+        FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=-4
     EndIf
     If(FitNoSources) then
         FitPos(1)=-1 ; FitPos(2)=-2 ; FitPos(3)=-3 ; FitPos(4)=-4
@@ -460,7 +460,7 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)  ! Obsolete, not used anymore
     Integer, intent(in) :: i_ant, i_chunk
     Integer, intent(out) :: Peakposs(1:NrP)
     !
-    real(dp) :: HEnvel(Time_dim), peakStr(1:9), AvePos,AvePosSq,AveAmpl, StDev
+    real(dp) :: HEnvel(Time_dim), peakStr(1:9), AvePos, TotAmpl, StDev
     integer :: i, j, k, PeakN,Offst
     integer :: i_loc(1), PeakPos(0:9), NPeakPos(0:9)
     !
@@ -492,18 +492,9 @@ Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)  ! Obsolete, not used anymore
     !
     peakStr=0
     Do j=1,PeakN-1
-        peakStr(j) = HEnvel(PeakPos(j))
-        AvePos=0. ; AvePosSq=0.  ; AveAmpl=0.
-        Do i=PeakPos(j)-Offst/2,PeakPos(j)+Offst/2
-            AvePos=AvePos + i*HEnvel(i)
-            AvePosSq=AvePosSq + i*i*HEnvel(i)
-            AveAmpl=AveAmpl + HEnvel(i)
-        Enddo
-        AvePos=AvePos/AveAmpl
-        AvePosSq=AvePosSq/AveAmpl
-        StDev= sqrt(AvePosSq-AvePos**2)
+        Call Inv5StarPk(HEnvel, PeakPos(j), Offst, AvePos, TotAmpl, StDev)
         write(2,*) j,'position offset=',PeakPos(j)-AvePos,', StDev=',StDev, &
-         ', power=',StDev*peakStr(j), ' or', AveAmpl
+         ', power=',StDev*peakStr(j), ' or', TotAmpl
     enddo
     !Write(2,*) 'PeakPos',peakpos
     !Write(2,*) 'PeakStr',peakstr
@@ -545,6 +536,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    write(2,*) 'timing offset-fit option="',lname,'"'
    read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
    Do i=1,N_FitPar_max
+      !write(2,*) 'FP_Mnem(i):',i,FP_Mnem(i)
       If(FP_Mnem(i).eq.'     ') exit
       If(TRIM(FP_Mnem(i)).eq.'!') exit
       If(FP_Mnem(i).eq.'NoSrc') Then
@@ -552,6 +544,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
           cycle
       EndIf
       Call Station_Mnem2ID(FP_Mnem(i),k)
+      !write(2,*) 'FP_Mnem(i)2:',i, FP_Mnem(i),k
       If(k.eq.0) exit
       N_FitPar=N_FitPar+1
       FP_s(N_FitPar)=k
@@ -574,7 +567,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       !Flush(unit=2)
    ElseIf(option.eq. 'ante') Then
       Fit_AntOffset=.true.
-      write(2,*) 'fit single antenna calibration'
+      write(2,*) 'fit calibration for antennas in stations separately'
    endif
    !
    If(FitNoSources) Write(2,*) 'No source parameters are being fitted'

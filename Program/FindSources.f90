@@ -118,7 +118,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          !StatMax=Ant_Stations(1,1)
          StatMax=1050
          CalcHessian=.false.
-         write(2,"(A,i3,A,i6,A,i6,A)") 'FindSource-v18 for i_peak:',i_peakS,'@',Peakpos(1),&
+         write(2,"(A,i3,A,i6,A,i6,A)") 'FindSource; i_peak:',i_peakS,'@',Peakpos(1),&
             ', ampl=',PeakSAmp(i_peakS,i_eo),'=================='
          !production=.false.
          !
@@ -191,21 +191,23 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
             Endif
             !
             !searching for good peaks to be used for improving calibration
-            If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then
+            If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then ! see for a possible 5-star source
                If(PeakSAmp(i_peakS,i_eo).gt.PeakSAmp(1,i_eo)/10.) then
             !Start_Time(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
-               write(2,*) 'got a good one!!!!!!!!!!!!!!!'
-                  write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start_Time[ms]:', &
-                     1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, Peakpos_0, &
-                     SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
                   If(i_eo.eq.0) Then
                      i_cal=i_cal+1
                      if(i_cal.le.10) CalSource(i_cal)=Peakpos_0
                   Else
                      Do i=1,i_cal
                         If(abs(Peakpos_0-CalSource(i_cal)).lt.6) Then
-                           Write(18,"(A,I8, F13.5, I7, 3F11.2)") '*****', (TimeFrame*1000+i_peakS), &
-                              1000.*Start_Time(1)*sample,  (Peakpos_0+CalSource(i_cal))/2, SourcePos(:,1)
+                           write(2,*) 'got a good one!!!!!!!!!!!!!!!'
+                           write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start_Time[ms]:', &
+                              1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, Peakpos_0, &
+                              SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
+                           Write(18,"(A,I8,':', F13.5, 3F11.2,i3)") '***** label=', (TimeFrame*1000+i_peakS), &
+                              1000.*Start_Time(1)*sample, SourcePos(:,1), i_cal
+                           Write(18,"(A,I8,3(F10.2,','),'; 0.0')") '  1 0 1',  (Peakpos_0+CalSource(i_cal))/2, SourcePos(:,1)
+                           Flush(unit=18)
                            exit
                         EndIf
                      Enddo
@@ -382,7 +384,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    use ThisSource, only : Safety, Dual, Tref_dim
    use unque, only : Double_sort
    use constants, only : dp
-   use DataConstants, only : EdgeOffset, Time_dim  ! , ChunkNr_dim
+   use DataConstants, only : EdgeOffset, Time_dim, RunMode  ! , ChunkNr_dim
    Implicit none
    Integer, intent(in) :: PeakS_dim, i_chunk
    Integer, intent(out) :: PeakSWu(PeakS_dim,0:2), PeakSWl(PeakS_dim,0:2), PeakSP(PeakS_dim,0:2)  ! Peaks positions
@@ -398,7 +400,8 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    integer :: i, j, k, i_ant, i_eo
    integer :: i_loc(1), i_Peak
    real(dp) :: HEnvel(Time_dim), PeakTail
-   Integer :: PSP,Wu,Wl,w, peak0,peak1,Peak2, pos0, pos1
+   Integer :: PSP,Wu,Wl,w, peak0,peak1,Peak2, pos0, pos1, WindW
+   real(dp) :: AvePos,TotAmpl, StDev
    !
    Separation=Safety
    !
@@ -417,7 +420,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
        Do j=1,2*PeaksPerChunk
          i_loc=MaxLoc( HEnvel(EdgeOffset:Time_dim-EdgeOffset) )
          PSP=i_loc(1) + EdgeOffset - 1
-         write(2,*) 'j=',j,psp,HEnvel(PSP)
+         !write(2,*) 'j=',j,psp,HEnvel(PSP)
          PeakTail=HEnvel(PSP)/2.  ! pulse should be reduced to less than PeakTail to determine width
          PeakSAmp(i_peak,i_eo)=NINT(HEnvel(PSP))
          !Write(2,*) 'PSP',j,i_peak,PSP
@@ -460,7 +463,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
          if(i_peak.eq.(PeakS_dim+1)) exit  ! PeaksPerChunk+1)) exit
       Enddo   !  j=1,2*PeaksPerChunk
       i_peak=i_peak-1
-      HEnvel(:)=abs(CTime_spectr(:,i_ant, i_chunk))
+      HEnvel(:)=abs(CTime_spectr(:,i_ant, i_chunk))  ! to get rid of all zeroed parts
       Write(2,"(A,i3,A)", ADVANCE='NO') 'Peak(',i_peak,'):'
       Write(2,"(20i6)") PeakSP(1:i_peak,i_eo)
       Write(2,"(A)", ADVANCE='NO') 'Peakval = '
@@ -480,6 +483,35 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
       !SPeak(:,4,i_eo)=NINT(HEnvel(PeakSP(1:i_peak,i_eo)))
       SPeak(1:i_peak,4,i_eo)=PeakSAmp(1:i_peak,i_eo)
       Call Double_sort(SPeak(1:i_peak,:,i_eo))  ! re-order on peak position; only for internal use
+      If(RunMode.eq. 2) Then   ! test for calibration quality
+         Windw=100
+         i=0
+         j=0
+         Do j=1,i_peak
+            write(2,"(I2)", Advance='no') j
+            Call Inv5StarPk(HEnvel, PeakSP(j,i_eo), Windw, AvePos, TotAmpl, StDev)
+            !write(2,*) '***** ',j,PeakSP(j,i_eo),'position offset=',AvePos,', StDev=',StDev, &
+            !', power=',StDev*PeakSAmp(j,i_eo), ' or', TotAmpl
+            If(StDev.lt.25) Then
+               i=i+1
+               PSP=PeakSP(i,i_eo)
+               Wu=PeakSWu(i,i_eo)
+               Wl=PeakSWl(i,i_eo)
+               w=PeakSAmp(i,i_eo)
+               !
+               PeakSP(i,i_eo)=PeakSP(j,i_eo)
+               PeakSWu(i,i_eo)=PeakSWu(j,i_eo)
+               PeakSWl(i,i_eo)=PeakSWl(j,i_eo)
+               PeakSAmp(i,i_eo)=PeakSAmp(j,i_eo)
+               !
+               PeakSP(j,i_eo)=PSP
+               PeakSWu(j,i_eo)=Wu
+               PeakSWl(j,i_eo)=Wl
+               PeakSAmp(j,i_eo)=w
+            EndIf
+         EndDo
+         write(2,*)
+      EndIf
       !write(*,*) 'done:',i_eo
    enddo  ! i_eo=0,1
    !            PeakSWl(i_eo,i_peak)=Wl
@@ -488,6 +520,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
       Return
    endif
    !
+   !stop
    !Flush(unit=2)
    !write(*,*) 'end polarity'
    write(2,"(A)", ADVANCE='NO') 'even sort:'
@@ -570,3 +603,29 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    Return
 End Subroutine DualPeakFind
 !==================
+Subroutine Inv5StarPk(HEnvel, PeakPos, Windw, AvePos, Ampl, StDev)
+!  Unvestigate 5-star peak structure, i.e. good for calibration
+   use constants, only : dp
+   Implicit none
+   Real(dp), intent(in) :: HEnvel(*)
+   Integer, intent(in) :: PeakPos, Windw  ! Peaks positions
+   Real(dp), intent(out) :: AvePos, Ampl, StDev
+   integer :: i
+   real(dp) :: AvePosSq,W, TotAmpl
+   AvePos=0. ; AvePosSq=0.  ; TotAmpl=0.
+   Do i=-Windw,Windw
+      W=HEnvel(i+PeakPos)**2
+      AvePos=AvePos + i*W
+      AvePosSq=AvePosSq + i*i*W
+      TotAmpl=TotAmpl + W
+   Enddo
+   AvePos=AvePos/TotAmpl
+   AvePosSq=AvePosSq/TotAmpl
+   StDev= sqrt(AvePosSq-AvePos**2)
+   Ampl=sqrt(TotAmpl/(2*Windw+1))
+   If(StDev.lt.25) Then
+      write(2,"(A,I6,A,F5.1,A,F5.1,A,F7.0,A,F7.0,A,F5.2,A,I4)") '*****',PeakPos,' position offset=',AvePos,', StDev=',StDev, &
+         ', Peak Ampl=',sqrt(TotAmpl/StDev), ' or',HEnvel(PeakPos),' ratio:',HEnvel(PeakPos)/sqrt(TotAmpl/StDev), &
+         ', halfwindow=',Windw
+   endif
+End Subroutine Inv5StarPk

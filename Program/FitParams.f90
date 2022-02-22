@@ -10,7 +10,7 @@
     !use unque
     use FitParams, only : FitParam, X_Offset, Fit_TimeOffsetAnt, ParamScaleFac, Fit_TimeOffsetStat
     use FitParams, only : N_FitPar_max, N_FitPar, N_FitStatTim, Nr_TimeOffset, Fit_AntOffset
-    use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode
+    use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode, ChunkNr_dim
     use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CorrAntNrs, SourcePos, RefAntErr, PeakNrTotal
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt, Unique_SAI
@@ -19,7 +19,7 @@
     Real(kind = 8), intent(out) :: X(N_FitPar_max)
     logical, intent(inout) :: First
     integer, intent(in) :: FitPos(4)
-    integer :: i,j,k,j_corr, nxx, i_ant, i_Peak, i_eo
+    integer :: i,j,k,j_corr, nxx, i_ant, i_Peak, i_eo, i_chunk
     Integer :: vec(Ant_nrMax)
     !Equivalence (Ant_Stations(1,1),vec(1))
     logical,dimension(Station_nrMax) :: mask
@@ -53,8 +53,15 @@
     Nr_TimeOffset=1
     if(FP_s(1).GT.0) then
      Do i=1,N_FitPar_max
+        ! write(2,*) 'SetFitParamsLMA:',i,FP_s(i)
         if(FP_s(i) .le. 0) exit
-        If(.not. any(FP_s(i)==Ant_Stations(CorrAntNrs(:,0,1),1)) ) cycle  ! check if this station included in present fit
+        Do i_chunk=1, ChunkNr_dim
+         Do i_eo=0,1
+            If(any(FP_s(i)==Ant_Stations(CorrAntNrs(1:Nr_Corr(i_eo,i_chunk),i_eo,i_chunk),i_chunk)) ) goto 2  ! check if this station included in present fit
+         Enddo
+        Enddo
+        exit
+  2     Continue
         Do k=1, Nr_UniqueStat
           If(Unique_StatID(k).eq. FP_s(i)) then
             N_FitStatTim= N_FitStatTim + 1 ! position in 'FitParam'
@@ -103,7 +110,7 @@
                 If(k .gt. N_FitPar_max) Then
                   write(2,*) 'Too many fit parameters, ',k, &
                      'exceeds max of', N_FitPar_max,' for i,i_peak=',i,i_Peak
-                  stop 'SetFitParamsLMA'
+                  stop 'SetFitParamsLMA; Too many fit parameters'
                 Endif
                 If(FitPos(i).eq.4) then
                     X( k ) = RefAntErr(i_Peak)
@@ -374,6 +381,7 @@ Subroutine Find_unique_StatAnt()
     enddo
     Call unique(vec,Station_IDs)
     Nr_UniqueStat=size(Station_IDs)-1
+    Write(2,*) 'Find_unique_StatAnt:Nr_UniqueStat=',Nr_UniqueStat
     Unique_StatID(1:Nr_UniqueStat)=Station_IDs(2:Nr_UniqueStat+1)  ! get rid of leading 0
     Deallocate(Station_IDs)
     !

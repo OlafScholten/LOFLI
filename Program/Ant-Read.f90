@@ -53,14 +53,14 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    !
    !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-   !Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',Start_time(i_chunk)*1000.d0*sample &
-   !   ,' [ms] =',Start_time(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
+   Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',Start_time(i_chunk)*1000.d0*sample &
+      ,' [ms] =',Start_time(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    !Write(2,*) 'SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    write(*,"(A,f8.2,A)") achar(27)//'[33m @',Start_time(i_chunk)*1000.*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
-   write(2,*) 'Simulation,WriteSimulation(2):', Simulation,WriteSimulation(:), 'file14open:',file14open
+   !write(2,*) 'Simulation,WriteSimulation(2):', Simulation,WriteSimulation(:), 'file14open:',file14open
    If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then
       If(file14open) then
          Rewind(unit=14)
@@ -96,7 +96,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
          FirstPass=.false.
          write(2,*) 'First data file #=',i_file,', name=',filename
       EndIf
-      If(Production) write(2,*) 'file #=',i_file,', name=',filename
+      !If(Production) write(2,*) 'file #=',i_file,', name=',filename
       If(.not. Production) write(*,"(A,i3)", ADVANCE='NO') achar(27)//'[100D'//'file#=',i_file  ! [1000D    !  //achar(27)//'[0m.'
       Do i_grp=1,Group_nr
           read(14,*) DSet_nr, Group_Names(i_grp)
@@ -139,9 +139,6 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   cycle   ! get next DSet
               Endif
               !
-              Powr_eo(i_eo)=Powr_eo(i_eo)+Powr
-              NAnt_eo(i_eo)=NAnt_eo(i_eo)+1
-              !
               Call RelDist(SourceGuess,LFRAnt_crdnts,RDist)
               Ant_RawSourceDist(Ant_nr(i_chunk)+1,i_chunk)=RDist         ! units of samples
               If(WriteSimulation(2).gt.0) Then
@@ -155,6 +152,9 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                !write(2,*) 'STATION_ID,Ant_ID was not calibrated',STATION_ID,Ant_ID,StatAnt_Calib
                cycle
               EndIf
+              !
+              Powr_eo(i_eo)=Powr_eo(i_eo)+Powr
+              NAnt_eo(i_eo)=NAnt_eo(i_eo)+1
               !
               !Absolute_TIME  ! should be the same for all
               !SAMPLE_NUMBER_first  ! Number of samples, after 'Absolute_TIME' for the first recording
@@ -257,17 +257,22 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
           Do i_ant=2,Ant_nr(i_chunk)
             If(Ant_Stations(i_ant-1,i_chunk).eq.Ant_Stations(i_ant,i_chunk)) Then ! apply to antennas from a single station only
                If(Ant_IDs(i_ant-1,i_chunk).gt.Ant_IDs(i_ant,i_chunk)) Then  ! flip order
-                  write(2,*) 'change order ',i_ant-1,Ant_IDs(i_ant-1,i_chunk),' and ',i_ant,Ant_IDs(i_ant,i_chunk), &
-                     ' for station',Ant_Stations(i_ant,i_chunk)
+                  !write(2,*) 'change order ',i_ant-1,Ant_IDs(i_ant-1,i_chunk),' and ',i_ant,Ant_IDs(i_ant,i_chunk), &
+                  !   ' for station',Ant_Stations(i_ant,i_chunk)
                   CTime_s(1:Time_dim)=CTime_spectr(1:Time_dim,i_ant,i_chunk)
                   Ant_ID=Ant_IDs(i_ant,i_chunk)
                   LFRAnt_crdnts(:)=Ant_pos(:,i_ant,i_chunk)
+                  RDist=Ant_RawSourceDist(i_ant,i_chunk)
+                  !
                   CTime_spectr(1:Time_dim,i_ant,i_chunk)=CTime_spectr(1:Time_dim,i_ant-1,i_chunk)
                   Ant_IDs(i_ant,i_chunk)=Ant_IDs(i_ant-1,i_chunk)
                   Ant_pos(:,i_ant,i_chunk)=Ant_pos(:,i_ant-1,i_chunk)
+                  Ant_RawSourceDist(i_ant,i_chunk)=Ant_RawSourceDist(i_ant-1,i_chunk)
+                  !
                   CTime_spectr(1:Time_dim,i_ant-1,i_chunk)=CTime_s(1:Time_dim)
                   Ant_IDs(i_ant-1,i_chunk)=Ant_ID
                   Ant_pos(:,i_ant-1,i_chunk)=LFRAnt_crdnts(:)
+                  Ant_RawSourceDist(i_ant-1,i_chunk)=RDist
                EndIf
             EndIf
           Enddo

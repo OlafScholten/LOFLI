@@ -27,6 +27,8 @@ Subroutine EI_PrntFitPars(X)
             i_fit=N_FitStatTim+i_Peak
             If(i_chunk.ne.ChunkNr(i_Peak)) then
                i_chunk=ChunkNr(i_Peak)
+               !write(2,*) 'EI_PrntFitPars:',i_peak,i_chunk, ChunkNr
+               !flush(unit=2)
                write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',Start_time(i_chunk),&
                   '[samples]=',Start_time(i_chunk)*Sample*1000.,'[ms]'
             Endif

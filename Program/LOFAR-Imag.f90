@@ -1,7 +1,7 @@
  !----------------
  !   Main program
  !-------------------------------------------
- !-------------------------------------------
+ !-----------------16/02/2022@14:04:57.575--------------------------
  !------- Source file:LOFAR-Imag.f90 ----
  !   Include 'ConstantsModules.f90'
  !   I   Module constants
@@ -13,9 +13,10 @@
  !   I   M   Subroutine DAssignFFT()
  !   I   M   Subroutine RFTransform_CF(A,Cnu)
  !   I   M   Subroutine RFTransform_CF_Filt(A,F,t_shft,Cnu)
+ !   I   M   Subroutine RFTransform_CF2RT(Cnu,RD)
  !   I   M   Subroutine RFTransform_CF2CT(Cnu,CD)
- !   I   M   Subroutine R2C(R,C)
- !   I   M   Subroutine  C2R(R,C)
+ !   I   M   Pure Subroutine R2C(R,C)
+ !   I   M   Pure Subroutine  C2R(R,C)
  !   I   M   Subroutine DownSamlple(E_t,E,padding,tTrace_dim,FF_dim, filt, E_nu_dwn, inui,inum)
  !   Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
  !   I   Module Chunk_AntInfo
@@ -25,51 +26,6 @@
  !   I   Module FitParams
  !   I   Module Explore_Pars
  !   I   M   Subroutine Alloc_Explore_Pars
- !   I   Module Interferom_Pars
- !   I   M   Subroutine Alloc_SInterferom_Pars
- !   I   M   Subroutine Alloc_EInterferom_Pars
- !   I   M   Subroutine DeAlloc_SInterferom_Pars
- !   I   M   Subroutine DeAlloc_EInterferom_Pars
- !   Include 'MappingUtilities.f90'
- !   I   Include 'HDF5_LOFAR_Read.f90'
- !   I   I   Module HDF5_LOFAR_Read
- !   I   I   M   Subroutine GetFileName(filenr, nxx)
- !   I   I   M   Subroutine ListGroups
- !   I   I   M   Subroutine CloseFile
- !   I   I   M   Subroutine ListGroupStructure(GroupName)
- !   I   I   M   Subroutine CloseGroup
- !   I   I   M   Subroutine ListDataAtt(GroupName,DSetName, prnt)
- !   I   I   M   Subroutine CloseDSet
- !   I   I   M   Subroutine GetData(Chunk, DSet_offset, DSet_dim)
- !   I   I   M   Subroutine AttrRead(file_id,Obj_id,Obj_name,prn)
- !   I   I   M   Subroutine DataRead(dset_id, Chunk, DSet_offset, DSet_dim)
- !   I   I   M   Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, DataReadErr)
- !   I   I   M   Subroutine CloseDataFiles()
- !   I   Module StationMnemonics
- !   I   M   Subroutine Station_ID2Mnem(STATION_ID,Station_Mnem)
- !   I   M   Character(len=5) Function Statn_ID2Mnem(STATION_ID)
- !   I   M   Subroutine Station_Mnem2ID(Station_Mnem,STATION_ID)
- !   I   M   Integer Function Statn_Mnem2ID(Station_Mnem)
- !   I   Subroutine Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib)
- !   I   Subroutine ITRF2LOFARConstruct()
- !   I   Subroutine ITRF2LOFAR(ITRF,LOFAR)
- !   I   Subroutine RelDist(Source,LFRAnt,RDist)
- !   I   Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
- !   I   Module unque
- !   I   M   Subroutine unique(vec,vec_unique)
- !   I   M   Subroutine Selection_sort(a)
- !   I   M   Subroutine Double_sort(a)
- !   I   M   Subroutine Double_IR_sort(N,a,R)
- !   I   M   Subroutine Double_RI_sort(N,a,R)
- !   I   M   Subroutine sort(n, a)
- !   I   Subroutine GetNonZeroLine(lineTXT)
- !   I   Module ansi_colors
- !   I   M   Function color(str, code) result(out)
- !   I   Subroutine Convert2m(CenLoc)
- !   Include 'GLEplotUtil.f90'
- !   I   Module GLEplots
- !   I   M   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows
- !   I   M   Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
  !   Include 'AntFunct.f90'
  !   I   Module AntFunCconst
  !   I   Subroutine Cheb_odd(Phi,Cheb)
@@ -77,7 +33,71 @@
  !   I   Subroutine AntFun(thet_d,phi_d)
  !   I   Subroutine AntFun_Inv(thet_d,phi_d)
  !   I   Subroutine AntFieParGen()
- !   I   WRITE (2,*) "Using environment variable: AntennaFun; Antenna Function read from files:",' "',TRIM(AntFunFile)//'LBA_Vout_*.txt"
+ !   I   WRITE (2,*) "Using environment variable: AntennaFun; Antenna Function from files:",' "',TRIM(AntFunFile)//'LBA_Vout_*.txt"'
+ !   Include 'InterferomPars.f90'
+ !   I   Module Interferom_Pars
+ !   I   M   Subroutine Alloc_EInterfAll_Pars
+ !   I   M   Subroutine Alloc_EInterfCalib_Pars
+ !   I   M   Subroutine Alloc_EInterfImag_Pars
+ !   I   M   Subroutine DeAlloc_EInterfImag_Pars
+ !   Include 'LOFLI_InputHandling.f90'
+ !   I   Subroutine PrintIntArray(Var, Var_name, Label)
+ !   I   Subroutine PrintIntVal(Var, Var_name, Label)
+ !   I   Subroutine PrintRealVal(Var, Var_name, Label)
+ !   I   Subroutine PrintLogiVal(Var, Var_name, Label)
+ !   I   Subroutine PrintChArray(Var, Var_name, Label)
+ !   I   Subroutine PrintChVal(Var, Var_name, Label)
+ !   I   Subroutine PrintParIntro(Label, RunOption, OutFileLabel)
+ !   I   Subroutine ReadSourceTimeLoc(StartTime_ms, CenLoc)
+ !   Include 'HDF5_LOFAR_Read.f90'
+ !   I   Module HDF5_LOFAR_Read
+ !   I   M   Subroutine GetFileName(filenr, nxx)
+ !   I   M   Subroutine ListGroups
+ !   I   M   Subroutine CloseFile
+ !   I   M   Subroutine ListGroupStructure(GroupName)
+ !   I   M   Subroutine CloseGroup
+ !   I   M   Subroutine ListDataAtt(GroupName,DSetName, prnt)
+ !   I   M   Subroutine CloseDSet
+ !   I   M   Subroutine GetData(Chunk, DSet_offset, DSet_dim)
+ !   I   M   Subroutine AttrRead(file_id,Obj_id,Obj_name,prn)
+ !   I   M   Subroutine DataRead(dset_id, Chunk, DSet_offset, DSet_dim)
+ !   I   M   Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, DataReadErr)
+ !   I   M   Subroutine CloseDataFiles()
+ !   Include 'MappingUtilities.f90'
+ !   I   Module unque
+ !   I   M   Subroutine unique(vec,vec_unique)
+ !   I   M   Subroutine Selection_sort(a)
+ !   I   M   Subroutine Double_sort(a)
+ !   I   M   Pure Subroutine Double_IR_sort(N,a,R)
+ !   I   M   Pure Subroutine Double_RI_sort(N,a,R)
+ !   I   M   Subroutine sort(n, a)
+ !   I   Module StationMnemonics
+ !   I   M   Subroutine Station_ID2Mnem(STATION_ID,Station_Mnem)
+ !   I   M   Character(len=5) Function Statn_ID2Mnem(STATION_ID)
+ !   I   M   Subroutine Station_Mnem2ID(Station_Mnem,STATION_ID)
+ !   I   M   Integer Function Statn_Mnem2ID(Station_Mnem)
+ !   I   Module Calibration
+ !   I   M   Subroutine ReadCalib()
+ !   I   M   Subroutine Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib, Calibrated)
+ !   I   M   Subroutine WriteCalibration ! MergeFine
+ !   I   Subroutine ITRF2LOFARConstruct()
+ !   I   Subroutine ITRF2LOFAR(ITRF,LOFAR)
+ !   I   Subroutine RelDist(Source,LFRAnt,RDist)
+ !   I   Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
+ !   I   Subroutine GetNonZeroLine(lineTXT)
+ !   I   Subroutine GetMarkedLine(Mark,lineTXT)
+ !   I   Module ansi_colors
+ !   I   M   Function color(str, code) result(out)
+ !   I   Subroutine Convert2m(CenLoc)
+ !   I   Pure Subroutine SetSmooth(N_Smth, Smooth)
+ !   I   Function random_stdnormal() Result(x)
+ !   I   end Function random_stdnormal
+ !   I   Subroutine random_stdnormal3D(x)
+ !   I   end Subroutine random_stdnormal3D
+ !   Include 'GLEplotUtil.f90'
+ !   I   Module GLEplots
+ !   I   M   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows
+ !   I   M   Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
  !   Include 'Ant-Read.f90'
  !   I   Subroutine AntennaRead(i_chunk,SourceGuess)
  !   I   Subroutine PlotSpectra(i_chunk)
@@ -99,8 +119,8 @@
  !   I   Subroutine FindCallibr(SourceGuess)
  !   I   Subroutine ReadPeakInfo(ReadErr)
  !   I   Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
- !   I   Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)
- !   I   Subroutine MergeFine
+ !   I   Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)  ! Obsolete, not used anymore
+ !   I   Subroutine GetStationFitOption(FP_s, FitNoSources)
  !   Include 'FitParams.f90'
  !   I   Include 'MGMR3D_spline.f90'  ! ../../NumLib
  !   I   Subroutine SetFitParamsLMA(X,first,FitPos)
@@ -122,6 +142,7 @@
  !   I   Subroutine SourceFitCycle(StatMax,DistMax)
  !   I   Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu)
  !   I   Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp)
+ !   I   Subroutine Inv5StarPk(HEnvel, PeakPos, Windw, AvePos, Ampl, StDev)
  !   Include 'SourceTryal.f90'  ! v16.f90' = v17.f90'  ; v17a.f90' uses grid search
  !   Include 'ExplorationOption.f90'
  !   I   Subroutine ExplorationRun
@@ -129,8 +150,14 @@
  !   I   Subroutine AnalSpectStats
  !   Include 'CurtainPlotOption.f90'
  !   I   Subroutine PlotAllCurtainSpectra(CurtainWidth)
- !   I   Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak)
+ !   I   Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
  !   I   Subroutine GLE_Corr()
+ !   I   Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
+ !   Include 'ImpulsImagOption.f90'
+ !   I   Subroutine ImpulsImagRun
+ !   I   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
+ !   I   Call GLEplotControl(SpecialCmnd='cd '//TRIM(ProgramFolder))
+ !   I   Call GLEplotControl(SpecialCmnd=TRIM(ProgramFolder)//'TrackExe.exe  <'//TRIM(lname))
  !   Include 'InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
  !   I   Include 'InterferometryOptSbRtns.f90'
  !   I   I   Subroutine Pol2Carth(LocPol,LocCth)
@@ -143,26 +170,38 @@
  !   I   I   Function Paraboloid(y0,Ay,By,Ry,d_gr) result(SMPow)
  !   I   I   Subroutine FindBarycenter(i,Baryd,SMPow,Qualty)
  !   I   I   Subroutine OutputIntfSlices(i_eo)
+ !   I   I   Subroutine EI_PolarizSlice(i_slice)
+ !   I   I   Subroutine matinv3(A,B)
  !   I   Subroutine InterferometerRun
  !   I   'cp ${ProgramDir}LOFAR-Imag-v20 ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when
  !   Include 'EIOption.f90'
  !   I   Subroutine EI_Run
  !   I   Subroutine Inverse33(A,B, eig, PolBasis)
  !   I   Subroutine EigvecS33(A,E,ev)
- !   I   Subroutine EISelectAntennas()
+ !   I   Subroutine EISelectAntennas(i_chunk)
  !   I   Subroutine EIPixBoundingBox()
  !   I   Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
  !   I   Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
  !   I   Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
- !   Include 'EIStokes-testW.f90'
- !   I   Subroutine EI_PolarizW(Nr_IntFer, IntfNuDim, i_slice)
- !   I   Subroutine matinv3(A,B)
- !   Include 'SIOption.f90'
- !   I   Subroutine SI_Run
- !   I   Subroutine InterfEngineB(i_eo, i_N, i_E, i_h, Nr_IntFer)
- !   I   Subroutine SISelectAntennas(i_eo)
- !   I   Subroutine SISetupSpec(i_eo)
- !   I   Subroutine SIAnalyzePixelTTrace(i_eo, i_N, i_E, i_h)
+ !   Include 'ECallibrOption.f90'
+ !   I   Include 'EICallRtns.f90'
+ !   I   I   Subroutine EI_PrntFitPars(X)
+ !   I   I   Subroutine EIPrntNewSources()
+ !   I   I   Subroutine EIPrntCompactSource(i_Peak)
+ !   I   I   Subroutine EIX2Source(X)
+ !   I   I   Subroutine EI_PolarizPeak(i_Peak)
+ !   I   I   Subroutine EISource2X_Stoch(X,Time_width, Space_Spread)
+ !   I   Include 'EIFitter.f90'
+ !   I   I   Subroutine EI_Fitter(X, Time_width, Space_Spread)
+ !   I   I   Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
+ !   I   I   Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPeak_OffSt, &
+ !   I   I   Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0, Cnu1, W_ap, W_at)
+ !   I   I   Subroutine TimeTracePlot(j_IntFer, IntfBase, i_chunk, VoxLoc,Windw, Label)
+ !   I   I   Subroutine  EI_Weights(Nr_IntFer, i_sample, i_chunk, PixLoc, AntPeak_OffSt, W_ap, W_at)
+ !   I   I   Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
+ !   I   I   Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
+ !   I   Subroutine E_Callibr()
+ !   I   Subroutine EIReadPeakInfo()
  !   Include 'System_Utilities.f90'
  !   I   Subroutine System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)
  !   I   Character(len=*), intent(out) :: ProgramFolder, UtilitiesFolder, FlashFolder, FlashName
@@ -170,23 +209,22 @@
  !   I   ProgramFolder='${ProgramDir}'
  !   I   Subroutine System_MemUsage(valueRSS)
  !   I   end Subroutine System_MemUsage
+ !   I   Subroutine CreateNewFolder(FileName)
  !   Program LOFAR_Imaging
  !   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
  !   Call System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)  ! set Flash name & f
- !   Call GLEplotControl(SpecialCmnd='cd '//TRIM(ProgramFolder))
- !   Call GLEplotControl(SpecialCmnd=TRIM(ProgramFolder)//'TrackExe.exe  <'//TRIM(lname))
  !   Subroutine AntennaSanity()
- !-------------------------------------------
+ !-----------------16/02/2022@14:04:57.575--------------------------
  !------------------------------------------
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+    Include 'AntFunct.f90'
     Include 'InterferomPars.f90'
     Include 'LOFLI_InputHandling.f90'
     Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
     Include 'GLEplotUtil.f90'
-    Include 'AntFunct.f90'
     Include 'Ant-Read.f90'
     Include 'CrossCorr.f90'
     Include 'FindCallibr.f90'   ! Station Callibration
@@ -258,7 +296,7 @@ Program LOFAR_Imaging
     use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
-    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax
+    use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
     Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ChainRun, PixPowOpt, N_fit
@@ -267,7 +305,7 @@ Program LOFAR_Imaging
     !
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
-    Real*8 :: SourceGuess(3,10) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Real*8 :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
@@ -417,12 +455,56 @@ Program LOFAR_Imaging
          WriteSimulation(2)=-1
          Simulation=""
       CASE("C")  ! Calibrate                          RunMode=2
+         ChunkNr_dim=0
+         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
+            Call GetNonZeroLine(lname)
+            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,1)  ! just dummy arguments
+            Call Convert2m(SourceGuess(:,1))
+            If(nxx.ne.0) exit
+            Read(lname,FMTSrces,iostat=nxx) &
+                i_dist, i_guess,j ,i_chunk,  SourceGuess(:,1) ! just dummy arguments
+            !write(2,*) i, nxx, lname
+            If(nxx.eq.0) exit
+            ChunkNr_dim=i   ! this was a genuine chunk card
+         EndDo
+         If(ChunkNr_dim.eq.0) Then
+            Write(2,*) lname
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too small'
+         EndIf
+         If(ChunkNr_dim.gt.N_Chunk_max) Then
+            Write(2,*) lname
+            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
+            stop 'Chunk number too large'
+         EndIf
+         !  Determine number of peaks/sorces that are included in the calibration search
+         write(2,*) 'number of calibration chunks:',ChunkNr_dim
+         i_peak=0
+         Do
+            Read(lname,FMTSrces,iostat=nxx) &
+               i_dist, i_guess,j ,i_chunk, SourceGuess(:,1) ! just dummy arguments
+            If(nxx.ne.0) exit
+            i_peak=i_peak+1
+            Call GetNonZeroLine(lname)
+            read(lname,*)  txt  ! check for possible 'exclude' line following this
+            If(trim(txt).eq.'exclud') Then
+               Call GetNonZeroLine(lname)
+            EndIf
+         Enddo
+         If(i_peak.eq.0) Then
+            PeakNr_dim=2*NrP*ChunkNr_dim
+         Else
+            PeakNr_dim=i_peak
+         EndIf
+         !
+         write(2,*) 'number of calibration sources:',PeakNr_dim
+         Rewind(unit=5) ! Standard input
+         read(*,NML = Parameters) ! to reposition correctly
+         !
          WriteSimulation(2)=-1
-         !Simulation="" ! not possible to use this option with simulated data
          CalibratedOnly=.False.
          E_FieldsCalc=.false.
          RealCorrelation=.False.
-         CalibratedOnly=.False.
          Polariz= E_FieldsCalc
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
          Call PrintValues(XcorelationPlot,'XcorelationPlot', &
@@ -432,11 +514,6 @@ Program LOFAR_Imaging
          'Print detailed information for the time deviations per antenna per pulse.')
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
          Call PrintValues(Dual,'Dual', 'Make a combined analysis of the even (Y-) and odd (X-) numbered dipoles.')
-         !Call PrintValues(RealCorrelation,'RealCorrelation', &
-         !'Use only the real part of the cross correlations, not the absolute value.')
-         !Call PrintValues(E_FieldsCalc,'E_FieldsCalc', &
-         !'Perform an unfolding of the antenna function, including source polarization.'//&
-         !'Sets Dual=.t. and RealCorrelation=.t. .')
          Call PrintValues(FullSourceSearch,'FullSourceSearch', &
          'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
          Call PrintValues(FitIncremental,'FitIncremental', &
@@ -452,49 +529,6 @@ Program LOFAR_Imaging
          !'Note: this is a bit of an annoying variable meant to allow to fit more offsets simultaneously.')
          !
          ! Pre-process inputdata for sources to be used in calibration
-         ChunkNr_dim=0
-         Do i=1,10 ! perform some pre-scanning of the input to now the number of chunks that will be used
-            Call GetNonZeroLine(lname)
-            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
-            Call Convert2m(SourceGuess(:,i))
-            If(nxx.ne.0) exit
-            Read(lname,FMTSrces,iostat=nxx) &
-                i_dist, i_guess,j ,i_chunk,  SourceGuess(:,i) ! just dummy arguments
-            If(nxx.eq.0) exit
-            write(2,*) i, nxx, lname
-            ChunkNr_dim=i   ! this was a genuine chunk card
-         EndDo
-         If(ChunkNr_dim.eq.0) Then
-            Write(2,*) lname
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too small'
-         EndIf
-         If(ChunkNr_dim.ge.10) Then
-            Write(2,*) lname
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too large'
-         EndIf
-         !  Determine number of peaks/sorces that are included in the calibration search
-         i_peak=0
-         Do
-            Read(lname,FMTSrces,iostat=nxx) &
-               i_dist, i_guess,j ,i_chunk, StartTime_ms, SourceGuess(:,i) ! just dummy arguments
-            If(nxx.ne.0) exit
-            i_peak=i_peak+1
-            Call GetNonZeroLine(lname)
-            read(lname,*)  txt  ! check for possible 'exclude' line following this
-            If(trim(txt).eq.'exclud') Then
-               Call GetNonZeroLine(lname)
-            EndIf
-         Enddo
-         If(i_peak.eq.0) Then
-            PeakNr_dim=2*NrP*ChunkNr_dim
-         Else
-            PeakNr_dim=i_peak
-         EndIf
-         !
-         Rewind(unit=5) ! Standard input
-         read(*,NML = Parameters) ! to reposition correctly
          !
       CASE("I")  ! ImpulsiveImager                          RunMode=3
          !ImagingRun=.true.
@@ -531,27 +565,9 @@ Program LOFAR_Imaging
             'Multiplier for the (parabolic) width of the pulse-search window.')
          Call PrintValues(Sigma_AntT,'Sigma_AntT', 'Constant added to width of search window for pulses.' ) !
       CASE("F")  ! Field Calibration; Interferometric               RunMode=7
-         Interferometry=.true.
-         FitRange_Samples=7
-         Dual=.false.
-         Polariz=Dual  !
-         CalibratedOnly=.False.
-         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
-         N_smth=IntfSmoothWin
-         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
-         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
-            'Produce a plot of the cross-correlation functions (real or absolute).')
-         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
-         !Call PrintValues(FullAntFitPrn,'FullAntFitPrn', &
-         !'Print detailed information for the time deviations per antenna per pulse.')
-         !Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' ) !
-         Call PrintValues(AntennaRange,'AntennaRange', &
-            'Maximum distance (from the core, in [km]) for  antennas to be included.')
-         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
-         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=0
-         Do i=1,10 ! perform some pre-scanning of the input to now the number of chunks that will be used
+         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
             Call GetNonZeroLine(lname)
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,i))
@@ -567,18 +583,19 @@ Program LOFAR_Imaging
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too small for FC'
          EndIf
-         If(ChunkNr_dim.ge.10) Then
+         If(ChunkNr_dim.gt.N_Chunk_max) Then
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
             stop 'Chunk number too large for FC'
          EndIf
          !  Determine number of peaks/sorces that are included in the calibration search
+         write(2,*) 'number of calibration chunks:',ChunkNr_dim
          i_peak=0
          Do
             Read(lname,FMTSrces,iostat=nxx) &
                i_dist, i_guess, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
             !write(2,*) 'nxx:',nxx,trim(lname)
             If(nxx.ne.0) exit
-            i_peak=i_peak+1
+            If(I_guess.eq.0) i_peak=i_peak+1
             Call GetNonZeroLine(lname)
             read(lname,*)  txt  ! check for possible 'exclude' line following this
             If(trim(txt).eq.'exclud') Then
@@ -588,12 +605,31 @@ Program LOFAR_Imaging
          PeakNr_dim=i_peak
          PeakNrTotal=i_peak  ! one of these is obsolete now
          !
+         write(2,*) 'number of calibration sources:',PeakNr_dim
          Rewind(unit=5) ! Standard input
          read(*,NML = Parameters) ! to reposition correctly
+         !
+         Interferometry=.true.
+         FitRange_Samples=7
+         Dual=.false.
+         CurtainHalfWidth=-1
+         Polariz=Dual  !
+         CalibratedOnly=.False.
+         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
+         N_smth=IntfSmoothWin
+         !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
+         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+            'Produce a plot of the cross-correlation functions (real or absolute).')
+         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
+         Call PrintValues(AntennaRange,'AntennaRange', &
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
+         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
+         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
          !
       CASE("T")  ! PolInterferometry==TRI-D imager         RunMode=24
          Interferometry=.true.
          FitRange_Samples=7
+         CurtainHalfWidth=-1
          Dual=.true.
          Polariz=Dual  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
          PeakNr_dim=2
@@ -603,7 +639,7 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(TimeBase,'TimeBase', &
             'Time-offset from the start of the data, best if kept the same for all analyses for this flash')
-         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.' ) !
+         !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.' ) !
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' )
          Call PrintValues(ChainRun,'ChainRun', &
             'Automatically start jobs (for - previous or + following timeslots, made to follow a negative leader.' )
@@ -759,11 +795,6 @@ Program LOFAR_Imaging
          !
          i_chunk=0 ! scratch
          If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
-         If(CurtainHalfWidth.gt.0) then
-            If(CurtainHalfWidth.le.10) CurtainHalfWidth=300
-            write(2,*) 'curtainplot half width: ',CurtainHalfWidth
-            Call PlotAllCurtainSpectra(CurtainHalfWidth) ! closes unit 10
-         EndIf
          Call GLEplotControl( Submit=.true.)
          !
   End SELECT

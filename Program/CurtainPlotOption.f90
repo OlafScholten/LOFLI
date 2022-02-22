@@ -37,6 +37,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    EndIf
    Do i_peak=1,PeakNrTotal
       i_eo=Peak_eo(i_peak)
+      !write(2,*) 'CurtainPlot:I_peak-A',i_peak,PeakNrTotal,I_ant,Nr_UniqueStat,i_chunk,i_eo
       If(i_eo .ne. 0) cycle !  Option 'Dual' is assumed and thus only the i_eo=0 peaks are taken
       i_chunk=ChunkNr(i_peak)
       I_ant=RefAnt(i_chunk,i_eo)
@@ -124,6 +125,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     ch2=PeakPos(i_Peak)+CurtainWidth
     !vsize=Nr_UniqueStat*2 34
     !
+    write(2,*) 'GLEscript_CurtainPlot:Nr_UniqueStat=', Nr_UniqueStat
     Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
     Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
     Write(unt,"(A,I2,3(/A),3(/A,I0))") 'size 63 ',2*Nr_UniqueStat+8,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
@@ -386,6 +388,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    HOffSt_p=4
    HOffSt_t=HOffSt_p+PlotW+Sep
    !
+   Write(2,*) 'GLEscript_Curtains:Nr_UniqueStat=',Nr_UniqueStat
    Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
    Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
    Write(unt,"(A,I2,3(/A),2(/A,I0))") 'size 63 ',Nr_UniqueStat+9,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
