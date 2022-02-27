@@ -444,13 +444,17 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
       Phi_r=atan2( Ras(2) , Ras(1) )  ! \phi=0 = north
       Thet_d(j_IntFer)=Thet_r*180/pi
       Phi_d(j_IntFer)=Phi_r*180/pi
-      Weight(j_IntFer)= AntSourceD(1)*AntSourceD(1)/Nr_IntFer  ! to normalize at unity for the reference antenna and A=(1,1,0)
-      ! Calculate Cur2E matrix
-      If((AntSourceD(j_IntFer)/AntSourceD(1)).gt.1. ) Then  ! The factor between E-field and signal is approx square of this
-         Weight(j_IntFer)=Weight(j_IntFer) ! *exp( -(AntSourceD(j_IntFer)/AntSourceD(1))**2 )
+      If(j_IntFer.eq.1) Then
+         Weight(1)= AntSourceD(1)*AntSourceD(1)/(Ras(3)*Ras(3)*Nr_IntFer)  ! to normalize at unity for the reference antenna and A=(1,1,0)
       EndIf
+      Weight(j_IntFer)= Ras(3)*Ras(3)*Weight(1)/(AntSourceD(j_IntFer)*AntSourceD(j_IntFer)) ! changed Febr 2022 to make it more similar to 1/noise power
+      If((AntSourceD(j_IntFer)/AntSourceD(1)).lt.1. ) Then  ! The factor between E-field and signal is approx square of this
+         Weight(j_IntFer)= Weight(1) ! changed Febr 2022 to make it more similar to 1/noise power
+      EndIf  ! this gives a much smoother and narrower interference max
       !Write(2,*) j_IntFer,Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)), &
       !      AntSourceD(j_IntFer),Thet_d(j_IntFer),Phi_d(j_IntFer)
+      !
+      ! Calculate Cur2E matrix
       D=AntSourceD(j_IntFer)*AntSourceD(j_IntFer)
       w=Weight(j_IntFer)/D ! to account for 1/R_{as}^2 in formula for A
       Do i=1,3

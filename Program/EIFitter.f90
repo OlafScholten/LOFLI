@@ -35,7 +35,6 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
     Real(dp) :: Chi2_start, Chi2StopRatio=1.0
     !
     !
-!stop
     !  Nr_TimeOffset = the number of antenna/station timings that are to be fitted
     !  PeakNrTotal   = number of pulses to be fitted
     !  N_FitPar      =  ??
@@ -44,12 +43,13 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
     !Call RFTransform_su(2*IntfNuDim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     !
     Meqn=0          ! total number of data-points that enter in the chi^2 search
-   N_fit=N_Smth/2+1   ! number of smaples on each side of pulse to be included in fitting
-   !
+    N_fit=N_Smth/2+1   ! number of smaples on each side of pulse to be included in fitting
+    !
     Do i_Peak=1,PeakNrTotal
       i_chunk=ChunkNr(i_Peak)
       IntfBase= Peakpos(i_Peak) - IntfNuDim
       Meqn = Meqn + Nr_IntFerCh(i_chunk)*2*(1+2*N_fit)     ! number of equations
+      Write(2,*) 'i_Peak:',i_Peak
       Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(:,i_Peak), &
          AntPeak_OffSt(1,i_Peak), Cnu0(0,1,i_Peak), Cnu1(0,1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
       Call EI_Weights(Nr_IntFerCh(i_chunk), IntfNuDim, i_chunk, SourcePos(:,i_Peak), &
@@ -695,6 +695,8 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
    Complex(dp) :: Phase, dPhase, nu_p(0:IntfNuDim), nu_t(0:IntfNuDim)
    Real(dp) :: RDist, dt_AntPix
    Real(dp) :: W_p, W_t  !, SumDiff, SumSq, Del_p, Del_t, sw_p, sw_t
+   Complex(dp) :: Phase_0, dPhase_0, Phase_1, dPhase_1
+   Real(dp) :: dt_AntPix_0, dt_AntPix_1
    !
    IntfDim=2*IntfNuDim  !  should be about =512
    !
@@ -727,6 +729,11 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
       W_ap(j_IntFer)=2.d-7/W_p!=1./W_p*1.0d3 *200.*25 !Noise_p(j_IntFer) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
       Noise_t(j_IntFer)=W_t*5.d6 ! factor 200 obtained by comparing with noise trace         !
       W_at(j_IntFer)=2.d-7/W_t
+      !If( MOD(j_IntFer,5).eq.1 )  write(2,*) 'weights:', j_IntFer, W_ap(j_IntFer), &
+      !   W_at(j_IntFer)/W_ap(j_IntFer) ,(140./(HorDist*HorDist/(Ras(3)*Ras(3))+1.))/W_ap(j_IntFer)
+      ! Conclusion: W_at(j_IntFer)=2.d-7/W_t is within about 20% of Ras(3)*Ras(3)/(HorDist*HorDist + Ras(3)*Ras(3))*140.
+      !
+      !W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.0*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
       !
       Call RelDist(VoxLoc(1),Ant_pos(1,i_ant,i_chunk),RDist) ! same for even and odd antenna
       !dt_AntPix_0 =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
@@ -744,6 +751,18 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
       !      AntPeak_OffSt(i_ant), SamplOff_0-IntfBase
       !If(j_intFer.eq.110) write(2,*) 'setup:',i_ant+1, j_IntFer, Rdist, Ant_RawSourceDist(i_ant+1,i_chunk), &
       !      AntPeak_OffSt(i_ant+1), SamplOff_1-IntfBase
+      !
+      !
+      !Call RelDist(VoxLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
+      dt_AntPix_0 =Rdist - AntPeak_OffSt(i_ant) ! + FitDelay(i_ant)  ! cut&paste from EI_PolGridDel
+      dt_AntPix_1 =Rdist - AntPeak_OffSt(i_ant+1) ! + FitDelay(i_ant+1)
+      dphase_0 = exp(-ipi*dt_AntPix_0 /IntfNuDim)
+      dphase_1 = exp(-ipi*dt_AntPix_1 /IntfNuDim)
+      Phase_0 =exp(-ipi*dt_AntPix_0 *inu1/IntfNuDim)
+      Phase_1 =exp(-ipi*dt_AntPix_1 *inu1/IntfNuDim)
+      !
+      !
+      !
       !
       If(SamplOff_0.lt.0 .or. SamplOff_1.lt.0) Then
          Write(2,*) 'Position in reference antenna too close to beginning of time-trace for source @',VoxLoc,' in chunk#',i_chunk
@@ -764,11 +783,13 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
          nu=i_nu*dnu
          i_freq=Int(nu)
          dfreq=nu-i_freq ! phase-shifts are zero for centran pixel, no timeshift!!
-         nu_p(i_nu) =(  ((1.-dfreq)*Ji_p0(i_freq) + dfreq*Ji_p0(i_freq+1)) *Cnu0(i_nu,j_IntFer) + &
-                        ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu,j_IntFer) ) *Gain(i_freq)
-         nu_t(i_nu) =(  ((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu,j_IntFer) + &
-                        ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu,j_IntFer) ) *Gain(i_freq)
+         nu_p(i_nu) =(  ((1.-dfreq)*Ji_p0(i_freq) + dfreq*Ji_p0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
+                        ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1 ) *Gain(i_freq)
+         nu_t(i_nu) =(  ((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
+                        ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1 ) *Gain(i_freq)
          ! Gain(i_freq)=sqrt( SUM(J^2) )/(Freq_max-Freq_min) ; to neutralize effect Ji on frequency, calculated in antenna_function
+         phase_0 =phase_0 *dphase_0
+         phase_1 =phase_1 *dphase_1
       Enddo
       ! convert to time
       Call RFTransform_CF2CT(nu_p(0),CTime_p(1,j_IntFer) )  ! needed for the peak/background estimate
@@ -829,9 +850,10 @@ End Subroutine TimeTracePlot
 !--------------------
 Subroutine  EI_Weights(Nr_IntFer, i_sample, i_chunk, PixLoc, AntPeak_OffSt, W_ap, W_at)
    use constants, only : dp
-   use Chunk_AntInfo, only :  Ant_pos, Ant_RawSourceDist
+   use Chunk_AntInfo, only :  Ant_pos, Ant_RawSourceDist  , Ant_Stations, Ant_IDs
    Use Interferom_Pars, only :  N_smth, smooth, IntFer_ant, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t
    Use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntFerCh
+   use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: Nr_IntFer, i_sample, i_chunk  ! IntfLead
    Real(dp), intent(in) :: PixLoc(1:3), AntPeak_OffSt(*)
@@ -868,9 +890,14 @@ Subroutine  EI_Weights(Nr_IntFer, i_sample, i_chunk, PixLoc, AntPeak_OffSt, W_ap
          Pow_p= Pow_p + smooth(j)*Abs(CTime_p(i_s+j,j_IntFer))**2
          Pow_t= Pow_t + smooth(j)*Abs(CTime_t(i_s+j,j_IntFer))**2
       Enddo
+      !write(2,*) 'EI_Weights:',j_IntFer, Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),Ant_IDs(I_ant,i_chunk) &
+      !   , Pow_p, Pow_t, Noise_p(j_IntFer),Noise_t(j_IntFer)
+      !write(2,*) REAL(CTime_p(i_s-2:i_s+2,j_IntFer)),';',REAL(CTime_t(i_s-2:i_s+2,j_IntFer))
       !The amplitudes are fit, so the sqrt(W) should be equal to the inverse of the error on the amplitude, which is the amplitude of the noise
-      W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.01*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
-      W_at(j_IntFer)=1./(Noise_t(j_IntFer)+0.01*Pow_t) ! =1./(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
+      !W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.01*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
+      !W_at(j_IntFer)=1./(Noise_t(j_IntFer)+0.01*Pow_t) ! =1./(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
+      W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.0*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
+      W_at(j_IntFer)=1./(Noise_t(j_IntFer)+0.0*Pow_t) ! =1./(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
       !w_p=I_Scale*W_ap(j_IntFer)  ! to have alpha of order unity
       !w_t=I_Scale*W_at(j_IntFer)
       ! For chi-square calculation, sum_ak[ W_ak * E_ak^2] :
@@ -919,7 +946,7 @@ Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
    Enddo
 End Subroutine GetInterfFitDelay
 ! ------------------------
-Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
+Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int, W_ap, W_at)
    use constants, only : dp
    use DataConstants, only : Station_nrMax, Ant_nrMax
    use ThisSource, only :  PeakNrTotal, PeakPos, ChunkNr
@@ -931,7 +958,7 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
    use StationMnemonics, only : Statn_ID2Mnem, Station_ID2Mnem
    use unque,only : Double_RI_sort
    implicit none
-   real(dp), intent(in) :: DelChi(-N_fit:+N_fit,1:2*Nr_IntFerMx)
+   real(dp), intent(in) :: DelChi(-N_fit:+N_fit,1:2*Nr_IntFerMx), W_ap(*), W_at(*)
    integer, intent(in) :: i_chunk
    real(dp), intent(out) :: PartChiSq(1:Nr_IntFerMx)
    integer, intent(out) :: PartChi2Int(1:Nr_IntFerMx)
@@ -964,11 +991,11 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
       !    If(Unique_StatID(i_stat).eq. Station_ID) exit
       !enddo
       If(PartChiSq(j_IntFer).gt. (2*ChiSq)) Then
-         Write(2,*) j_IntFer, Statn_ID2Mnem(Station_ID), Antenna_SAI, PartChiSq(j_IntFer),&
-               PartChiSq_p(j_IntFer), PartChiSq_t(j_IntFer)
+         Write(2,"(I5,A6,I7, 3F7.2, 2F9.3)") j_IntFer, Statn_ID2Mnem(Station_ID), Antenna_SAI, PartChiSq(j_IntFer),&
+               PartChiSq_p(j_IntFer), PartChiSq_t(j_IntFer), W_ap(j_IntFer), W_at(j_IntFer)
       EndIf
    Enddo
    Call Double_RI_sort(Nr_IntferCh(i_chunk),PartChiSq,PartChi2Int)
-   write(2,*) 'chi^2/ndf=',ChiSq
+   write(2,"(A,F8.2)") 'chi^2/ndf=',ChiSq
    Return
 End Subroutine WriteDelChiPeak

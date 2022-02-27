@@ -51,13 +51,14 @@ Subroutine EIPrntNewSources()
    use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, PeakPos, SourcePos
    use Chunk_AntInfo, only : Start_time
     !use StationMnemonics, only : Statn_ID2Mnem
-   use Constants, only : Sample
+   use Constants, only : dp,sample,c_mps,Refrac
    Implicit none
    !real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
    integer ( kind = 4 ) :: i,j, i_Peak, i_chunk
    integer, external :: XIndx
+   Real(dp) :: time
    Character(len=5) :: Station_Mnem
-   Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
+   !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
    !
    i_chunk=0
    Do i_Peak = 1,PeakNrTotal
@@ -68,13 +69,16 @@ Subroutine EIPrntNewSources()
    Endif
    Enddo
    !
-   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,   height, Del-t); RMS[ns], sqrt(chi^2/df), Excluded: '
+   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height;    t[ms]  ); (chi^2/df) '
    i_chunk=1
    j=0
    Do i_Peak = 1,PeakNrTotal
+      Time=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
+      Time = Time*Refrac/(c_mps*sample) ! Convert to units of [samples]
+      Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000.
       Write(2,"('C',i2,' 0',i2,I8)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),PeakPos(i_Peak)
       Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
-      write(2,"(';',F7.2)") PeakChiSQ(i_Peak)
+      write(2,"(F12.5';',F7.2)") Time, PeakChiSQ(i_Peak)
    Enddo  !  i_Peak = 1,PeakNrTotal
 End Subroutine EIPrntNewSources
 !==========================================
@@ -195,7 +199,7 @@ Subroutine EI_PolarizPeak(i_Peak)
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), &
       AntPeak_OffSt(1,i_Peak), W_ap(1,i_peak), W_at(1,i_peak), Cnu0(0,1,i_peak), Cnu1(0,1,i_peak), Outpt, DelChi, Label)
    PeakChiSQ(i_Peak)=Chi2pDF
-   Call WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChiSqInt)
+   Call WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChiSqInt, W_ap(1,i_peak), W_at(1,i_peak))
    !j_IntFer=PartChiSqInt(Nr_IntFerCh(i_chunk))
    !write(Label,"(i2.2,i3.3)") i_Peak,j_IntFer
    !Call TimeTracePlot(j_IntFer, IntfBase, i_chunk, SourcePos(1,i_Peak), Windw, Label)

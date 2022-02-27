@@ -218,7 +218,7 @@ Subroutine PrntNewSources()
    Endif
    Enddo
    !
-   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,   height, Del-t); RMS[ns], sqrt(chi^2/df), Excluded: '
+   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, Del-t); RMS[ns], sqrt(chi^2/df), Excluded: '
    If(Polariz) Then
       i_chunk=1
       j=0
