@@ -497,11 +497,11 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !stop
    !
    Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
-   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiDat_'//TRIM(Label) !    remove files; clean-up
-   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
-   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
-   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
-   !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder) !    remove files; clean-up
+ !  write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiDat_'//TRIM(Label) !    remove files; clean-up
+ !  write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
+ !  write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
+ !  write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
+ !  !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder) !    remove files; clean-up
    !
    return
 End Subroutine GLEscript_Curtains

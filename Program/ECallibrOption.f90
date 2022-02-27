@@ -48,7 +48,7 @@ Subroutine E_Callibr()
    integer :: i, j, k, i_ant, i_eo, i_chunk, i_stat, StatID, nxx
    integer :: i_loc(1), i_Peak
    Logical :: FitNoSources
-   character*10 :: txt
+   character*10 :: StochOption
    character*80 :: lname
    real(dp) :: x1,x2,x3,t, Time_width, Space_Spread(1:3)
    !real(dp) :: dt,B, MTC, dtI
@@ -148,10 +148,13 @@ Subroutine E_Callibr()
     flush(unit=2)
     !
     Call GetNonZeroLine(lname)
-    Read(lname,*, iostat=nxx) Time_width, Space_Spread
-    If(nxx.ne.0) Then
+    Read(lname,*, iostat=nxx) StochOption, Time_width, Space_Spread
+    If(nxx.ne.0 .or. StochOption .ne.'Stochastic' ) Then
       Time_width=0.
       Space_Spread(1:3)=0.
+    Else
+      Write(2,*) 'Stochasticity allowed with timing spread for the fitted stations=',&
+         Time_width,' and spread in space for sources of', Space_Spread, '[m]'
     EndIf
     !stop 'FitCycle'
 !    write(2,"(A,I4,A,I3,A,i4,A,F7.2,A)") 'N_FitPar=',N_FitPar ,', N_FitStatTim=', N_FitStatTim, &
