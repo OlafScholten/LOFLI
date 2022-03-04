@@ -14,7 +14,7 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
     use FitParams, only : X_Offset, WriteCalib
     use Interferom_Pars, only :  N_Smth, N_fit, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     !use DataConstants, only : ChunkNr_dim, Production
-    use Interferom_Pars, only : W_ap, W_at, Cnu0, Cnu1, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t, AntPeak_OffSt
+    use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, IntfNuDim, AntPeak_OffSt
     use ThisSource, only :  PeakNr, PeakNrTotal, ChunkNr, PeakPos, sourcepos, PeakChiSQ
     Implicit none
     real ( kind = 8 ), intent(inout) :: X(N_FitPar_max)
@@ -49,11 +49,9 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
       i_chunk=ChunkNr(i_Peak)
       IntfBase= Peakpos(i_Peak) - IntfNuDim
       Meqn = Meqn + Nr_IntFerCh(i_chunk)*2*(1+2*N_fit)     ! number of equations
-      Write(2,*) 'i_Peak:',i_Peak
-      Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(:,i_Peak), &
-         AntPeak_OffSt(1,i_Peak), Cnu0(0,1,i_Peak), Cnu1(0,1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
-      Call EI_Weights(Nr_IntFerCh(i_chunk), IntfNuDim, i_chunk, SourcePos(:,i_Peak), &
-         AntPeak_OffSt(1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
+      !Write(2,*) 'i_Peak:',i_Peak
+      Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(:,i_Peak), AntPeak_OffSt(1,i_Peak), &
+         Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak) )
     EndDo
     !
     v_dim=93 + Meqn*nvar + 3*Meqn + nvar*(3*nvar+33)/2
@@ -189,7 +187,7 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
     use DataConstants, only : Station_nrMax, Ant_nrMax
 !    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err
     use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
-    use Interferom_Pars, only : W_ap, W_at, Cnu0, Cnu1, N_fit, AntPeak_OffSt, Chi2pDF
+    use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1,  N_fit, AntPeak_OffSt, Chi2pDF
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
@@ -273,7 +271,7 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
          Enddo
          write(Label,"(' Peak',i3)") i_Peak
          Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_peak), AntPeak_OffSt(1,i_Peak), &
-               W_ap(1,i_peak), W_at(1,i_peak), Cnu0(0,1,i_peak), Cnu1(0,1,i_peak), Outpt, DelChi, Label)
+               Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), Outpt, DelChi, Label)
          PeakChiSQ(i_peak) = Chi2pDF
            !
          Do j=-N_fit,N_fit
@@ -298,7 +296,7 @@ End Subroutine CompareEI
 !==================================================
 !-----------------------------------------------
 Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPeak_OffSt, &
-            W_ap, W_at, Cnu0, Cnu1, Outpt, DelChi, Label)
+            Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, Outpt, DelChi, Label)
    ! Needs: Ant_RawSourceDist as used when reading in data (when fitted time-shifts = 0)
    !alculates: 1) trace in frequency space for even and odd antennas symmetrically around
    !  calculated pulse time (based on suggested source time and position) for each antenna pair
@@ -319,12 +317,13 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    use GLEplots, only : GLEplotControl
    use Interferom_Pars, only :IntfNuDim, dnu, inu1, inu2
    use FFT, only : RFTransform_CF, RFTransform_CF2CT
-   use StationMnemonics, only : Statn_ID2Mnem, Station_ID2Mnem
+   use StationMnemonics, only : Statn_ID2Mnem !, Station_ID2Mnem
    Implicit none
    Integer, intent(in) :: Nr_IntFer, i_sample,i_chunk
-   Real(dp), intent(in) :: VoxLoc(1:3), W_ap(1:Nr_IntFer), W_at(1:Nr_IntFer)
+   Real(dp), intent(in) :: VoxLoc(1:3)
    Real(dp), intent(in) :: FitDelay(*), AntPeak_OffSt(*)
-   Complex(dp), intent(in) :: Cnu0(0:IntfNuDim,Nr_IntFer), Cnu1(0:IntfNuDim,Nr_IntFer)
+   Complex(dp), intent(in) :: Cnu_p0(0:IntfNuDim,Nr_IntFer), Cnu_p1(0:IntfNuDim,Nr_IntFer)
+   Complex(dp), intent(in) :: Cnu_t0(0:IntfNuDim,Nr_IntFer), Cnu_t1(0:IntfNuDim,Nr_IntFer)
    Integer, intent(in) :: Outpt ! <=0: minimal ; =1: 1line ; =2: chi^2 info to files
    Character(len=8), intent(in) :: Label
    Real(dp), intent(out) :: DelChi(-N_fit:N_fit,*)
@@ -338,7 +337,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    Complex(dp) :: Sp, St
    Complex(dp) :: FTime_PB(1:2*IntfNuDim,1:3), Fnu_PB(0:IntfNuDim,1:3)
    Complex(dp) :: Phase_0, dPhase_0, Phase_1, dPhase_1, nu_p(0:IntfNuDim), nu_t(0:IntfNuDim)
-   Real(dp) :: RDist, dt_AntPix_0, dt_AntPix_1, sw_p, sw_t, W_p, W_t
+   Real(dp) :: RDist, dt_AntPix_0, dt_AntPix_1, sw, sw1
    Real(dp) :: AMat(1:3,1:3), Ai(1:3,1:3)
    Complex :: Stk(3,3), AiF(1:3)
    Real(dp) :: Esq_ak, FdotI
@@ -348,7 +347,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    !Real(dp) :: TestW_p(1:Nr_IntFer), TestW_t(1:Nr_IntFer)   ! just for printing & plotting
    Real(dp) :: wap_PB(1:3,1:Nr_IntFer), wat_PB(1:3,1:Nr_IntFer)  ! weighted p and t directions in polarization basis (_PB)
    Complex(dp) :: wEnu_p(0:IntfNuDim), wEnu_t(0:IntfNuDim)
-   Complex(dp) :: wETime_p(1:2*IntfNuDim), wETime_t(1:2*IntfNuDim)
+   Complex(dp) :: wETime_p(1:2*IntfNuDim), wETime_t(1:2*IntfNuDim),Mod_p,Mod_t
    Complex(dp) :: wEtime_ap(-N_smth:N_smth,1:Nr_IntFer), wEtime_at(-N_smth:N_smth,1:Nr_IntFer) ! weighted E fields, time dependent
    Real(dp) :: dChi_ap(1:Nr_IntFer), dChi_at(1:Nr_IntFer)
    Real(dp) :: AveAmp_ap(1:Nr_IntFer), AveAmp_at(1:Nr_IntFer)
@@ -375,15 +374,10 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    NEh2PB(2,1)=NEh2PB(3,3)*NEh2PB(1,2)- NEh2PB(1,3)*NEh2PB(3,2)  ! VHR(1)~(-h,0,N)
    NEh2PB(3,1)=NEh2PB(1,3)*NEh2PB(2,2)- NEh2PB(2,3)*NEh2PB(1,2)
    !
-   !write(2,*) VoxLoc(:), NEh2PB
-   !write(2,*) 'w_ap',w_ap
-   !write(2,*) 'w_at',w_at   !
    wEnu_p(:)=0.
    wEnu_t(:)=0.
    !i_s=IntfLead  +  1+i_slice*N_smth  ! approximately correct, upto rounding errors for dt
    i_s=i_sample
-   !write(2,*) 'EI_PolGridDel:',i_s,VoxLoc(:)
-   !flush(unit=2)
    Fnu_PB(:,:)=0.
    AMat(:,:)=0.
    SumSq=0.
@@ -399,8 +393,6 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Phase_0 =exp(-ipi*dt_AntPix_0 *inu1/IntfNuDim)
       Phase_1 =exp(-ipi*dt_AntPix_1 *inu1/IntfNuDim)
       !
-      !If(j_intFer.eq.110) write(2,*) 'dt_AntPix_0:',i_ant, j_IntFer, dt_AntPix_0, Rdist, AntPeak_OffSt(i_ant), dt_AntPix_1
-      !If(j_intFer.eq.110) write(2,*) 'dt_AntPix_1:',i_ant+1, j_IntFer, dt_AntPix_1, Rdist, AntPeak_OffSt(i_ant+1)
       Ras(1)=(VoxLoc(1)-Ant_pos(1,i_ant,i_chunk))/1000.  ! \vec{R}_{antenna to source}
       Ras(2)=(VoxLoc(2)-Ant_pos(2,i_ant,i_chunk))/1000.
       Ras(3)=(VoxLoc(3)-Ant_pos(3,i_ant,i_chunk))/1000.
@@ -415,46 +407,31 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       D_a(j_IntFer)=D      ! Just for plotting
       Ph_a(j_IntFer)=Phi_d
       !
-      Call AntFun_Inv(thet_d ,Phi_d ) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
+      sw= sqrt( (140./(HorDist*HorDist/(Ras(3)*Ras(3))+1.))) ! changed Febr 2022 to make it more similar to 1/noise power
+      If(j_IntFer.eq.1) sw1=sw
+      If(sw.gt.sw1 ) Then  ! The factor between E-field and signal is approx square of this
+         sw=sw1 ! changed Febr 2022 to make it more similar to 1/noise power
+      EndIf  ! this gives a much smoother and narrower interference max
+      !
       Vec_p(1)=sin(Phi_r)              ; Vec_p(2)=-cos(Phi_r)        ; Vec_p(3)=0.
       Vec_t(1)=-cos(Thet_r)*Vec_p(2)  ; Vec_t(2)=cos(Thet_r)*Vec_p(1) ; Vec_t(3)=-sin(Thet_r)
       !
       Do i=1,3  ! convert t&p orientations from (NEh) to polar base
-         p_PB(i)=SUM( NEh2PB(:,i)*Vec_p(:) )
-         t_PB(i)=SUM( NEh2PB(:,i)*Vec_t(:) )
+         wap_PB(i,j_IntFer)=SUM( NEh2PB(:,i)*Vec_p(:) )*sw/D
+         wat_PB(i,j_IntFer)=SUM( NEh2PB(:,i)*Vec_t(:) )*sw/D
       Enddo
-      !write(2,"(4(A,3F7.3),3F7.3)") 'p_PB=',p_PB(:),', t_PB=',t_PB(:)! &
-      !write(2,*) Vec_p(:), Ras(:)
-      !flush(unit=2)
-      !
-      w_p=W_ap(j_IntFer)
-      w_t=W_at(j_IntFer)  ! do not bother about scale factor, divides out anyhow.
-      sw_p=sqrt(W_ap(j_IntFer))
-      sw_t=sqrt(W_at(j_IntFer))
-      wap_PB(:,j_IntFer)=p_PB(:)*sw_p/D
-      wat_PB(:,j_IntFer)=t_PB(:)*sw_t/D
       !
       Do i_nu=inu1,inu2   ! Increment frequency spectrum with the spectrum from this antenna
-         nu=i_nu*dnu
-         i_freq=Int(nu)
-         dfreq=nu-i_freq
-         Sp=((1.-dfreq)*Ji_p0(i_freq) + dfreq*Ji_p0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
-            ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1
-         St=((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
-            ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1
-         Fnu_PB(i_nu,:)=Fnu_PB(i_nu,:) + ( p_PB(:)* Sp*w_p + t_PB(:)* St*w_t ) *Gain(i_freq)/D
-         wEnu_p(i_nu)=  Sp*sw_p *Gain(i_freq)
-         wEnu_t(i_nu)=  St*sw_t *Gain(i_freq)
+         wEnu_p(i_nu) = (Cnu_p0(i_nu,j_IntFer) *phase_0 + Cnu_p1(i_nu,j_IntFer)*phase_1) * sw
+         wEnu_t(i_nu) = (Cnu_t0(i_nu,j_IntFer) *phase_0 + Cnu_t1(i_nu,j_IntFer)*phase_1) * sw  ! contains gain
+         Fnu_PB(i_nu,:)=Fnu_PB(i_nu,:) + ( wap_PB(:,j_IntFer)* wEnu_p(i_nu) + wat_PB(:,j_IntFer)* wEnu_t(i_nu) )
          phase_0 =phase_0 *dphase_0
          phase_1 =phase_1 *dphase_1
       Enddo
       !
-      !write(2,*) 'j_IntFer:',j_IntFer, i_ant, wEnu_p(inu1+1), abs(SP), phase_0, dphase_0
-      !flush(unit=2)
-      ! Calculate contribution to AMat       == A matrix
       Do i=1,3
          Do j=1,3  ! a single factor distance since the other is already included in W (as in W_p & W_t)
-            AMat(i,j)=AMat(i,j)+ ( p_PB(i)*p_PB(j)*w_p + t_PB(i)*t_PB(j)*w_t)/(D*D)
+            AMat(i,j)=AMat(i,j)+ wap_PB(i,j_IntFer)*wap_PB(j,j_IntFer) + wat_PB(i,j_IntFer)*wat_PB(j,j_IntFer)
          Enddo
       Enddo
       !
@@ -466,27 +443,17 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Enddo
       !
    Enddo     ! j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-   !write(2,*) 'Sp',i_ant, i_s, abs(Sp), abs(St), phase_0, phase_1
-   !flush(unit=2)
    !
    Call matinv3(AMat, Ai)
    Do m=1,3  ! convert to time
       Call RFTransform_CF2CT(Fnu_PB(0,m),FTime_PB(1,m) )
    Enddo
    !
-   !write(2,*) 'EI_PolGridDel;Ai',Ai
-   !flush(unit=2)
-   !write(2,*) 'FTime_PB(1:10,1):',FTime_PB(1:10,1)
-   !
    Stk(:,:)=0.
    FdotI=0.
    SumSq=0.
    If(TestCh2) then
-      !Write(2,*) 'wap:',W_ap(1:10)
-      !Write(2,*) 'gain:',Gain(Freq_min:Freq_min+10)
-      !Write(2,*) 'FTime_PB:',FTime_PB(100:110,1)
-      !write(2,*) 'EI_PolGridDel;FTime_PB(1:10,1):',FTime_PB(1:10,1)
-      !flush(unit=2)
+      !
       Do i=1,8
          If( Label(i:i).eq.' ') then
             txt(i:i)='-'
@@ -494,11 +461,6 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
             txt(i:i)=Label(i:i)
          EndIf
       EndDo
-      !i=188 ! 111   !            <<<<<<<<<<<<<<<<<<<<<<<<
-      !OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'DelChi2_'//TRIM(txt)//'.dat')
-      !write(30,"(3I4,I7,' 0')") i_sample, Nr_IntFer, i, i_s
-      !Write(30,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
-       !  '! i_ant, j; Ep-data;  model , Et-data, model, d_chi_p','d_chi_t'
       !
       write(FMT,"(A,I4,A)") '(I4,',Nr_IntFer,'G13.3)'
       OPEN(UNIT=31,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'PhiDat_'//TRIM(txt)//'.dat') ! for curtain plots
@@ -509,18 +471,20 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Power_t(:)=0.
       AveAmp_ap(:)=0.
       AveAmp_at(:)=0.
-   EndIf
+   EndIf    ! If(TestCh2)
+   !
    If(N_fit.gt.0) then
       N_s=N_fit
    Else
       N_s=N_smth
    EndIf
+   !
    dChi_ap(:)=0.  ;     dChi_at(:)=0.
    Do j=-N_s,N_s ! fold time-dependence with smoothing function
       Do m=1,3  ! convert to time
          AiF(m)=SUM( Ai(m,:)*FTime_PB(i_s+j,:) )
       Enddo
-      !write(2,*) 'FTime_PB(i_s+j,:)',i_s,j,FTime_PB(i_s+j,:)
+      !write(2,*) 'FTime_PB(i_s+j,:)',i_s,j,FTime_PB(i_s+j,:), Ai(1,1),'aif:', aif(:)
       !flush(unit=2)
       FdotI=FdotI + smooth(j)*Real( SUM( FTime_PB(i_s+j,:)*Conjg(AiF) ) )  ! Imag is zero
       Do m=1,3
@@ -533,8 +497,10 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       !   Del_p = ABS( wEtime_ap(j,j_IntFer) -SUM( wap_PB(:,j_IntFer)*AiF(:) ) ) ! true difference (measured-calculated)for this antenna
       !   Del_t = ABS( wEtime_at(j,j_IntFer) -SUM( wat_PB(:,j_IntFer)*AiF(:) ) )
       ! NB should absolute difference be fitted or the real part?
-         Del_p = Real( wEtime_ap(j,j_IntFer) -SUM( wap_PB(:,j_IntFer)*AiF(:) ) ) ! true difference (measured-calculated)for this antenna
-         Del_t = Real( wEtime_at(j,j_IntFer) -SUM( wat_PB(:,j_IntFer)*AiF(:) ) )
+         Mod_p=SUM( wap_PB(:,j_IntFer)*AiF(:) ) ! weighted model E-field
+         Mod_t=SUM( wat_PB(:,j_IntFer)*AiF(:) )
+         Del_p = Real( wEtime_ap(j,j_IntFer) - Mod_p ) ! true difference (measured-calculated)for this antenna
+         Del_t = Real( wEtime_at(j,j_IntFer) - Mod_t )
          dChi_ap(j_IntFer)=dChi_ap(j_IntFer) + W* Del_p**2 ! wEtime_ap(j,j_IntFer) * Conjg( Del_p  ) ! Imag is zero ??
          dChi_at(j_IntFer)=dChi_at(j_IntFer) + W* Del_t**2 ! wEtime_at(j,j_IntFer) * Conjg( Del_t  ) ! Imag is zero ??
          ! SumDiff=SumDiff+ sqrt(W)*(Del_p + Del_t)
@@ -544,35 +510,39 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
          If(TestCh2) then
             Power_p(j_IntFer)=Power_p(j_IntFer) + W*ABS(wEtime_ap(j,j_IntFer))**2
             Power_t(j_IntFer)=Power_t(j_IntFer) + W*ABS(wEtime_at(j,j_IntFer))**2
-            AveAmp_ap(j_IntFer)=AveAmp_ap(j_IntFer) + sqrt(W)*ABS(wEtime_ap(j,j_IntFer))
-            AveAmp_at(j_IntFer)=AveAmp_at(j_IntFer) + sqrt(W)*ABS(wEtime_at(j,j_IntFer))
+            AveAmp_ap(j_IntFer)=AveAmp_ap(j_IntFer) + W*ABS(Mod_p)**2 ! sqrt(W)*ABS(wEtime_ap(j,j_IntFer))
+            AveAmp_at(j_IntFer)=AveAmp_at(j_IntFer) + W*ABS(Mod_t)**2 ! sqrt(W)*ABS(wEtime_at(j,j_IntFer))
          EndIf
-      Enddo
+      Enddo ! j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
       !write(2,*) 'j',j,smooth(j), Del_p, Del_t,AiF(1), FdotI
       !flush(unit=2)
       If(TestCh2) then
-         !j_IntFer=i
-         !write(2,*) 'EI_PolGridDel;Del_p:', j, Del_p, wEtime_ap(j,j_IntFer), SUM( wap_PB(:,j_IntFer)*AiF(:) )
-         !flush(unit=2)
-         !write(30,"(I4,I5,10G13.3)")  j_IntFer, j, &
-         !   wEtime_ap(j,j_IntFer), SUM( wap_PB(:,j_IntFer)*AiF(:) ), &
-         !   wEtime_at(j,j_IntFer), SUM( wat_PB(:,j_IntFer)*AiF(:) ), &
-          !  dChi_ap(j_IntFer), dChi_at(j_IntFer)
          write(31,FMT)  j, REAL( wEtime_ap(j,1:Nr_IntFer) )  ! Data
          write(32,FMT)  j, REAL( wEtime_at(j,1:Nr_IntFer) )
          write(33,FMT)  j,( REAL( SUM( wap_PB(:,j_IntFer)*AiF(:) ) ), j_IntFer=1,Nr_IntFer)  ! model
          write(34,FMT)  j,( REAL( SUM( wat_PB(:,j_IntFer)*AiF(:) ) ), j_IntFer=1,Nr_IntFer)
       EndIf
-   Enddo
+   Enddo  ! j=-N_s,N_s ! fold time-dependence with smoothing function
    dChi_ap(1:Nr_IntFer)=dChi_ap(1:Nr_IntFer)/(2*N_s+1.)
    dChi_at(1:Nr_IntFer)=dChi_at(1:Nr_IntFer)/(2*N_s+1.)
    SumSq=SUM(dChi_ap(1:Nr_IntFer)) +SUM(dChi_at(1:Nr_IntFer)) ! smooth(j)* (Del_p**2 + Del_t**2) ! True contribution to chi^2 from this antenna
    Chi2pDF=SumSq/(2.*Nr_IntFer)
    If(TestCh2) then
-      Power_p(:)=Power_p(:)/W_ap(:)
-      Power_t(:)=Power_t(:)/W_at(:)
-      AveAmp_ap(:)=AveAmp_ap(:)/sqrt(W_ap(:))
-      AveAmp_at(:)=AveAmp_at(:)/sqrt(W_at(:))
+      !Power_p(:)=Power_p(:)/(2*N_s+1.)
+      !Power_t(:)=Power_t(:)/(2*N_s+1.)
+      !AveAmp_ap(:)=AveAmp_ap(:)/(2*N_s+1.)
+      !AveAmp_at(:)=AveAmp_at(:)/(2*N_s+1.)
+      write(2,"(10A)")  'j_Int, i_ant, Ant_IDs', &
+         'Statn_ID, Weight^2', ';',&
+         'dChi_ap, sqrt(Power_p), sqrt(mod)',';',&
+         ' dChi_at, sqrt(Power_t), sqrt(mod),'
+      Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
+         i_ant=IntFer_ant(j_IntFer,i_chunk)
+         write(2,"(I4,I5,I6,A, F7.2,A,3F9.3,A,3F9.3)")  j_IntFer, i_ant, Ant_IDs(I_ant,i_chunk), &
+            Statn_ID2Mnem(Ant_Stations(I_ant,i_chunk)), SUM(wap_PB(:,j_IntFer)*wap_PB(:,j_IntFer))*1.e3, ';',&
+             dChi_ap(j_IntFer), sqrt(Power_p(j_IntFer)), sqrt(AveAmp_ap(j_IntFer)),';',&
+             dChi_at(j_IntFer), sqrt(Power_t(j_IntFer)), sqrt(AveAmp_at(j_IntFer))
+      Enddo
       !Close(UNIT=30)
       Close(UNIT=31)
       Close(UNIT=32)
@@ -582,15 +552,6 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Call GLEscript_Curtains(30, GLE_file, N_s, i_chunk, trim(DataFolder)//TRIM(OutFileLabel), TRIM(txt), &
                dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
       Write(2,"(16x,A,5x,A,5x,A,6x,A,2x,A,4x,A)") 'D', 'Power','weight','delta_chi^2'!,'Power','d_chi/sqrt(P)'
-      !Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-      !   i_ant=IntFer_ant(j_IntFer,i_chunk)
-      !   Write(2,"(I3,1x,A5,I4, F6.1,1x,A,F10.1,F10.3,F9.2, F10.2,F9.2)") &
-      !                  j_IntFer, Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),Ant_IDs(i_ant,i_chunk),D_a(j_IntFer), &
-      !                  'p:', Power_p(j_IntFer),W_ap(j_IntFer),dChi_ap(j_IntFer), &
-      !                  AveAmp_ap(j_IntFer)**2/Power_p(j_IntFer)
-      !   Write(2,"(20x,A,F10.1,F10.3,F9.2, F10.2,F9.2)") 't:', Power_t(j_IntFer),W_at(j_IntFer),dChi_at(j_IntFer), &
-      !                  AveAmp_at(j_IntFer)**2/Power_t(j_IntFer)
-      !Enddo
    EndIf
    !
    !Chi2pDF=(Esq_ak-FdotI)/(2.*Nr_IntFer)    !  Reasonable approximation to chi^2
@@ -644,13 +605,11 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
          write(30,"(2I4,F9.2,2G12.3,I7,' 0')") i_sample, Nr_IntFer, SumSq, StI12, StI, i_s
          Write(30,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
             '! nr, i_ant, Ant#, St#;  D[km] , phi[deg], d_chi_ph, d_chi_th','StI','StI12'
-         w=(W_ap(1)+W_at(1))/2.
          Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
             i_ant=IntFer_ant(j_IntFer,i_chunk)
             write(30,"(I4,I5,I6,I6,F9.3,F8.1,5G12.3)")  j_IntFer, i_ant, &
                Ant_IDs(I_ant,i_chunk), Ant_Stations(I_ant,i_chunk), D_a(j_IntFer), Ph_a(j_IntFer), &
-               dChi_ap(j_IntFer), dChi_at(j_IntFer), &
-               W_ap(j_IntFer)/W, W_at(j_IntFer)/W
+               dChi_ap(j_IntFer), dChi_at(j_IntFer)
          Enddo
          Close(Unit=30)
          !Call GLEplotControl(PlotType='EI_delta-chisq', PlotName='EI_delchisq_'//TRIM(txt)//TRIM(OutFileLabel), &
@@ -666,16 +625,15 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    Return
 End Subroutine EI_PolGridDel
 !-----------------------------------------------
-
-Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0, Cnu1, W_ap, W_at)
+Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1)
    !--------------------------------------------
    use constants, only : dp, pi, ci
-   use DataConstants, only : Time_dim, DataFolder, OutFileLabel, Ant_nrMax
+   use DataConstants, only : Time_dim, Ant_nrMax  ! , DataFolder, OutFileLabel
    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
-   use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo !, NAnt_eo
-   Use Interferom_Pars, only :  SumWindw, N_smth, smooth  !, NrPixSmPowTr
-   Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntFerCh
-   Use Interferom_Pars, only : CTime_p, CTime_t, Noise_p, Noise_t  !PixLoc, CenLoc,
+   use Chunk_AntInfo, only : NormOdd, NormEven
+   Use Interferom_Pars, only :  SumWindw, N_smth, smooth
+   Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx !, Nr_IntFerCh
+   !Use Interferom_Pars, only : CTime_p, CTime_t, Noise_p, Noise_t  !PixLoc, CenLoc,
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain  !J_0p,J_0t,J_1p,J_1t,
    use Interferom_Pars, only :IntfNuDim, dnu, inu1, inu2
    use GLEplots, only : GLEplotControl
@@ -684,25 +642,21 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
    Integer, intent(in) :: Nr_IntFer, IntfBase, i_chunk  ! IntfLead
    Real(dp), intent(in) :: VoxLoc(1:3)
    Real(dp), intent(out) :: AntPeak_OffSt(1:Ant_nrMax)
-   Complex(dp), intent(out) :: Cnu0(0:IntfNuDim,Nr_IntFerMx), Cnu1(0:IntfNuDim,Nr_IntFerMx)
-   Real(dp), intent(out) :: W_ap(1:Nr_IntFer), W_at(1:Nr_IntFer)
+   Complex(dp), intent(out) :: Cnu_p0(0:IntfNuDim,Nr_IntFerMx), Cnu_p1(0:IntfNuDim,Nr_IntFerMx)
+   Complex(dp), intent(out) :: Cnu_t0(0:IntfNuDim,Nr_IntFerMx), Cnu_t1(0:IntfNuDim,Nr_IntFerMx)
    complex(dp), parameter :: ipi=ci*pi
    integer :: i_ant, j_IntFer, i, j, i_freq, i_nu, IntfDim, i_s, m, n, SamplOff_0, SamplOff_1
    Real(dp) :: Ras(1:3), HorDist, Thet_r ,Phi_r, dfreq, D, W,  nu
    Real(dp) :: thet_d, Phi_d  ! AntSourceD(1:Nr_IntFer),
    Real(dp) :: Rtime(1:2*IntfNuDim)
-   Complex(dp) :: Sp, St
-   Complex(dp) :: Phase, dPhase, nu_p(0:IntfNuDim), nu_t(0:IntfNuDim)
-   Real(dp) :: RDist, dt_AntPix
-   Real(dp) :: W_p, W_t  !, SumDiff, SumSq, Del_p, Del_t, sw_p, sw_t
+   Complex(dp) :: Cnu0(0:IntfNuDim), Cnu1(0:IntfNuDim)
+   Real(dp) :: RDist !, dt_AntPix
+   !Real(dp) :: W_p, W_t  !, SumDiff, SumSq, Del_p, Del_t, sw_p, sw_t
    Complex(dp) :: Phase_0, dPhase_0, Phase_1, dPhase_1
-   Real(dp) :: dt_AntPix_0, dt_AntPix_1
+   !Real(dp) :: dt_AntPix_0, dt_AntPix_1
    !
    IntfDim=2*IntfNuDim  !  should be about =512
    !
-   !PowerScale=1.
-   !NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)) )/100.
-   !NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)) )/100.
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas to detremine t- and p- polarized trace for central pixel; needed for noise estimate
       i_ant=IntFer_ant(j_IntFer,i_chunk)
       !write(2,*) i_ant, j_IntFer, Ant_pos(:,i_ant,i_chunk)
@@ -714,55 +668,18 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
       Phi_r=atan2( Ras(2) , Ras(1) )  ! \phi=0 = north
       Thet_d =Thet_r*180/pi
       Phi_d =Phi_r*180/pi
-      !If(j_IntFer.eq.1) Then
-      !   I_Scale= (HorDist*HorDist + Ras(3)*Ras(3))/Nr_IntFer ! scales value of chi-square, not intensity, and value of F
-      !   !write(2,*) 'AmplitudeW NormEven,odd',NormEven,NormOdd,', ratio=',NormEven/NormOdd, Noise
-      !EndIf
-      !Calculation of noise-power level
-      Call AntFun_Inv(thet_d ,Phi_d ) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
-      w_p=SUM( ((NormEven*ABS(Ji_p0(Freq_min:Freq_max)))**2+(NormOdd*ABS(Ji_p1(Freq_min:Freq_max)))**2)* &
-         Gain(Freq_min:Freq_max)**4)
-      w_t=SUM( ((NormEven*ABS(Ji_t0(Freq_min:Freq_max)))**2+(NormOdd*ABS(Ji_t1(Freq_min:Freq_max)))**2)* &
-         Gain(Freq_min:Freq_max)**4) ! This to account for the noise level in the theta direction when pol is unfolded in the proper direction
-      !   noise=(100.)^2*W; Factor 100 to copy the factor that was introduces in Antenna_Read
-      Noise_p(j_IntFer)=W_p*5.d6 ! Additional /10 (approx) because effective bandwidth / full, thus degrees of freedom are over estimated
-      W_ap(j_IntFer)=2.d-7/W_p!=1./W_p*1.0d3 *200.*25 !Noise_p(j_IntFer) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
-      Noise_t(j_IntFer)=W_t*5.d6 ! factor 200 obtained by comparing with noise trace         !
-      W_at(j_IntFer)=2.d-7/W_t
-      !If( MOD(j_IntFer,5).eq.1 )  write(2,*) 'weights:', j_IntFer, W_ap(j_IntFer), &
-      !   W_at(j_IntFer)/W_ap(j_IntFer) ,(140./(HorDist*HorDist/(Ras(3)*Ras(3))+1.))/W_ap(j_IntFer)
-      ! Conclusion: W_at(j_IntFer)=2.d-7/W_t is within about 20% of Ras(3)*Ras(3)/(HorDist*HorDist + Ras(3)*Ras(3))*140.
       !
-      !W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.0*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
+      Call AntFun_Inv(thet_d ,Phi_d ) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
       !
       Call RelDist(VoxLoc(1),Ant_pos(1,i_ant,i_chunk),RDist) ! same for even and odd antenna
-      !dt_AntPix_0 =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
+      !
       SamplOff_0=Int(Rdist - Ant_RawSourceDist(i_ant,i_chunk))
-      !If(j_IntFer.eq.1) write(2,*) 'SamplOff_0:',SamplOff_0,Rdist, Ant_RawSourceDist(i_ant,i_chunk)
-      !write(2,*) 'SamplOff_0:',SamplOff_0,j_IntFer,IntfBase,Ant_RawSourceDist(i_ant,i_chunk), i_ant,i_chunk
-      !Flush(unit=2)
       AntPeak_OffSt(i_ant)= SamplOff_0 + Ant_RawSourceDist(i_ant,i_chunk)
-      !dt_AntPix_0 =Rdist - Ant_OffSt(i_ant)
       SamplOff_0=IntfBase + SamplOff_0
+      !
       SamplOff_1=Int(Rdist - Ant_RawSourceDist(i_ant+1,i_chunk))
       AntPeak_OffSt(i_ant+1)= SamplOff_1 + Ant_RawSourceDist(i_ant+1,i_chunk)
       SamplOff_1=IntfBase + SamplOff_1
-      !If(j_intFer.eq.110) write(2,*) 'setup:',i_ant, j_IntFer, Rdist, Ant_RawSourceDist(i_ant,i_chunk), &
-      !      AntPeak_OffSt(i_ant), SamplOff_0-IntfBase
-      !If(j_intFer.eq.110) write(2,*) 'setup:',i_ant+1, j_IntFer, Rdist, Ant_RawSourceDist(i_ant+1,i_chunk), &
-      !      AntPeak_OffSt(i_ant+1), SamplOff_1-IntfBase
-      !
-      !
-      !Call RelDist(VoxLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-      dt_AntPix_0 =Rdist - AntPeak_OffSt(i_ant) ! + FitDelay(i_ant)  ! cut&paste from EI_PolGridDel
-      dt_AntPix_1 =Rdist - AntPeak_OffSt(i_ant+1) ! + FitDelay(i_ant+1)
-      dphase_0 = exp(-ipi*dt_AntPix_0 /IntfNuDim)
-      dphase_1 = exp(-ipi*dt_AntPix_1 /IntfNuDim)
-      Phase_0 =exp(-ipi*dt_AntPix_0 *inu1/IntfNuDim)
-      Phase_1 =exp(-ipi*dt_AntPix_1 *inu1/IntfNuDim)
-      !
-      !
-      !
       !
       If(SamplOff_0.lt.0 .or. SamplOff_1.lt.0) Then
          Write(2,*) 'Position in reference antenna too close to beginning of time-trace for source @',VoxLoc,' in chunk#',i_chunk
@@ -772,30 +689,23 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
          Write(2,*) 'Position in reference antenna too close to end of time-trace for source @',VoxLoc,' in chunk#',i_chunk
          Stop 'EI_PolSetUp: too small trailing buffer'
       EndIf
-      RTime(:)=REAL(CTime_spectr(SamplOff_0+1:SamplOff_0+IntfDim,i_ant,i_chunk))*NormEven  ! IntfBase=SumStrt - IntfLead
-      Call RFTransform_CF(RTime,Cnu0(0,j_IntFer))
+      RTime(:)=REAL(CTime_spectr(SamplOff_0+1:SamplOff_0+IntfDim,i_ant,i_chunk))*NormEven
+      Call RFTransform_CF(RTime,Cnu0(0))
       RTime(:)=REAL(CTime_spectr(SamplOff_1+1:SamplOff_1+IntfDim,i_ant+1,i_chunk))*NormOdd
-      Call RFTransform_CF(RTime,Cnu1(0,j_IntFer))
+      Call RFTransform_CF(RTime,Cnu1(0))
       !
-      nu_p(:)=0.
-      nu_t(:)=0.
       Do i_nu=inu1,inu2   ! Increment frequency spectrum with this antenna
          nu=i_nu*dnu
          i_freq=Int(nu)
          dfreq=nu-i_freq ! phase-shifts are zero for centran pixel, no timeshift!!
-         nu_p(i_nu) =(  ((1.-dfreq)*Ji_p0(i_freq) + dfreq*Ji_p0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
-                        ((1.-dfreq)*Ji_p1(i_freq) + dfreq*Ji_p1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1 ) *Gain(i_freq)
-         nu_t(i_nu) =(  ((1.-dfreq)*Ji_t0(i_freq) + dfreq*Ji_t0(i_freq+1)) *Cnu0(i_nu,j_IntFer)*phase_0 + &
-                        ((1.-dfreq)*Ji_t1(i_freq) + dfreq*Ji_t1(i_freq+1)) *Cnu1(i_nu,j_IntFer)*phase_1 ) *Gain(i_freq)
+         Cnu_p0(i_nu,j_IntFer)= ((1.-dfreq)*Ji_p0(i_freq)*Gain(i_freq) + dfreq*Ji_p0(i_freq+1)*Gain(i_freq+1))* Cnu0(i_nu)
+         Cnu_p1(i_nu,j_IntFer)= ((1.-dfreq)*Ji_p1(i_freq)*Gain(i_freq) + dfreq*Ji_p1(i_freq+1)*Gain(i_freq+1))* Cnu1(i_nu)
+         Cnu_t0(i_nu,j_IntFer)= ((1.-dfreq)*Ji_t0(i_freq)*Gain(i_freq) + dfreq*Ji_t0(i_freq+1)*Gain(i_freq+1))* Cnu0(i_nu)
+         Cnu_t1(i_nu,j_IntFer)= ((1.-dfreq)*Ji_t1(i_freq)*Gain(i_freq) + dfreq*Ji_t1(i_freq+1)*Gain(i_freq+1))* Cnu1(i_nu)
          ! Gain(i_freq)=sqrt( SUM(J^2) )/(Freq_max-Freq_min) ; to neutralize effect Ji on frequency, calculated in antenna_function
-         phase_0 =phase_0 *dphase_0
-         phase_1 =phase_1 *dphase_1
       Enddo
-      ! convert to time
-      Call RFTransform_CF2CT(nu_p(0),CTime_p(1,j_IntFer) )  ! needed for the peak/background estimate
-      Call RFTransform_CF2CT(nu_t(0),CTime_t(1,j_IntFer) )
-   Enddo    !  j_IntFer=1,Nr_IntFer
-   !
+      !
+   EndDo
    !Write(2,*) 'EI_PolSetUp:CTime_p(1:10_IntFer)=',CTime_p(1:10,1)
    !Write(2,*) 'EI_PolSetUp:NormOdd', IntfBase, NormOdd
    !Write(2,*) 'EI_PolSetUp:Noise_p(1:10)', Noise_p(1:10)
@@ -803,113 +713,6 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0
    Return
 End Subroutine EI_PolSetUp
 !--------------------
-!--------------------
-Subroutine TimeTracePlot(j_IntFer, IntfBase, i_chunk, VoxLoc,Windw, Label)
-   use constants, only : dp
-   use DataConstants, only : DataFolder, OutFileLabel
-   use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Ant_RawSourceDist
-   use Chunk_AntInfo, only : NormOdd, NormEven  ! Powr_eo !, NAnt_eo
-   Use Interferom_Pars, only :  IntFer_ant, IntfNuDim, CTime_p, CTime_t
-   !Use Interferom_Pars, only :  PowerScale
-   use GLEplots, only : GLEplotControl
-   Implicit none
-   Integer, intent(in) :: j_IntFer, i_chunk, IntfBase, Windw
-   Real(dp), intent(in) :: VoxLoc(1:3)
-   Character(LEN=8), intent(in) :: Label
-   Real(dp) :: RDist
-   Integer :: i_ant, i_s, i, base
-   ! Just for checking causality on the first pass
-   !j_IntFer=1
-   !PowerScale=1.
-   !NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
-   !NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
-   i_ant=IntFer_ant(j_IntFer,i_chunk)
-   Call RelDist(VoxLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-   Rdist =Rdist - Ant_RawSourceDist(i_ant,i_chunk)
-   i_s=NINT(Rdist)+IntfNuDim-Windw/2
-   base=IntfBase + i_s
-   !write(txt,"(I2.2)") j_IntFer
-   !write(2,*) 'E-field hilbert envelope for the central pixel for the antenna pair ',TRIM(Label),' written to:',&
-   !      trim(DataFolder)//TRIM(OutFileLabel)//'Trace_'//TRIM(Label)//'.dat',' shift=',NINT(Rdist ),' samples'
-   OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'Trace_'//TRIM(Label)//'.dat')
-   Write(30,*) 1,Windw
-      Write(2,*) 'In TimeTracePlot, data written to file:', trim(DataFolder)//TRIM(OutFileLabel)//'Trace_'//TRIM(Label)//'.dat'
-      write(2,*) 'Header: base,base+Windw, data range=',1, Windw
-      Write(2,*) 1,Windw
-   Do i=1, Windw
-      write(30,"(i5,40G12.4)") i,ABS(CTime_spectr(Base+i,i_ant,i_chunk))*NormEven &
-         ,ABS(CTime_spectr(Base+i,i_ant+1,i_chunk))*NormOdd &
-         ,Abs(CTime_p(i_s+i,j_IntFer)), Abs(CTime_t(i_s+i,j_IntFer))
-   EndDo
-   Close(Unit=30)
-   Call GLEplotControl(PlotType='PlotTimeTraces', PlotName='TimeTraces_'//TRIM(Label)//TRIM(OutFileLabel), &
-         PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//' "'//TRIM(Label)//'"' ) ! does NOT work in windows
-   !
-   Return
-End Subroutine TimeTracePlot
-!--------------------
-Subroutine  EI_Weights(Nr_IntFer, i_sample, i_chunk, PixLoc, AntPeak_OffSt, W_ap, W_at)
-   use constants, only : dp
-   use Chunk_AntInfo, only :  Ant_pos, Ant_RawSourceDist  , Ant_Stations, Ant_IDs
-   Use Interferom_Pars, only :  N_smth, smooth, IntFer_ant, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t
-   Use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntFerCh
-   use StationMnemonics, only : Statn_ID2Mnem
-   Implicit none
-   Integer, intent(in) :: Nr_IntFer, i_sample, i_chunk  ! IntfLead
-   Real(dp), intent(in) :: PixLoc(1:3), AntPeak_OffSt(*)
-   Real(dp), intent(out) :: W_ap(1:Nr_IntFer), W_at(1:Nr_IntFer)
-   !Complex(dp), intent(in) :: CTime_p(1:2*IntfNuDim,1:Nr_IntFer), CTime_t(1:2*IntfNuDim,1:Nr_IntFer)
-   !Real(dp),intent(in) :: Noise_p(1:Nr_IntFer), Noise_t(1:Nr_IntFer)
-   Real(dp) :: RDist, pow_p, pow_t
-   Integer :: j_IntFer, i_ant, i_s, j
-   !
-   !Nr_IntFer=Nr_IntFerCh(i_chunk)
-   j_IntFer=1
-   i_ant=IntFer_ant(j_IntFer,i_chunk)
-   Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-   Rdist =Rdist - AntPeak_OffSt(i_ant)
-   i_s=i_sample + NINT(Rdist)  ! approximately correct, upto rounding errors for dt
-   !Write(2,*) 'CTime_p(i_s+j,j_IntFer):',i_s,CTime_p(i_s:i_s+10,1)
-  ! flush(unit=2)
-   !Write(2,*) 'CTime_t(i_s+j,j_IntFer):',i_s,CTime_t(i_s,:)
-   !
-   Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-      !  Get interferometry phase shifts
-      i_ant=IntFer_ant(j_IntFer,i_chunk)
-      Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-      !Rdist - Ant_RawSourceDist(i_ant,i_chunk) + FitDelay(i_ant)
-      !Note that for calculational speed the fitdelays are assumed to be of minor importance for determining the
-      ! signal-over-noise values, and thus the wieghting factors.
-      Rdist =Rdist - AntPeak_OffSt(i_ant) ! Used only for weighting, fitted shifts not included
-      i_s=i_sample + NINT(Rdist)  ! approximately correct, upto rounding errors for dt
-   !write(2,*) 'i_s',i_s,j_intFer, i_ant, rdist, PixLoc(:)
-   !flush(unit=2)
-      Pow_p=0.
-      Pow_t=0.
-      Do j=-N_smth,N_smth ! pulse power, fold with smoothing function
-         Pow_p= Pow_p + smooth(j)*Abs(CTime_p(i_s+j,j_IntFer))**2
-         Pow_t= Pow_t + smooth(j)*Abs(CTime_t(i_s+j,j_IntFer))**2
-      Enddo
-      !write(2,*) 'EI_Weights:',j_IntFer, Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),Ant_IDs(I_ant,i_chunk) &
-      !   , Pow_p, Pow_t, Noise_p(j_IntFer),Noise_t(j_IntFer)
-      !write(2,*) REAL(CTime_p(i_s-2:i_s+2,j_IntFer)),';',REAL(CTime_t(i_s-2:i_s+2,j_IntFer))
-      !The amplitudes are fit, so the sqrt(W) should be equal to the inverse of the error on the amplitude, which is the amplitude of the noise
-      !W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.01*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
-      !W_at(j_IntFer)=1./(Noise_t(j_IntFer)+0.01*Pow_t) ! =1./(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
-      W_ap(j_IntFer)=1./(Noise_p(j_IntFer)+0.0*Pow_p) ! =1./(Noise_p(j_IntFer)*sqrt(Pow_p/Noise_p(j_IntFer)+1.))
-      W_at(j_IntFer)=1./(Noise_t(j_IntFer)+0.0*Pow_t) ! =1./(Noise_t(j_IntFer)*sqrt(Pow_t/Noise_t(j_IntFer)+1.))
-      !w_p=I_Scale*W_ap(j_IntFer)  ! to have alpha of order unity
-      !w_t=I_Scale*W_at(j_IntFer)
-      ! For chi-square calculation, sum_ak[ W_ak * E_ak^2] :
-      !Esq_ak=Esq_ak + (Pow_p*W_ap(j_IntFer) + Pow_t*W_at(j_IntFer))  ! Used in approximation to chi^2
-      !write(2,*) 'Noise_p(',Noise_p(j_IntFer),Pow_p
-   Enddo
-   !write(2,*) 'Noise_p(',Noise_p(1:10)
-   !write(2,*) 'W_ap(',W_ap(1:10)
-   !Stop
-   !
-   Return
-End Subroutine EI_Weights
 ! ------------------------
 Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
     use constants, only : dp
@@ -946,7 +749,7 @@ Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
    Enddo
 End Subroutine GetInterfFitDelay
 ! ------------------------
-Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int, W_ap, W_at)
+Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
    use constants, only : dp
    use DataConstants, only : Station_nrMax, Ant_nrMax
    use ThisSource, only :  PeakNrTotal, PeakPos, ChunkNr
@@ -955,10 +758,10 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int, W_ap, W_at)
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
    !use FitParams, only : N_FitPar, N_FitStatTim, FitParam, X_Offset
    !use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset
-   use StationMnemonics, only : Statn_ID2Mnem, Station_ID2Mnem
+   use StationMnemonics, only : Statn_ID2Mnem ! , Station_ID2Mnem
    use unque,only : Double_RI_sort
    implicit none
-   real(dp), intent(in) :: DelChi(-N_fit:+N_fit,1:2*Nr_IntFerMx), W_ap(*), W_at(*)
+   real(dp), intent(in) :: DelChi(-N_fit:+N_fit,1:2*Nr_IntFerMx)
    integer, intent(in) :: i_chunk
    real(dp), intent(out) :: PartChiSq(1:Nr_IntFerMx)
    integer, intent(out) :: PartChi2Int(1:Nr_IntFerMx)
@@ -992,7 +795,7 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int, W_ap, W_at)
       !enddo
       If(PartChiSq(j_IntFer).gt. (2*ChiSq)) Then
          Write(2,"(I5,A6,I7, 3F7.2, 2F9.3)") j_IntFer, Statn_ID2Mnem(Station_ID), Antenna_SAI, PartChiSq(j_IntFer),&
-               PartChiSq_p(j_IntFer), PartChiSq_t(j_IntFer), W_ap(j_IntFer), W_at(j_IntFer)
+               PartChiSq_p(j_IntFer), PartChiSq_t(j_IntFer)
       EndIf
    Enddo
    Call Double_RI_sort(Nr_IntferCh(i_chunk),PartChiSq,PartChi2Int)

@@ -180,9 +180,9 @@ Subroutine ImpulsImagRun
    !
    Call GLEplotControl(SpecialCmnd='cd '//TRIM(ProgramFolder))
    If(Windows) Then
-      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track-.f90 %LIBRARY%')
+      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track.f90 %LIBRARY%')
    Else
-      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track-.f90 ${LIBRARY}')
+      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track.f90 ${LIBRARY}')
    EndIf
    Call GLEplotControl(SpecialCmnd='cd '//TRIM(FlashFolder))
    Call GLEplotControl(SpecialCmnd=TRIM(ProgramFolder)//'TrackExe.exe  <'//TRIM(lname))

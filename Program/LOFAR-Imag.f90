@@ -1,5 +1,18 @@
  !----------------
  !   Main program
+!
+!@software{scholten_olaf_2021_6320331,
+!  author       = {Scholten, Olaf},
+!  title        = {LOFAR Lightning Imaging},
+!  month        = march,
+!  year         = 2022,
+!  note         = {{v22.2 of this package offers the possibility to perform time calibration using the TRI-D imager using a chi-square steepest descent method. This version (or a slightly older version) has been used in https://arxiv.org/abs/2110.02547 which has been accepted for publication in Phys Rev D.}},
+!  publisher    = {Zenodo},
+!  version      = {v22.2},
+!  doi          = {10.5281/zenodo.6320331},
+!  url          = {https://doi.org/10.5281/zenodo.6320331}
+!}
+!
  !-------------------------------------------
  !-----------------16/02/2022@14:04:57.575--------------------------
  !------- Source file:LOFAR-Imag.f90 ----
