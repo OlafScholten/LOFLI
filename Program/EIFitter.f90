@@ -532,17 +532,17 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       !Power_t(:)=Power_t(:)/(2*N_s+1.)
       !AveAmp_ap(:)=AveAmp_ap(:)/(2*N_s+1.)
       !AveAmp_at(:)=AveAmp_at(:)/(2*N_s+1.)
-      write(2,"(10A)")  'j_Int, i_ant, Ant_IDs', &
-         'Statn_ID, Weight^2', ';',&
-         'dChi_ap, sqrt(Power_p), sqrt(mod)',';',&
-         ' dChi_at, sqrt(Power_t), sqrt(mod),'
-      Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-         i_ant=IntFer_ant(j_IntFer,i_chunk)
-         write(2,"(I4,I5,I6,A, F7.2,A,3F9.3,A,3F9.3)")  j_IntFer, i_ant, Ant_IDs(I_ant,i_chunk), &
-            Statn_ID2Mnem(Ant_Stations(I_ant,i_chunk)), SUM(wap_PB(:,j_IntFer)*wap_PB(:,j_IntFer))*1.e3, ';',&
-             dChi_ap(j_IntFer), sqrt(Power_p(j_IntFer)), sqrt(AveAmp_ap(j_IntFer)),';',&
-             dChi_at(j_IntFer), sqrt(Power_t(j_IntFer)), sqrt(AveAmp_at(j_IntFer))
-      Enddo
+      !write(2,"(10A)")  'j_Int, i_ant, Ant_IDs', &
+      !   'Statn_ID, Weight^2', ';',&
+      !   'dChi_ap, sqrt(Power_p), sqrt(mod)',';',&
+      !   ' dChi_at, sqrt(Power_t), sqrt(mod),'
+      !Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
+      !   i_ant=IntFer_ant(j_IntFer,i_chunk)
+      !   write(2,"(I4,I5,I6,A, F7.2,A,3F9.3,A,3F9.3)")  j_IntFer, i_ant, Ant_IDs(I_ant,i_chunk), &
+      !      Statn_ID2Mnem(Ant_Stations(I_ant,i_chunk)), SUM(wap_PB(:,j_IntFer)*wap_PB(:,j_IntFer))*1.e3, ';',&
+      !       dChi_ap(j_IntFer), sqrt(Power_p(j_IntFer)), sqrt(AveAmp_ap(j_IntFer)),';',&
+      !       dChi_at(j_IntFer), sqrt(Power_t(j_IntFer)), sqrt(AveAmp_at(j_IntFer))
+      !Enddo
       !Close(UNIT=30)
       Close(UNIT=31)
       Close(UNIT=32)

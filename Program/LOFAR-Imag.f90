@@ -254,6 +254,7 @@
     !Include 'SIOption.f90'
     Include 'ECallibrOption.f90'
     Include 'System_Utilities.f90'
+    Include 'PeakInterferoOption.f90'
 !-----------------------------------
 Program LOFAR_Imaging
 !
@@ -415,6 +416,11 @@ Program LOFAR_Imaging
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='FC'//TRIM(OutFileLabel)//'.out')
          RunMode=7
          Sources1='Field Calibration for TRI-D Imager (Interferometry)'
+      CASE("P")  ! PeakInterferometry
+         Write(*,*) 'PeakInterferometry, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='PkInt'//TRIM(OutFileLabel)//'.out')
+         RunMode=8
+         Sources1='PeakInterferometry (Interferometry)'
       CASE DEFAULT  ! Help
          Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
          Write(*,*) '- "Explore" for first exploration of this flash to get some idea of the layout and timing'
@@ -664,6 +670,28 @@ Program LOFAR_Imaging
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+      CASE("P")  ! Field Calibration; Interferometric               RunMode=7
+         ! Pre-process inputdata for sources to be used in calibration
+         ChunkNr_dim=N_Chunk_max
+         PeakNr_dim=50
+         PeakNrTotal=50  ! one of these is obsolete now
+         Interferometry=.true.
+         FitRange_Samples=7
+         Dual=.false.
+         CurtainHalfWidth=-1
+         Polariz=Dual  !
+         CalibratedOnly=.true.
+         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
+         N_smth=IntfSmoothWin
+         !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
+         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+            'Produce a plot of the cross-correlation functions (real or absolute).')
+         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
+         Call PrintValues(AntennaRange,'AntennaRange', &
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
+         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
+         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'
    End SELECT
@@ -810,6 +838,10 @@ Program LOFAR_Imaging
          If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
          !
+      CASE(8)
+         Call PeakInterferoOption
+         If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
+         Call GLEplotControl( Submit=.true.)
   End SELECT
 
    stop

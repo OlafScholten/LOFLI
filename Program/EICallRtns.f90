@@ -168,7 +168,7 @@ Subroutine EI_PolarizPeak(i_Peak)
    use constants, only : dp
    use DataConstants, only : Ant_nrMax
    use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
-   use Interferom_Pars, only : W_ap, W_at, Cnu0, Cnu1, IntfNuDim, CTime_p, CTime_t, Noise_p, Noise_t, AntPeak_OffSt
+   use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, IntfNuDim, AntPeak_OffSt
    Use Interferom_Pars, only :  N_Smth, N_fit, Chi2pDF
    use ThisSource, only : ChunkNr, PeakPos, sourcepos, PeakChiSQ
    Implicit none
@@ -189,17 +189,15 @@ Subroutine EI_PolarizPeak(i_Peak)
    IntfBase= Peakpos(i_Peak) - IntfNuDim
    Windw=3*N_Smth
    Call GetInterfFitDelay(i_chunk, FitDelay)
-   Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(1,i_Peak), &
-      AntPeak_OffSt(1,i_Peak), Cnu0(0,1,i_Peak), Cnu1(0,1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
+   Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
+      Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak))
    Windw=3*N_Smth
-   Call EI_Weights(Nr_IntFerCh(i_chunk), IntfNuDim, i_chunk, SourcePos(1,i_Peak), &
-      AntPeak_OffSt(1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
    !write(2,*) 'EI_PolarizPeak:W_ap='
    write(Label,"('Pk ',i4.2)") i_Peak
-   Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), &
-      AntPeak_OffSt(1,i_Peak), W_ap(1,i_peak), W_at(1,i_peak), Cnu0(0,1,i_peak), Cnu1(0,1,i_peak), Outpt, DelChi, Label)
+   Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
+      Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), Outpt, DelChi, Label)
    PeakChiSQ(i_Peak)=Chi2pDF
-   Call WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChiSqInt, W_ap(1,i_peak), W_at(1,i_peak))
+   Call WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChiSqInt)
    !j_IntFer=PartChiSqInt(Nr_IntFerCh(i_chunk))
    !write(Label,"(i2.2,i3.3)") i_Peak,j_IntFer
    !Call TimeTracePlot(j_IntFer, IntfBase, i_chunk, SourcePos(1,i_Peak), Windw, Label)
@@ -215,10 +213,8 @@ Subroutine EI_PolarizPeak(i_Peak)
          VoxLoc(2)=SourcePos(2,i_Peak) + i_2*del_2
          VoxLoc(3)=SourcePos(3,i_Peak)
          write(Label,"('Gr ',I2,',',i2)") i_1,i_2
-         Call EI_Weights(Nr_IntFerCh(i_chunk), IntfNuDim, i_chunk, VoxLoc(:),  &
-            AntPeak_OffSt(1,i_Peak), W_ap(1,i_Peak), W_at(1,i_Peak))
          Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, VoxLoc(:), AntPeak_OffSt(1,i_Peak), &
-            W_ap(1,i_peak), W_at(1,i_peak), Cnu0(0,1,i_peak), Cnu1(0,1,i_peak), Outpt, DelChi, Label)
+            Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak),  Outpt, DelChi, Label)
       Enddo
    Enddo
    !

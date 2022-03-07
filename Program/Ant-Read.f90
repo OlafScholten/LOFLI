@@ -167,6 +167,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Sample_Offset = INT(T_Offset) ! in units of sample size
               SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
               Dset_offset=Start_time(i_chunk) + Sample_Offset - SAMPLE_NUMBER_first
+              !write(2,*) 'Start_time(i_chunk),:',Start_time(i_chunk), Sample_Offset, SAMPLE_NUMBER_first
               !If(Ant_nr(1).eq.0) write(2,*) ', TimeOffset', T_Offset, Dset_Offset,DATA_LENGTH, Sample_Offset - SAMPLE_NUMBER_first
               If(Dset_offset .gt.DATA_LENGTH) then
                   If(Diagnostics) write(2,*) '****DATA_LENGTH=',Dset_offset, ' greater than ',DATA_LENGTH

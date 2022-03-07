@@ -163,7 +163,8 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    !   STOP
          !
          !SourceSPos(:,i_eo,i_peakS)=SourcePos(:,1)
-         Peakpos_0=Peakpos(1) + NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt
+         !Peakpos_0=Peakpos(1) + NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt
+         Peakpos_0=Peakpos(1) - NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt; sign changed to - March 7, 2022
          DistMax=sqrt(sum(SourcePos(:,1)*SourcePos(:,1)))
          PeakNrSearched= PeakNrSearched +1
          !N_EffAnt, Max_EffAnt
@@ -175,6 +176,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
             .and. (FitQual .lt. ChiSq_lim)) then
             Wl=PeakSWl(i_peakS,i_eo)
             Wu=PeakSWu(i_peakS,i_eo)
+            !write(2,*) 'NINT(Peak_Offst(1)):',NINT(Peak_Offst(1))
             Write(units(i_eo),"(I8,', ',3(f12.4,', '),f12.9,', ',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','))") & ! ID (N,E,z) t chi^2 Diag(covariance)
                (TimeFrame*1000+i_peakS),SourcePos(:,1), &
                (Start_Time(1)+Peakpos_0)*sample-DistMax*Refrac/c_mps, FitQual &
