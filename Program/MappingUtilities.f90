@@ -227,8 +227,8 @@ Module Calibration
 Contains
 ! -------------------------------------------------
 Subroutine ReadCalib()
-    use constants, only : dp,sample
-    use DataConstants, only : Station_nrMax, DataFolder, Ant_nrMax, Calibrations! , Diagnostics
+    use constants, only : dp,sample, HeightCorrectIndxRef
+    use DataConstants, only : Station_nrMax, DataFolder, Ant_nrMax, Calibrations, RunMode ! , Diagnostics
     !Use Chunk_AntInfo, only : Fine_STMnm, Fine_STDelay, Fine_AntDelay, SAI_AntDelay, Nr_AntDelay, Nr_StatDelay, CalibrDelay ! all these are output from this routine
     Implicit none
     Character(len=5) :: txt !, Station_Mnem
@@ -237,8 +237,10 @@ Subroutine ReadCalib()
     Real(dp), save :: LOFAR_STDelay(Station_nrMax) ! Archaic
     integer :: nxx, i, SAI
     Integer :: i_LOFAR, i_fine, n
-    Logical :: Old, FMT2022
-    Character(len=60) :: tst !, Station_Mnem
+    Logical :: Old, FMT2022, IndxRef
+    Character(len=80) :: tst !, Station_Mnem
+    Character(len=3) :: Mrk
+    Character(len=25) :: date,TxtIndx
     !
    i_LOFAR=0
    Open(unit=9,STATUS='old',ACTION='read', FILE = 'Book/StationCalibrations.dat', IOSTAT=nxx) ! trim(DataFolder)//
@@ -275,18 +277,32 @@ Subroutine ReadCalib()
    Endif
    !
    read(9,"(A60)") tst  ! Check for a new-style calibration file
-   read(tst,*,IOSTAT=nxx) SAI, Delay,n  ! Check for a new-style calibration file
+   read(tst,*,IOSTAT=nxx) Mrk, date, TxtIndx, IndxRef  ! Check for Height correction Index Ref
+   !write(2,*) 'tst:',tst
+   !write(2,*) 'From ReadCalib:nxx=',nxx,Mrk,i,' ', date,' ', TxtIndx,' ', IndxRef
    If(nxx.eq.0) Then
       FMT2022=.true.
       i_LOFAR=0  ! the data of  'Book/StationCalibrations.dat' (Archaic) have already been included in the station delays
+      write(2,*) 'From ReadCalib:',Mrk,' ', date,' ', TxtIndx,' ', IndxRef
    Else
-      FMT2022=.false.
-      If(i_LOFAR.eq.0) Then
-         write(2,*) 'In "ReadCalib": something went wrong reading the file StationCalibrations.dat'
-         Stop 'Error in ReadCalib'
+      IndxRef=.false.  ! In the old days no correction for the height dependence of the index of refraction was used
+      read(tst,*,IOSTAT=nxx) SAI, Delay,n  ! Check for a new-style calibration file
+      If(nxx.eq.0) Then
+         FMT2022=.true.
+         i_LOFAR=0  ! the data of  'Book/StationCalibrations.dat' (Archaic) have already been included in the station delays
+      Else
+         FMT2022=.false.
+         If(i_LOFAR.eq.0) Then
+            write(2,*) 'In "ReadCalib": something went wrong reading the file StationCalibrations.dat'
+            Stop 'Error in ReadCalib'
+         EndIf
       EndIf
+      rewind(unit=9)
    EndIf
-   rewind(unit=9)
+   If(runmode.ne.2 .and. runmode.ne.7) Then
+      HeightCorrectIndxRef= IndxRef
+      write(2,*) 'runmode, HeightCorrectIndxRef:',runmode, HeightCorrectIndxRef
+   EndIf
    !
    n=-1
    Do       ! Read single antenna calibrations
@@ -379,11 +395,11 @@ End Subroutine Station_ID2Calib
 !============================
 Subroutine WriteCalibration ! MergeFine
 ! Merge values of FineOffset with input from 'FineCalibrations.dat'
-   use constants, only : dp, sample
+   use constants, only : dp, sample, HeightCorrectIndxRef
    use DataConstants, only : Station_nrMax, Ant_nrMax, Calibrations, RunMode  ! , DataFolder
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Tot_UniqueAnt, Nr_UniqueAnt
    !Use Chunk_AntInfo, only : Fine_STMnm, Fine_STDelay, Fine_AntDelay, SAI_AntDelay, Nr_AntDelay, Nr_StatDelay, CalibrDelay ! all these are generated in 'ReadCalib'
-   use FitParams, only : Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt
+   use FitParams, only : Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt, FitQual
    use unque,only : Double_IR_sort
    use StationMnemonics, only : Station_ID2Mnem
    Implicit none
@@ -399,9 +415,9 @@ Subroutine WriteCalibration ! MergeFine
        DATE_T(1),DATE_T(2),DATE_T(3),(DATE_T(i),i=5,6)
    !
    i_fine=Nr_AntDelay
-   UpDate_STDelay(:)=0.  ! merge with station/antenna delays obtained from fir
+   UpDate_STDelay(:)=0.  ! merge with station/antenna delays obtained from fit
    If(Fit_AntOffset) then
-      Do i_stat=1,Nr_UniqueStat  ! set fine-offset to obtained value from previous fit
+      Do i_stat=1,Nr_UniqueStat  ! set fine-offset to values obtained from present fit
         !Stat_ID=Unique_StatID(i_stat)
         !write(*,*) 'i-asai',Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)
         Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
@@ -474,7 +490,8 @@ Subroutine WriteCalibration ! MergeFine
       cmnt="FldCal"
    EndIf
    Open(unit=19,STATUS='unknown',ACTION='write', FILE = 'Book/Calibrations'//Date_mn//'.dat', IOSTAT=nxx)  !  trim(DataFolder)//
-   write(2,*) 'New: Calibrations="','Calibrations'//Date_mn//'.dat','" ! '//cmnt  ! trim(DataFolder)//
+   write(2,"(A,1x,L,F6.2)") 'New: Calibrations="Calibrations'//Date_mn//'.dat" ! '//cmnt,HeightCorrectIndxRef, FitQual  ! trim(DataFolder)//
+   Write(19,"(A4,1x,A,A,L)") '!01 ',Date_mn,' HeightCorrectIndxRef= ',HeightCorrectIndxRef
    Do i=1,Nr_AntDelay
       k=NINT(SAI_AntDelay(i)/1000.)
       Call Station_ID2Mnem(k,Station_Mnem)
@@ -513,7 +530,7 @@ Subroutine WriteCalibration ! MergeFine
    Enddo
    Nr_StatDelay=i_fine
    !
-   write(2,"(' station',1x,'NewFineCalibrations',5x,'Updated with')")
+   write(2,"(' station',1x,'NewCalibrations; Updated with [samples]')")
    Do i=1,i_fine
       write(2,"(1x,A5,3F13.3)") Fine_STMnm(i), Fine_STDelay(i), UpDate_STDelay(i)
       write(19,"(1x,A5,F14.4)") Fine_STMnm(i), Fine_STDelay(i)
@@ -614,21 +631,112 @@ End Subroutine ITRF2LOFAR
 !================================================
 Subroutine RelDist(Source,LFRAnt,RDist)
 !   RDist is distance relative to center of CS002, in units of time-samples
-    use constants, only : dp,sample,c_mps,Refrac
+!  RDist= dt_(core-source) - dt_(ant-source)=dt_{cs} - dt_{as}
+! t_core=t_s + dt_cs ; t_ant=t_s + dt_as  ; t_s=t_ant-dt_as
+! thus: t_core=t_ant + Rdist
+    use constants, only : dp,sample,c_mps
     implicit none
     real(dp), intent(in) :: Source(3)
     real(dp), intent(in) :: LFRAnt(3)
     real(dp), intent(out) :: RDist
     Real(dp) :: D
+   Real(dp) :: IndxRefrac
+   Real(dp), external :: RefracIndex
     !write(2,*) 'source',source
     !write(2,*) 'LFRAnt',LFRAnt
     D=sum((Source(:)-LFRAnt(:))*(Source(:)-LFRAnt(:)))
     RDist = sqrt(D)
     D=sum(Source(:)*Source(:))  ! core=center station CS002 is at zero
     RDist = RDist - sqrt(D)         ! units of [meter]
-    RDist = Rdist*Refrac/(c_mps*sample) ! Convert to units of [samples]
+    RDist = Rdist*RefracIndex( Source(3) )/(c_mps*sample) ! Convert to units of [samples]
     Return
 End Subroutine RelDist
+!================================================
+Real(kind=8) Function tShift_ms(Source)  !
+    use constants, only : dp,sample,c_mps
+    implicit none
+    real(dp), intent(in) :: Source(1:3)
+    Real(dp), external :: RefracIndex
+    !real(dp), intent(out) :: tShift
+    tShift_ms = RefracIndex(Source(3))*sqrt(Source(1)*Source(1)+Source(2)*Source(2)+Source(3)*Source(3))*1000./c_mps
+    Return
+End Function tShift_ms
+!================================================    Real(dp), external ::
+Real(kind=8) Function tShift_smpl(Source)  !
+    use constants, only : dp,sample,c_mps
+    implicit none
+    real(dp), intent(in) :: Source(1:3)
+    Real(dp), external :: RefracIndex
+    !real(dp), intent(out) :: tShift
+    tShift_smpl = RefracIndex(Source(3))*sqrt(Source(1)*Source(1)+Source(2)*Source(2)+Source(3)*Source(3))/(c_mps*sample)
+    Return
+End Function tShift_smpl
+!================================================
+Real(kind=8) Function RefracIndex(h)
+!        Parameters of atmospheric density as used in Corsika
+    use constants, only : dp,HeightCorrectIndxRef
+    implicit none
+    integer, parameter :: AtmHei_Dim=1000
+    Real(dp), parameter :: AtmHei_step=10.d0 ! [m]
+    real(dp), intent(in) :: h
+    Real(dp), save :: Xi(0:AtmHei_Dim)
+    Real(dp) :: hi
+    Logical, save :: First=.true.
+    integer :: i
+    !
+    If (First) Then ! Calculate atmosphere (from MGMR3D)
+      First=.false.
+      Call AveIndxRefr(AtmHei_dim,AtmHei_step, xi)
+    EndIf
+    If(HeightCorrectIndxRef) Then
+       hi=h/AtmHei_step
+       i=INT(hi)
+       If(i.ge.AtmHei_Dim) then
+         RefracIndex=xi(AtmHei_Dim)
+       ElseIf(i.gt.0) then
+         RefracIndex=xi(i)*(hi-i) + xi(i+1)*(i+1.-hi)
+       Else
+         RefracIndex=Xi(0)
+       EndIf
+    Else
+       RefracIndex=Xi(0)
+    EndIf
+    !Write(2,*) 'Function RefracIndex:',h,RefracIndex
+End Function RefracIndex
+!=========================================
+Subroutine AveIndxRefr(AtmHei_dim,AtmHei_step, xi)
+   use constants, only : dp
+   implicit none
+   integer, intent(in) :: AtmHei_Dim
+   Real(dp), intent(in) :: AtmHei_step ! [m]
+   Real(dp), intent(out) :: Xi(0:AtmHei_Dim)
+   !REAL(dp), parameter :: Refrac=1.000267394d0 ! Index of refraction at sea level (20^0, 100% hum) From https://emtoolbox.nist.gov/Wavelength/Documentation.asp
+   REAL(dp), parameter :: Refrac= 1.0003     ! Index of refraction at sea level
+   real(dp) :: height
+   real(dp):: mass,b,c,RefOrho
+   integer :: i
+   !
+   xi(0)=Refrac
+   mass=0.
+   RefOrho=(xi(0)-1.d0)*9941.8638d0/1222.6562d0
+   do i = 1, AtmHei_dim
+      height=i*AtmHei_step  ! distance to ground along shower axis
+       if (height.ge.10d3) then
+            b = 1305.5948; c = 6361.4304
+       elseif (height.ge.4d3) then
+            b = 1144.9069d0; c = 8781.5355d0
+       else
+            b = 1222.6562d0; c = 9941.8638d0
+       endif
+      mass = mass + (b/c) * exp(-height/c) * AtmHei_step ! assume density is about constant
+      !write(2,*) height, a, PenDepth(0)-X_rh-RPenDepth(i)
+      !
+      ! calculate  averaged refractivity per meter
+      xi(i) = 1.d0+ RefOrho* mass/height   ! mean index of refraction for rays from height to 0
+    end do
+    !write(2,*) 'Xi:',Xi(0),Xi(1),Xi(10),Xi(100),Xi(1000)
+    Return
+End Subroutine AveIndxRefr
 !=========================================
 Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist

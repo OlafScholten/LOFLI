@@ -29,6 +29,8 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
             BatchFile='ATRID'
          CASE(7)  ! InterfSelect; TRID imager
             BatchFile='Afig-FldCal'
+         CASE(8)  ! PeakInterferometry
+            BatchFile='Afig-PkInt'
          CASE DEFAULT
             write(2,*) 'not a foreseen plotting RunMode:',RunMode
             write(*,*) 'not a foreseen plotting RunMode:',RunMode
@@ -77,8 +79,8 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
             Write(2,*) 'GLE should be running now'
          Else
             If(RunMode.eq.2) Then
-               write(10,"('rm ',A,'{LOFAR_Corr*.dat,CCPeakPhase*.dat}')") TRIM(DataFolder)
-               write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
+              write(10,"('rm ',A,'{LOFAR_Corr*.dat,CCPeakPhase*.dat}')") TRIM(DataFolder)
+      !!         write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
             EndIf
             Close(unit=10)
             shellin = 'chmod 755 '//TRIM(BatchFile)//'.sh'

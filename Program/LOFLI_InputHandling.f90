@@ -124,7 +124,7 @@ MODULE LOFLI_Input
    End Subroutine PrintParIntro
 !
    Subroutine ReadSourceTimeLoc(StartTime_ms, CenLoc)
-      use constants, only : dp, Sample, Refrac, c_mps
+      use constants, only : dp, Sample, c_mps
       use Chunk_AntInfo, only : TimeBase
       Implicit none
       Real(dp), intent(OUT) :: StartTime_ms, CenLoc(1:3)
@@ -132,6 +132,7 @@ MODULE LOFLI_Input
       Character(LEN=lnameLen) :: lname
       Real(dp) :: t_shft
       Integer :: j
+      Real(dp), external :: tShift_ms
       !
       Call GetNonZeroLine(lname)
       Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
@@ -140,7 +141,7 @@ MODULE LOFLI_Input
          '" !  Core/Source-| time, & position'
       Call Convert2m(CenLoc)
       StartTime_ms=StartTime_ms+TimeBase
-      t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
+      t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
       !
       j = iachar(lname(1:1))  ! convert to upper case if not already
       if (j>= iachar("a") .and. j<=iachar("z") ) then

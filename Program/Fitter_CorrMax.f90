@@ -268,7 +268,7 @@ Subroutine JacobianCorrTime ( meqn, nvar, X_p, nf, Jacobian, uiparm, urparm, ufp
   End Subroutine JacobianCorrTime
 !=================================================
 Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
-    use constants, only : dp,sample,c_mps,Refrac
+    use constants, only : dp,sample,c_mps
     use DataConstants, only : Station_nrMax, Ant_nrMax, Production
     use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
@@ -314,16 +314,18 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
   real ( kind = 8 ), intent(out) :: Jacobian(meqn,nvar)
   real ( kind = 8 ) :: X(nvar),D1,D2,Rns
 
-    real ( kind = 8 ) ::   StatFineOff, T_shft, val
-    Real(dp) :: ChiSq(1:Station_nrMax,1:PeakNrTotal), Ave(1:Station_nrMax,1:PeakNrTotal), RMS(1:Station_nrMax,1:PeakNrTotal)
-    Real(dp) :: SumJac(1:Station_nrMax,1:PeakNrTotal), ChiSqWeight(1:Station_nrMax,1:PeakNrTotal)
-    integer :: Cnt(1:Station_nrMax), CPE_eqn(Ant_nrMax),C_A(Ant_nrMax)  ! , Dropped(1:Station_nrMax)
-    !
-    integer :: i,j,k, i_SAI, j_corr, i_eqn, i_stat, i_ant, i_Peak, i_eo, i_chunk, Station_ID, i_ant1, i_xyz, i_StOff, Antenna_SAI
-    real(dp) :: RDist, RDist1
-    integer, external :: XIndx
-    logical :: prn, StCal
-    Character(len=5) :: Station_Mnem
+   real ( kind = 8 ) ::   StatFineOff, T_shft, val
+   Real(dp) :: ChiSq(1:Station_nrMax,1:PeakNrTotal), Ave(1:Station_nrMax,1:PeakNrTotal), RMS(1:Station_nrMax,1:PeakNrTotal)
+   Real(dp) :: SumJac(1:Station_nrMax,1:PeakNrTotal), ChiSqWeight(1:Station_nrMax,1:PeakNrTotal)
+   integer :: Cnt(1:Station_nrMax), CPE_eqn(Ant_nrMax),C_A(Ant_nrMax)  ! , Dropped(1:Station_nrMax)
+   !
+   integer :: i,j,k, i_SAI, j_corr, i_eqn, i_stat, i_ant, i_Peak, i_eo, i_chunk, Station_ID, i_ant1, i_xyz, i_StOff, Antenna_SAI
+   real(dp) :: RDist, RDist1
+   integer, external :: XIndx
+   logical :: prn, StCal
+   Character(len=5) :: Station_Mnem
+   Real(dp) :: IndxRefrac
+   Real(dp), external :: RefracIndex
     !
     prn=.false.
     StCal=.false.  ! Calculate fit statistics per source
@@ -445,6 +447,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             !
             val=0.
             !if(nvar.eq.1) write(*,*) Cnt(i_stat), i_stat
+            IndxRefrac = RefracIndex( SourcePos(3,i_Peak) )
             Do i=1 , N_FitPar-N_FitStatTim !Jacobian(i_eqn,i) = d R(i_eqn) / d X(i)
                 i_xyz=FitParam(N_FitStatTim+i)
                 k=XIndx(i,i_Peak)
@@ -453,7 +456,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                 else
                     Jacobian(i_eqn,k)=(SourcePos(i_xyz,i_Peak)-Ant_pos(i_xyz,i_ant,i_chunk))/D2 &
                         - (SourcePos(i_xyz,i_Peak)-Ant_pos(i_xyz,i_ant1,i_chunk))/d1
-                    Jacobian(i_eqn,k)=-Jacobian(i_eqn,k)*Refrac/(c_mps*sample) ! Convert to units of [samples]
+                    Jacobian(i_eqn,k)=-Jacobian(i_eqn,k)*IndxRefrac /(c_mps*sample) ! Convert to units of [samples]
                     val=val+Jacobian(i_eqn,k)*Jacobian(i_eqn,k)*25.  ! 25 to convert from [samples^2] to [ns^2]
                     Jacobian(i_eqn,k)=Jacobian(i_eqn,k)/CCorr_Err(j_corr,i_Peak)
                 endif

@@ -54,6 +54,7 @@ Module Interferom_Pars
    Integer, save :: PixPowOpt=0   ! used in "EIAnalyzePixelTTrace"
    Real(dp),save :: StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Real(dp),save :: dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
+   Real(dp),save ::  BoundingBox(1:2,1:4)
    !Real(dp) :: EleAng,AziAng  elevation & azimuth
    !
    Real(dp), Allocatable :: D_a(:),Ph_a(:)  ! weighted p and t directions in polarization basis (_PB)
@@ -63,10 +64,10 @@ Module Interferom_Pars
    Complex(dp), Allocatable :: wEtime_ap(:,:), wEtime_at(:,:) ! weighted E fields, time dependent
    !Complex(dp), Allocatable :: dChi_ap(:), dChi_at(:)
    Real(dp), Allocatable :: dChi_ap(:), dChi_at(:)
-   Complex(dp), Allocatable, save :: Cnu0(:,:,:), Cnu1(:,:,:)
-   Real(dp), Allocatable, save :: W_ap(:,:), W_at(:,:) !created in EI_Weights for all chunks
-   Real(dp), Allocatable, save :: Noise_p(:), Noise_t(:) !needed in EI_Weights for present chunk for generating weights
-   Complex(dp), Allocatable, save :: CTime_p(:,:), CTime_t(:,:) !needed in EI_Weights for present chunk for generating weights
+   Complex(dp), Allocatable, save :: Cnu_p0(:,:,:), Cnu_t0(:,:,:), Cnu_p1(:,:,:), Cnu_t1(:,:,:)
+   !Real(dp), Allocatable, save :: W_ap(:,:), W_at(:,:) !created in EI_Weights for all chunks
+   !Real(dp), Allocatable, save :: Noise_p(:), Noise_t(:) !needed in EI_Weights for present chunk for generating weights
+   !Complex(dp), Allocatable, save :: CTime_p(:,:), CTime_t(:,:) !needed in EI_Weights for present chunk for generating weights
    Real(dp), Allocatable, save :: AntPeak_OffSt(:,:)  ! Calculated in EI_PolSetUp
    Real(dp), save :: dnu
    Integer, save :: inu1, inu2
@@ -91,11 +92,12 @@ Module Interferom_Pars
       inu1=Int(Freq_min/dnu)+1
       inu2=Int(Freq_max/dnu)-1
       Nr_IntFer=Nr_IntFerMx
-      Allocate( Cnu0(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
-      Allocate( Cnu1(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
-      Allocate( W_ap(1:Nr_IntFerMx,1:PeakNr_dim), W_at(1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
-      Allocate(  CTime_p(1:2*IntfNuDim,1:Nr_IntFerMx), CTime_t(1:2*IntfNuDim,1:Nr_IntFerMx) )
-      Allocate(  Noise_p(1:Nr_IntFerMx), Noise_t(1:Nr_IntFerMx) )
+      Allocate( Cnu_p0(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
+      Allocate( Cnu_p1(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
+      Allocate( Cnu_t0(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
+      Allocate( Cnu_t1(0:IntfNuDim,1:Nr_IntFerMx,1:PeakNr_dim) )   !  indices interchanged !!!
+      !Allocate(  CTime_p(1:2*IntfNuDim,1:Nr_IntFerMx), CTime_t(1:2*IntfNuDim,1:Nr_IntFerMx) )
+      !Allocate(  Noise_p(1:Nr_IntFerMx), Noise_t(1:Nr_IntFerMx) )
       Allocate(  AntPeak_OffSt(1:Ant_nrMax,1:PeakNr_dim) )
       !Allocate( NEh2PB(1:3,1:3,1:PeakNr_dim))
       Allocate( Smooth(-N_smth:N_smth) )

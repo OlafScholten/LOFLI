@@ -290,7 +290,7 @@ End Subroutine OptSrcPos
 ! ======================================
 Subroutine SearchWin(i_ref, i_ant, i_chunk, SrcPos, EEst)
    use Chunk_AntInfo, only : Ant_pos !, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
-   use constants, only : dp,pi,sample,c_mps,Refrac
+   use constants, only : dp,pi,sample,c_mps
    use ThisSource, only : Safety
    use FitParams, only : SpaceCov, Sigma_AntT
    Implicit none
@@ -299,7 +299,8 @@ Subroutine SearchWin(i_ref, i_ant, i_chunk, SrcPos, EEst)
    Real(dp), Intent(out) :: EEst
    !integer :: i_chunk, i_peak,i_ref, i_eo, i_ant, j_corr
    integer :: i,j
-   Real(dp) :: Jac(1:3), Da, Dr, Drel, Er1, MaxTimeWin, small=1.d-9, Large=1.d11![samples]
+   Real(dp) :: Jac(1:3), Da, Dr, Drel, Er1, MaxTimeWin, IndxRefrac, small=1.d-9, Large=1.d11![samples]
+   Real(dp), external :: RefracIndex
    !  small=epsilon(small)
    !
    Dr=0. ; Da=0. ; Drel=0.
@@ -314,10 +315,11 @@ Subroutine SearchWin(i_ref, i_ant, i_chunk, SrcPos, EEst)
    Enddo
    Da=sqrt(Da)
    Dr=sqrt(Dr)
-   MaxTimeWin=sqrt(Drel)*Refrac/(c_mps*sample) ! In [samples]
+   IndxRefrac = RefracIndex(SrcPos(3))
+   MaxTimeWin= sqrt(Drel)*IndxRefrac/(c_mps*sample) ! In [samples]
    Do i=1,3
       Jac(i)=((SrcPos(i)-Ant_pos(i,i_ant,i_chunk))/Da -(SrcPos(i)-Ant_pos(i,i_ref,i_chunk))/Dr) &
-      *Refrac/(c_mps*sample)
+      *IndxRefrac/(c_mps*sample)
    EndDo ! the space components of the Jacobian; F in the notes as give in \eqref{RealKalmanJacobian}
    !write(2,*) 'Jac:',Jac, SigmaSpace
    EEst=Er1*Er1  !  Estimated error, sum of error in estimate (\eqref{RealKalmanEstimateError} in notes) and intrinsic measurement error

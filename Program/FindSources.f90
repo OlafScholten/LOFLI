@@ -26,7 +26,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
 !        and that 'FitRange_Samples=??' is optimal
 !  v18: Peak-location statistics file written
 !  v18: 'PeaksPerChunk' introduced as a parameter
-   use constants, only : dp,sample,Refrac,c_mps
+   use constants, only : dp,sample,c_mps
    use DataConstants, only : Production, Time_dim, EdgeOffset
    use Chunk_AntInfo, only : Ant_Stations, Start_time, NoiseLevel
    use Chunk_AntInfo, only : MaxPeaksPerChunk, PeaksPerChunk!, PeakSP, PeakSWl, PeakSWu, PeakSAmp, PeakD_nr
@@ -44,7 +44,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    Integer, intent(in) :: units(0:2)   ! used for writing fitresults
    !Integer, parameter :: Separation=Safety ! determines part of the ref spectrum that is zeroed after finding a peak; Safety from 'ThisSource'
    !real ( kind = 8 ) :: X(N_FitPar_max)
-   Real(dp), parameter :: Dist_Lim=1.d5
+   Real(dp), parameter :: Dist_Lim=2.5d5
    !Integer, parameter :: PeakS_dim=350
    !
    integer :: i, j, k, i_ant, i_eo, i_chunk=1, i_eo_s=0, i_eo_f=1
@@ -55,6 +55,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    Integer :: PeakSAmp(MaxPeaksPerChunk,0:2), PeakD_nr
    Integer :: Wu,Wl, CalSource(10),i_cal
    Integer :: Peakpos_0, PeakNrSearched, PeakNrFound, PeakNrGood ! pulse position for an virtual antenna at the core of CS002
+   Real(dp), external :: RefracIndex
    !integer, external :: XIndx
    !       Initialize
    PulsPosCore=.false.  ! Pulse positions are on the ref. antenna
@@ -163,21 +164,25 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    !   STOP
          !
          !SourceSPos(:,i_eo,i_peakS)=SourcePos(:,1)
-         Peakpos_0=Peakpos(1) + NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt
+         !Peakpos_0=Peakpos(1) + NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt
+         Peakpos_0=Peakpos(1) - NINT(Peak_Offst(1)) ! latter is calculated in GetCorrSingAnt; sign changed to - March 7, 2022
          DistMax=sqrt(sum(SourcePos(:,1)*SourcePos(:,1)))
          PeakNrSearched= PeakNrSearched +1
          !N_EffAnt, Max_EffAnt
          ! ChiSq_lim Limit should be higher for Dual option;
          ! Real(dp), save :: ChiSq_lim=10              ! limit set on the chi-square (FitQual)
          ! Real(dp), save :: EffAntNr_lim=0.8        ! limit set on the ratio of effective number of used antennas v.s. available number
+         If(Max_EffAnt.lt.10) exit
          If((DistMax .lt. Dist_Lim) .and. ( (N_EffAnt*1./Max_EffAnt) .gt. EffAntNr_lim) &
+            .and. ( Sigma(1) .lt. 999. ) .and. ( Sigma(2) .lt. 999.) &
             .and. ( Sigma(3) .lt. 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) ) .and. ( Sigma(3) .gt. 0.) &
             .and. (FitQual .lt. ChiSq_lim)) then
             Wl=PeakSWl(i_peakS,i_eo)
             Wu=PeakSWu(i_peakS,i_eo)
-            Write(units(i_eo),"(I8,', ',3(f12.4,', '),f12.9,', ',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','))") & ! ID (N,E,z) t chi^2 Diag(covariance)
+            !write(2,*) 'NINT(Peak_Offst(1)):',NINT(Peak_Offst(1))
+            Write(units(i_eo),"(I8,', ',3(f12.3,', '),f12.9,', ',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','))") & ! ID (N,E,z) t chi^2 Diag(covariance)
                (TimeFrame*1000+i_peakS),SourcePos(:,1), &
-               (Start_Time(1)+Peakpos_0)*sample-DistMax*Refrac/c_mps, FitQual &
+               (Start_Time(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps, FitQual &
                , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
             !write(*,*) 'Wu,Wl',Peakpos_0,Wl,Wu
             Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu) ! clean peak only when decent source location was obtained

@@ -1,24 +1,25 @@
 &Parameters 
  RunOption='Impulsive'
- NoiseLevel = 150.  ! minimal height for peaks to attempt localization, note [abitrary nits]
- AntennaRange=100	! maximal distance of antennas to the reference antenna [km]
- FitRange_Samples=70 ! 50 ! not used in imaging mode; important for calibration since there automatic windowing is not working
+ AntennaRange=100
+ FitRange_Samples=70 ! 20
  Sigma_AntT= 3          ! 3=S ;  2=T
  SearchRangeFallOff=4.0  ! 4.5=v ; 4=w ; 3.5=def
- ChiSq_lim= 80 ! max value for chi^2 of a source for it to be stored (RMS=sqrt(chi^2))
+ ChiSq_lim= 80
  Dual=.false.
- SaturatedSamplesMax=1 ,
+ SaturatedSamplesMax=10 ,
 ! CalibratedOnly=.false.
 
  NoiseLevel = 200.
- Calibrations = "Calibrations202011221739.dat" ! updated for v18  chi^2=5.66
- BadAnt_SAI=   007093, 005092, 005093, 011088, 011089, 011090, 011091, 013088, 013089, 032086, 032087
-             103092, 103093, 121091, 125088, 125089, 125092, 125093, 130092, 130093, 130094, 130095
-             145084, 145085, 145088, 145089, 166094, 166095
- OutFileLabel="SE"  
-&end 
+ Calibrations="Calibrations202203311709.dat" ! FldCal 2.40 antenna CS021 RS305 NoSrc !
+ 
+ ExcludedStat= "RS508", "RS509"  ! too many saturated antennas
+! SignFlp_SAI=   21078, 125028, 142092, 142093, 145032, 145033, 166015 
+ PolFlp_SAI=  32086, 
+ BadAnt_SAI=   2085,   4089,   7091,   7094,   7095,  11086,  11087,  21086,  21087,  21094
+              21095,  26084,  26085,  30086,  30087,  30090,  30091, 161086, 125087, 130086
+             130087, 130088, 130089, 167084, 167085, 167086, 167087, 188095,
+ OutFileLabel="" &end 
 
-  669 , -20000.07, +40123.33,   7713.12, 0 2100 ! SE StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
-  669 , -20000.07, -43123.33,   5713.12, 0 2100 ! SW StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
-
+  750. , 30., +5.,   5., 0 1500 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+   --- ---------- -------- ------------- -   nohup ./Imaging.sh  >Imaging.log 2>&1  & 
 

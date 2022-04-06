@@ -1,6 +1,6 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
    !use DataConstants, only : Polariz
    !use FitParams, only : Explore
@@ -167,6 +167,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Sample_Offset = INT(T_Offset) ! in units of sample size
               SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
               Dset_offset=Start_time(i_chunk) + Sample_Offset - SAMPLE_NUMBER_first
+              !write(2,*) 'Start_time(i_chunk),:',Start_time(i_chunk), Sample_Offset, SAMPLE_NUMBER_first
               !If(Ant_nr(1).eq.0) write(2,*) ', TimeOffset', T_Offset, Dset_Offset,DATA_LENGTH, Sample_Offset - SAMPLE_NUMBER_first
               If(Dset_offset .gt.DATA_LENGTH) then
                   If(Diagnostics) write(2,*) '****DATA_LENGTH=',Dset_offset, ' greater than ',DATA_LENGTH
@@ -363,7 +364,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
 End Subroutine AntennaRead
 ! ========================
 Subroutine PlotSpectra(i_chunk)
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, DataFolder, Diagnostics ! , ChunkNr_dim
    use Chunk_AntInfo, only : Ant_nr, CTime_spectr
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
@@ -536,7 +537,7 @@ Subroutine SimulationRead(SourceGuess)
 !  col3: even antenna at location 2
 !  and so on.
 !
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample 
    use DataConstants, only : Time_dim, Cnu_dim, Station_nrMax
    Use Chunk_AntInfo, only : Station_name, Station_number, Simulation
    use Chunk_AntInfo, only : Start_time

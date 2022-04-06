@@ -4,12 +4,14 @@ Module constants
     REAL(dp), parameter :: pi=2.d0*asin(1.d0)
     REAL(dp), parameter :: c_l=0.299792458d0     ! speed of light in Vacuum [m/nsec]
     REAL(dp), parameter :: c_mps=c_l * 1.d9 ! =0.299792458d9     ! speed of light in Vacuum [m/sec]
-    REAL(dp), parameter :: Refrac=1.0003     ! Index of refraction at sea level
+    !REAL(dp), parameter :: Refrac=1.0003     ! Index of refraction at sea level
     !REAL(dp), parameter :: Refrac=1.0002     ! Index of refraction
     !REAL(dp), parameter :: Refrac=0.99984d0     ! Index of refraction
     real(dp), save :: RotMat(3,3) ! Rotation matrix from ITRF to local Superterp coordinates
     real(dp), parameter :: center_CS002(3)= (/ 3826577.5, 461021.3125, 5064893.0 /)
     real(dp), parameter :: sample=5.d-9   ! Sample length in seconds
+    !Logical, save :: HeightCorrectIndxRef=.false.
+    Logical, save :: HeightCorrectIndxRef=.true.
 End Module constants
 !-----------------------------------
 Module DataConstants

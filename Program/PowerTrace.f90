@@ -1,12 +1,11 @@
 !-----------------------------------------
  !-------------------------------------------
  !------------------------------------------
-    !Include 'ConstantsModules-v15.f90'
-    !Include 'ParamModules-v15.f90'
-    Include 'MappingUtilities-v13.f90' ! h5-read
-    Include 'ConstantsModules-v16.f90'
-    Include 'ParamModules-v17.f90'
-    !Include 'MappingUtilities-v17.f90' ! h5-read
+    Include 'ConstantsModules.f90'
+    Include 'FFT_routines.f90'
+    Include 'ParamModules.f90'
+    Include 'HDF5_LOFAR_Read.f90'
+    Include 'MappingUtilities.f90' ! h5-read
 !-----------------------------------
 Program PowerTrace
 !
@@ -49,8 +48,8 @@ Program PowerTrace
    Call GetNonZeroLine(lname)
    Read(lname,*) Calibrations
    write(2,*) 'Calibration file: ',trim(Calibrations)
-   Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters.uft')
-   Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure.dat')
+   Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
+   Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
 1  Continue
    Call GetNonZeroLine(lname)
    Read(lname,*,IOSTAT=nxx) Station_Mnem, StartTime_ms, dTime_ms, UpS, OutDataFileName, ReqStat_eo
@@ -93,12 +92,13 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
    use HDF5_LOFAR_Read, only : DATA_LENGTH, SAMPLE_NUMBER_first, Absolute_TIME, DIPOLE_CALIBRATION_DELAY
    use HDF5_LOFAR_Read, only : GetDataChunk
    use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt,Hann
+   Use Calibration, only : Station_ID2Calib
    Implicit none
    Integer, intent(inout) :: UpS ! Upsample number
    Integer, intent(inout) :: ReqStat_ID, ReqStat_eo ! Station ID for which power spectrum should be made
    Real(dp), intent(in) :: SourceCoor(3),StartTime_ms,dTime_ms ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
    !
-   Integer :: i_chunk, OverLap, i_chunkMax
+   Integer :: i_chunk, OverLap, i_chunkMax, Calibrated
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim)
    Complex(dp) :: CNu_s(0:Cnu_dim), CTime_s(1:Time_dim)
@@ -142,7 +142,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
                   cycle   ! get next DSet
               Endif
               !
-              Call Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib) ! StatAnt_Calib in units of samples
+              Call Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib, Calibrated) ! StatAnt_Calib in units of samples
               !
               Write(2,"(A,I4,I3,A,3F9.1)") 'Antenna coordinates of ', STATION_ID, Ant_ID,' (N,E,h)',LFRAnt_crdnts
               DistSRC=sqrt(sum(SourceCoor(:)*SourceCoor(:)))
@@ -155,7 +155,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
               !
       ! antRead: Dset_offset=Start_time(i_chunk) + RDist + DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib - SAMPLE_NUMBER_first
               Sample_Offset= INT((StartTime_ms/1000. + DIPOLE_CALIBRATION_DELAY)/Sample)+ StatAnt_Calib- SAMPLE_NUMBER_first   ! in units of samples
-              Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)
+              Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
               write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*Refrac/(c_mps*Sample)
               SubSample_Offset = 0
               OverLap=128
@@ -180,7 +180,8 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
                  DataReadErr=0
                  Call GetDataChunk(Group_Names(i_grp),DSet_Names(i_dst), Chunk, Dset_offset, Time_dim, DataReadErr=DataReadErr)
                  If(DataReadErr.ne.0) then
-                  write(2,*) '************ error in data-read!, file #=',i_file,', name=',filename
+                  write(2,*) '************ error in data-read!, file #=',i_file,', for chunk#',i_chunk,', name=',filename
+                  write(*,*) 'error at chunk#',i_chunk
                   stop 'DataReadError'
                  endif
                  !
