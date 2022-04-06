@@ -7,7 +7,8 @@ ParentDir="copysetup"
 #FlashFolder='18F-1'
 #FlashFolder='18D-1'
 #FlashFolder='20B-10'
-FlashFolder='21C-1'
+#FlashFolder='21C-1'
+FlashFolder='21C-9'
 
 
 #Year="2020"
@@ -33,7 +34,7 @@ cd ${FlashFolder}
 mkdir files
 mkdir Book
 
-cp ${MainDir}/${ParentDir}/Book/{StationCalibrations.dat,Calibrations_ZERO.dat} ${MainDir}/${FlashFolder}/Book
+cp ${MainDir}/${ParentDir}/Book/{StationCalibrations.dat,Calibrations*.dat} ${MainDir}/${FlashFolder}/Book
 cp ${MainDir}/${ParentDir}/{*.sh,*.in,FlashImage.bat} ${MainDir}/${FlashFolder}
 cd ${MainDir}/${FlashFolder}
 chmod 764 *.sh
