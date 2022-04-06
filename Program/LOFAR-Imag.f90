@@ -14,7 +14,7 @@
 !}
 !
  !-------------------------------------------
- !-----------------16/02/2022@14:04:57.575--------------------------
+ !----------------- 6/04/2022@17:49:44.374--------------------------
  !------- Source file:LOFAR-Imag.f90 ----
  !   Include 'ConstantsModules.f90'
  !   I   Module constants
@@ -96,6 +96,10 @@
  !   I   Subroutine ITRF2LOFARConstruct()
  !   I   Subroutine ITRF2LOFAR(ITRF,LOFAR)
  !   I   Subroutine RelDist(Source,LFRAnt,RDist)
+ !   I   Real(kind=8) Function tShift_ms(Source)  !
+ !   I   Real(kind=8) Function tShift_smpl(Source)  !
+ !   I   Real(kind=8) Function RefracIndex(h)
+ !   I   Subroutine AveIndxRefr(AtmHei_dim,AtmHei_step, xi)
  !   I   Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
  !   I   Subroutine GetNonZeroLine(lineTXT)
  !   I   Subroutine GetMarkedLine(Mark,lineTXT)
@@ -131,6 +135,7 @@
  !   Include 'FindCallibr.f90'   ! Station Callibration
  !   I   Subroutine FindCallibr(SourceGuess)
  !   I   Subroutine ReadPeakInfo(ReadErr)
+ !   I   Subroutine DualReadPeakInfo(i_eo,i_chunk)
  !   I   Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
  !   I   Subroutine GetLargePeaks(i_ant, i_chunk, Peakposs)  ! Obsolete, not used anymore
  !   I   Subroutine GetStationFitOption(FP_s, FitNoSources)
@@ -208,9 +213,7 @@
  !   I   I   Subroutine EI_Fitter(X, Time_width, Space_Spread)
  !   I   I   Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
  !   I   I   Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPeak_OffSt, &
- !   I   I   Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu0, Cnu1, W_ap, W_at)
- !   I   I   Subroutine TimeTracePlot(j_IntFer, IntfBase, i_chunk, VoxLoc,Windw, Label)
- !   I   I   Subroutine  EI_Weights(Nr_IntFer, i_sample, i_chunk, PixLoc, AntPeak_OffSt, W_ap, W_at)
+ !   I   I   Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1)
  !   I   I   Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
  !   I   I   Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
  !   I   Subroutine E_Callibr()
@@ -223,11 +226,15 @@
  !   I   Subroutine System_MemUsage(valueRSS)
  !   I   end Subroutine System_MemUsage
  !   I   Subroutine CreateNewFolder(FileName)
+ !   Include 'PeakInterferoOption.f90'
+ !   I   Subroutine PeakInterferoOption()
+ !   I   Subroutine WriteInterfRslts(i_Peak)
+ !   I   Subroutine ReadFlashImageDat(SourceGuess)
  !   Program LOFAR_Imaging
  !   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
  !   Call System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)  ! set Flash name & f
  !   Subroutine AntennaSanity()
- !-----------------16/02/2022@14:04:57.575--------------------------
+ !----------------- 6/04/2022@17:49:44.374--------------------------
  !------------------------------------------
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
@@ -343,8 +350,8 @@ Program LOFAR_Imaging
          , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Version='v22.01'
-   release='22.01 (Jan, 2022)'
+   Version='v22.04'
+   release='22.04 (April, 2022)'
    Utility='LOFLi-Imaging'
    CALL get_environment_variable("LIBRARY", lname)
    !WRITE (*,*) "LIBRARY=",TRIM(lname)
