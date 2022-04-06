@@ -1,0 +1,21 @@
+&Parameters 
+ RunOption='PkIntfer'
+! CurtainHalfWidth=50  ! should not be possible for this option
+ AntennaRange=100
+ IntfSmoothWin= 19 !19     ! Width (in samples) of the slices for TRI-D imaging.
+! Diagnostics=.true.
+ SaturatedSamplesMax=3 ,
+ Calibrations="Calibrations202203051621.dat" ! FldCal 5.06
+     
+! SignFlp_SAI= 21090, 21091, 145084, 145085
+! WriteCalib=.true.
+! ExcludedStat=  "RS208", "RS210", "RS409", !,!Many saturated antennas for 21C-1
+ PolFlp_SAI=  32086, 
+ BadAnt_SAI=   6083,  11086,  11087,  21086,  21087,  21094,  21095,  24084,  26084,  26085
+              28095,  30085,  30086,  30087,  30089,  30090,  30091,  30092,  30093,  30094
+             106089, 130086, 130087, 130088, 130089, 146087, 150093, 188085, 188087, 188090
+             188093, 188094, 188095, !21090, 21091, !145084, 145085 !  for 21C-1
+ OutFileLabel="" &end 
+
+ "21C1e-E2aZ3.dat"
+

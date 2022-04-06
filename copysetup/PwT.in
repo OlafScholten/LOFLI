@@ -1,15 +1,12 @@
- "Calibrations202010091240.dat"   ! for 20A7
+"Calibrations202203021949.dat" ! FldCal 21C-1; Flat nearby weights, chi^2= 5.12, fit all stations and peaks
 
- CS002  865   110. 400  "VHFpwr_20A7-200-2us-" 0 ! Note: 0.080[ms] calibration for RS106! stat_ID, initial[ms], length[ms], upsample nr, outfilename 
- -20000,   38000.,    6000.         !(N,E,h)
-o  CS002  669   800. 4000  "VHFpwr_20A7-all-20us-" 0 ! Note: 0.080[ms] calibration for RS106! stat_ID, initial[ms], length[ms], upsample nr, outfilename 
- -20000,   38000.,    6000.         !(N,E,h)
- CS002  1165   110. 400  "VHFpwr_20A7-500-2us-" 0 ! Note: 0.080[ms] calibration for RS106! stat_ID, initial[ms], length[ms], upsample nr, outfilename 
- -20000,   38000.,    6000.         !(N,E,h)
+
+ CS002  1250   1450. 400  "VHFpwr_21C-1_CS002-2us-" 0 !  stat_ID, initial[ms], length[ms], upsample nr, outfilename 
+ -16000,   -21000.,    8000.         !(N,E,h)
+ 
+-------------------------------------------------
 -------------------------------------------------
 
- CS002  750.  750.  4000  "VHFpwr_I-a-20us-"  0
- -7500, +4000, 4000 
 
  CS002   980.  170.  40  "VHFpwr_I-277-200ns-" 0 ! +265=1022. ! stat_ID, initial, length, upsample nr, outfilename
  -11000, +7000, 3500 
@@ -44,15 +41,4 @@ o  CS002  669   800. 4000  "VHFpwr_20A7-all-20us-" 0 ! Note: 0.080[ms] calibrati
  128   1150.  50.  1000  "PowerTrace_I-405-5us-RS208"  ! +393=1150. ! stat_ID, initial, length, upsample nr, outfilename
  -11000, +7000, 3500 
 
- 002  750.  750.  4000  "PowerTrace_I-a-20us"  750
- -7500, +4000, 4000 
-
-
-i: 757.  10.  128
- -7500, +4000, 4000 
-+265=1022. !  I-275
- 1022.  30.  256
- -11000, +7000, 3500 
-+393=1150. !  I-405
- -11000, +7000, 3500 
 
