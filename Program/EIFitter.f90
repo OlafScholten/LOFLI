@@ -11,7 +11,8 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
 !
     use constants, only : dp
     use FitParams, only : FitParam, N_FitPar, N_FitStatTim, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset, N_FitPar_max
-    use FitParams, only : X_Offset, WriteCalib
+    use FitParams, only : X_Offset, WriteCalib, FitQual
+    use DataConstants, only : RunMode
     use Interferom_Pars, only :  N_Smth, N_fit, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     !use DataConstants, only : ChunkNr_dim, Production
     use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, IntfNuDim, AntPeak_OffSt
@@ -143,8 +144,9 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
          endif
          !
          !Write(*,*) 'end nl2sol'
-          write(2,"('Result, chi^2/ndf=',F9.2)", ADVANCE='NO') 2*v(10)/(meqn-nvar)
-          write(*,"('chi^2/ndf=',F9.2)") 2*v(10)/(meqn-nvar)
+         FitQual=2*v(10)/(meqn-nvar)
+          write(2,"('Result, chi^2/ndf=',F9.2)", ADVANCE='NO') FitQual
+          write(*,"('chi^2/ndf=',F9.2)") FitQual
           write(2,"(', # of fie calls=',i3,' and # of iterations=',i3)") iv(6),iv(31)
    endif
    NF=-1
@@ -170,6 +172,9 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
     EndIf
     Do i_Peak=1,PeakNrTotal
       Call EI_PolarizPeak(i_Peak)
+      If(RunMode.eq.8) Then   ! Interferometric Peakfitting mode
+         Call WriteInterfRslts(i_Peak)
+      EndIf
     Enddo
 8  Continue
     Deallocate( v )
@@ -183,10 +188,10 @@ End Subroutine EI_Fitter
 !=================================================
 !=================================================
 Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
-    use constants, only : dp,sample,c_mps,Refrac
+    use constants, only : dp,sample,c_mps
     use DataConstants, only : Station_nrMax, Ant_nrMax
 !    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err
-    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
+    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakRMS, PeakChiSQ
     use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1,  N_fit, AntPeak_OffSt, Chi2pDF
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos
@@ -245,7 +250,6 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
     i_eqn=0
     !if(nvar.eq.1) write(*,*) 'X_p',X_p
     Do i_Peak=1,PeakNrTotal
-        !i_eo=Peak_eo(i_peak)
         i_chunk=ChunkNr(i_peak)
         !
          Do j_IntFer=1,Nr_IntferCh(i_chunk)

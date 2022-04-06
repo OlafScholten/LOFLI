@@ -1,6 +1,6 @@
 ! ---------------------------------
 Subroutine ExplorationRun
-   use constants, only : dp,sample !,pi,ci,Refrac
+   use constants, only : dp,sample 
    use DataConstants, only : Time_dim, DataFolder, FlashName
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
    use Chunk_AntInfo, only : Start_time, TimeFrame

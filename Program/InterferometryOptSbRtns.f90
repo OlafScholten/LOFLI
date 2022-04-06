@@ -52,7 +52,7 @@ Subroutine PixBoundingBox()
    !  Needs
    !     call SelectIntfAntennas  first
    ! ------------------------------------
-   use constants, only : dp !, pi, Sample, Refrac, c_mps
+   use constants, only : dp
    use DataConstants, only : Time_Dim
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
    Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerMx, Nr_IntFerCh
@@ -132,7 +132,7 @@ End Subroutine PixBoundingBox
 Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    ! Output power info for complete trace as function of pixel
    !--------------------------------------------
-   use constants, only : dp, pi, Sample  ! , Refrac, c_mps
+   use constants, only : dp, pi, Sample
    use DataConstants, only : DataFolder, OutFileLabel, Time_Dim
    !use Chunk_AntInfo, only : TimeBase
    use Chunk_AntInfo, only : CTime_spectr
@@ -287,7 +287,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    ! Needs
    !     File 30 opened
    !--------------------------------------------
-   use constants, only : dp, pi, Sample, Refrac, c_mps
+   use constants, only : dp, pi, Sample,  c_mps
    use DataConstants, only : DataFolder, OutFileLabel
    use Chunk_AntInfo, only : TimeBase
    Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
@@ -312,6 +312,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Real(dp) :: s, X, Y, AngOff
    Real(dp) :: HorVec(1:3), VerVec(1:3)
    Complex(dp), allocatable :: CMTime_Pix(:,:)
+   Real(dp), external :: tShift_ms   !
    !
    Write(txt,"('_',i1)") i_eo
    If(Dual) Then
@@ -424,7 +425,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
          PixLoc(:)=CenLoc(:)+d_Mx(:)*d_loc(:)
          Call Carth2Pol(PixLoc,PixLocPol)
       Endif
-      t_shft=sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
+      t_shft=tShift_ms(PixLoc(:))  ! sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
       !write(29,"(i6,',',4(f11.5,','),4g13.6,',',3g13.5,2x,L1)") i, t_ms-t_shft, &
       If(Dual) Then
          s=sqrt(MaxSmPowQ(i_slice)*MaxSmPowQ(i_slice)+MaxSmPowU(i_slice)*MaxSmPowU(i_slice))
@@ -460,7 +461,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
                Call Carth2Pol(PixLoc,PixLocPol)
             Endif
             !
-            t_shft=sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
+            t_shft=tShift_ms(PixLoc(:)) ! sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
             write(28,"(i6,',',4(f11.5,','),4g13.6,',',3g13.5)") i_slice, t_ms-t_shft, &
                PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowBar, QualBar(1)
             !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_gr(:)
@@ -717,7 +718,7 @@ Subroutine FindBarycenter(i,Baryd,SMPow,Qualty)
    ! Needs
    !     File 30 opened
    !--------------------------------------------
-   use constants, only : dp, pi, Sample  ! , Refrac, c_mps
+   use constants, only : dp, pi, Sample
    Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
    Use Interferom_Pars, only : PixelPower, MaxSmPow, N_smth
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax
@@ -795,7 +796,7 @@ Subroutine OutputIntfSlices(i_eo)
    ! Analyze the Slices
    ! Needs
    !--------------------------------------------
-   use constants, only : dp, pi, Sample  ! , Refrac, c_mps
+   use constants, only : dp, pi, Sample
    use DataConstants, only : DataFolder, OutFileLabel
    use Chunk_AntInfo, only : CTime_spectr
    use ThisSource, only : Dual, SourcePos

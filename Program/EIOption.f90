@@ -24,7 +24,7 @@ Subroutine EI_Run
    Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !
    Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, Nr_IntFerCh
    Use Interferom_Pars, only : PixPowOpt
-   use constants, only : dp, ci, pi !, Sample, Refrac, c_mps
+   use constants, only : dp, ci, pi
    use StationMnemonics, only : Statn_ID2Mnem
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    !use GLEplots, only : GLEplotControl
@@ -218,7 +218,7 @@ Subroutine EISelectAntennas(i_chunk)
    ! Select antennas within a range of 'AntennaRange' from the core
    ! And put the condition the both dipoles are at same location
    !--------------------------------------------
-   use constants, only : dp !, pi, Sample, Refrac, c_mps
+   use constants, only : dp
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
    Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntferCh, Nmax_IntFer ! the latter gives # per chunk
@@ -321,7 +321,7 @@ Subroutine EIPixBoundingBox()
    !  Needs
    !     call SelectIntfAntennas  first
    ! ------------------------------------
-   use constants, only : dp !, pi, Sample, Refrac, c_mps
+   use constants, only : dp
    use DataConstants, only : Time_Dim
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
    Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerCh
@@ -377,7 +377,7 @@ Subroutine EIPixBoundingBox()
    IntfBase=SumStrt - IntfLead
    !write(*,"(A,o10,b20)") '(lead,dim):', IntfLead, IntfDim
    If((IntfBase+IntfDim .gt. Time_dim) .or. (IntfBase .lt. 1)) then
-      write(2,*) 'dimensions for interferometry out of range: ', IntfBase, IntfBase+IntfDim, Time_dim
+      write(2,*) 'dimensions for interferometry out of range: ', IntfBase,'<1 or ', IntfBase+IntfDim,'>', Time_dim
       write(2,*) 'input for interferometry: ', SumStrt, SumWindw
       stop 'Intferom dimension problem'
    Endif
@@ -393,7 +393,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    ! Needs:
    !   ?
    !--------------------------------------------
-   use constants, only : dp, pi, Sample, Refrac, c_mps
+   use constants, only : dp, pi, Sample, c_mps
    use DataConstants, only : Time_Dim, Cnu_dim
    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
    use Chunk_AntInfo, only : Start_time, TimeBase
@@ -422,6 +422,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    Complex(dp) :: Cnu0(0:IntfNuDim), Cnu1(0:IntfNuDim), Sp, St
    Real(dp) :: AntW(2), NRM
    Character(len=50) :: FMT_A
+   Real(dp), external :: tShift_ms
    !Logical :: GainFactor=.false.
    !Logical :: GainFactor=.true.
    !
@@ -526,7 +527,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !write(2,*) 'CMCnu(Nr_IntFer/2,1:2,IntfNuDim/2)', IntfNuDim/2,  IntFer_ant(Nr_IntFer/2),  CMCnu(Nr_IntFer/2,1,IntfNuDim/2) &
    !   , IntFer_ant(Nr_IntFer/2+1),CMCnu(Nr_IntFer/2+1,1,IntfNuDim/2)
    i_ant=IntFer_ant(1,1)
-   t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
+   t_shft=tShift_ms(CenLoc(:))/1000.d0 !  sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
    write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
       ', time difference with central pixel=',t_shft*1000.,'[ms]'
    !
@@ -594,7 +595,7 @@ End Subroutine EIEngine
 Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    ! Analyze the trace of this pixel
    !--------------------------------------------
-   use constants, only : dp, pi !ci !, , Sample, Refrac, c_mps
+   use constants, only : dp, pi
    Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, IntfLead, PixLoc, polar, N_pix
    Use Interferom_Pars, only : IntPowSpec, MaxSmPow, N_smth, smooth
    Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2

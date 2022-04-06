@@ -155,7 +155,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
               !
       ! antRead: Dset_offset=Start_time(i_chunk) + RDist + DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib - SAMPLE_NUMBER_first
               Sample_Offset= INT((StartTime_ms/1000. + DIPOLE_CALIBRATION_DELAY)/Sample)+ StatAnt_Calib- SAMPLE_NUMBER_first   ! in units of samples
-              Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)
+              Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
               write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*Refrac/(c_mps*Sample)
               SubSample_Offset = 0
               OverLap=128

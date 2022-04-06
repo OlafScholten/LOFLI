@@ -61,15 +61,16 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
          OffSet=NINT(Rdist - Ant_RawSourceDist(i_ant,i_chunk) + Fit_TimeOffsetStat(i_stat) -OSt)
          !write(2,*) 'curtainoffset',OffSet, Rdist - Ant_RawSourceDist(i_ant,i_chunk)
          Ch2=PeakPos(i_Peak) + OffSet
-         Lower=MIN(CurtainWidth, Ch2)
+         Lower=MIN(CurtainWidth, Ch2-1)
          Upper=MIN(CurtainWidth,(Time_dim - Ch2))
          Ch1=Ch2-Lower
          Ch2=Ch2+Upper
-         !write(2,*) I_ant,i_peak, Ch1, Ch2, Lower, Upper
+         !write(2,*) I_ant,i_peak, Ch1, Ch2, Lower, Upper,Rdist, Ant_RawSourceDist(i_ant,i_chunk), Fit_TimeOffsetStat(i_stat), OSt
          If(Upper.le.0) then
             Ch1=Time_dim/2
             Ch2=Ch1+2
          Endif
+         If(Ch2.lt.Ch1) Ch2=Ch1+2
          If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
             write(txt,"(A,i3.3,'-',i2.2)") TRIM(OutFileLabel),I_ant,i_peak
          Else
@@ -497,10 +498,10 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !stop
    !
    Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
- !  write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiDat_'//TRIM(Label) !    remove files; clean-up
- !  write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
- !  write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
- !  write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiDat_'//TRIM(Label) !    remove files; clean-up
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
+   write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
  !  !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder) !    remove files; clean-up
    !
    return

@@ -1,5 +1,5 @@
 Subroutine ImpulsImagRun
-   use constants, only : dp,pi,ci,sample,Refrac,c_mps
+   use constants, only : dp,pi,ci,sample,c_mps
    use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
    use DataConstants, only : Time_dim, Production, release  ! , Cnu_dim, RunMode, Utility
    use DataConstants, only : Calibrations, OutFileLabel, EdgeOffset
@@ -22,6 +22,7 @@ Subroutine ImpulsImagRun
    Character(LEN=180) :: lname
    Character(LEN=250) :: TxtIdentifier, TxtImagingPars
    Character(LEN=250) :: Txt20Identifier, Txt20ImagingPars
+   Real(dp), external :: tShift_ms
    !
    CALL DATE_AND_TIME (Values=DATE_T)
    Write(TxtIdentifier,"('Release ',A,', run on ',I2,'/',I2,'/',I4,' , at ',I2,':',I2,':',I2,'.',I3,', Flash: ',A )") &
@@ -38,7 +39,8 @@ Subroutine ImpulsImagRun
    Endif
    Call Convert2m(SourceGuess(:,1))
    If(Mark.eq."S") Then
-         StartTime_ms=StartTime_ms + sqrt(SUM(SourceGuess(:,1)*SourceGuess(:,1)))*1000.*Refrac/c_mps ! convert to reference antenna time
+      !StartTime_ms=StartTime_ms + sqrt(SUM(SourceGuess(:,1)*SourceGuess(:,1)))*1000.*RefracIndex(SourceGuess(3,1))/c_mps ! convert to reference antenna time
+      StartTime_ms=StartTime_ms + tShift_ms(SourceGuess(:,1)) ! convert to reference antenna time
    EndIf
    Write(TxtImagingPars,"(A,I3,A,F6.1,A,F4.1,A,F4.1,A,F4.0,A,F5.0,A,F5.1,A,F6.1,A,3F5.1,A,i5)") &
       'FitRange=',FitRange_Samples,'[samples],',AntennaRange,'[km], Sigma_AntT=',Sigma_AntT, &

@@ -36,7 +36,7 @@ PROGRAM rewriteEvent
   Character(len=180) :: lineTXT
   integer :: i,j,k, nxx, d_Ampl  ! unit,
   Real*8 :: Qual, t_start, dt_MTL, AmplitudePlot
-  integer :: kk, jk, wrunt, DelNEff, N_EffAnt, Max_EffAnt
+  integer :: kk, jk, wrunt, DelNEff, N_EffAnt !, Max_EffAnt
   Logical :: EndInput
   !
   !unit=12
@@ -277,12 +277,14 @@ Subroutine SelSources(Qual,t_start, EndInput)
       Label(1,j)=i ;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
       if(j.eq.maxd) then
          write(*,*) 'Max. dimension reached of', maxd,' at',i
+         write(2,*) 'Max. dimension reached of', maxd,' at',i
          exit
       EndIf
       !Q=sqrt(val) + 35.*(Max_EffAnt-N_EffAnt)/Max_EffAnt
       !write(30,"(1x,i7,4(2x,g14.8),3x,f8.2,i4)") i,sigma,Q,sqrt(val), Max_EffAnt-N_EffAnt
     enddo
     !Close(Unit=30)
+    write(2,*) 'Last event read:',i,' @ t=',t,'[s]'
 998 continue
     close(unit=28)
     !

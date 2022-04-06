@@ -197,11 +197,11 @@ Subroutine PrntNewSources()
     !use FitParams, only : station_nrMax
     !use FittingParameters
     !use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
-   use ThisSource, only : PeakNrTotal, ChunkNr, Peak_eo
+   use ThisSource, only : PeakNrTotal, ChunkNr, Peak_eo, Dual
    use Chunk_AntInfo, only : Start_time
     !use StationMnemonics, only : Statn_ID2Mnem
    use Constants, only : Sample
-   use DataConstants, only : Polariz
+   use DataConstants, only : Polariz, RunMode
    Implicit none
    !real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
    integer ( kind = 4 ) :: i,j, i_Peak, i_chunk, i_eo
@@ -219,52 +219,63 @@ Subroutine PrntNewSources()
    Enddo
    !
    Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, Del-t); RMS[ns], sqrt(chi^2/df), Excluded: '
-   If(Polariz) Then
-      i_chunk=1
-      j=0
-      Do i_Peak = 1,PeakNrTotal
-         If(i_chunk.eq.ChunkNr(i_Peak)) Then
-            j=j+1
-         Else
-            i_eo=1
-            Do i=i_Peak-j, i_Peak-1
-               Call PrntCompactSource(i,i_eo)
-            Enddo
-            j=1
-         EndIf
-         i_chunk=ChunkNr(i_Peak)
-         i_eo=0
-         Call PrntCompactSource(i_Peak,i_eo)
-      Enddo  !  i_Peak = 1,PeakNrTotal
-      i_eo=1
-      Do i=PeakNrTotal-j+1, PeakNrTotal
-         Call PrntCompactSource(i,i_eo)
-      Enddo
-   Else
-      Do i_Peak = 1,PeakNrTotal
-         Call PrntCompactSource(i_Peak,Peak_eo(i_Peak))
-      Enddo  !  i_Peak = 1,PeakNrTotal
-   EndIf
+   !If(Dual .and. RunMode.eq.2) Then
+   !      write(2,*) 'PrntNewSources:',PeakNrTotal
+   !   Do i_Peak = 1,PeakNrTotal
+   !      write(2,*) 'PrntNewSources:',i_Peak,Peak_eo(i_Peak)
+   !      If(Peak_eo(i_Peak).eq.0) Call PrntCompactSource(i_Peak,2)
+   !   Enddo  !  i_Peak = 1,PeakNrTotal
+   !Else
+      If(Polariz) Then  ! Obsolete?
+         write(2,*) 'PrntNewSources: Was not sure if this options is used anywhere, but obviously it is'
+         i_chunk=1
+         j=0
+         Do i_Peak = 1,PeakNrTotal
+            If(i_chunk.eq.ChunkNr(i_Peak)) Then
+               j=j+1
+            Else
+               i_eo=1
+               Do i=i_Peak-j, i_Peak-1
+                  Call PrntCompactSource(i,i_eo)
+               Enddo
+               j=1
+            EndIf
+            i_chunk=ChunkNr(i_Peak)
+            i_eo=0
+            Call PrntCompactSource(i_Peak,i_eo)
+         Enddo  !  i_Peak = 1,PeakNrTotal
+         i_eo=1
+         Do i=PeakNrTotal-j+1, PeakNrTotal
+            Call PrntCompactSource(i,i_eo)
+         Enddo
+      Else
+         Do i_Peak = 1,PeakNrTotal
+            Call PrntCompactSource(i_Peak,Peak_eo(i_Peak))
+         Enddo  !  i_Peak = 1,PeakNrTotal
+      EndIf
+   !EndIf
 End Subroutine PrntNewSources
 !==========================================
 Subroutine PrntCompactSource(i_Peak,i_eo)
    use constants, only : dp
    use FitParams, only : station_nrMax
    !use FittingParameters
-   use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
+   use ThisSource, only : PeakPos, Peak_eo, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
    use Chunk_AntInfo, only : Unique_StatID, Ant_pos, Ant_RawSourceDist, RefAnt
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: i_Peak,i_eo
-   integer ( kind = 4 ) :: i,k, i_chunk
+   integer ( kind = 4 ) :: i,k, i_chunk,i_eoR
    Character(len=5) :: Station_Mnem
    Real(dp) :: RDist
    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
    !
    ! translate peakposition in the reference antenna to one for a (virtual) antenna at the core
    i_chunk=ChunkNr(i_Peak)
-   Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk),RDist) !distance to ant - distance to core in samples
-   k=PeakPos(i_Peak)-NINT(RDist-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
+   i_eoR=i_eo
+   If(i_eo.eq.2) i_eoR=Peak_eo(i_Peak)
+   Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eoR),i_chunk),RDist) !distance to ant - distance to core in samples
+   k=PeakPos(i_Peak)-NINT(RDist-Ant_RawSourceDist(RefAnt(i_chunk,i_eoR),i_chunk)) ! in samples due to signal travel distance to reference
    !
    Write(2,"('C',3i2,I8)", ADVANCE='NO') i_Peak,i_eo,ChunkNr(i_Peak),k
    Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)

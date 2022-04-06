@@ -1,6 +1,6 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
    !use DataConstants, only : Polariz
    !use FitParams, only : Explore
@@ -364,7 +364,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
 End Subroutine AntennaRead
 ! ========================
 Subroutine PlotSpectra(i_chunk)
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, DataFolder, Diagnostics ! , ChunkNr_dim
    use Chunk_AntInfo, only : Ant_nr, CTime_spectr
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
@@ -537,7 +537,7 @@ Subroutine SimulationRead(SourceGuess)
 !  col3: even antenna at location 2
 !  and so on.
 !
-   use constants, only : dp,sample ! ,Refrac,pi,ci
+   use constants, only : dp,sample 
    use DataConstants, only : Time_dim, Cnu_dim, Station_nrMax
    Use Chunk_AntInfo, only : Station_name, Station_number, Simulation
    use Chunk_AntInfo, only : Start_time

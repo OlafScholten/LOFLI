@@ -29,7 +29,7 @@ Subroutine InterferometerRun
    use Chunk_AntInfo, only : Start_time, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
    use ThisSource, only : Dual, CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use FitParams, only : AntennaRange
-   use constants, only : dp, ci, pi, Sample, Refrac, c_mps
+   use constants, only : dp, ci, pi, Sample, c_mps
    use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
    !use StationMnemonics, only : Statn_ID2Mnem
    use HDF5_LOFAR_Read, only : CloseDataFiles
@@ -133,6 +133,10 @@ Subroutine InterferometerRun
    If(SliceLen.lt.1) SliceLen=1 ! obsolete
    NrSlices=SumWindw/SliceLen ! obsolete
    write(2,"(A,I5,A,I5,A,F6.3)") 'Adjusted TRI-D window, SumStrt=',SumStrt, ', SumWindw=', SumWindw, ', AmpltPlot=', AmpltPlot
+   If(SumStrt.lt.0) Then
+      write(2,*) 'Window starting sample should be positive'
+      Stop 'Window starting sample should be positive'
+   EndIf
    write(2,"(20(1x,'='))")
    !
    !  Read the time traces

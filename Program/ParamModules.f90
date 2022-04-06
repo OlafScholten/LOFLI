@@ -83,7 +83,8 @@ Module ThisSource
     ! to do: make PeakNr_dim & ChunkNr_dim dynamic
     Integer, save :: Safety=20 ! 20 40     ! length of time spectrum used for correlation = 2xSafety + Tref_dim
     Integer, parameter :: Tref_dim=20 ! 40  ! length of reference pulse, including Hann window of 2x5
-    Integer, parameter :: NrP=4  ! Max nr of peaks per spectrum during calibration run
+    !Integer, parameter :: NrP=4  ! Max nr of peaks per spectrum during calibration run
+    Integer :: NrP=4  ! Max nr of peaks per spectrum during calibration run
     integer, parameter :: UpSamplFact=1
     integer, save :: T2_dim ! = Tref_dim + Safety*2
     Integer, save, allocatable :: CorrAntNrs(:,:,:)

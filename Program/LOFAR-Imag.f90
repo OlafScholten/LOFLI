@@ -296,7 +296,7 @@ Program LOFAR_Imaging
 !  v18: Produce plots of interferometric maxima for automatic-slices; units= 28, 29 used locally
 !  v19: Plotting control unified
 ! v22.01: chi^2 fitting of antenna delays in TRI-D mode for calibration
-    use constants, only : dp,pi,ci,sample,Refrac
+    use constants, only : dp,pi,ci,sample, HeightCorrectIndxRef
     use LOFLI_Input
     use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
     use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode, Utility, release
@@ -336,8 +336,9 @@ Program LOFAR_Imaging
     NAMELIST /Parameters/ RunOption &
          !,  Explore, ImagingRun, Interferometry !, RealCorrelation, E_FieldsCalc &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
+         !, NrP &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
-         , Diagnostics, Dual, FitIncremental &
+         , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
          , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
@@ -445,6 +446,7 @@ Program LOFAR_Imaging
    ChunkNr_dim=1
    PeakNr_dim=1
    FMTSrces="(1x,3i2,I8,3(F10.2,1x))"
+   NrP=4       ! Nr of tryal pulses when searching for calibration
    SELECT CASE (RunOption(1:1))
    ! option          runmode
    ! Explore            1
@@ -475,17 +477,19 @@ Program LOFAR_Imaging
          Simulation=""
       CASE("C")  ! Calibrate                          RunMode=2
          ChunkNr_dim=0
+         FitIncremental=.false.
          Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
             Call GetNonZeroLine(lname)
             Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,1)  ! just dummy arguments
             Call Convert2m(SourceGuess(:,1))
+            !write(2,*) i, nxx, lname
             If(nxx.ne.0) exit
             Read(lname,FMTSrces,iostat=nxx) &
                 i_dist, i_guess,j ,i_chunk,  SourceGuess(:,1) ! just dummy arguments
-            !write(2,*) i, nxx, lname
-            If(nxx.eq.0) exit
+            If(nxx.eq.0 .and. i_guess.eq.0) exit
             ChunkNr_dim=i   ! this was a genuine chunk card
          EndDo
+         !write(2,*) 'test, ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk, SourceGuess(:,1)
          If(ChunkNr_dim.eq.0) Then
             Write(2,*) lname
             write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
@@ -497,6 +501,8 @@ Program LOFAR_Imaging
             stop 'Chunk number too large'
          EndIf
          !  Determine number of peaks/sorces that are included in the calibration search
+         If(Dual) NrP= 8
+         !NrP=4
          write(2,*) 'number of calibration chunks:',ChunkNr_dim
          i_peak=0
          Do
@@ -510,15 +516,16 @@ Program LOFAR_Imaging
                Call GetNonZeroLine(lname)
             EndIf
          Enddo
+         Rewind(unit=5) ! Standard input
+         read(*,NML = Parameters) ! to reposition correctly
+         !
          If(i_peak.eq.0) Then
             PeakNr_dim=2*NrP*ChunkNr_dim
+            FitIncremental=.true.
          Else
             PeakNr_dim=i_peak
          EndIf
-         !
          write(2,*) 'number of calibration sources:',PeakNr_dim
-         Rewind(unit=5) ! Standard input
-         read(*,NML = Parameters) ! to reposition correctly
          !
          WriteSimulation(2)=-1
          CalibratedOnly=.False.
@@ -543,6 +550,7 @@ Program LOFAR_Imaging
          'Maximum deviation (in samples) for a pulse in an antenna to be included in source position fitting.')
          !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
+         Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
          !Call PrintValues(PeakNr_dim,'PeakNr_dim', &
          !'Maximum number of sources (counting even and odd dipoles separately) included in the input.'//&
          !'Note: this is a bit of an annoying variable meant to allow to fit more offsets simultaneously.')
@@ -644,6 +652,7 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
          !
       CASE("T")  ! PolInterferometry==TRI-D imager         RunMode=24
          Interferometry=.true.
@@ -670,7 +679,7 @@ Program LOFAR_Imaging
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
-      CASE("P")  ! Field Calibration; Interferometric               RunMode=7
+      CASE("P")  ! PeakInterferometry            RunMode=8
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=N_Chunk_max
          PeakNr_dim=50

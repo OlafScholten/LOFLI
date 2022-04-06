@@ -46,11 +46,13 @@ Subroutine FindCallibr(SourceGuess)
    integer :: i_loc(1), i_Peak, StLoc, StatMax, ReadErr, PeakNr1
    Integer :: PeakSP(2*NrP,0:2), PeakSWl(2*NrP,0:2), PeakSWu(2*NrP,0:2), PeakSAmp(2*NrP,0:2), PeakD_nr
    Real(dp) :: DistMax
+   Integer, parameter :: w_low=5 ! Min slices between peaks in odd&even to be merged; should be about twice the value set in DualPeakFind
    !character*80 :: lname  ! Should be 80 to be compatible with "GetNonZeroLine"
    character*10 :: txt
    character*35 :: Frmt
    real(dp) :: x1,x2,x3,t
    logical :: FitNoSources=.true.
+   logical :: NewPeak
     real(dp) :: dt,B, MTC, dtI
     Complex(dp), Allocatable :: ST01nu(:)
     Complex(dp), Allocatable :: ST01T(:)
@@ -85,30 +87,77 @@ Subroutine FindCallibr(SourceGuess)
    !flush(unit=2)
    If(ReadErr.ne.0) then  ! Find peak positions instead of reading them from input
       Do i_chunk=1, ChunkNr_dim     ! get the NrP strongest peaks in this time block
-        Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
-        Do i_eo=0,1
+         Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
+         If(Dual) Then
             If((PeakNr1 + NrP) .gt. PeakNr_dim) then
                write(2,*) 'PeakNr_dim will be exceeded',PeakNr1, NrP
                stop 'FindCallibr-1'
             endif
-            Peakpos(PeakNr1+1:PeakNr1+NrP)=PeakSP(1:NrP,i_eo)
-            Do i_peak=PeakNr1+1,PeakNr1 + NrP
-                Peakpos(i_peak)=PeakSP(i_peak-PeakNr1,i_eo)
-                Peak_eo(i_peak)=i_eo
+            !Peakpos(PeakNr1+1:PeakNr1+NrP)=PeakSP(1:NrP,i_eo)
+            Do j=1,NrP/2
+                i_peak=PeakNr1+j
+                Peakpos(i_peak)=PeakSP(j,0)
+                Peak_eo(i_peak)=0
                 ChunkNr(i_peak)=i_chunk
-               SourcePos(:,i_Peak) = SourceGuess(:,i_chunk)
-               RefAntErr(i_Peak) = 0.
+                SourcePos(:,i_Peak) = SourceGuess(:,i_chunk)
+                RefAntErr(i_Peak) = 0.
+                !write(2,*) 'Peakpos(i_peak)',i_peak,Peakpos(i_peak)
             Enddo
-            PeakNr1=PeakNr1 + NrP
+            Do i=1, NrP  ! add the positions from odd antennas
+               !write(2,*) 'i',i
+               NewPeak=.true.
+               Do j=PeakNr1+1,PeakNr1 + NrP/2
+                  If(abs(Peakpos(j)-PeakSP(i,1)) .lt. w_low) Then
+                     Peakpos(j)=(Peakpos(j)+PeakSP(i,1))/2
+                     NewPeak=.false.
+                     !write(2,*) 'Peakpos(j)',j,Peakpos(j)
+                     exit
+                  EndIf
+               EndDo
+               If(NewPeak .and. (i_peak-PeakNr1).lt.NrP) Then
+                   i_peak=i_peak+1
+                   Peakpos(i_peak)=PeakSP(i,1)
+                   Peak_eo(i_peak)=0
+                   ChunkNr(i_peak)=i_chunk
+                   SourcePos(:,i_Peak) = SourceGuess(:,i_chunk)
+                   RefAntErr(i_Peak) = 0.
+                   !write(2,*) 'Peakpos(i_peak);1',i_peak,Peakpos(i_peak)
+               EndIf
+            EndDo
             !write(2,*) 'PeakNr1=',PeakNr1,i_eo,i_chunk
-            TotPeakNr(i_eo,i_chunk)=PeakNr1! last peak# for this (i_eo,i_chunk)
-            PeakNr(i_eo,i_chunk)=NrP        ! number of peaks for this (i_eo,i_chunk)
-        enddo
-      enddo ! i_chunk=1, ChunkNr_dim
+            TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
+            PeakNr(0,i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_eo,i_chunk)
+            Call DualReadPeakInfo(2,i_chunk)  !  Copy to the odd antennas
+            PeakNr1=TotPeakNr(1,i_chunk)
+         Else
+            Do i_eo=0,1
+               If((PeakNr1 + NrP) .gt. PeakNr_dim) then
+                  write(2,*) 'PeakNr_dim will be exceeded',PeakNr1, NrP
+                  stop 'FindCallibr-1'
+               endif
+               Peakpos(PeakNr1+1:PeakNr1+NrP)=PeakSP(1:NrP,i_eo)
+               Do i_peak=PeakNr1+1,PeakNr1 + NrP
+                   Peakpos(i_peak)=PeakSP(i_peak-PeakNr1,i_eo)
+                   Peak_eo(i_peak)=i_eo
+                   ChunkNr(i_peak)=i_chunk
+                  SourcePos(:,i_Peak) = SourceGuess(:,i_chunk)
+                  RefAntErr(i_Peak) = 0.
+               Enddo
+               PeakNr1=PeakNr1 + NrP
+               !write(2,*) 'PeakNr1=',PeakNr1,i_eo,i_chunk
+               TotPeakNr(i_eo,i_chunk)=PeakNr1! last peak# for this (i_eo,i_chunk)
+               PeakNr(i_eo,i_chunk)=NrP        ! number of peaks for this (i_eo,i_chunk)
+            enddo
+         EndIf
+      EndDo  ! i_chunk=1, ChunkNr_dim
       PeakNrTotal=PeakNr1
    endif
    !write(2,*) 'PeakNrTotal:',PeakNrTotal
+   !write(2,*) 'Peakpos:',Peakpos
+   !write(2,*) 'Peak_eo:',Peak_eo
+   !write(2,*) 'ChunkNr:',ChunkNr
    !write(2,*) 'SourcePos:',SourcePos
+   !flush(unit=2)
    !
    If(Polariz) then
       write(2,*) 'Use theta polarization for antenna correlations'
@@ -248,7 +297,7 @@ Subroutine ReadPeakInfo(ReadErr)
 !   Read-in the peakpos and source guesses for individual pulses.
 !
 !
-    use constants, only : dp,sample,Refrac,c_mps
+    use constants, only : dp,sample!,Refrac,c_mps
     use Chunk_AntInfo, only : Station_nrMax, RefAnt, Ant_pos, Ant_RawSourceDist
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs
     use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, ChunkNr !NrP, t_ccorr,
@@ -305,7 +354,7 @@ Subroutine ReadPeakInfo(ReadErr)
       read(lname,Frmt,iostat=nxx)  Label,i,i_eo,i_c, k, x1,x2,x3,t
       !write(2,*) k, x1,x2,x3,t
       If(nxx.ne.0) exit
-      if((i_eo.lt.0) .or. (i_eo.gt.1) ) exit
+      if((i_eo.lt.0) .or. (i_eo.gt.2) ) exit
       i_peak=i_peak+1
       If(i_peak .gt. PeakNr_dim) then
          write(2,*) 'PeakNr_dim will be exceeded',i_peak
@@ -315,15 +364,24 @@ Subroutine ReadPeakInfo(ReadErr)
       If(i_eoa .ne. i_eo) then
           PeakNr1= i_peak-1
           If(i_eo.eq. 0) i_chunk=i_chunk+1
-      Elseif(i_ca.ne.i_c) then ! i_eo did not jump
-          TotPeakNr(1,i_chunk)=i_peak-1 ! last peak# for this (i_eo,i_chunk)
-          PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
+      Elseif(i_ca.ne.i_c) then ! i_eo did not jump, but chunks did
+          If(i_eo.eq.1) Then
+            PeakNr(0,i_chunk+1)=0        ! number of peaks for this (i_eo,i_chunk)
+            TotPeakNr(0,i_chunk+1)=TotPeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
+          Else
+             Call DualReadPeakInfo(i_eo,i_chunk)
+             i_peak=TotPeakNr(1,i_chunk)+1
+          EndIf
           i_chunk=i_chunk+1
       Endif
       if(i_chunk.gt.ChunkNr_dim) Then
          write(2,*) 'error when reading peak info, chunk number problems',i_c,i_ca,i_chunk
          stop 'ReadPeakInfo'
       EndIf
+      i_eoa=i_eo
+      i_ca=i_c
+      If(i_eo.eq.2) i_eo=0 ! same peak info for even&odd
+      !
       SourcePos(1,i_Peak)=x1
       SourcePos(2,i_Peak)=x2
       SourcePos(3,i_Peak)=x3
@@ -340,13 +398,13 @@ Subroutine ReadPeakInfo(ReadErr)
       RefAntErr(i_Peak) = t
       Peak_eo(i_peak)=i_eo
       If(Dual .and. (i_eo.eq.1)) then
-      Do i=0,PeakNr(0,i_chunk)-1
-         !write(2,*) 'peakpos-i',i,TotPeakNr(0,i_chunk)-i,Peakpos(TotPeakNr(0,i_chunk)-i),k
-         If(Peakpos(TotPeakNr(0,i_chunk)-i).eq. k) then
-            SourcePos(:,i_Peak)=SourcePos(:,TotPeakNr(0,i_chunk)-i)
-            exit
-         Endif
-      Enddo
+         Do i=0,PeakNr(0,i_chunk)-1
+            !write(2,*) 'peakpos-i',i,TotPeakNr(0,i_chunk)-i,Peakpos(TotPeakNr(0,i_chunk)-i),k
+            If(Peakpos(TotPeakNr(0,i_chunk)-i).eq. k) then
+               SourcePos(:,i_Peak)=SourcePos(:,TotPeakNr(0,i_chunk)-i)
+               exit
+            Endif
+         Enddo
       endif
       !write(2,*) 'Source ',i_Peak, ' searched near ',SourcePos(:,i_Peak)
       ChunkNr(i_peak)=i_chunk
@@ -375,16 +433,15 @@ Subroutine ReadPeakInfo(ReadErr)
                (ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
          Call GetNonZeroLine(lname)
       EndIf
-      If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only
-         i_peak=TotPeakNr(0,i_chunk)
-         TotPeakNr(1,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
-         PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
-         PeakNrTotal=i_peak
-         PeakNr1=i_peak
-      EndIf
-      i_eoa=i_eo
-      i_ca=i_c
+      !If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only ; Obsolete
+      !   i_peak=TotPeakNr(0,i_chunk)
+      !   TotPeakNr(1,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
+      !   PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
+      !   PeakNrTotal=i_peak
+      !   PeakNr1=i_peak
+      !EndIf
    Enddo
+   Call DualReadPeakInfo(i_eoa,i_chunk)
    write(2,*) 'PeakNrTotal=',PeakNrTotal
    write(2,*) 'TotPeakNr',TotPeakNr
    !
@@ -393,6 +450,36 @@ Subroutine ReadPeakInfo(ReadErr)
    !
    Return
 End Subroutine ReadPeakInfo
+!================================
+Subroutine DualReadPeakInfo(i_eo,i_chunk)
+    use constants, only : dp,sample!,Refrac,c_mps
+    use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, ChunkNr !NrP, t_ccorr,
+    use ThisSource, only : Dual, PeakNr, PeakNrTotal !, PlotCCPhase, Safety, Nr_corr
+    use ThisSource, only : PeakPos, Peak_eo
+    use DataConstants, only : PeakNr_dim, ChunkNr_dim
+    use DataConstants, only : Polariz
+    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
+    Implicit none
+    Integer, intent(in) :: i_eo,i_chunk
+    Integer :: i
+    If(i_eo.eq.1) Return
+    If(i_eo.eq.2) Then ! same for even&odd
+       PeakNr(1,i_chunk)=PeakNr(0,i_chunk)                        ! number of peaks for this (i_eo,i_chunk)
+       TotPeakNr(1,i_chunk)=TotPeakNr(0,i_chunk)+PeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
+       Do i=0,PeakNr(0,i_chunk)-1 ! copy
+         Peakpos(TotPeakNr(1,i_chunk)-i) = Peakpos(TotPeakNr(0,i_chunk)-i)
+         SourcePos(:,TotPeakNr(1,i_chunk)-i) = SourcePos(:,TotPeakNr(0,i_chunk)-i)
+         RefAntErr(TotPeakNr(1,i_chunk)-i) = RefAntErr(TotPeakNr(0,i_chunk)-i)
+         Peak_eo(TotPeakNr(1,i_chunk)-i)=1
+         ChunkNr(TotPeakNr(1,i_chunk)-i)=i_chunk
+         PeakNrTotal=TotPeakNr(1,i_chunk)
+       EndDo
+    ElseIf(i_eo.eq.0) Then
+       PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
+       TotPeakNr(1,i_chunk)=TotPeakNr(0,i_chunk)+PeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
+    EndIf
+    Return
+End Subroutine DualReadPeakInfo
 !================================
 Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !use DataConstants, only : ChunkNr_dim

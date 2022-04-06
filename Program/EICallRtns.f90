@@ -51,13 +51,12 @@ Subroutine EIPrntNewSources()
    use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, PeakPos, SourcePos
    use Chunk_AntInfo, only : Start_time
     !use StationMnemonics, only : Statn_ID2Mnem
-   use Constants, only : dp,sample,c_mps,Refrac
+   use Constants, only : dp,sample,c_mps !,Refrac
    Implicit none
-   !real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
-   integer ( kind = 4 ) :: i,j, i_Peak, i_chunk
-   integer, external :: XIndx
+   integer ( kind = 4 ) :: i_Peak, i_chunk !, i,j
    Real(dp) :: time
-   Character(len=5) :: Station_Mnem
+   Real(dp), external :: tShift_smpl
+!   Character(len=5) :: Station_Mnem
    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
    !
    i_chunk=0
@@ -70,12 +69,11 @@ Subroutine EIPrntNewSources()
    Enddo
    !
    Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height;    t[ms]  ); (chi^2/df) '
-   i_chunk=1
-   j=0
    Do i_Peak = 1,PeakNrTotal
-      Time=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
-      Time = Time*Refrac/(c_mps*sample) ! Convert to units of [samples]
-      Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000.
+      !Time=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
+      !Time = Time*Refrac/(c_mps*sample) ! Convert to units of [samples]
+      !Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000.
+      Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - tShift_smpl(SourcePos(:,i_Peak)) )*Sample*1000.
       Write(2,"('C',i2,' 0',i2,I8)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),PeakPos(i_Peak)
       Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
       write(2,"(F12.5';',F7.2)") Time, PeakChiSQ(i_Peak)
@@ -120,7 +118,6 @@ Subroutine EIX2Source(X)
     Implicit none
     real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
     integer :: i_Peak
-    !integer, external :: XIndx
     integer :: i, k,j
     !Real(dp) :: dt
     !
