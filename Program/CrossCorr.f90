@@ -212,7 +212,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
                        ', source-pos=(',SourcePos(1:3,i_Peak),')[m] , RefAntErr=', RefAntErr(i_Peak),'[samples]'
                Endif
             Endif
-            Peak_Offst(i_Peak)=Rdist + RefAntErr(i_Peak)  !=RDist1  !  In units of samples
+            Peak_Offst(i_Peak)=Rdist + RefAntErr(i_Peak)  !=T_shft1 in 'CompareCorrTime' !  In units of samples
             Peak_RefSAI(i_Peak)=i_SAI
             Peak_IRef(i_Peak)=i_ant
             StLoc=PeakPos(i_Peak) - Tref_dim/2
@@ -232,7 +232,8 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
                Call GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, Tref_dim, &
                      T2_dim, PolBasis(1,1,i_Peak), alpha, W, CnuRt(0,1,i_peak)) ! get FFT spectrum around peak for (t,p) directions
             Else
-               Call GetAnt(i_ant, i_chunk, StLoc, Tref_dim, T2_dim, CnuRt(0,1,i_peak))
+               Call GetAnt(i_ant, i_chunk, StLoc, Tref_dim, T2_dim, CnuRt(0,1,i_peak)) ! get nu-spectrum for reference antenna
+               !write(2,*) 'ref:',i_ant,i_peak, StLoc, Tref_dim, T2_dim, SubSample_Offset
             EndIf
             If(.not. Production) then
                CC_val=abs(CTime_spectr(StLoc+Tref_dim/2,i_ant,i_chunk))/2.
@@ -286,6 +287,13 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
                i_Peak, SubSample_Offset, CrCor, CrCorp)
          Else
             Call CrossCorr(CnuRt(0,1,i_peak), i_ant, i_chunk, StLoc, T2_dim, SubSample_Offset, CrCor)
+            !If(i_ant.lt.5) write(2,*) i_ant,i_peak,j_corr, StLoc, T2_dim, SubSample_Offset,CrCor(T2_dim),CrCor(1:2)
+            ! Checked: for the self correlation the max of the real part is (almost) at 1 (delta-t=0, where you would expect it,
+            !  however the max of the hilbert envelope may be moved from zero. Seems that for asymmetric pulses the max&min of the
+            !  imaginary part is not symmetrix, which may be the reason that the Hilbert transform peaks elsewhere than delta-t=0
+            ! For a true self correlation this cannot happen, however the reference-antenna spectrum lenght 'Tref_dim'is padded
+            !  with zeros to reach the length 'T2_dim' of the spectra for which the cross correlations are calculated. This
+            !  difference in length is the culprit.
          EndIf
         !
         Call SearchWin(Peak_IRef(i_Peak), i_ant, i_chunk, SourcePos(1,i_Peak), SearchRange)
@@ -325,6 +333,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
         !       ( i-1,crcor(T2_dim+i),i=-2,0,1), (i-1,crcor(i), i=1,4)
         !       stop
         If(j_corr .eq. 1) then
+            RtMax=RtMax-RefAntErr(i_Peak)  ! April 2022
             CC_WidRef(i_Peak)=CC_Wid  ! set in call to CC_Max
             !write(2,"(2I3,2F8.2,A,11(i2,':(',G12.3,'), '))") i_ant, i_Peak, RtMax, RDist,' ABScrcor:', &
             !   ( i-1,ABS(crcor(T2_dim+i)),i=-2,0,1), (i-1,ABS(crcor(i)), i=1,4)
@@ -340,6 +349,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
         !If(j_corr.eq.2 .and. abs(RtMax).gt.5.) write(2,"(10F7.2)")  CCorr(:,j_corr,i_Peak)
     9    continue
         CCorr_max(j_corr,i_Peak) = RtMax
+        !If(i_ant.lt.5) write(2,*) i_Peak,j_corr,'RtMax:',RtMax
         CCorr_Err(j_corr,i_Peak) = Error
         CCNorm(j_corr,i_Peak)  =  CC_val
         CCPhase(i_Peak)  = CC_Phase
@@ -755,6 +765,7 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
       i_loc=MaxLoc(TrueCC(-Range:Range) ) ! works only for a very smooth function, not for real correlation
       t_max=i_loc(1) - Range -1
       CCval=-1.
+      !If(i_ant.lt.5) write(2,*) i_ant,i_peak,t_max,'TrueCC(t_max-1:t_max+1)',TrueCC(t_max-1:t_max+1)
    EndIf
    !If(i_peak.eq.1) write(2,*) i_ant,TrueCC(:)
    !if(i_ant.eq.5) stop
@@ -812,6 +823,7 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
       !      ', peak#=',i_Peak, RtMax, CCval, atan2(Ival, Rval)*180./pi
       !flush(unit=2)
    endif
+   !If(i_ant.lt.3) write(2,*) i_ant,i_peak,' CrossCorr_Max@',RtMax,', amp=',CCval
    !write(2,*) 'Exit  CrossCorr_Max', RtMax, CCval, CCPhase, Error, '; TrueCC=', TrueCC
    !flush(unit=2)
    !
@@ -909,7 +921,7 @@ Subroutine ReImAtMax(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RCCorr, RtMax, Aval, 
    Return
 End Subroutine ReImAtMax
 !=====================================
-Subroutine GetRefAnt
+Subroutine GetRefAnt(ChunkNr)
    ! with the dual option the relative distance between the two polarity antennas should be small
    use DataConstants, only : ChunkNr_dim
    use DataConstants, only : Polariz
@@ -918,10 +930,16 @@ Subroutine GetRefAnt
    use constants, only : dp
    use unque, only : Double_sort
    Implicit none
+   Integer, intent(in) :: ChunkNr
    Integer, parameter :: MaxRefAnt=20, i_e=0, i_o=1, MA=100  ! max nr of antenna pairs tested for close proximity
-   Integer :: Ant(1:Ma,0:2), j, i_ante, i_anto, i_chunk
+   Integer :: Ant(1:Ma,0:2), j, i_ante, i_anto, i_chunk,N_chunk
    Real(dp) :: Dist
-   Do i_chunk=1, ChunkNr_dim
+   If((ChunkNr .le. 0) .or. (ChunkNr .gt. ChunkNr_dim)) Then
+      N_chunk=ChunkNr_dim
+   Else
+      N_chunk=ChunkNr
+   EndIf
+   Do i_chunk=1, N_chunk
       If(Dual) then
          j=0
          Do i_ante=1,MaxRefAnt ! build table of relative distances

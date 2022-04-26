@@ -18,7 +18,8 @@ Module Chunk_AntInfo
     Integer, save, allocatable :: Ant_IDs(:,:)
     Integer, save, allocatable :: Ant_nr(:)
     Integer, save, allocatable :: RefAnt(:,:)
-    Integer, save, allocatable :: Start_time(:)  ! ChunkNr(:)  !
+    Integer, save, allocatable :: StartT_sam(:)  ! ChunkNr(:)  !
+    Real(dp), save, allocatable  :: ChunkStTime_ms(:), ChunkFocus(:,:)
     Real(dp), save, allocatable :: Ant_RawSourceDist(:,:) ! distances that have been taken into account already when filling out this chunk
     Real(dp), save, allocatable :: Ant_pos(:,:,:)
     Complex(dp), save, allocatable :: CTime_spectr(:,:,:)
@@ -61,8 +62,9 @@ Module Chunk_AntInfo
     Allocate( Ant_Stations(1:Ant_nrMax,1:ChunkNr_dim) )
     Allocate( Ant_IDs(1:Ant_nrMax,1:ChunkNr_dim) )
     Allocate( Ant_nr(1:ChunkNr_dim) )
+    Ant_nr(1:ChunkNr_dim)=0
     Allocate( RefAnt(1:ChunkNr_dim,0:1) )
-    Allocate( Start_time(1:ChunkNr_dim) )
+    Allocate( StartT_sam(1:ChunkNr_dim) )
     Allocate( Ant_RawSourceDist(1:Ant_nrMax,1:ChunkNr_dim) ) ! distances that have been taken into account already when filling out this chunk
     Allocate( Ant_pos(3,1:Ant_nrMax,1:ChunkNr_dim) )
     Allocate( CTime_spectr(1:Time_dim,1:Ant_nrMax,1:ChunkNr_dim) )
@@ -112,6 +114,7 @@ Module ThisSource
     !          pulse arrival time difference w.r.t. reference antenna and depends on source position
     Real(dp), save, allocatable  :: CCPhase_ave(:,:)
     Integer, save, allocatable :: Dropped(:,:)
+    Real(dp), save :: StStdDevMax_ns=100.d0  ! Maximum allowed standard deviation in antenna-arraval times for a pulse in one station while calibrating
     Complex(dp), save, allocatable :: CnuRt(:,:,:)
     Real(dp), save, allocatable :: t_CCorr(:)
     integer, save, allocatable :: Unique_pos(:)  ! Used in Xindx to store the peakpositions to find double peaks
@@ -140,18 +143,24 @@ Module ThisSource
        T2_dim = Tref_dim + Safety*2
        Allocate( CorrAntNrs(1:Ant_nrMax,0:1,1:ChunkNr_dim))
        Allocate( Nr_Corr(0:1,1:ChunkNr_dim))
-       Allocate( PeakNr(0:1,1:ChunkNr_dim) )      ! number of peaks for this (i_eo,i_chunk)
-       Allocate( TotPeakNr(0:1,1:ChunkNr_dim))    ! last peak# for this (i_eo,i_chunk)
        !
-       Allocate( Peak_eo(1:PeakNr_dim), ChunkNr(1:PeakNr_dim)) ! , Peak_Offst(1:PeakNr_dim)
+       If(.not. Allocated(PeakNr) ) Then
+          Allocate( PeakNr(0:1,1:ChunkNr_dim) )      ! number of peaks for this (i_eo,i_chunk)
+          Allocate( TotPeakNr(0:1,1:ChunkNr_dim))    ! last peak# for this (i_eo,i_chunk)
+          Allocate( Peak_eo(1:PeakNr_dim), ChunkNr(1:PeakNr_dim)) ! , Peak_Offst(1:PeakNr_dim)
+          Allocate( PeakPos(1:PeakNr_dim))  ! peak position in the reference antenna
+          Allocate( SourcePos(3,1:PeakNr_dim))
+          Allocate( RefAntErr(1:PeakNr_dim))
+       EndIf
+       If(.not. Allocated(ExclStatNr) ) Then
+          Allocate( ExclStatNr(1:30,1:PeakNr_dim))
+          ExclStatNr(:,:)=0
+       EndIf
+       !
        Allocate( Peak_RefSAI(1:PeakNr_dim))
        Allocate( Peak_IRef(1:PeakNr_dim))
        Allocate( Peak_Offst(1:PeakNr_dim)) ! Set in 'GetCorrSingAnt',
        !          pulse arrival time shift (w.r.t. core CS002) of pulse in reference antenna depending on source position
-       Allocate( ExclStatNr(1:30,1:PeakNr_dim))
-       Allocate( PeakPos(1:PeakNr_dim))  ! peak position in the reference antenna
-       Allocate( SourcePos(3,1:PeakNr_dim))
-       Allocate( RefAntErr(1:PeakNr_dim))
        Allocate( PeakRMS(1:PeakNr_dim))
        Allocate( PeakChiSQ(1:PeakNr_dim))
        Allocate( CnuRt(0:T2_dim/2,1:3,1:PeakNr_dim) )
@@ -164,11 +173,11 @@ Module ThisSource
        !          pulse arrival time difference w.r.t. reference antenna and depends on source position
        Allocate( CCPhase_ave(1:PeakNr_dim,1:Station_nrMax))
        Allocate( Dropped(1:Station_nrMax,1:PeakNr_dim) ) ! Number of antennas effectively dropped from the fitting
+       Dropped(:,:)=0
        Allocate( t_CCorr(-Safety:Safety) )
        Allocate( Unique_pos(1:PeakNr_dim) ) ! Used in Xindx to store the peakpositions to find double peaks
        Allocate( CC_WidRef(1:PeakNr_dim) ) ! Estimate of the width of the cross correlation
        Allocate( CC_Qual(1:Ant_nrMax,1:PeakNr_dim) ) ! Quality of the cross correlation
-       ExclStatNr(:,:)=0
        !write(2,"(A,o10,i7)") 'from Alloc_ThisSource, T2_dim:', T2_dim, T2_dim
     End Subroutine Alloc_ThisSource
 End Module ThisSource

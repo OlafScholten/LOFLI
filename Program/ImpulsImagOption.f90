@@ -5,7 +5,7 @@ Subroutine ImpulsImagRun
    use DataConstants, only : Calibrations, OutFileLabel, EdgeOffset
    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Dual !, PeakPos
    use FitParams, only : FullSourceSearch, SigmaGuess, AntennaRange, SearchRangeFallOff, Sigma_AntT
-   use Chunk_AntInfo, only : Start_time, AntennaNrError, DataReadError, TimeFrame !, BadAnt_nr, BadAnt_SAI ExcludedStatID,
+   use Chunk_AntInfo, only : StartT_sam, AntennaNrError, DataReadError, TimeFrame !, BadAnt_nr, BadAnt_SAI ExcludedStatID,
    use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk !TimeBase, Simulation, WriteSimulation
    use FFT, only : RFTransform_su,DAssignFFT
    use Explore_Pars, only : NMin, NMax, Emin, EMax
@@ -55,7 +55,7 @@ Subroutine ImpulsImagRun
       Write(2,"('Preferred source location:',3F8.2,'[km]')") SourceGuess(:,1)/1000.
       Write(2,"('Initial error on location:',3F8.3,'[km]')") SigmaGuess(:)/1000.
    Endif
-   Start_time(1)=(StartTime_ms/1000.)/sample  ! in sample's
+   StartT_sam(1)=(StartTime_ms/1000.d0)/sample  ! in sample's
    write(*,*) 'Start Source Finding'
    lname=' [s] ; ID, (North, East, vertical at core) [m] , t [s] , chi^2, sigma(N,E,v),    N_EffAnt, Max_EffAnt ;'
    lname=lname//' height, l&r widths'
@@ -67,7 +67,7 @@ Subroutine ImpulsImagRun
       Open(unit=17,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
       Write(17,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
       Write(17,"('! ',A)") TRIM(TxtImagingPars)
-      Write(17,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' even&odd antenna numbers'
+      Write(17,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even&odd antenna numbers'
       Open(unit=27,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
       write(27,*) TRIM(Txt20ImagingPars)
       write(27,"('! ',A)") TRIM(Txt20Identifier)
@@ -77,7 +77,7 @@ Subroutine ImpulsImagRun
       Open(unit=15,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
       Write(15,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
       Write(15,"('! ',A)") TRIM(TxtImagingPars)
-      Write(15,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' even antenna numbers'
+      Write(15,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even antenna numbers'
       Open(unit=25,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
       write(25,*) TRIM(Txt20ImagingPars)
       write(25,"('! ',A)") TRIM(Txt20Identifier)
@@ -87,30 +87,30 @@ Subroutine ImpulsImagRun
       Open(unit=16,STATUS='unknown',ACTION='write', FILE = TRIM(Sources2)//'.csv')
       Write(16,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
       Write(16,"('! ',A)") TRIM(TxtImagingPars)
-      Write(16,"(f12.9,2A)") StartTime_ms/1000.,TRIM(lname),' odd antenna numbers'
+      Write(16,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' odd antenna numbers'
       Open(unit=26,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources2)//'_stat.csv')
       write(26,*) TRIM(Txt20ImagingPars)
       write(26,"('! ',A)") TRIM(Txt20Identifier)
       units(1)=16
    Endif
    !
-   ChunkNr_start=StartingTime/(1000.*sample*(Time_dim-2*EdgeOffset))+1
-   ChunkNr_stop=StoppingTime/(1000.*sample*(Time_dim-2*EdgeOffset))+1
+   ChunkNr_start=StartingTime/(1000.d0*sample*(Time_dim-2*EdgeOffset))+1
+   ChunkNr_stop=StoppingTime/(1000.d0*sample*(Time_dim-2*EdgeOffset))+1
    !ChunkNr_start=1501 ; ChunkNr_stop=1900 ! No Time Frame == ChunkNr
    write(*,"(A,i5,A)") achar(27)//'[45m # of data-blocks read in=',(ChunkNr_stop-ChunkNr_start),achar(27)//'[0m'
    If((ChunkNr_stop-ChunkNr_start).gt.3) Production=.true.
    Open(unit=18,STATUS='unknown',ACTION='write', FILE = TRIM(Sources)//'-5star-'//TRIM(OutFileLabel)//'.dat')
-   write(18,*) '! Start_Time[ms]:', '1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
+   write(18,*) '! StartT_sam[ms]:', '1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
    Do TimeFrame=ChunkNr_start, ChunkNr_stop
       AntennaNrError=0
       write(*,"(A,i6,A)", ADVANCE='NO') achar(27)//'[31m Processing block# ',TimeFrame,achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
       i_chunk=1
-      Start_Time(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
-      !Write(2,*) 'StartTime_ms=',StartTime_ms,', TimeFrame=',TimeFrame,', Start_Time=',Start_Time(1)
+      StartT_sam(1)=(StartTime_ms/1000.d0)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
+      !Write(2,*) 'StartTime_ms=',StartTime_ms,', TimeFrame=',TimeFrame,', StartT_sam=',StartT_sam(1)
       Write(2,"(A,I5,A,F8.3,A,F12.6,A,I11,A,3F10.1,A)") 'Start time for slice',TimeFrame &
-         ,' (dt=',Start_time(1)*1000.d0*sample-StartTime_ms,' [ms]) is',Start_time(1)*1000.d0*sample &
-         ,' [ms]=',Start_time(1),' [Samples]; SourceGuess=',SourceGuess(:,i_chunk),';  1=North, 2=East, 3=vertical(plumbline)'
+         ,' (dt=',StartT_sam(1)*1000.d0*sample-StartTime_ms,' [ms]) is',StartT_sam(1)*1000.d0*sample &
+         ,' [ms]=',StartT_sam(1),' [Samples]; SourceGuess=',SourceGuess(:,i_chunk),';  1=North, 2=East, 3=vertical(plumbline)'
       Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
       Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))

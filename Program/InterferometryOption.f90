@@ -26,7 +26,7 @@ Subroutine InterferometerRun
    use DataConstants, only : OutFileLabel, DataFolder, Calibrations, Time_Dim !, Cnu_dim,
    !use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
    use DataConstants, only : Polariz
-   use Chunk_AntInfo, only : Start_time, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
+   use Chunk_AntInfo, only : StartT_sam, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
    use ThisSource, only : Dual, CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use FitParams, only : AntennaRange
    use constants, only : dp, ci, pi, Sample, c_mps
@@ -143,7 +143,7 @@ Subroutine InterferometerRun
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), 'initializing'
    i_chunk=1
-   Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
+   StartT_sam(i_chunk)=(StartTime_ms/1000.d0)/sample  ! in sample's
    TimeFrame=i_chunk
    Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    Call AntennaRead(i_chunk, CenLoc)

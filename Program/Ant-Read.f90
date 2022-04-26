@@ -4,7 +4,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
    !use DataConstants, only : Polariz
    !use FitParams, only : Explore
-    use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
+    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
     use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos, CalibratedOnly
     use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist, Simulation, WriteSimulation
@@ -53,10 +53,10 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    !
    !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-   Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',Start_time(i_chunk)*1000.d0*sample &
-      ,' [ms] =',Start_time(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
+   Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',StartT_sam(i_chunk)*1000.d0*sample &
+      ,' [ms] =',StartT_sam(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    !Write(2,*) 'SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
-   write(*,"(A,f8.2,A)") achar(27)//'[33m @',Start_time(i_chunk)*1000.*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
+   write(*,"(A,f8.2,A)") achar(27)//'[33m @',StartT_sam(i_chunk)*1000.d0*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
@@ -152,6 +152,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                !write(2,*) 'STATION_ID,Ant_ID was not calibrated',STATION_ID,Ant_ID,StatAnt_Calib
                cycle
               EndIf
+              !Write(2,*) 'calibration:', STATION_ID,Ant_ID,StatAnt_Calib, DIPOLE_CALIBRATION_DELAY/Sample
               !
               Powr_eo(i_eo)=Powr_eo(i_eo)+Powr
               NAnt_eo(i_eo)=NAnt_eo(i_eo)+1
@@ -166,8 +167,8 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               T_Offset=RDist + StatAnt_Calib  ! in units of samples
               Sample_Offset = INT(T_Offset) ! in units of sample size
               SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
-              Dset_offset=Start_time(i_chunk) + Sample_Offset - SAMPLE_NUMBER_first
-              !write(2,*) 'Start_time(i_chunk),:',Start_time(i_chunk), Sample_Offset, SAMPLE_NUMBER_first
+              Dset_offset=StartT_sam(i_chunk) + Sample_Offset - SAMPLE_NUMBER_first
+              !write(2,*) 'StartT_sam(i_chunk),:',StartT_sam(i_chunk), Sample_Offset, SAMPLE_NUMBER_first
               !If(Ant_nr(1).eq.0) write(2,*) ', TimeOffset', T_Offset, Dset_Offset,DATA_LENGTH, Sample_Offset - SAMPLE_NUMBER_first
               If(Dset_offset .gt.DATA_LENGTH) then
                   If(Diagnostics) write(2,*) '****DATA_LENGTH=',Dset_offset, ' greater than ',DATA_LENGTH
@@ -283,7 +284,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                !Call CreateNewFolder(Simulation) ! create new folder when needed
                Open(Unit=31,STATUS='unknown',ACTION='write', &
                      FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
-               Write(31,*) 'StartTime_ms= ',(Start_time(i_chunk)+WriteSimulation(1)+RDist)*sample*1000., &
+               Write(31,*) 'StartTime_ms= ',(StartT_sam(i_chunk)+WriteSimulation(1)+RDist)*sample*1000.d0, &
                      ' N_samp= ', WriteSimulation(2), ' noise_power= 100.'
                Do i_ant=AntNr_lw,AntNr_up
                   i_eo=mod(Ant_IDs(i_ant,i_chunk),2)
@@ -328,7 +329,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    EndIf
    !
    If(Ant_nr(i_chunk).le.6) then
-      write(2,*) Ant_nr(i_chunk),' are too few active antennas for chunck starting at ',Start_time(i_chunk)
+      write(2,*) Ant_nr(i_chunk),' are too few active antennas for chunck starting at ',StartT_sam(i_chunk)
       If(AntennaNrError.lt.0) then
          stop 'AntennaRead'
       Else
@@ -537,10 +538,10 @@ Subroutine SimulationRead(SourceGuess)
 !  col3: even antenna at location 2
 !  and so on.
 !
-   use constants, only : dp,sample 
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, Station_nrMax
    Use Chunk_AntInfo, only : Station_name, Station_number, Simulation
-   use Chunk_AntInfo, only : Start_time
+   use Chunk_AntInfo, only : StartT_sam
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
    use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist
    use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
@@ -656,9 +657,9 @@ Subroutine SimulationRead(SourceGuess)
          i_ant=AntNr_lw+j_ant
          RDist=Ant_RawSourceDist(i_ant,i_chunk)
          !StatAnt_Calib=StatStartTime/Sample ! StatAnt_Calib in units of samples
-         !T_Offset=-RDist - StatStartTime/(Sample*1000.) +Start_time(i_chunk)  ! in units of samples
-         T_Offset=-RDist + StatStartTime/(Sample*1000.) -Start_time(i_chunk)  ! in units of samples
-         !write(2,*) 'T_Offset', T_Offset,RDist, StatStartTime/(Sample*1000.)-Start_time(i_chunk) , i_ant
+         !T_Offset=-RDist - StatStartTime/(Sample*1000.) +StartT_sam(i_chunk)  ! in units of samples
+         T_Offset=-RDist + StatStartTime/(Sample*1000.d0) -StartT_sam(i_chunk)  ! in units of samples
+         !write(2,*) 'T_Offset', T_Offset,RDist, StatStartTime/(Sample*1000.d0)-StartT_sam(i_chunk) , i_ant
          !flush(Unit=2)
          Sample_Offset = INT(T_Offset) ! in units of sample size
          SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size

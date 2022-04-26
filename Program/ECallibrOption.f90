@@ -26,7 +26,7 @@ Subroutine E_Callibr()
 !        antenna location (in the same chunck).
    use constants, only : dp,sample
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode, Time_Dim
-   use Chunk_AntInfo, only : Unique_SAI, Start_time, Tot_UniqueAnt, Ant_Stations
+   use Chunk_AntInfo, only : Unique_SAI, StartT_sam, Tot_UniqueAnt, Ant_Stations
    use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat, Nr_UniqueAnt, N_Chunk_max
    use DataConstants, only : Ant_nrMax
    use ThisSource, only : SourcePos
@@ -55,27 +55,28 @@ Subroutine E_Callibr()
    Integer :: i_SAI
    !
    !       Read appropriate data chunks
-   Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
-   Do i_chunk=1, ChunkNr_dim
-      Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
-      If(NINT(SourceGuess(2,i_chunk)).eq.1) &
-            write(*,"(A,i3,A)") achar(27)//'[45m # Check ChunkNr_dim',i_chunk,achar(27)//'[0m'
-      Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
-      Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
-      !
-      Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
-      !
-   EndDo !  i_chunk
-   close(unit=14)
-   close(unit=12)
-   call DAssignFFT()  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   Call  ReadPeakFitInfo()
+ !  Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+ !  write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
+  ! Do i_chunk=1, ChunkNr_dim
+  !    Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
+  !    If(NINT(SourceGuess(2,i_chunk)).eq.1) &
+  !          write(*,"(A,i3,A)") achar(27)//'[45m # Check ChunkNr_dim',i_chunk,achar(27)//'[0m'
+  !   StartT_sam(i_chunk)=(StartTime_ms/1000.d0)/sample  ! in sample's
+  !    Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
+  !    !
+  !    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
+  !    !
+  ! EndDo !  i_chunk
+  ! close(unit=14)
+  ! close(unit=12)
+  ! call DAssignFFT()  !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
    !
    Write(2,"(A,I3,2x,50(1x,I5))") 'Nr_UniqueStat=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
    write(2,"(A,I4,2x,50(1x,A5))") 'Nr_UniqueAnt=',Nr_UniqueAnt, (Statn_ID2Mnem(Unique_StatID(k)),k=1,Nr_UniqueStat)
     !
    Call Alloc_EInterfCalib_Pars()
-   Call EIReadPeakInfo() ! get peak positions as they would be seen in a trace at the center of the core
+   !Call EIReadPeakInfo() ! get peak positions as they would be seen in a trace at the center of the core
    !Get fitoption:
    Call GetStationFitOption(FP_s, FitNoSources)
    write(2,*) 'reading for calibration finalized, FitNoSources=', FitNoSources
@@ -167,7 +168,7 @@ Subroutine E_Callibr()
    Call EI_PrntFitPars(X)
     !
    Write(2,"(//,A)") ' ==== Summary of new parameters ===='
-   Call EIPrntNewSources
+   Call PrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
    If(WriteCalib) then
       Call WriteCalibration ! was MergeFine
@@ -177,105 +178,5 @@ Subroutine E_Callibr()
     !
 End Subroutine E_Callibr
 !=================================
-Subroutine EIReadPeakInfo()
-   !
-    use constants, only : dp,sample
-    use DataConstants, only : PeakNr_dim, ChunkNr_dim
-    use Chunk_AntInfo, only : Station_nrMax
-    use ThisSource, only : SourcePos,  ExclStatNr, TotPeakNr !NrP, t_ccorr,
-    use ThisSource, only : PeakNrTotal !,PeakNr,  PlotCCPhase, Safety, Nr_corr
-    use ThisSource, only : PeakPos, ChunkNr
-!    use FitParams
-    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
-    Implicit none
-    !
-    integer :: i_eo, i_chunk, i, k, i_c ,i_ca  !,i_eoa
-    !logical :: Fitfirst !,TraceFirst
-    Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
-    !Integer, parameter :: PeakS_dim=NrP
-    integer :: i_Peak, nxx
-    character*80 :: lname
-    character*10 :: txt
-    character*35 :: Frmt
-    real(dp) :: x1,x2,x3,t
-    !
-   Call GetNonZeroLine(lname)
-   !write(2,*) 'EIReadPeakInfo:',lname
-   Frmt="(1x,3I2,I8,3(F10.2,1x))"
-   i_peak=0
-   TotPeakNr(0,:)=0
-   !PeakNr(:)=0
-   i_chunk=0
-   i_ca=-1
-   PeakNrTotal=PeakNr_dim
-   i_peak=0
-   Do !i_Peak=1,PeakNr_dim       ! Read source positions from input. There should be at least one un-readable line in the input.
-      !write(2,*) 'lname="',lname,'"'
-      read(lname,Frmt,iostat=nxx)  i, i_eo, i_c, k, x1,x2,x3
-      If(nxx.ne.0) Then  ! should have reached the end of the list
-         If(i_peak.ne.PeakNr_dim) Then
-               Write(2,*) 'error when reading source info for #',i_Peak,', list cut-of too early'
-               Write(2,*) 'Culprit: "',trim(lname),'"'
-            Stop 'EIReadPeakInfo: sources read problem'
-         EndIf
-         exit
-      EndIf
-      If(i_eo.ne.0) goto 1
-      i_Peak=i_Peak+1
-      If(i_c.ne.i_ca) then
-         i_chunk=i_chunk+1
-         i_ca=i_c
-      EndIf
-      If(i_peak.gt.PeakNr_dim) Then
-         Write(2,*) 'error when reading source info for #',i_Peak,', read beyond the end of the sources list'
-         Write(2,*) 'Culprit: "',trim(lname),'"'
-         Stop 'EIReadPeakInfo: sources read problem'
-      EndIf
-      SourcePos(1,i_Peak)=x1
-      SourcePos(2,i_Peak)=x2
-      SourcePos(3,i_Peak)=x3
-      Peakpos(i_Peak)=k
-      ChunkNr(i_Peak)=i_chunk
-      if(i_chunk.gt.ChunkNr_dim) Then
-         Write(2,*) 'Chunk nr error when reading source info for #',i_Peak
-         Write(2,*) 'Culprit: "',trim(lname),'"'
-         Stop 'EI-sources chunk nr error'
-      EndIf
-      TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk); not really used and obsolete
-      !PeakNr(i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_chunk)
-      !
-      ExclStatNr(:,i_peak)=0
-1     Continue
-      !write(2,*) 'EIReadPeakInfo:',k,i_c,i_peak, i_chunk,i_eo
-      Call GetNonZeroLine(lname)
-      !write(2,*) 'lname="',lname,'"'
-      !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
-      ExclStMnem='     '
-      read(lname,*,iostat=nxx)  txt,ExclStMnem
-      !write(2,*) 'excl',txt,';',ExclStMnem,nxx
-      !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
-      If(trim(txt).eq.'exclude') Then
-        Do k=1,Station_nrMax
-            If(ExclStMnem(k).eq.'     ') exit
-            Call Station_Mnem2ID(ExclStMnem(k),ExclStatNr(k,i_peak))
-            If(ExclStatNr(k,i_peak).eq.0) exit
-        Enddo
-        k=k-1
-        !read(lname,*,iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)  Statn_Mnem2ID
-        !If(nxx.ne.0 .or. txt.ne.'exclude') cycle
-        write(2,"(A,I3,A,I2,20(I4,A,A,',  '))") 'excluded for source',i_peak,' #',k, &
-               (ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
-        Call GetNonZeroLine(lname)
-      EndIf
-   Enddo
-   write(2,*) 'PeakNrTotal=',PeakNrTotal  ! total # of pulses
-   !write(2,*) 'TotPeakNr',TotPeakNr(0,:)         ! array giving number of peaks for this (i_eo,i_chunk)
-   !
-   !write(2,*) 'SourcePos=',SourcePos
-   !
-   !
-   Return
-End Subroutine EIReadPeakInfo
-!================================
 !=====================================
 !============================

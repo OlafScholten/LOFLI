@@ -10,7 +10,7 @@ Subroutine PeakInterferoOption()
 !
    use constants, only : dp,sample
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode, Time_Dim
-   use Chunk_AntInfo, only : Unique_SAI, Start_time, Tot_UniqueAnt, Ant_Stations
+   use Chunk_AntInfo, only : Unique_SAI, StartT_sam, Tot_UniqueAnt, Ant_Stations
    use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat, Nr_UniqueAnt, N_Chunk_max
    use DataConstants, only : Ant_nrMax
    use ThisSource, only : SourcePos
@@ -109,7 +109,7 @@ Subroutine PeakInterferoOption()
    Call EI_PrntFitPars(X)
     !
    Write(2,"(//,A)") ' ==== Summary of new parameters ===='
-   Call EIPrntNewSources
+   Call PrntNewSources
    !
    !
    Return
@@ -122,7 +122,7 @@ Subroutine WriteInterfRslts(i_Peak)
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF, BoundingBox, StartTime_ms
    use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, PeakPos, SourcePos
-   use Chunk_AntInfo, only : Start_time
+   use Chunk_AntInfo, only : StartT_sam
    use GLEplots, only : GLEplotControl
    Implicit none
    Integer, intent(in) :: i_Peak  ! =29, 28
@@ -131,8 +131,8 @@ Subroutine WriteInterfRslts(i_Peak)
    !
    !Time=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
    !Time = Time*Refrac/(c_mps*sample) ! Convert to units of [samples]
-   !Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000. - StartTime_ms
-   Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) )*Sample*1000. - tShift_ms(SourcePos(:,i_Peak)) - StartTime_ms
+   !Time=( StartT_sam(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000. - StartTime_ms
+   Time=( StartT_sam(ChunkNr(i_Peak)) + PeakPos(i_Peak) )*Sample*1000.d0 - tShift_ms(SourcePos(:,i_Peak)) - StartTime_ms
    x=SourcePos(2,i_Peak)/1000.
    y=SourcePos(1,i_Peak)/1000.
    z=SourcePos(3,i_Peak)/1000.
@@ -174,9 +174,9 @@ Subroutine ReadFlashImageDat(SourceGuess)
    !
     use constants, only : dp,sample, c_mps
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, DataFolder, EdgeOffset, Time_dim
-    use Chunk_AntInfo, only : Station_nrMax, Start_time
+    use Chunk_AntInfo, only : Station_nrMax, StartT_sam
     Use Interferom_Pars, only : BoundingBox, StartTime_ms
-    use ThisSource, only : SourcePos,  ExclStatNr, TotPeakNr !NrP, t_ccorr,
+    use ThisSource, only : SourcePos,  TotPeakNr !NrP, t_ccorr,
     use ThisSource, only : PeakNrTotal !,PeakNr,  PlotCCPhase, Safety, Nr_corr
     use ThisSource, only : PeakPos, ChunkNr
 !    use FitParams
@@ -228,7 +228,7 @@ Subroutine ReadFlashImageDat(SourceGuess)
             Stop 'EI-sources chunk nr error'
          EndIf
          TimeFrame0=TimeFrame
-         Start_Time(i_chunk)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
+         StartT_sam(i_chunk)=(StartTime_ms/1000.d0)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
          SourceGuess(1,i_chunk)=x1*1000.
          SourceGuess(2,i_chunk)=x2*1000.
          SourceGuess(3,i_chunk)=x3*1000.
@@ -241,10 +241,10 @@ Subroutine ReadFlashImageDat(SourceGuess)
       TotPeakNr(0,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk); not really used and obsolete
       !TimeShft=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
       !TimeShft = TimeShft*Refrac/(c_mps*sample) ! Convert to units of [samples]
-      !PeakPos(i_Peak) = (StartTime_ms+t)/(Sample*1000.) - Start_time(ChunkNr(i_Peak))+ TimeShft
-      PeakPos(i_Peak) = (StartTime_ms+t)/(Sample*1000.) - Start_time(ChunkNr(i_Peak))+ tShift_smpl(SourcePos(:,i_Peak))
-      write(2,*) k,i_peak,i_chunk, Start_Time(i_chunk), x1, x2, x3, PeakPos(i_Peak)
-      !write(2,*) t/(Sample*1000.), Start_time(ChunkNr(i_Peak)), TimeShft
+      !PeakPos(i_Peak) = (StartTime_ms+t)/(Sample*1000.) - StartT_sam(ChunkNr(i_Peak))+ TimeShft
+      PeakPos(i_Peak) = (StartTime_ms+t)/(Sample*1000.d0) - StartT_sam(ChunkNr(i_Peak))+ tShift_smpl(SourcePos(:,i_Peak))
+      write(2,*) k,i_peak,i_chunk, StartT_sam(i_chunk), x1, x2, x3, PeakPos(i_Peak)
+      !write(2,*) t/(Sample*1000.), StartT_sam(ChunkNr(i_Peak)), TimeShft
 
    EndDo
    PeakNrTotal=i_peak

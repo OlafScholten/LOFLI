@@ -1,9 +1,9 @@
 ! ---------------------------------
 Subroutine ExplorationRun
-   use constants, only : dp,sample 
+   use constants, only : dp,sample
    use DataConstants, only : Time_dim, DataFolder, FlashName
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
-   use Chunk_AntInfo, only : Start_time, TimeFrame
+   use Chunk_AntInfo, only : StartT_sam, TimeFrame
    use FitParams, only : SpaceCov
    use FitParams, only : PeakS_dim, MaxFitAntDistcs, MaxFitAntD_nr !,
    use Explore_Pars, only : PeakS, StatsStore_SAI, StatsStore_Ave, StatsStore_RMS, StatsStore_Peak, N_ExplTimes
@@ -25,8 +25,8 @@ Subroutine ExplorationRun
    PeakS_dim=10
    TimeFr=0
    Read (12) ir_file,ir_grp,ir_dst, LFRAnt_crdnts, powr, DATA_LENGTH, SAMPLE_NUMBER_first!, Absolute_TIME, DIPOLE_CALIBRATION_DELAY,nu_fltr !nu_fltr
-   StartTime_ms= 1.d0*NINT(SAMPLE_NUMBER_first *sample*1000.)
-   StoppingTime=StartTime_ms+DATA_LENGTH*sample*1000.
+   StartTime_ms= 1.d0*NINT(SAMPLE_NUMBER_first *sample*1000.d0)
+   StoppingTime=StartTime_ms+DATA_LENGTH*sample*1000.d0
    write(2,*) 'start & stop times=',StartTime_ms,StoppingTime
    !StartTime_ms=784.
    XFrameEi=-80  ; XFrameEf=+80
@@ -47,7 +47,7 @@ Subroutine ExplorationRun
    Do i_expl=1,N_ExplTimes
       write(2,"(50('= '))")
       StartTime_ms=StartTime_ms + dt_ms
-      Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
+      StartT_sam(i_chunk)=(StartTime_ms/1000.d0)/sample  ! in sample's
       If(StartTime_ms.gt.StoppingTime) exit
       Do i_guess=0,3
          TimeFrame=TimeFr+ 10*i_expl + i_guess    ! just a label

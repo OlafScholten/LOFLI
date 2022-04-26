@@ -28,7 +28,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
 !  v18: 'PeaksPerChunk' introduced as a parameter
    use constants, only : dp,sample,c_mps
    use DataConstants, only : Production, Time_dim, EdgeOffset
-   use Chunk_AntInfo, only : Ant_Stations, Start_time, NoiseLevel
+   use Chunk_AntInfo, only : Ant_Stations, StartT_sam, NoiseLevel
    use Chunk_AntInfo, only : MaxPeaksPerChunk, PeaksPerChunk!, PeakSP, PeakSWl, PeakSWu, PeakSAmp, PeakD_nr
    use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, TotPeakNr, PeakPos, Peak_eo, ChunkNr
    use ThisSource, only : RefAntErr, SourcePos, Dual, Peak_Offst, CCShapeCut
@@ -61,7 +61,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    PulsPosCore=.false.  ! Pulse positions are on the ref. antenna
    !
    Call Find_unique_StatAnt()
-   Call GetRefAnt
+   Call GetRefAnt(i_chunk)
    !
    Call DualPeakFind(PeaksPerChunk, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp)
    !
@@ -153,8 +153,14 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
             !If(Peakpos(1).eq. 16155 .and. i_dist.eq.2) Call GLE_Corr()
             !stop 'FindStatCall-1'
             !if(i_peakS.eq.2) stop 'FindStatCall-1'
+            !If(DistMax.gt.25.) write(2,*) '(sqrt(SpaceCov(i,i)),i=1,3):',DistMax,(sqrt(SpaceCov(i,i)),i=1,3),Sigma
          EndDo ! i_dist=1,MaxFitAntD_nr
-         !Endif
+         !When the Hesian was calculated the covariance matrix is stored, as well as Sigma, otherwise sigma=large
+         ! as this throws out many good sources, we repair this here (April 2022)
+         Do i=1,3
+            sigma(i)=sqrt(SpaceCov(i,i))
+         Enddo
+         !
          If(units(i_eo).lt.0) then
             Write(2,"(I8,', ',3(f12.4,', '),f9.3)") & ! ID (x,y,z) t chi^2 Diag(covariance)
                (TimeFrame*1000+i_peakS),SourcePos(:,1), FitQual
@@ -173,45 +179,56 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          ! Real(dp), save :: ChiSq_lim=10              ! limit set on the chi-square (FitQual)
          ! Real(dp), save :: EffAntNr_lim=0.8        ! limit set on the ratio of effective number of used antennas v.s. available number
          If(Max_EffAnt.lt.10) exit
+         If(i_peakS.eq.1 .and. i_eo.ne.1) Write(18,"(' ', F13.6, 3F11.2,i9)")  &
+                        1000.d0*StartT_sam(1)*sample, SourcePos(:,1)/1000., (TimeFrame*1000+i_peakS)
          If((DistMax .lt. Dist_Lim) .and. ( (N_EffAnt*1./Max_EffAnt) .gt. EffAntNr_lim) &
             .and. ( Sigma(1) .lt. 999. ) .and. ( Sigma(2) .lt. 999.) &
             .and. ( Sigma(3) .lt. 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) ) .and. ( Sigma(3) .gt. 0.) &
             .and. (FitQual .lt. ChiSq_lim)) then
-            Wl=PeakSWl(i_peakS,i_eo)
-            Wu=PeakSWu(i_peakS,i_eo)
-            !write(2,*) 'NINT(Peak_Offst(1)):',NINT(Peak_Offst(1))
-            Write(units(i_eo),"(I8,', ',3(f12.3,', '),f12.9,', ',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','))") & ! ID (N,E,z) t chi^2 Diag(covariance)
-               (TimeFrame*1000+i_peakS),SourcePos(:,1), &
-               (Start_Time(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps, FitQual &
-               , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
-            !write(*,*) 'Wu,Wl',Peakpos_0,Wl,Wu
-            Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu) ! clean peak only when decent source location was obtained
-            PeakNrFound=PeakNrFound+1
-            If(FitQual.lt.25.) then
-               NMin = Min(NMin,SourcePos(1,1)/1000.) ! Extremes in [km]
-               EMin = Min(EMin,SourcePos(2,1)/1000.)
-               NMax = Max(NMax,SourcePos(1,1)/1000.)
-               EMax = Max(EMax,SourcePos(2,1)/1000.)
-               PeakNrGood=PeakNrGood+1
-            Endif
-            !
-            !searching for good peaks to be used for improving calibration
-            If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then ! see for a possible 5-star source
-               If(PeakSAmp(i_peakS,i_eo).gt.PeakSAmp(1,i_eo)/10.) then
-            !Start_Time(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
+               If( Sigma(3) .gt. 999.99) Sigma(3)=999.990
+               Wl=PeakSWl(i_peakS,i_eo)
+               Wu=PeakSWu(i_peakS,i_eo)
+               !write(2,*) 'NINT(Peak_Offst(1)):',NINT(Peak_Offst(1))
+               Write(units(i_eo),"(I8,', ',3(f12.3,', '),f12.9,', ',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','))") & ! ID (N,E,z) t chi^2 Diag(covariance)
+                  (TimeFrame*1000+i_peakS),SourcePos(:,1), &
+                  (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps, FitQual &
+                  , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
+               !write(*,*) 'Wu,Wl',Peakpos_0,Wl,Wu
+               Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu) ! clean peak only when decent source location was obtained
+               PeakNrFound=PeakNrFound+1
+               If(FitQual.lt.25.) then
+                  NMin = Min(NMin,SourcePos(1,1)/1000.) ! Extremes in [km]
+                  EMin = Min(EMin,SourcePos(2,1)/1000.)
+                  NMax = Max(NMax,SourcePos(1,1)/1000.)
+                  EMax = Max(EMax,SourcePos(2,1)/1000.)
+                  PeakNrGood=PeakNrGood+1
+               Endif
+               !
+               !searching for good peaks to be used for improving calibration
+               !If(i_peakS.lt.10 .and. wl.le.10 .and. Wu.le.10) &
+               If(i_peakS.lt.10 .and. (FitQual .lt. ChiSq_lim/2.) ) &
+                  Write(18,"('C',i2,' 2 1',I8,3(F10.2,','),F12.5,';',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','),I3)") &
+                     i_peakS, Peakpos_0, SourcePos(:,1), &
+                     (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps , FitQual &
+                     , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu, i_eo
+               If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then ! see for a possible 5-star source
+                  If(PeakSAmp(i_peakS,i_eo).gt.PeakSAmp(1,i_eo)/10.) then
+               !StartT_sam(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's
                   If(i_eo.eq.0) Then
                      i_cal=i_cal+1
                      if(i_cal.le.10) CalSource(i_cal)=Peakpos_0
                   Else
+                     If(i_cal.gt.10) i_cal=10
                      Do i=1,i_cal
                         If(abs(Peakpos_0-CalSource(i_cal)).lt.6) Then
                            write(2,*) 'got a good one!!!!!!!!!!!!!!!'
-                           write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start_Time[ms]:', &
-                              1000.*Start_Time(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, Peakpos_0, &
-                              SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
+                           write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start time[ms]:', &
+                              1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.d0*sample, Peakpos_0, &
+                              SourcePos(:,1)/1000.d0, FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
                            Write(18,"(A,I8,':', F13.5, 3F11.2,i3)") '***** label=', (TimeFrame*1000+i_peakS), &
-                              1000.*Start_Time(1)*sample, SourcePos(:,1), i_cal
-                           Write(18,"(A,I8,3(F10.2,','),'; 0.0')") '  1 0 1',  (Peakpos_0+CalSource(i_cal))/2, SourcePos(:,1)
+                              1000.d0*StartT_sam(1)*sample, SourcePos(:,1), i_cal
+                           Write(18,"(A,I8,3(F10.2,','),F12.5,'; 0.0')") 'R 1 2 1',  (Peakpos_0+CalSource(i_cal))/2, &
+                              SourcePos(:,1), (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps
                            Flush(unit=18)
                            exit
                         EndIf
@@ -229,7 +246,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          !If(i_peakS.gt.6) stop 'SourceFind'
          !If(i_peakS.gt.20) stop 'SourceFind'
       EndDo !  i_peakS=1,PeaksPerChunk
-      write(units(i_eo)+10,"(I8,',',F8.2,',',I4,',',I4,',',I4)") TimeFrame, Start_Time(i_chunk)*1000.*sample, &
+      write(units(i_eo)+10,"(I8,',',F8.2,',',I4,',',I4,',',I4)") TimeFrame, StartT_sam(i_chunk)*1000.d0*sample, &
          PeakNrSearched, PeakNrFound, PeakNrGood
       write(2,*) 'located pulses', PeakNrSearched, PeakNrFound, PeakNrGood
       write(*,*) 'located pulses', PeakNrSearched, PeakNrFound, PeakNrGood
@@ -314,9 +331,15 @@ Subroutine SourceFitCycle(StatMax,DistMax)
    endif
    Call FitCCorr(X)  ! fit source
    Call X2Source(X)
-   If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,4F9.1, A,F8.2, A,2I4, A,3G11.3)") &
-      'Max distance=',DistMax,'[km], fitted:', X( 1:N_FitPar ),', chi^2/ndf=', FitQual &
-      ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
+   If(N_FitPar.eq.4) Then
+      If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,4F9.1, A,F8.2, A,2I4, A,3G11.3)") &
+         'Max distance=',DistMax,'[km], fitted:', X( 1:N_FitPar ),', chi^2/ndf=', FitQual &
+         ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
+   Else
+      If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,3F9.1, A,F8.2, A,2I4, A,3G11.3)") &
+         'Max distance=',DistMax,'[km], fitted:', X( 1:3 ),', chi^2/ndf=', FitQual &
+         ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
+   EndIf
    !
 End Subroutine SourceFitCycle
 !=====================================

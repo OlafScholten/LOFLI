@@ -408,9 +408,9 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    write(2,"(6x,A, 4x,A,9x,';', 4x,A, 4x,A,I5)") "i, AveSmPow/y0, RimMx/y0,  Mx;","t[ms], Position=(N,E,h)[km]",&
       "Q/I, U/I, V/I [%] ;" , "I3, Linpol*100., angle ; nr slices=", NrPixSmPowTr
    Do i_slice=1,NrPixSmPowTr ! N_smth+1,SumWindw-N_smth,N_smth
-      t_ms=(1+i_slice*N_smth)*sample*1000.+t_offsetPow  ! time stamp
+      t_ms=(1+i_slice*N_smth)*sample*1000.d0+t_offsetPow  ! time stamp
 !!!!!!!!!   t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
-!!!!!!!!!!!!!   t_offsetPow=((Start_time(i_chunk)+SumStrt)*sample-t_shft)*1000.-TimeBase
+!!!!!!!!!!!!!   t_offsetPow=((StartT_sam(i_chunk)+SumStrt)*sample-t_shft)*1000.-TimeBase
       !
       ! Do a 3D parabolic fit to interpolate around the maximal pixel
       Call FindInterpolMx(i_slice,d_Mx, SMPowMx,QualMx)
@@ -891,7 +891,7 @@ Subroutine EI_PolarizSlice(i_slice)
    Use Interferom_Pars, only : i_chunk, PixLoc, CenLoc
    Implicit none
    Integer, intent(in) :: i_slice
-   Integer :: i_sample, i_1, i_2, Output, j_IntFer
+   Integer :: i_sample, i_1, i_2, Output, j_IntFer, ExclStat(1:30)= (/ (0.d0, I_1 = 1, 30) /) !
    Real(dp) :: ChiSq, DelChi(-N_Smth:+N_Smth,1:Nr_IntFerMx)
    Real(dp) :: FitDelay(1:Ant_nrMax), VoxLoc(1:3), del_1, del_2
    Character(len=8) :: Label
@@ -912,9 +912,9 @@ Subroutine EI_PolarizSlice(i_slice)
    write(Label,"('Slc ',i4.2)") i_slice
    write(2,"(1x,A,i4,A,I5,A,2(F9.4,','),F9.4,A)") 'Slice',i_slice,', Ref. ant. sample=',IntfBase+i_sample, &
       ', Max Intensity @ (N,E,h)=(',PixLoc(:)/1000.,') [km]'
-   !write(2,*) ' i_sample, i_chunk, :', i_sample, i_chunk, Nr_IntFerCh(:),'fitdelay:',FitDelay
+   !write(2,*) ' i_sample, i_chunk:', i_sample, i_chunk, Nr_IntFerCh(:),'fitdelay:',FitDelay
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, i_sample, i_chunk, PixLoc(:), AntPeak_OffSt(1,1), &
-      Cnu_p0(0,1,1), Cnu_t0(0,1,1), Cnu_p1(0,1,1), Cnu_t1(0,1,1), Output, DelChi, Label)
+      Cnu_p0(0,1,1), Cnu_t0(0,1,1), Cnu_p1(0,1,1), Cnu_t1(0,1,1), Output, DelChi, Label, ExclStat)
    !
    Return
    If(SumWindw/N_Smth.ge.5) Return
@@ -930,7 +930,7 @@ Subroutine EI_PolarizSlice(i_slice)
          VoxLoc(3)=PixLoc(3)
          write(Label,"('Gr ',I2,',',i2)") i_1,i_2
          Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, i_sample, i_chunk, VoxLoc(:), AntPeak_OffSt(1,1), &
-            Cnu_p0(0,1,1), Cnu_t0(0,1,1), Cnu_p1(0,1,1), Cnu_t1(0,1,1), Output, DelChi, Label)
+            Cnu_p0(0,1,1), Cnu_t0(0,1,1), Cnu_p1(0,1,1), Cnu_t1(0,1,1), Output, DelChi, Label, ExclStat)
       Enddo
    Enddo
    !

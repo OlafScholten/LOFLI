@@ -191,7 +191,7 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
     use constants, only : dp,sample,c_mps
     use DataConstants, only : Station_nrMax, Ant_nrMax
 !    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err
-    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakRMS, PeakChiSQ
+    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakRMS, PeakChiSQ, ExclStatNr
     use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1,  N_fit, AntPeak_OffSt, Chi2pDF
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos
@@ -275,7 +275,8 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
          Enddo
          write(Label,"(' Peak',i3)") i_Peak
          Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_peak), AntPeak_OffSt(1,i_Peak), &
-               Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), Outpt, DelChi, Label)
+               Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), &
+               Outpt, DelChi, Label, ExclStatNr(:,i_peak) )
          PeakChiSQ(i_peak) = Chi2pDF
            !
          Do j=-N_fit,N_fit
@@ -300,7 +301,7 @@ End Subroutine CompareEI
 !==================================================
 !-----------------------------------------------
 Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPeak_OffSt, &
-            Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, Outpt, DelChi, Label)
+            Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, Outpt, DelChi, Label, ExclStat)
    ! Needs: Ant_RawSourceDist as used when reading in data (when fitted time-shifts = 0)
    !alculates: 1) trace in frequency space for even and odd antennas symmetrically around
    !  calculated pulse time (based on suggested source time and position) for each antenna pair
@@ -317,13 +318,14 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    Use Interferom_Pars, only : IntFer_ant, N_fit, N_smth, smooth
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
+!   use ThisSource, only : ExclStatNr
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain  !J_0p,J_0t,J_1p,J_1t,
    use GLEplots, only : GLEplotControl
    use Interferom_Pars, only :IntfNuDim, dnu, inu1, inu2
    use FFT, only : RFTransform_CF, RFTransform_CF2CT
    use StationMnemonics, only : Statn_ID2Mnem !, Station_ID2Mnem
    Implicit none
-   Integer, intent(in) :: Nr_IntFer, i_sample,i_chunk
+   Integer, intent(in) :: Nr_IntFer, i_sample,i_chunk, ExclStat(1:30)
    Real(dp), intent(in) :: VoxLoc(1:3)
    Real(dp), intent(in) :: FitDelay(*), AntPeak_OffSt(*)
    Complex(dp), intent(in) :: Cnu_p0(0:IntfNuDim,Nr_IntFer), Cnu_p1(0:IntfNuDim,Nr_IntFer)
@@ -411,11 +413,27 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       D_a(j_IntFer)=D      ! Just for plotting
       Ph_a(j_IntFer)=Phi_d
       !
+      !  Station weighting
       sw= sqrt( (140./(HorDist*HorDist/(Ras(3)*Ras(3))+1.))) ! changed Febr 2022 to make it more similar to 1/noise power
       If(j_IntFer.eq.1) sw1=sw
       If(sw.gt.sw1 ) Then  ! The factor between E-field and signal is approx square of this
          sw=sw1 ! changed Febr 2022 to make it more similar to 1/noise power
       EndIf  ! this gives a much smoother and narrower interference max
+      !
+      If(ANY(ExclStat(:)==Ant_Stations(i_ant,i_chunk))) then
+         D_a(j_IntFer)=0.      ! Just for plotting
+         Ph_a(j_IntFer)=0.
+         Do i=1,3  ! convert t&p orientations from (NEh) to polar base
+            wap_PB(i,j_IntFer)=0.
+            wat_PB(i,j_IntFer)=0.
+         Enddo
+         Do j=-N_smth,N_smth ! copy for later use
+            wEtime_ap(j,j_IntFer)=0.
+            wEtime_at(j,j_IntFer)=0.
+         Enddo
+         !write(2,*) 'ExclStat:',Ant_Stations(i_ant,i_chunk),j_IntFer
+         cycle
+      EndIf
       !
       Vec_p(1)=sin(Phi_r)              ; Vec_p(2)=-cos(Phi_r)        ; Vec_p(3)=0.
       Vec_t(1)=-cos(Thet_r)*Vec_p(2)  ; Vec_t(2)=cos(Thet_r)*Vec_p(1) ; Vec_t(3)=-sin(Thet_r)

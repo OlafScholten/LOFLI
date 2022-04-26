@@ -1,4 +1,3 @@
-!=================================
 !================================
 !=================================
 Subroutine FindCallibr(SourceGuess)
@@ -22,19 +21,19 @@ Subroutine FindCallibr(SourceGuess)
 !        i_eo=0 (even=Y-dipoles) peak positions hold for the two antenna orientations.
 !      2) This also requires that the Y- (i_ant=even) and X- (i_ant=even+1) dipoles are both active at the same
 !        antenna location (in the same chunck).
-   use Chunk_AntInfo, only : Unique_SAI, Start_time, TimeFrame, tot_uniqueant
+   use Chunk_AntInfo, only : Unique_SAI, StartT_sam, TimeFrame, tot_uniqueant
    use DataConstants, only : Polariz, Ant_nrMax
    use ThisSource, only : Dual, RealCorrelation
    use ThisSource, only : NrP, t_ccorr, SourcePos, RefAntErr, ExclStatNr, Peak_eo, ChunkNr, TotPeakNr
    use ThisSource, only : Nr_corr, PeakNr, PeakNrTotal, PlotCCPhase, Safety, PolBasis, Tref_dim, T2_Dim
-   use ThisSource, only : PeakPos, Peak_eo, PeakRMS, PeakChiSQ
+   use ThisSource, only : PeakPos, Peak_eo, PeakRMS, PeakChiSQ, StStdDevMax_ns
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
    use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, FitIncremental, PulsPosCore, WriteCalib, N_EffAnt, Max_EffAnt
    use FitParams, only : FullSourceSearch
    use constants, only : dp,sample
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode
    use FitParams, only : MeanCircPol, Cnu01, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
-   use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
+   use FFT, only : RFTransform_su, RFTransform_CF2CT
    !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
@@ -73,19 +72,19 @@ Subroutine FindCallibr(SourceGuess)
 !   write(2,*) 'sourceguess', NrP, SourceGuess
 !   flush(unit=2)
    Nr_Corr=0
-   ExclStatNr(:,:)=0
-   Call GetRefAnt      ! works also in polariz mode
+ !  ExclStatNr(:,:)=0
+   Call GetRefAnt(ChunkNr_dim)      ! works also in polariz mode
    !
    i_peak=0
    PeakNr1=0
-   If(RunMode.eq.1) then ! To prevent reading from input in Explore
-      ReadErr=-1
-   Else
-      Call ReadPeakInfo(ReadErr)
-   Endif
+  ! If(RunMode.eq.1) then ! To prevent reading from input in Explore
+  !    ReadErr=-1
+  ! Else
+  !    If(TotPeakNr(1,ChunkNr_dim).eq.0)
+  ! Endif
    !write(2,*) 'ReadErrh: ',ReadErr
    !flush(unit=2)
-   If(ReadErr.ne.0) then  ! Find peak positions instead of reading them from input
+   If((RunMode.eq.1) .or. (TotPeakNr(1,ChunkNr_dim).eq.0)) then  ! Find peak positions instead of reading them from input
       Do i_chunk=1, ChunkNr_dim     ! get the NrP strongest peaks in this time block
          Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
          If(Dual) Then
@@ -203,7 +202,7 @@ Subroutine FindCallibr(SourceGuess)
          If(SourcePos(1,i_Peak) .ne. SourcePos(1,i_Peak)) cycle  ! check for NaN
          If(abs(SourcePos(3,i_Peak))/1000. .gt. XFrameh) cycle
          write(29,"(1x,i5,4(2x,g14.8),3x,f9.6,2I5)")  &
-            TimeFrame*10+i_Peak,Start_time(1)*1000.*sample, &
+            TimeFrame*10+i_Peak,StartT_sam(1)*1000.d0*sample, &
             SourcePos(2,i_Peak)/1000.,SourcePos(1,i_Peak)/1000.,abs(SourcePos(3,i_Peak)/1000.),PeakRMS(i_Peak), &
             N_EffAnt, Max_EffAnt
       Enddo
@@ -280,7 +279,7 @@ Subroutine FindCallibr(SourceGuess)
       DeAllocate( Cnu01 )
       MeanCircPol=.false.
    Endif
-   Write(2,"(//,A)") ' ==== Summary of new parameters ===='
+   Write(2,"(//,A,F5.1)") ' ==== Summary of new parameters, stations will be dropped when timing-StDev exceeds ', StStdDevMax_ns
    Call PrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
    If(WriteCalib) then
@@ -293,193 +292,6 @@ Subroutine FindCallibr(SourceGuess)
     !
 End Subroutine FindCallibr
 !=================================
-Subroutine ReadPeakInfo(ReadErr)
-!   Read-in the peakpos and source guesses for individual pulses.
-!
-!
-    use constants, only : dp,sample!,Refrac,c_mps
-    use Chunk_AntInfo, only : Station_nrMax, RefAnt, Ant_pos, Ant_RawSourceDist
-    use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs
-    use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, ChunkNr !NrP, t_ccorr,
-    use ThisSource, only : Dual, PeakNr, PeakNrTotal !, PlotCCPhase, Safety, Nr_corr
-    use ThisSource, only : PeakPos, Peak_eo
-    use DataConstants, only : PeakNr_dim, ChunkNr_dim
-    use DataConstants, only : Polariz
-    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
-    Implicit none
-    !Character(len=80), intent(out) :: lname
-    Integer, intent(out) :: ReadErr
-    !
-    integer :: i_eo, i_chunk, i_dist, i, j, k, i_c,i_ca,i_eoa
-    !logical :: Fitfirst !,TraceFirst
-    Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
-    integer :: i_Peak, nxx, PeakNr1
-    character*80 :: lname  ! Should be 80 to be compatible with "GetNonZeroLine"
-    character*10 :: txt
-    character*1 :: Label
-    character*35 :: Frmt
-    real(dp) :: x1,x2,x3,t
-    !
-   ReadErr=0
-   Call GetNonZeroLine(lname)
-!      Write(2,"(i3,2i2,I8)", ADVANCE='NO') i_Peak,Peak_eo(i_Peak),ChunkNr(i_Peak),PeakPos(i_Peak)
-!      Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
-!      Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
-   Frmt="(A1,3i2,I8,3(F10.2,1x),F8.2)"
-   read(lname,Frmt,iostat=nxx)  Label,i,i_eoa,i_ca, k, x1,x2,x3,t
-   If(nxx.ne.0) then
-      If(lname(49:49) .eq. ';') then
-         Read(lname,"(A1,3i2,I8,3(F10.2,1x))")  Label,i,i_eoa,i_ca, k, x1,x2,x3
-         t=0.
-      Else
-         write(2,*) 'Error reading in line: "',lname,'"'
-         ReadErr=-1
-         Return
-      EndIf
-   Endif
-    !
-    !
-   RefAntErr(1:PeakNr_dim) = 0.
-   i_peak=0
-   TotPeakNr=0
-   PeakNr=0
-   i_chunk=1
-   PeakNr1=0
-   Do      ! Read source positions from input. There should be at least one un-readable line in the input.
-      !write(2,*) 'lname="',lname,'"'
-      j = iachar(lname(1:1))  ! convert to upper case if not already
-      if (j>= iachar("a") .and. j<=iachar("z") ) then
-         lname(1:1) = achar(j-32)
-      end if
-      read(lname,Frmt,iostat=nxx)  Label,i,i_eo,i_c, k, x1,x2,x3,t
-      !write(2,*) k, x1,x2,x3,t
-      If(nxx.ne.0) exit
-      if((i_eo.lt.0) .or. (i_eo.gt.2) ) exit
-      i_peak=i_peak+1
-      If(i_peak .gt. PeakNr_dim) then
-         write(2,*) 'PeakNr_dim will be exceeded',i_peak
-         Write(2,*) 'Expected:   Core/Reference antenna |i |i_eo |i_c |k |N |E |h | dt " in format ',FrMT
-         stop 'FindCallibr:ReadPeakInfo'
-      endif
-      If(i_eoa .ne. i_eo) then
-          PeakNr1= i_peak-1
-          If(i_eo.eq. 0) i_chunk=i_chunk+1
-      Elseif(i_ca.ne.i_c) then ! i_eo did not jump, but chunks did
-          If(i_eo.eq.1) Then
-            PeakNr(0,i_chunk+1)=0        ! number of peaks for this (i_eo,i_chunk)
-            TotPeakNr(0,i_chunk+1)=TotPeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
-          Else
-             Call DualReadPeakInfo(i_eo,i_chunk)
-             i_peak=TotPeakNr(1,i_chunk)+1
-          EndIf
-          i_chunk=i_chunk+1
-      Endif
-      if(i_chunk.gt.ChunkNr_dim) Then
-         write(2,*) 'error when reading peak info, chunk number problems',i_c,i_ca,i_chunk
-         stop 'ReadPeakInfo'
-      EndIf
-      i_eoa=i_eo
-      i_ca=i_c
-      If(i_eo.eq.2) i_eo=0 ! same peak info for even&odd
-      !
-      SourcePos(1,i_Peak)=x1
-      SourcePos(2,i_Peak)=x2
-      SourcePos(3,i_Peak)=x3
-      If(Label.eq.'C') Then
-         !x1=sqrt(sum((Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk)-SourcePos(:,i_Peak))**2))*Refrac/c_mps/sample
-         !x2=sqrt(sum(SourcePos(:,i_Peak)**2))*Refrac/c_mps/sample
-         Call RelDist(SourcePos(:,i_Peak),Ant_pos(:,RefAnt(i_chunk,i_eo),i_chunk),x3) !distance to ant - distance to core in samples
-         k=k+NINT(x3-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
-         !write(2,*) i_peak,RefAnt(i_chunk,i_eo),k,x3, Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk),  &
-         !      ' ref station=',Ant_Stations(RefAnt(i_chunk,i_eo),i_chunk), Ant_IDs(RefAnt(i_chunk,i_eo),i_chunk)
-         !write(2,*) Label,i,i_eo,i_c,i_ca,i_chunk
-      EndIf
-      Peakpos(i_Peak)=k  ! peakposition in reference antenna
-      RefAntErr(i_Peak) = t
-      Peak_eo(i_peak)=i_eo
-      If(Dual .and. (i_eo.eq.1)) then
-         Do i=0,PeakNr(0,i_chunk)-1
-            !write(2,*) 'peakpos-i',i,TotPeakNr(0,i_chunk)-i,Peakpos(TotPeakNr(0,i_chunk)-i),k
-            If(Peakpos(TotPeakNr(0,i_chunk)-i).eq. k) then
-               SourcePos(:,i_Peak)=SourcePos(:,TotPeakNr(0,i_chunk)-i)
-               exit
-            Endif
-         Enddo
-      endif
-      !write(2,*) 'Source ',i_Peak, ' searched near ',SourcePos(:,i_Peak)
-      ChunkNr(i_peak)=i_chunk
-      TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
-      PeakNr(i_eo,i_chunk)=i_peak-PeakNr1        ! number of peaks for this (i_eo,i_chunk)
-      PeakNrTotal=i_peak
-      !write(2,*) i_eo,i_chunk,'PeakNr(i_eo,i_chunk)=',PeakNr(i_eo,i_chunk)
-      ExclStatNr(:,i_peak)=0
-      Call GetNonZeroLine(lname)
-      !write(2,*) 'lname="',lname,'"'
-      !read(lname,"(A7,i3,10i5)",iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)
-      ExclStMnem='     '
-      read(lname,*,iostat=nxx)  txt,ExclStMnem
-      !write(2,*) 'excl',txt,';',ExclStMnem
-      !If(nxx.ne.0 ) write(2,*) 'nxx=',nxx  ! always = -1
-      If(trim(txt).eq.'exclude') Then
-         Do k=1,Station_nrMax
-            If(ExclStMnem(k).eq.'     ') exit
-            Call Station_Mnem2ID(ExclStMnem(k),ExclStatNr(k,i_peak))
-            If(ExclStatNr(k,i_peak).eq.0) exit
-         Enddo
-         k=k-1
-         !read(lname,*,iostat=nxx)  txt,k,ExclStatNr(1:k,i_peak)  Statn_Mnem2ID
-         !If(nxx.ne.0 .or. txt.ne.'exclude') cycle
-         write(2,"(A,I3,A,I2,20(I4,A,A,',  '))") 'excluded for source',i_peak,' #',k, &
-               (ExclStatNr(i,i_peak),'=',Statn_ID2Mnem(ExclStatNr(i,i_peak)), i=1,k)
-         Call GetNonZeroLine(lname)
-      EndIf
-      !If(Polariz .AND. (i_eo.eq.1) ) then !  take i_eo=0 peak info only ; Obsolete
-      !   i_peak=TotPeakNr(0,i_chunk)
-      !   TotPeakNr(1,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
-      !   PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
-      !   PeakNrTotal=i_peak
-      !   PeakNr1=i_peak
-      !EndIf
-   Enddo
-   Call DualReadPeakInfo(i_eoa,i_chunk)
-   write(2,*) 'PeakNrTotal=',PeakNrTotal
-   write(2,*) 'TotPeakNr',TotPeakNr
-   !
-   !write(2,*) 'SourcePos=',SourcePos
-   !
-   !
-   Return
-End Subroutine ReadPeakInfo
-!================================
-Subroutine DualReadPeakInfo(i_eo,i_chunk)
-    use constants, only : dp,sample!,Refrac,c_mps
-    use ThisSource, only : SourcePos, RefAntErr, ExclStatNr, Peak_eo, TotPeakNr, ChunkNr !NrP, t_ccorr,
-    use ThisSource, only : Dual, PeakNr, PeakNrTotal !, PlotCCPhase, Safety, Nr_corr
-    use ThisSource, only : PeakPos, Peak_eo
-    use DataConstants, only : PeakNr_dim, ChunkNr_dim
-    use DataConstants, only : Polariz
-    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
-    Implicit none
-    Integer, intent(in) :: i_eo,i_chunk
-    Integer :: i
-    If(i_eo.eq.1) Return
-    If(i_eo.eq.2) Then ! same for even&odd
-       PeakNr(1,i_chunk)=PeakNr(0,i_chunk)                        ! number of peaks for this (i_eo,i_chunk)
-       TotPeakNr(1,i_chunk)=TotPeakNr(0,i_chunk)+PeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
-       Do i=0,PeakNr(0,i_chunk)-1 ! copy
-         Peakpos(TotPeakNr(1,i_chunk)-i) = Peakpos(TotPeakNr(0,i_chunk)-i)
-         SourcePos(:,TotPeakNr(1,i_chunk)-i) = SourcePos(:,TotPeakNr(0,i_chunk)-i)
-         RefAntErr(TotPeakNr(1,i_chunk)-i) = RefAntErr(TotPeakNr(0,i_chunk)-i)
-         Peak_eo(TotPeakNr(1,i_chunk)-i)=1
-         ChunkNr(TotPeakNr(1,i_chunk)-i)=i_chunk
-         PeakNrTotal=TotPeakNr(1,i_chunk)
-       EndDo
-    ElseIf(i_eo.eq.0) Then
-       PeakNr(1,i_chunk)=0        ! number of peaks for this (i_eo,i_chunk)
-       TotPeakNr(1,i_chunk)=TotPeakNr(0,i_chunk)+PeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
-    EndIf
-    Return
-End Subroutine DualReadPeakInfo
 !================================
 Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !use DataConstants, only : ChunkNr_dim

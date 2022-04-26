@@ -20,7 +20,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    Logical :: UsePeakNr
    CHARACTER(LEN=60) :: GLE_file
    ! Character(len=25), save :: OutFileLabel=''
-   CHARACTER(LEN=31) :: txt      ! 6 more than length of  OutFileLabel
+   CHARACTER(LEN=32) :: txt      ! 7 more than length of  OutFileLabel
    !
    write(*,*) 'MakeAllCurtainPlots for "'//TRIM(OutFileLabel)//'"'
    write(2,*) 'curtain width=',CurtainWidth
@@ -72,7 +72,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
          Endif
          If(Ch2.lt.Ch1) Ch2=Ch1+2
          If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
-            write(txt,"(A,i3.3,'-',i2.2)") TRIM(OutFileLabel),I_ant,i_peak
+            write(txt,"(A,i3.3,'-',i3.3)") TRIM(OutFileLabel),I_ant,i_peak
          Else
             write(txt,"(A,i3.3)") TRIM(OutFileLabel),I_ant
          EndIf
@@ -88,7 +88,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
       unt=9
       write(2,*) 'SourcePos(:,i_Peak)',SourcePos(:,i_Peak)
       If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
-         Write(GLE_file,"('CuP-',A,i2.2)") TRIM(OutFileLabel),i_peak
+         Write(GLE_file,"('CuP-',A,i3.3)") TRIM(OutFileLabel),i_peak
       Else
          Write(GLE_file,"('CuP-',A)") TRIM(OutFileLabel)
       EndIf
@@ -115,7 +115,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     Character(Len=*), intent(in) :: file
     integer :: I_ant, i_stat, Stat_nr, Stations(1:Station_nrMax), i_time, i_c, lstyle
     integer :: A(1), Plot_scale, ch1, ch2, VLine, i_chunk, k
-    Character(len=41) :: txt
+    Character(len=42) :: txt
     Character(len=5) :: Station_Mnem
     real*8 :: plot_offset,b
     !
@@ -134,7 +134,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
         'set lwidth 0.1','t_min = ',ch1,'t_max = ',ch2,'scl = ',Plot_scale
 !        'set lwidth 0.1','t_min = 13250 !12500 !0','t_max = 13350 !15000 !',Time_dim,'scl = ',Plot_scale
      If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
-         write(txt,"(A,i1.1,A,i2.2)") 'Chunk=',i_chunk,', peak=',i_peak
+         write(txt,"(A,i1.1,A,i3.3)") 'Chunk=',i_chunk,', peak=',i_peak
      Else
          write(txt,"(A)") TRIM(OutFileLabel)
      EndIf
@@ -165,7 +165,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
             !write(2,*) 'i_stat=',i_Stat,Stations(1:Stat_nr)
         endif
         If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
-            write(txt,"(A,i3.3,'-',i2.2)") TRIM(OutFileLabel),I_ant,i_peak
+            write(txt,"(A,i3.3,'-',i3.3)") TRIM(OutFileLabel),I_ant,i_peak
         Else
             write(txt,"(A,i3.3)") TRIM(OutFileLabel),I_ant
         EndIf
@@ -231,8 +231,8 @@ Subroutine GLE_Corr()
     Integer :: i, i_max, k, J_corr_st(0:Station_nrMax),Height,lr
     Logical :: nra,nrb
     character(len=5) :: Station_Mnem,Lab_a,Lab_b
-    character(len=9) :: txt
-    character(len=12) :: XCorrPlot
+    character(len=10) :: txt
+    character(len=13) :: XCorrPlot
     Character(len=2) :: EveOdd(0:1)=(/'Ev','Od'/), tp(0:1)=(/'Th','Ph'/), ext
     Real(dp) :: plot_offset, lwidth
     !
@@ -248,10 +248,10 @@ Subroutine GLE_Corr()
         If(polariz) then
             ext=tp(i_tp)
             If(i_tp.eq.1) pBase=Ant_nrMax/2
-            write(XCorrPlot,"('XCP_',I2.2,A2,'.gle')") i_peak,ext
+            write(XCorrPlot,"('XCP_',I3.3,A2,'.gle')") i_peak,ext
         Else
             ext=EveOdd(i_eo)
-            write(XCorrPlot,"('XCP_',I2.2,'.gle')") i_peak
+            write(XCorrPlot,"('XCP_',I3.3,'.gle')") i_peak
         EndIf
         i=0
         J_corr_st(i)=1
@@ -271,7 +271,7 @@ Subroutine GLE_Corr()
             'include "../Utilities/DiscreteColor.gle"',&
             'set lwidth 0.1','t_min = ',-Safety,'t_max = ',Safety,'Height = ',Height
     !        'set lwidth 0.1','t_min = 13250 !12500 !0','t_max = 13350 !15000 !',Time_dim,'scl = ',Plot_scale
-        Write(9,"(A,5(/A),I2,'=',i3,':',i5.5,'(',A,')',A,6(/A))") &
+        Write(9,"(A,5(/A),I3,'=',i3,':',i5.5,'(',A,')',A,6(/A))") &
             'amove 4 4','begin graph','  size 55 Height','  vscale 1','  hscale 1',&
             '   title  "Time Spectra, Peak# ',i_peak,i_chunk,Peakpos(i_peak),TRIM(ext),'"', &
             '   xtitle "time [samples]"', &! '   ytitle "Abs cross corr"',&
@@ -294,7 +294,7 @@ Subroutine GLE_Corr()
         plot_offset=4.+1./3.
         nra=.true.
         Do i=1,i_max  ! Loop over stations
-            write(txt,"(i4.4,A,I2.2,A2)") Ant_Stations(CorrAntNrs(J_corr_st(i-1),i_eo,i_chunk),i_chunk),'_',i_peak,ext
+            write(txt,"(i4.4,A,I3.3,A2)") Ant_Stations(CorrAntNrs(J_corr_st(i-1),i_eo,i_chunk),i_chunk),'_',i_peak,ext
             !write(2,*) i,txt,J_corr_st(i)-1-J_corr_st(i-1)
             Open(Unit=11,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'LOFAR_Corr-'//txt//'.dat')
             write(11,*) '!',Ant_Stations(J_corr_st(i-1),i_chunk), &

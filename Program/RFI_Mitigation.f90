@@ -2,6 +2,8 @@
     Include 'ConstantsModules.f90'
     Include 'FFT_routines.f90'
     Include 'ParamModules.f90'
+    Include 'AntFunct.f90'
+    Include 'InterferomPars.f90'
     Include 'HDF5_LOFAR_Read.f90'
     Include 'MappingUtilities.f90'
     Include 'System_Utilities.f90'
@@ -243,7 +245,7 @@ program RFI_mitigation
    !
    !Write(2,*) 'total nr antennas and stations'
    !Write(2,*) 'Check for bad antennas occurring twice; indicate for bad antennas why they are bad'
-   write(2,*) 'time range for which there are data [ms]',VeryFirstSampl*sample*1000., MostLatestSampl*sample*1000.
+   write(2,*) 'time range for which there are data [ms]',VeryFirstSampl*sample*1000, MostLatestSampl*sample*1000.
    Write(2,*) '!!!!!!!!! For ',NFail,' Antennas RFI-mitigation failed, out of a total of',i_ant,' !!!!!!!!!!!!'
    !write(2,*) MinAmp_Ant(1:i_ant)
    MinAmpAv=MinAmpAv/(i_ant-Nfail)
@@ -422,7 +424,7 @@ Subroutine RoughStatistics(i_dst)
          pw=pw+Chunk(j)*Chunk(j)
       Enddo
       pw=sqrt(pw/Time_dim)
-      time=1000.*((i_chunk*Time_dim+SAMPLE_NUMBER_first)* Sample -DIPOLE_CALIBRATION_DELAY) ! in [ms]
+      time=1000*((i_chunk*Time_dim+SAMPLE_NUMBER_first)* Sample -DIPOLE_CALIBRATION_DELAY) ! in [ms]
       If(MakePlots) write(10,*) i_chunk, time, pw, (ChMax-ChMin), N_one, Ntwo
       MaxAmpChunk(i_chunk)=ChMax-ChMin
    EndDo
@@ -636,7 +638,7 @@ Subroutine TestFilter(i_dst)
       !      AvAmpl=AvAmpl + (ChMax-ChMin)
       !   EndIf
       !Endif
-      time=1000.*((i_chunk*Time_dim+SAMPLE_NUMBER_first)* Sample -DIPOLE_CALIBRATION_DELAY) ! in [ms]
+      time=1000.d0*((i_chunk*Time_dim+SAMPLE_NUMBER_first)* Sample -DIPOLE_CALIBRATION_DELAY) ! in [ms]
       write(10,*) i_chunk, time, sqrt(p), (ChMax-ChMin) !,pw/p
    EndDo
    Close(Unit=10)

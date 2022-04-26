@@ -153,7 +153,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
               !Call Station_ID2Calib(STATION_ID,Ant_ID,StatAnt_Calib) ! StatAnt_Calib in units of samples
               !write(2,*) 'STATION_ID,Ant_ID,StatAnt_Calib',STATION_ID,Ant_ID,StatAnt_Calib
               !
-      ! antRead: Dset_offset=Start_time(i_chunk) + RDist + DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib - SAMPLE_NUMBER_first
+      ! antRead: Dset_offset=StartT_sam(i_chunk) + RDist + DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib - SAMPLE_NUMBER_first
               Sample_Offset= INT((StartTime_ms/1000. + DIPOLE_CALIBRATION_DELAY)/Sample)+ StatAnt_Calib- SAMPLE_NUMBER_first   ! in units of samples
               Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
               write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*Refrac/(c_mps*Sample)
@@ -165,7 +165,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
               Overlap=(Time_dim-i_samplM*UpS)/2 ! Recalculate the overlap to have it match the re-sample size
               i_samplM = i_samplM -1  ! to later start counting from zero
               write(2,*) 'i_samplM=',i_samplM,UpS, OverLap, i_samplM+1- (Time_dim-2*OverLap)/UpS ! last should be =0
-              i_chunkMax=INT(dTime_ms/(1000.*sample*(Time_dim-2*OverLap)))
+              i_chunkMax=INT(dTime_ms/(1000.d0*sample*(Time_dim-2*OverLap)))
               write(2,*) 'i_chunkMax=',i_chunkMax, Sample_Offset, Time_dim, OverLap
               call flush(2)
               Do i_chunk=0,i_chunkMax
@@ -202,7 +202,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
                         !write(2,*) 'px',p,x,i_sampl*UpS+i+OverLap,CTime_s(i_sampl*UpS+i+OverLap)
                      Enddo
                      p=p/UpS
-                     t=StartTime_ms + (i_chunk*(Time_dim-2*OverLap) + OverLap + (i_sampl+0.5)*UpS)*sample*1000.
+                     t=StartTime_ms + (i_chunk*(Time_dim-2*OverLap) + OverLap + (i_sampl+0.5)*UpS)*sample*1000.d0
                      write(29,"(f11.6,g14.3)") t,p
                      !write(2,*) 't,p,UpS',t,p,UpS
                      !stop
