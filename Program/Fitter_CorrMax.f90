@@ -216,8 +216,8 @@ Subroutine FitCCorr(X)
          Endif
          !If(Sigma(3).lt.99.)
          IF(.not. Production) then
-            Write(2,"(A,2I6,A,F8.2)", ADVANCE='NO') 'N_EffAnt=',N_EffAnt,Max_EffAnt &
-               ,', chi^2/ndf=',2*v(10)/(meqn-nvar)
+            Write(2,"(A,2I6,A,F8.2,A)", ADVANCE='NO') 'N_EffAnt=',N_EffAnt,Max_EffAnt &
+               ,', chi^2/ndf=',2*v(10)/(meqn-nvar), ', stations marked when timing StDev > 1.5'
                !,', Sigma=',Sigma(1:3)
             If(SpaceCov(1,1) .gt. 0.) then
                Write(2,"(A,G11.3)", ADVANCE='NO') ', SQRT{SpaceCov(i,i)}[km]:',sqrt(SpaceCov(1,1))/1000.
@@ -272,7 +272,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
     use DataConstants, only : Station_nrMax, Ant_nrMax, Production
     use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
-    use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped
+    use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped, StStdDevMax_ns
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos, Ant_RawSourceDist
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
     use FitParams, only : ParamScaleFac, N_FitPar, N_FitStatTim, FitParam, X_Offset
@@ -320,7 +320,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
    integer :: Cnt(1:Station_nrMax), CPE_eqn(Ant_nrMax),C_A(Ant_nrMax)  ! , Dropped(1:Station_nrMax)
    !
    integer :: i,j,k, i_SAI, j_corr, i_eqn, i_stat, i_ant, i_Peak, i_eo, i_chunk, Station_ID, i_ant1, i_xyz, i_StOff, Antenna_SAI
-   real(dp) :: RDist, RDist1
+   real(dp) :: RDist, T_shft1
    integer, external :: XIndx
    logical :: prn, StCal
    Character(len=5) :: Station_Mnem
@@ -409,15 +409,22 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             Call RelDist(SourcePos(1,i_Peak),Ant_pos(1,i_ant,i_chunk),RDist)
             Rdist=Rdist - Ant_RawSourceDist(i_ant,i_chunk) + StatFineOff ! - INT(Peak_Offst(i_Peak))
             If(j_corr .eq. 1) then
-               Rdist1=Rdist + RefAntErr(i_Peak)
+               !T_shft1=Rdist + RefAntErr(i_Peak)  ! Before April 2022, works better than when correcting for the off-set
+                T_shft1=Rdist - CCorr_max(1,i_Peak)  + RefAntErr(i_Peak)  ! April 2022
+               ! One would expect that the self-correlation, i.e. CCorr_max(1,i_Peak), peaks at zero, however,
+               !  this seems not the case for asymmetric pulses. For these asymmetric pulses the real part peaks at
+               !  (close to) zero, as expected, but the imaginary part is not anti-symmetric w.r.t. zero. This appears
+               !  to pull the max of the Hilbert transform away from zero, much to my surprise. To compensate for this
+               !  the off-set is corrected for this asymmetry that should persist for all cross correlations. Nasty!!
+               !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak):' &
+               !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(1,i_Peak), CCorr_max(2,i_Peak)
                i_ant1=i_ant
-               !Write(2,*) 'Rdist:',Rdist - Ant_RawSourceDist(i_ant,i_chunk) , StatFineOff , RefAntErr(i_Peak)
                D1=sum((SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk))*(SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk)))
                D1=sqrt(D1)     ! True distance from source to reference antena
+            !
                cycle
             EndIf
-            RDist=RDist - Rdist1 ! subtract the value for the reference antenna
-            T_shft=Rdist  - T_Offset(j_corr,i_Peak) ! shift in cross-correlation peak due to changed source position while fitting
+            T_shft=Rdist - T_shft1 - T_Offset(j_corr,i_Peak) ! shift in cross-correlation peak due to changed source position while fitting
             ! where 'T_Offset' is the shift between the this and the reference antenna-timings which is
             !   already accounted for when calculating the cross correlations,
             !   which, of course, is based on the source positions before the coming fitting round. (set in GetCorrSingAnt)
@@ -425,18 +432,11 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             i_eqn=i_eqn+1
             !if(nvar.eq.1) write(*,*) i_eqn
             R(i_eqn)= (CCorr_max(j_corr,i_Peak) - T_shft)/CCorr_Err(j_corr,i_Peak)
-            !write(2,*) i_eqn,j_corr,i_Peak, CCorr_max(j_corr,i_Peak), T_shft
-            !if(nvar.eq.1) write(*,*) 'i_eqn',i_eqn, CCorr_max(j_corr,i_Peak), T_shft, CCorr_Err(j_corr,i_Peak)
-            !write(2,*) j_corr,i_peak,i_eqn,R(i_eqn),CCorr_max(j_corr,i_Peak), Rdist, T_Offset(j_corr,i_Peak), Rdist1
-            !write(2,*) 'T_shft',i_eqn,R(i_eqn),T_shft,CCorr_max(j_corr,i_Peak)
-            !write(2,"(2F9.1,1x)", ADVANCE='NO') CCorr_max(j_corr,i_Peak),T_shft
             If(CCorr_Err(j_corr,i_Peak).gt.1000) R(i_eqn)=0.  ! For excluded stations no peak-position is determined
-            !If(FullAntFitPrn) write(2,*) 'R(i_eqn)= ',i_eqn, R(i_eqn),CCorr_max(j_corr,i_Peak),T_shft,&
-            !   Rdist, Ant_RawSourceDist(i_ant,i_chunk), StatFineOff, Rdist1, T_Offset(j_corr,i_Peak)
-            !If(Station_ID.eq.26) then
-            ! write(2,*) 'CompareCorrTime',i_eqn,R(i_eqn), Antenna_SAI, StatFineOff
-            ! stop
-            ! endif
+            !
+            !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak):' &
+            !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak)- T_shft
+            !
             ChiSq(i_stat,i_Peak) = ChiSq(i_stat,i_Peak) + R(i_eqn)*R(i_eqn)
             Cnt(i_stat) = Cnt(i_stat) + 1
             !
@@ -489,7 +489,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             PeakRMS(i_Peak)= sqrt(sum(RMS(:,i_Peak))/sum(Cnt(:)))
         Endif
         If(prn) then
-            write(2,"(A,I2,I2,A,I7,A, 2f7.2,A,3(F11.2,','),A,F7.3)", ADVANCE='NO') 'i_Peak=',i_Peak,i_eo, &
+            write(2,"(A,I3,I2,A,I7,A, 2f7.2,A,3(F11.2,','),A,F7.3)", ADVANCE='NO') 'i_Peak=',i_Peak,i_eo, &
                 ', PeakPos=',PeakPos(i_Peak),', Chi^2/DegrF=', PeakChiSQ(i_Peak), &
                 sum(ChiSq(:,i_Peak))/(sum(Cnt(:))-sum(Dropped(:,i_Peak))), &
                 ', source position:',SourcePos(:,i_Peak),' RefAntTimeErr:',RefAntErr(i_Peak)
@@ -537,29 +537,52 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             !    endif
             !enddo
             !write(2,*) '-----'
-            write(2,"(A)", ADVANCE='NO') 'RMS [ns]='
-            Do i_stat=1, Station_nrMax
-                If(Cnt(i_stat) .ne. 0) then
-                    write(2,"(F6.1,';')", ADVANCE='NO') &
-                        sqrt(RMS(i_stat,i_Peak)/Cnt(i_stat))
-                endif
-            enddo
-            write(2,*) '-----'
+            !write(2,"(A)", ADVANCE='NO') 'RMS [ns]='
+            !Do i_stat=1, Station_nrMax
+            !    If(Cnt(i_stat) .ne. 0) then
+            !        write(2,"(F6.1,';')", ADVANCE='NO') &
+            !            sqrt(RMS(i_stat,i_Peak)/Cnt(i_stat))
+            !    endif
+            !enddo
+            !write(2,*) '-----'
             write(2,"(A)", ADVANCE='NO') 'Avrg[ns]='
             Do i_stat=1, Station_nrMax
                 If(Cnt(i_stat) .ne. 0) then
                     write(2,"(F6.1,';')", ADVANCE='NO') &
-                        Ave(i_stat,i_Peak)/Cnt(i_stat)
+                        (Ave(i_stat,i_Peak))/Cnt(i_stat)
                 endif
             enddo
             write(2,*) '-----'
-            write(2,"(A)", ADVANCE='NO') 'RMS(Jac)='
+            !write(2,"(A)", ADVANCE='NO') 'DAve[ns]='
+            !Do i_stat=1, Station_nrMax
+            !    If(Cnt(i_stat) .ne. 0) then
+            !        write(2,"(F6.1,';')", ADVANCE='NO') &
+            !           -Ave(i_stat,i_Peak)/Cnt(i_stat)+SIGN(sqrt(RMS(i_stat,i_Peak)/Cnt(i_stat)),Ave(i_stat,i_Peak))
+            !    endif
+            !enddo
+            !write(2,*) '-----'
+            write(2,"(A)", ADVANCE='NO') 'StD [ns]='
             Do i_stat=1, Station_nrMax
                 If(Cnt(i_stat) .ne. 0) then
-                    write(2,"(F6.2,';')", ADVANCE='NO') &
-                        sqrt(SumJac(i_stat,i_Peak)/Cnt(i_stat))
+                    val=SQRT(RMS(i_stat,i_Peak)/Cnt(i_stat) - (Ave(i_stat,i_Peak)/Cnt(i_stat))**2)
+                    If(val.gt.StStdDevMax_ns) Then
+                     Dropped(i_stat,i_Peak)= Dropped(i_stat,i_Peak) + 1
+                    EndIf
+                    If(val.lt.1.5) Then
+                        write(2,"(F6.1,';')", ADVANCE='NO') val
+                    Else
+                        write(2,"('**',F4.1,';')", ADVANCE='NO') val
+                    EndIf
                 endif
             enddo
+            !write(2,*) '-----'
+            !write(2,"(A)", ADVANCE='NO') 'RMS(Jac)='
+            !Do i_stat=1, Station_nrMax
+            !    If(Cnt(i_stat) .ne. 0) then
+            !        write(2,"(F6.2,';')", ADVANCE='NO') &
+            !            sqrt(SumJac(i_stat,i_Peak)/Cnt(i_stat))
+            !    endif
+            !enddo
             write(2,"(A,/)") '-----'
         endif ! prn
         !if(nvar.eq.1) write(*,*) 'SourcePos(1,i_Peak)',SourcePos(1,i_Peak),i_peak

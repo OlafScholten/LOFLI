@@ -262,7 +262,7 @@ Subroutine SelSources(Qual,t_start, EndInput)
       Else
          Q=sigma(3)*z
       Endif
-      If(Q.gt. ICVal) cycle
+      If(Q.gt. ICVal .and. val.gt.ICVal) cycle
       If(.not. old) then
          Q=sqrt(val)
          If(DelNEff .lt. 0) then

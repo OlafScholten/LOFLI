@@ -2,6 +2,10 @@
     Include 'ParamModules.f90'
     Include 'MappingUtilities.f90'
 !-----------------------------------
+!=================================
+Module Interferom_Pars  ! Just placeholder
+   Integer, allocatable, save :: IntFer_ant(:,:)
+End Module Interferom_Pars
 !-----------------------------------
 Program CompareCalibr
    use constants, only : dp

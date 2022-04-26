@@ -9,41 +9,6 @@
     !Include 'CurtainPlotOption.f90'
     Include 'System_Utilities.f90'
 !-----------------------------------
-Function random_stdnormal() Result(x)
-!  https://masuday.github.io/fortran_tutorial/random.html
-! General interest: https://en.wikibooks.org/wiki/Fortran/Fortran_procedures_and_functions
-   implicit none
-   real :: x
-   real,parameter :: pi=3.14159265
-   real :: u1,u2
-   ! call random_number(r) gives 0=< r < 1 i.e. including 0, excluding 1
-   call random_number(u1)
-   call random_number(u2)
-   x = sqrt(-2*log(1-u1))*cos(2*pi*u2)
-   Return
-end Function random_stdnormal
-!-----------------------------------
-Subroutine random_stdnormal3D(x)
-!  https://masuday.github.io/fortran_tutorial/random.html
-! General interest: https://en.wikibooks.org/wiki/Fortran/Fortran_procedures_and_functions
-   implicit none
-   real, intent(out) :: x(1:3)
-   real :: R,D, Epsln=epsilon(Epsln)
-   real :: u1,u2,u3
-   Real :: random_stdnormal
-   ! call random_number(r) gives 0=< r < 1 i.e. including 0, excluding 1
-   call random_number(u1)  ! may include zero
-   call random_number(u2)
-   call random_number(u3)
-   R=sqrt((0.5-u1)**2+(0.5-u2)**2+(0.5-u3)**2+Epsln) ! to prevent zero
-   D=random_stdnormal()! can be zero
-   D=((abs(d))**(1/3.))  ! to have distances distributed like [d^2 x gaussian(d)]
-   !D=sqrt(abs(d)) * Space_width  ! to have distances distributed like [d x gaussian(d)]
-   x(1)= D*(0.5-u1)/R
-   x(2)= D*(0.5-u2)/R
-   x(3)= D*(0.5-u3)/R
-   Return
-end Subroutine random_stdnormal3D
 !-----------------------------------
 Program Simulate_Data
    use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
@@ -95,7 +60,7 @@ Program Simulate_Data
    Real(dp) :: Ras(1:3), Vec_p(1:3), Vec_t(1:3)
    Real(dp) :: D, HorDist, A_p,A_t, FracGalacNoisePow, GN, IstN, TotalGain, NormPulseAmp0Bckg, TimingErr_ns
    Real(dp) :: PulseRespWidth=20. !samples
-   Real(dp) :: dFreq, nu, dnu, Phi_d, Phi_r, Thet_d, Thet_r, SourceGuess(3), Start_time,t_shft
+   Real(dp) :: dFreq, nu, dnu, Phi_d, Phi_r, Thet_d, Thet_r, SourceGuess(3), StartT_sam,t_shft
    Character(len=12) :: Station_name, Lab1, Lab2, Lab3, Lab4
    Integer :: i_file, i_ant, j_ant, Ant_nr, i_sample, k, Ant_IDs(1:AntpStat)
    Integer,save :: EvenOdd=-1

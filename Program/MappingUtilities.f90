@@ -397,7 +397,9 @@ Subroutine WriteCalibration ! MergeFine
 ! Merge values of FineOffset with input from 'FineCalibrations.dat'
    use constants, only : dp, sample, HeightCorrectIndxRef
    use DataConstants, only : Station_nrMax, Ant_nrMax, Calibrations, RunMode  ! , DataFolder
-   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Tot_UniqueAnt, Nr_UniqueAnt
+   use DataConstants, only : FlashName, OutFileLabel
+   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Tot_UniqueAnt, Nr_UniqueAnt, RefAnt, Ant_Stations
+   Use Interferom_Pars, only : IntFer_ant
    !Use Chunk_AntInfo, only : Fine_STMnm, Fine_STDelay, Fine_AntDelay, SAI_AntDelay, Nr_AntDelay, Nr_StatDelay, CalibrDelay ! all these are generated in 'ReadCalib'
    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt, FitQual
    use unque,only : Double_IR_sort
@@ -406,9 +408,10 @@ Subroutine WriteCalibration ! MergeFine
    Real(dp) :: Delay, mean(Station_nrMax), UpDate_STDelay(1:Ant_nrMax)=0.
    character(len=5) :: txt, Station_Mnem!, Fine_STMnm(Station_nrMax), LOFAR_STMnm(Station_nrMax)
    integer :: i, k, nxx, i_fine, SAI, n, i_unq
-   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI, Nr_WriteStat
+   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI, Nr_WriteStat, k_Ref
    Character(len=12) :: Date_mn
    Character(len=7) :: cmnt
+   Character(len=70) :: CalibrationFileName
    !
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(Date_mn,"(I4,I2.2,I2.2, I2.2,I2.2)") &
@@ -486,11 +489,14 @@ Subroutine WriteCalibration ! MergeFine
    !  ============== start writing
    ! get unique filename
    cmnt="Hilbert"
+   CalibrationFileName="Hil"
    If(RunMode.eq.7) Then
       cmnt="FldCal"
+      CalibrationFileName="Fld"
    EndIf
-   Open(unit=19,STATUS='unknown',ACTION='write', FILE = 'Book/Calibrations'//Date_mn//'.dat', IOSTAT=nxx)  !  trim(DataFolder)//
-   write(2,"(A,1x,L,F6.2)") 'New: Calibrations="Calibrations'//Date_mn//'.dat" ! '//cmnt,HeightCorrectIndxRef, FitQual  ! trim(DataFolder)//
+   CalibrationFileName=TRIM(CalibrationFileName)//TRIM(FlashName)//TRIM(OutFileLabel)//'-'//Date_mn//'.cal'
+   Open(unit=19,STATUS='unknown',ACTION='write', FILE = 'Book/'//TRIM(CalibrationFileName), IOSTAT=nxx)  !  trim(DataFolder)//
+   write(2,"(A,1x,L,F6.2,'  ')") '  Calibrations="'//TRIM(CalibrationFileName)//'" ! '//cmnt,HeightCorrectIndxRef, FitQual  ! trim(DataFolder)//
    Write(19,"(A4,1x,A,A,L)") '!01 ',Date_mn,' HeightCorrectIndxRef= ',HeightCorrectIndxRef
    Do i=1,Nr_AntDelay
       k=NINT(SAI_AntDelay(i)/1000.)
@@ -501,6 +507,11 @@ Subroutine WriteCalibration ! MergeFine
       write(19,*) SAI_AntDelay(i),Fine_AntDelay(i), n
    Enddo
    write(19,*) '============ =========== =============== ======= all in units of samples'
+   If(RunMode.eq.2) Then
+      n=Ant_Stations(RefAnt(1,0),1)
+   Else
+      n=Ant_Stations(IntFer_ant(1,1),1) ! If(allocated(IntFer_ant))
+   EndIf
    !
    i_fine=Nr_StatDelay
    Do k=1,Nr_WriteStat    ! Write stationdelays
@@ -508,6 +519,7 @@ Subroutine WriteCalibration ! MergeFine
      Call Station_ID2Mnem(Unique_StatID(k),Station_Mnem)
      !write(2,*) 'mnem',k,Unique_StatID(k),Station_Mnem
      !core=((RunMode.eq.1) .and. (Station_Mnem(1:2) .eq. 'CS'))  ! zero the calibration timings for the core stations
+     If( Unique_StatID(k).eq. n ) k_Ref=k
      nxx=0
      Do i=1,i_fine
          If(Station_Mnem .eq. Fine_STMnm(i)) then
@@ -529,11 +541,13 @@ Subroutine WriteCalibration ! MergeFine
      endif
    Enddo
    Nr_StatDelay=i_fine
-   !
+   write(2,*) 'Calibration constant zeroed for ref-station:', Fine_STMnm(k_ref)
+   flush(unit=2)
+   ! RefAnt(i_chunk,i_eo)
    write(2,"(' station',1x,'NewCalibrations; Updated with [samples]')")
    Do i=1,i_fine
-      write(2,"(1x,A5,3F13.3)") Fine_STMnm(i), Fine_STDelay(i), UpDate_STDelay(i)
-      write(19,"(1x,A5,F14.4)") Fine_STMnm(i), Fine_STDelay(i)
+      write(2,"(1x,A5,3F13.3)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref), UpDate_STDelay(i)
+      write(19,"(1x,A5,F14.4)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref)
    enddo
    Close(unit=19)
    !
@@ -658,7 +672,7 @@ Real(kind=8) Function tShift_ms(Source)  !
     real(dp), intent(in) :: Source(1:3)
     Real(dp), external :: RefracIndex
     !real(dp), intent(out) :: tShift
-    tShift_ms = RefracIndex(Source(3))*sqrt(Source(1)*Source(1)+Source(2)*Source(2)+Source(3)*Source(3))*1000./c_mps
+    tShift_ms = RefracIndex(Source(3))*sqrt(Source(1)*Source(1)+Source(2)*Source(2)+Source(3)*Source(3))*1000.d0/c_mps
     Return
 End Function tShift_ms
 !================================================    Real(dp), external ::
@@ -859,7 +873,7 @@ End Module ansi_colors
 Subroutine Convert2m(CenLoc)
    Implicit none
    real*8, intent(inout) :: CenLoc(3)
-   If((abs(CenLoc(1)) .lt. 100.) .and. (abs(CenLoc(2)) .lt. 100.) .and. (abs(CenLoc(3)) .lt. 50.) ) Then
+   If((abs(CenLoc(1)) .lt. 180.) .and. (abs(CenLoc(2)) .lt. 180.) .and. (abs(CenLoc(3)) .lt. 20.) ) Then
       CenLoc(:)=CenLoc(:)*1000.  ! convert from [km] to [m]
    Endif
    Return

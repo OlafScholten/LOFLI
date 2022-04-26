@@ -4,7 +4,7 @@ Subroutine EI_PrntFitPars(X)
     use FitParams
     !use FittingParameters
     use ThisSource, only : PeakPos, PeakNrTotal, ChunkNr, PeakChiSQ
-    use Chunk_AntInfo, only : Unique_StatID, Start_time
+    use Chunk_AntInfo, only : Unique_StatID, StartT_sam
     use StationMnemonics, only : Station_ID2Mnem
     use StationMnemonics, only : Statn_ID2Mnem
     use DataConstants, only : ChunkNr_dim
@@ -29,11 +29,11 @@ Subroutine EI_PrntFitPars(X)
                i_chunk=ChunkNr(i_Peak)
                !write(2,*) 'EI_PrntFitPars:',i_peak,i_chunk, ChunkNr
                !flush(unit=2)
-               write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',Start_time(i_chunk),&
-                  '[samples]=',Start_time(i_chunk)*Sample*1000.,'[ms]'
+               write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',StartT_sam(i_chunk),&
+                  '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
             Endif
             Write(2,"(i3,2x,i2,A,I6,A,3F8.3)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),&
-                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.
+                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.d0
             write(2,"(', chi^2/df=',F7.2)", ADVANCE='NO') PeakChiSQ(i_Peak)
             !If(Station_nrMax.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
             !      write(2,"(' Excluded:')", ADVANCE='NO')
@@ -47,65 +47,6 @@ Subroutine EI_PrntFitPars(X)
     Endif
 End Subroutine EI_PrntFitPars
 !==========================================
-Subroutine EIPrntNewSources()
-   use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, PeakPos, SourcePos
-   use Chunk_AntInfo, only : Start_time
-    !use StationMnemonics, only : Statn_ID2Mnem
-   use Constants, only : dp,sample,c_mps !,Refrac
-   Implicit none
-   integer ( kind = 4 ) :: i_Peak, i_chunk !, i,j
-   Real(dp) :: time
-   Real(dp), external :: tShift_smpl
-!   Character(len=5) :: Station_Mnem
-   !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
-   !
-   i_chunk=0
-   Do i_Peak = 1,PeakNrTotal
-   If(i_chunk.ne.ChunkNr(i_Peak)) then
-      i_chunk=ChunkNr(i_Peak)
-      write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',Start_time(i_chunk),&
-         '[samples]=',Start_time(i_chunk)*Sample*1000.,'[ms]'
-   Endif
-   Enddo
-   !
-   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height;    t[ms]  ); (chi^2/df) '
-   Do i_Peak = 1,PeakNrTotal
-      !Time=SQRT(sum(SourcePos(:,i_Peak)*SourcePos(:,i_Peak)))
-      !Time = Time*Refrac/(c_mps*sample) ! Convert to units of [samples]
-      !Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - Time )*Sample*1000.
-      Time=( Start_time(ChunkNr(i_Peak)) + PeakPos(i_Peak) - tShift_smpl(SourcePos(:,i_Peak)) )*Sample*1000.
-      Write(2,"('C',i2,' 0',i2,I8)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),PeakPos(i_Peak)
-      Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
-      write(2,"(F12.5';',F7.2)") Time, PeakChiSQ(i_Peak)
-   Enddo  !  i_Peak = 1,PeakNrTotal
-End Subroutine EIPrntNewSources
-!==========================================
-Subroutine EIPrntCompactSource(i_Peak)
-    use FitParams, only : station_nrMax
-    !use FittingParameters
-    use ThisSource, only : PeakPos, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, ExclStatNr, Dropped, SourcePos
-    use Chunk_AntInfo, only : Unique_StatID
-    use StationMnemonics, only : Statn_ID2Mnem
-    Implicit none
-    Integer, intent(in) :: i_Peak
-    integer ( kind = 4 ) :: i
-    Character(len=5) :: Station_Mnem
-    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
-    !
-   If(Station_nrMax.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
-      Do i=1,Station_nrMax
-         If(ExclStatNr(i,i_peak).eq.0) exit
-         Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(ExclStatNr(i,i_peak))
-      Enddo
-      write(2,"(/,'exclude  ')", ADVANCE='NO')
-      Do i=1,Station_nrMax
-         If(Dropped(i,i_peak).eq.0) cycle
-         Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(Unique_StatID(i))
-      Enddo
-   Endif
-   write(2,*) ' '
-   Return
-End Subroutine EIPrntCompactSource
 !==========================================
 Subroutine EIX2Source(X)
 ! Move fit results fron X to Sourcepos and FineOffset_
@@ -167,7 +108,7 @@ Subroutine EI_PolarizPeak(i_Peak)
    use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, IntfNuDim, AntPeak_OffSt
    Use Interferom_Pars, only :  N_Smth, N_fit, Chi2pDF
-   use ThisSource, only : ChunkNr, PeakPos, sourcepos, PeakChiSQ
+   use ThisSource, only : ChunkNr, PeakPos, sourcepos, PeakChiSQ, ExclStatNr
    Implicit none
    Integer, intent(in) :: i_Peak
    Integer :: IntfBase, i_chunk, i_1, i_2, Outpt, j_IntFer, Windw
@@ -192,7 +133,8 @@ Subroutine EI_PolarizPeak(i_Peak)
    !write(2,*) 'EI_PolarizPeak:W_ap='
    write(Label,"('Pk ',i4.2)") i_Peak
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
-      Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), Outpt, DelChi, Label)
+      Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), &
+      Outpt, DelChi, Label, ExclStatNr(:,i_peak) )
    PeakChiSQ(i_Peak)=Chi2pDF
    Call WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChiSqInt)
    !j_IntFer=PartChiSqInt(Nr_IntFerCh(i_chunk))
@@ -211,7 +153,8 @@ Subroutine EI_PolarizPeak(i_Peak)
          VoxLoc(3)=SourcePos(3,i_Peak)
          write(Label,"('Gr ',I2,',',i2)") i_1,i_2
          Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, VoxLoc(:), AntPeak_OffSt(1,i_Peak), &
-            Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak),  Outpt, DelChi, Label)
+            Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak),  &
+            Outpt, DelChi, Label, ExclStatNr(:,i_peak) )
       Enddo
    Enddo
    !

@@ -396,7 +396,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    use constants, only : dp, pi, Sample, c_mps
    use DataConstants, only : Time_Dim, Cnu_dim
    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
-   use Chunk_AntInfo, only : Start_time, TimeBase
+   use Chunk_AntInfo, only : StartT_sam, TimeBase
    use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use FFT, only : RFTransform_CF !, RFTransform_CF2CT
    use StationMnemonics, only : Statn_ID2Mnem
@@ -531,10 +531,10 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
       ', time difference with central pixel=',t_shft*1000.,'[ms]'
    !
-   tMin=((Start_time(i_chunk)+SumStrt)*sample-t_shft)*1000.
-   tMax=((Start_time(i_chunk)+SumStrt+SumWindw)*sample-t_shft)*1000.
+   tMin=((StartT_sam(i_chunk)+SumStrt)*sample-t_shft)*1000.
+   tMax=((StartT_sam(i_chunk)+SumStrt+SumWindw)*sample-t_shft)*1000.
    write(2,*) 'Source time window start@', tMin, '[ms], end@', tMax
-   t_offsetPow=((Start_time(i_chunk)+SumStrt)*sample)*1000.-TimeBase
+   t_offsetPow=((StartT_sam(i_chunk)+SumStrt)*sample)*1000.d0-TimeBase
    Flush(unit=2)
    !
    Return

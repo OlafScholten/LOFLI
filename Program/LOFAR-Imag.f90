@@ -309,12 +309,12 @@ Program LOFAR_Imaging
     use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode, Utility, release
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, Diagnostics, EdgeOffset, Calibrations, OutFileLabel
     use DataConstants, only : Polariz
-    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth
+    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth, StStdDevMax_ns
     use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal ! , PeakPos
     use FitParams, only : FitIncremental, WriteCalib, FullAntFitPrn,  AntennaRange
     use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
     use FitParams, only : FullSourceSearch ! , SigmaGuess
-    use Chunk_AntInfo, only : ExcludedStatID, Start_time, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
+    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
     use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
@@ -343,11 +343,10 @@ Program LOFAR_Imaging
     NAMELIST /Parameters/ RunOption &
          !,  Explore, ImagingRun, Interferometry !, RealCorrelation, E_FieldsCalc &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
-         !, NrP &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
          , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
-         , ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
+         , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel, ChainRun &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    Version='v22.04'
@@ -407,7 +406,7 @@ Program LOFAR_Imaging
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Imaging'//TRIM(OutFileLabel)//'.out')
          RunMode=3
          Sources1='Impulsive Imager'
-      CASE("X")  ! XY-Interferometry
+      CASE("X")  ! XY-Interferometry; Obsolete
          Write(*,*) 'Interferometry, OutFileLabel=',TRIM(OutFileLabel)
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Interferometer'//TRIM(OutFileLabel)//'.out')
          RunMode=14
@@ -429,6 +428,11 @@ Program LOFAR_Imaging
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='PkInt'//TRIM(OutFileLabel)//'.out')
          RunMode=8
          Sources1='PeakInterferometry (Interferometry)'
+      CASE("M")  ! MultiplePointsourcesInterferometry
+         Write(*,*) 'MultiplePointsources-Interferometry, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MSInt'//TRIM(OutFileLabel)//'.out')
+         RunMode=9
+         Sources1='MultiplePointsources (Interferometry)'
       CASE DEFAULT  ! Help
          Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
          Write(*,*) '- "Explore" for first exploration of this flash to get some idea of the layout and timing'
@@ -485,50 +489,17 @@ Program LOFAR_Imaging
       CASE("C")  ! Calibrate                          RunMode=2
          ChunkNr_dim=0
          FitIncremental=.false.
-         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
-            Call GetNonZeroLine(lname)
-            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,1)  ! just dummy arguments
-            Call Convert2m(SourceGuess(:,1))
-            !write(2,*) i, nxx, lname
-            If(nxx.ne.0) exit
-            Read(lname,FMTSrces,iostat=nxx) &
-                i_dist, i_guess,j ,i_chunk,  SourceGuess(:,1) ! just dummy arguments
-            If(nxx.eq.0 .and. i_guess.eq.0) exit
-            ChunkNr_dim=i   ! this was a genuine chunk card
-         EndDo
-         !write(2,*) 'test, ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk, SourceGuess(:,1)
-         If(ChunkNr_dim.eq.0) Then
-            Write(2,*) lname
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too small'
-         EndIf
-         If(ChunkNr_dim.gt.N_Chunk_max) Then
-            Write(2,*) lname
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too large'
-         EndIf
-         !  Determine number of peaks/sorces that are included in the calibration search
-         If(Dual) NrP= 8
-         !NrP=4
-         write(2,*) 'number of calibration chunks:',ChunkNr_dim
-         i_peak=0
-         Do
-            Read(lname,FMTSrces,iostat=nxx) &
-               i_dist, i_guess,j ,i_chunk, SourceGuess(:,1) ! just dummy arguments
-            If(nxx.ne.0) exit
-            i_peak=i_peak+1
-            Call GetNonZeroLine(lname)
-            read(lname,*)  txt  ! check for possible 'exclude' line following this
-            If(trim(txt).eq.'exclud') Then
-               Call GetNonZeroLine(lname)
-            EndIf
-         Enddo
+         !
+         Call PreReadPeakFitInfo(ChunkNr_dim,i_peak)
          Rewind(unit=5) ! Standard input
          read(*,NML = Parameters) ! to reposition correctly
          !
+         If(Dual) NrP= 8
          If(i_peak.eq.0) Then
             PeakNr_dim=2*NrP*ChunkNr_dim
             FitIncremental=.true.
+         ElseIf(i_guess.eq.2) Then
+            PeakNr_dim=2*i_peak
          Else
             PeakNr_dim=i_peak
          EndIf
@@ -558,9 +529,9 @@ Program LOFAR_Imaging
          !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
-         !Call PrintValues(PeakNr_dim,'PeakNr_dim', &
-         !'Maximum number of sources (counting even and odd dipoles separately) included in the input.'//&
-         !'Note: this is a bit of an annoying variable meant to allow to fit more offsets simultaneously.')
+         Call PrintValues(StStdDevMax_ns,'StStdDevMax_ns', &
+         'Stations are excluded when the standard deviation in antenna-arraval times '//&
+         'for a pulse in one station exceeds this value.')
          !
          ! Pre-process inputdata for sources to be used in calibration
          !
@@ -601,41 +572,7 @@ Program LOFAR_Imaging
       CASE("F")  ! Field Calibration; Interferometric               RunMode=7
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=0
-         Do i=1,N_Chunk_max ! perform some pre-scanning of the input to now the number of chunks that will be used
-            Call GetNonZeroLine(lname)
-            Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, SourceGuess(:,i)  ! just dummy arguments
-            Call Convert2m(SourceGuess(:,i))
-            !Write(2,*) nxx, 'A:', lname
-            If(nxx.ne.0) exit
-            Read(lname,FMTSrces,iostat=nxx) &
-               i_dist, i_guess, i_chunk,j, SourceGuess(:,i) ! just dummy arguments
-            !Write(2,*) nxx, 'B:', lname
-            If(nxx.eq.0) exit
-            ChunkNr_dim=i   ! this was a genuine chunk card
-         EndDo
-         If(ChunkNr_dim.eq.0) Then
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too small for FC'
-         EndIf
-         If(ChunkNr_dim.gt.N_Chunk_max) Then
-            write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'last line:', StartTime_ms,i_dist, i_guess,j,i_chunk
-            stop 'Chunk number too large for FC'
-         EndIf
-         !  Determine number of peaks/sorces that are included in the calibration search
-         write(2,*) 'number of calibration chunks:',ChunkNr_dim
-         i_peak=0
-         Do
-            Read(lname,FMTSrces,iostat=nxx) &
-               i_dist, i_guess, i_chunk,j,  SourceGuess(:,1) ! just dummy arguments
-            !write(2,*) 'nxx:',nxx,trim(lname)
-            If(nxx.ne.0) exit
-            If(I_guess.eq.0) i_peak=i_peak+1
-            Call GetNonZeroLine(lname)
-            read(lname,*)  txt  ! check for possible 'exclude' line following this
-            If(trim(txt).eq.'exclud') Then
-               Call GetNonZeroLine(lname)
-            EndIf
-         Enddo
+         Call PreReadPeakFitInfo(ChunkNr_dim,i_peak)
          PeakNr_dim=i_peak
          PeakNrTotal=i_peak  ! one of these is obsolete now
          !
@@ -790,7 +727,7 @@ Program LOFAR_Imaging
          EndIf
          Write(2,*) 'Window start at sample#=',WriteSimulation(1), ', median at ',WriteSimulation(1)+WriteSimulation(2)/2 &
             ,', window=',WriteSimulation(2),' [samples]'
-         Start_Time(1)=(StartTime_ms/1000.)/sample
+         StartT_sam(1)=(StartTime_ms/1000.d0)/sample
          write(2,"(20(1x,'='),/)")
          Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
          Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
@@ -810,29 +747,8 @@ Program LOFAR_Imaging
          Call ImpulsImagRun
        ! =====2 2 2 2 2 2 2 2
       CASE(2)  ! Calibrate                          RunMode=2
-          Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-          write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
-          Do i_chunk=1, ChunkNr_dim
-              !StartTime_ms=1200 ! i_chunk*100.
-              !
-              !Call GetNonZeroLine(lname)
-              !read(lname,*) StartTime_ms, SourceGuess(:,i_chunk) !
-              !Call Convert2m(SourceGuess(:,i_chunk))
-              Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
-              !write(2,*) 'StartTime_ms, SourceGuess', StartTime_ms, SourceGuess(:,i_chunk)
-              If(NINT(SourceGuess(2,i_chunk)).eq.1) &
-                     write(*,"(A,i3,A)") achar(27)//'[45m # Check ChunkNr_dim',i_chunk,achar(27)//'[0m'
-              Start_time(i_chunk)=(StartTime_ms/1000.)/sample  ! in sample's
-              !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-              Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
-              !
-          EndDo !  i_chunk
-          !
-          close(unit=14)
-          close(unit=12)
-          call DAssignFFT()
-          !Ant_ID=MaxLoc(AntMnem, mask=AntMnem.eq.DSet_Names(3))
-          !
+         Call ReadPeakFitInfo
+         !
          write(*,*) 'start fitting'
          Call FindCallibr(SourceGuess) ! Find Station Callibrations
          !
