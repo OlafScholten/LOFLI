@@ -572,7 +572,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Close(UNIT=34)
       Write(GLE_file,"('CuP-',A,A)") TRIM(OutFileLabel),trim(txt)
       Call GLEscript_Curtains(30, GLE_file, N_s, i_chunk, trim(DataFolder)//TRIM(OutFileLabel), TRIM(txt), &
-               dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
+               dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF, VoxLoc(:))
       Write(2,"(16x,A,5x,A,5x,A,6x,A,2x,A,4x,A)") 'D', 'Power','weight','delta_chi^2'!,'Power','d_chi/sqrt(P)'
    EndIf
    !

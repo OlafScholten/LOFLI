@@ -183,7 +183,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               DataReadError=0
               Call GetDataChunk(Group_Names(i_grp),DSet_Names(i_dst), Chunk, Dset_offset, Time_dim, DataReadErr=DataReadErr)
               If(DataReadErr.ne.0) then
-               write(2,*) '************ error in data-read!, file #=',i_file,', name=',filename
+               write(2,*) '************ error in data-read',DataReadErr,', file #=',i_file,', name=',filename
                DataReadError=-1
                write(*,*) 'error in data-read'
                return

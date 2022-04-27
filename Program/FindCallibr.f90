@@ -162,8 +162,8 @@ Subroutine FindCallibr(SourceGuess)
       write(2,*) 'Use theta polarization for antenna correlations'
       Allocate( PolBasis(1:3,1:3,1:PeakNrTotal) )
    Endif
-   write(2,*) 'FullSourceSearch: ', FullSourceSearch
-   flush(unit=2)
+   !write(2,*) 'FullSourceSearch: ', FullSourceSearch
+   !flush(unit=2)
    FitNoSources=.not.FullSourceSearch
    PulsPosCore=.false.
    If(FitIncremental) then
@@ -196,7 +196,7 @@ Subroutine FindCallibr(SourceGuess)
       !write(2,*) 'PeakNrTotal=',PeakNrTotal
       Do i_peak=1,PeakNrTotal
          If(PeakRMS(i_Peak).gt. 25.) cycle
-         write(2,"(i2,i7,', x,y,z=', 3F9.0,', RMS=',F7.1)") i_peak,Peakpos(i_peak),SourcePos(:,i_Peak),PeakRMS(i_Peak)
+         write(2,"(i2,i7,', N,E,h=', 3F9.0,', RMS=',F7.1)") i_peak,Peakpos(i_peak),SourcePos(:,i_Peak),PeakRMS(i_Peak)
          If((SourcePos(2,i_Peak)/1000. .lt. XFrameEi) .or. (SourcePos(2,i_Peak)/1000. .gt. XFrameEf)) cycle
          If((SourcePos(1,i_Peak)/1000. .lt. XFrameNi) .or. (SourcePos(1,i_Peak)/1000. .gt. XFrameNf)) cycle
          If(SourcePos(1,i_Peak) .ne. SourcePos(1,i_Peak)) cycle  ! check for NaN
@@ -309,7 +309,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !logical :: FitNoSources=.false.
     !
     !
-    write(2,*) '=== New Round ============================================================'
+    !write(2,*) '=== New Round ============================================================'
     flush(unit=2)
     CalcHessian=.false.
     SpaceCov(1,1)=-.1 ; SpaceCov(2,2)=-.1 ; SpaceCov(3,3)=-.1 ;
@@ -327,8 +327,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
         FitPos(1)=-1 ; FitPos(2)=-2 ; FitPos(3)=-3 ; FitPos(4)=-4
     endif
     Call SetFitParamsLMA(X,Fitfirst,FitPos) ! Important to call 'SetFitParamsLMA' after 'GetCorrSingAnt'
-    write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
-    flush(unit=2)
+    !write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
+    !flush(unit=2)
     !
     !stop 'FitCycle'
     !write(2,*) 'Fit with Nr_Corr=',Nr_Corr,'============================================================'
