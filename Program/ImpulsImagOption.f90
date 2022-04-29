@@ -103,7 +103,6 @@ Subroutine ImpulsImagRun
    write(18,*) '! StartT_sam[ms]:', '1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
    Do TimeFrame=ChunkNr_start, ChunkNr_stop
-      AntennaNrError=0
       write(*,"(A,i6,A)", ADVANCE='NO') achar(27)//'[31m Processing block# ',TimeFrame,achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
       i_chunk=1
       StartT_sam(1)=(StartTime_ms/1000.d0)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's

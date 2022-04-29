@@ -11,7 +11,6 @@
     use FitParams, only : FitParam, X_Offset, Fit_TimeOffsetAnt, ParamScaleFac, Fit_TimeOffsetStat
     use FitParams, only : N_FitPar_max, N_FitPar, N_FitStatTim, Nr_TimeOffset, Fit_AntOffset
     use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode, ChunkNr_dim
-    use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CorrAntNrs, SourcePos, RefAntErr, PeakNrTotal
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt, Unique_SAI
     use StationMnemonics, only : Station_Mnem2ID
@@ -68,22 +67,10 @@
             FitParam(N_FitStatTim)= k ! the timing of station "Unique_StatID(k)" will be fitted.
             X_Offset(N_FitStatTim)=Nr_TimeOffset   ! position in 'X' for this station, or the first antanna for this station
             If(Fit_AntOffset) then
-               If(Polariz) Then
-                 ! write(2,*) 'SetFitParam',k, Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1)
-                 Do j= 1,(Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1))/2
-                    X(Nr_TimeOffset)=(Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j-1)+ Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j))/2.
-                    !write(2,*) 'timeoffseteven-odd', Tot_UniqueAnt(k-1)+2*j-1, Nr_TimeOffset,  &
-                    !    Unique_SAI(Tot_UniqueAnt(k-1)+2*j-1), Unique_SAI(Tot_UniqueAnt(k-1)+2*j), X(Nr_TimeOffset)
-                    Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j-1) = X(Nr_TimeOffset)
-                    Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j) = X(Nr_TimeOffset) ! set equal to average
-                    Nr_TimeOffset=Nr_TimeOffset+1
-                 Enddo
-               Else
                  Do j= 1,Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1)
                     X(Nr_TimeOffset)=Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j)
                     Nr_TimeOffset=Nr_TimeOffset+1
                  Enddo
-               EndIf
             Else
               X(Nr_TimeOffset)=Fit_TimeOffsetStat(k)
               Nr_TimeOffset=Nr_TimeOffset+1
@@ -188,7 +175,6 @@ End Subroutine PrntFitPars
 Subroutine X2Source(X)
 ! Move fit results fron X to Sourcepos and FineOffset_
     use DataConstants, only : Station_nrMax
-    use DataConstants, only : Polariz
     use ThisSource, only : SourcePos, RefAntErr, PeakNrTotal
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt,  Unique_SAI
     use FitParams
@@ -226,18 +212,9 @@ Subroutine X2Source(X)
             !write(2,*) 'X2SourceX',X(X_Offset(i):X_Offset(i)+Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1))
             !write(2,*) 'X2Sourceu',Unique_SAI(Tot_UniqueAnt(k-1)+1:Tot_UniqueAnt(k))
             If(Fit_AntOffset) then
-               If(Polariz) Then ! should agree with convention for calculating the Jacobian for fitting
-                 Do j= 1,(Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1))/2  ! there is same fit_timeoffset for even and odd
-                    ! dt=Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j-1)-Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j)
-                    Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j-1)=X(X_Offset(i)+j-1)
-                    Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+2*j)=X(X_Offset(i)+j-1)
-                    !write(2,*) 'X2Source', i,k,j,X(X_Offset(i)+j-1), X_Offset(i)
-                 Enddo
-               Else
                  Do j= 1,Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1)
                     Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j)=X(X_Offset(i)+j-1)
                  Enddo
-               EndIf
             Else
               Fit_TimeOffsetStat(k) = X(X_Offset(i))
             endif
@@ -255,7 +232,7 @@ Subroutine Find_unique_StatAnt()
 !  Update list of unique stations and antennas.
     use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt
     use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
-    use DataConstants, only : Polariz
+    use DataConstants, only : Interferometry !Polariz
     !use ThisSource, only : Fit_TimeOffsetStat, Unique_StatID
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
@@ -296,7 +273,7 @@ Subroutine Find_unique_StatAnt()
     Endif
     vec(k+1:Ant_nrMax*(ChunkNr_dim+1))=0
     Do i_chunk=1, ChunkNr_dim
-      If(Polariz) Then  ! keep only even-odd pairs
+      If(Interferometry) Then  ! keep only even-odd pairs, needed for E-field interferometry
          Do i_ant=1,Ant_nr(i_chunk)
             If((MOD(Ant_IDs(i_ant,i_chunk),2).eq.0) .and. ((Ant_IDs(i_ant,i_chunk)+1) .eq. Ant_IDs(i_ant+1,i_chunk))) then
               vec(k+1)= 1000*Ant_Stations(i_ant,i_chunk)+Ant_IDs(i_ant,i_chunk)

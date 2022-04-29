@@ -216,7 +216,7 @@ End Subroutine GLEscript_CurtainPlot
 !====================================
 Subroutine GLE_Corr()
     use DataConstants, only : Station_nrMax, DataFolder
-    use DataConstants, only : Polariz, Ant_nrMax
+    use DataConstants, only :  Ant_nrMax
     use Chunk_AntInfo
     use ThisSource, only : CCorr, PeakNrTotal, CorrAntNrs, Nr_Corr, Safety, Peak_eo, ChunkNr, Peakpos, CCorr_Err, RefAntErr
     use FitParams, only : N_FitPar_max
@@ -238,21 +238,21 @@ Subroutine GLE_Corr()
     !
     !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
     i_tp2=0
-    If(polariz) i_tp2=1
+    !If(polariz) i_tp2=1
     Do i_peak=1,PeakNrTotal
       Do i_tp=0,i_tp2
         i_eo=Peak_eo(i_peak)
         i_chunk=ChunkNr(i_peak)
         Station=Ant_Stations(CorrAntNrs(1,i_eo,i_chunk),i_chunk)
         pBase=0
-        If(polariz) then
-            ext=tp(i_tp)
-            If(i_tp.eq.1) pBase=Ant_nrMax/2
-            write(XCorrPlot,"('XCP_',I3.3,A2,'.gle')") i_peak,ext
-        Else
+        !If(polariz) then
+        !    ext=tp(i_tp)
+        !    If(i_tp.eq.1) pBase=Ant_nrMax/2
+        !    write(XCorrPlot,"('XCP_',I3.3,A2,'.gle')") i_peak,ext
+        !Else
             ext=EveOdd(i_eo)
             write(XCorrPlot,"('XCP_',I3.3,'.gle')") i_peak
-        EndIf
+        !EndIf
         i=0
         J_corr_st(i)=1
         Do j_corr=1,Nr_Corr(i_eo,i_chunk)

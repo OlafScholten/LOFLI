@@ -472,6 +472,8 @@ Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, 
    If(list_max.eq.1) filename_list='.'
    !write(2,*) '-----',list_max,trim(filename),' ; ',trim(GroupName),' ; ',trim(DSetName)
    error=0
+   hdferr=0
+   DataReadErr=0
    Do List_nr=1,list_max
       If((filename_list(List_nr).eq.trim(filename)) .and. (Group_name_list(List_nr).eq.trim(GroupName)) .and. &
             (DSet_list(List_nr).eq.trim(DSetName))) then
@@ -519,7 +521,6 @@ Subroutine GetDataChunk(GroupName,DSetName, Chunk, DSet_offset, DSet_dim, prnt, 
       Return
       !Stop 'GetDataChunk: data-open problem'
    Endif
-   DataReadErr=0
     Call DataRead(dset_id_list(List_nr), Chunk, DSet_offset, DSet_dim)
     If(hdferr.ne.0) then ! set in call to 'h5dread_f' in 'GetDataChunk'
         If(.not. Production) write(*,*) '!!HDF5 error captured for antenna ',trim(DSetName),', no problem!!!'

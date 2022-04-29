@@ -39,7 +39,7 @@ Module Chunk_AntInfo
     Logical, save :: CalibratedOnly
     Integer, save :: RefStat_ID
     Integer, save :: DataReadError
-    Integer, save :: AntennaNrError=-1
+    Integer, save :: AntennaNrError=0
     Integer, save :: TimeFrame
     Integer, save :: PeaksPerChunk=500  ! actual max number of peaks that will be used (set on input)
     Integer, parameter :: MaxPeaksPerChunk=500             ! Maximal number of peaks per chunck

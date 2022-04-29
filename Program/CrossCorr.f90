@@ -6,7 +6,7 @@ Subroutine BuildCC(StatMax,DistMax)
 !        This requires treating the even and odd antennas at the same level and it will be assumed that the
 !        i_eo=0 (even=Y-dipoles) peak positions hold for the two antenna orientations.
     use DataConstants, only : ChunkNr_dim, Production, DataFolder, RunMode
-    use DataConstants, only : Polariz
+    !use DataConstants, only : Polariz
     use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Nr_UniqueStat, RefAnt, Nr_UniqueAnt, Unique_SAI
     use ThisSource, only : Nr_Corr, Peakpos, PlotCCPhase, CCPhase_ave, Stat_pos, TotPeakNr
     use ThisSource, only : T2_dim, Tref_dim, PeakNrTotal
@@ -34,9 +34,9 @@ Subroutine BuildCC(StatMax,DistMax)
    !
    !
    i_eo1=1
-   If(Polariz) Then
-      i_eo1=0
-   EndIf
+   !If(Polariz) Then
+   !   i_eo1=0
+   !EndIf
    dtAnt_tp(:)=0.
    NSrc_tp(:)=0
    If(first) then
@@ -74,9 +74,9 @@ Subroutine BuildCC(StatMax,DistMax)
                 If(Ant_Stations(i_ant,i_chunk) .gt. StatMax) cycle  ! Limit to antennas near the superterp
                 If(Dist .gt. DistMax*1000.) cycle  ! Limit to antennas near the superterp
                 if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. i_eo) cycle       ! limit to odd antennas
-                If(Polariz) Then
-                  if((Ant_IDs(i_ant+1,i_chunk)-Ant_IDs(i_ant,i_chunk)) .ne. 1) cycle       ! limit to even-odd antenna pairss
-                EndIf
+                !If(Polariz) Then
+                !  if((Ant_IDs(i_ant+1,i_chunk)-Ant_IDs(i_ant,i_chunk)) .ne. 1) cycle       ! limit to even-odd antenna pairss
+                !EndIf
                 ! write(2,*) 'GetCorrSingAnt:',i_ant, J_Corr, i_eo, i_chunk
                 ! flush(unit=2)
                 !
@@ -115,8 +115,8 @@ End Subroutine BuildCC
 !=====================================
 Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
 !   Get the Correlation for a single antenna and all peaks in this chunk
-    use DataConstants, only : Station_nrMax,PeakNr_dim,Time_dim, Production
-    use DataConstants, only : Polariz, Ant_nrMax
+    use DataConstants, only : Station_nrMax,PeakNr_dim,Time_dim, Production, Ant_nrMax
+!    use DataConstants, only : Polariz
     use Chunk_AntInfo, only : CTime_spectr, Ant_Pos, Ant_RawSourceDist, Ant_Stations, Ant_IDs
     use Chunk_AntInfo, only : Unique_SAI, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt
     use Chunk_AntInfo, only : Ant_nr
@@ -221,20 +221,20 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
             !write(2,*) 'StLoc=',StLoc
             !flush(unit=2)
             !RTTraceRef(1:Tref_dim) = Real(CTime_spectr(StLoc+1:StLoc+Tref_dim,i_ant,i_chunk))
-            If(Polariz) Then
-               !RTTraceRef1(1:Tref_dim) = Real(CTime_spectr(StLoc+1:StLoc+Tref_dim,i_ant+1,i_chunk))
-               Call GetAntSourceAng(i_ant, i_chunk, SourcePos(1,i_Peak), Thet_d, Phi_d, Dist)
-               PolBasis(:,2,i_Peak)= (/sin(Phi_d*pi/180.) , -cos(Phi_d*pi/180.) , 0.d0 /)
-               PolBasis(:,1,i_Peak)= (/-cos(Thet_d*pi/180.)*PolBasis(2,2,i_Peak) ,cos(Thet_d*pi/180.)*PolBasis(1,2,i_Peak) ,&
-                        sin(Thet_d*pi/180.) /)
-               PolBasis(:,3,i_Peak)= (/-sin(Thet_d*pi/180.)*PolBasis(2,2,i_Peak) ,sin(Thet_d*pi/180.)*PolBasis(1,2,i_Peak) ,&
-                        -cos(Thet_d*pi/180.) /)
-               Call GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, Tref_dim, &
-                     T2_dim, PolBasis(1,1,i_Peak), alpha, W, CnuRt(0,1,i_peak)) ! get FFT spectrum around peak for (t,p) directions
-            Else
+            !If(Polariz) Then
+            !   !RTTraceRef1(1:Tref_dim) = Real(CTime_spectr(StLoc+1:StLoc+Tref_dim,i_ant+1,i_chunk))
+            !   Call GetAntSourceAng(i_ant, i_chunk, SourcePos(1,i_Peak), Thet_d, Phi_d, Dist)
+            !   PolBasis(:,2,i_Peak)= (/sin(Phi_d*pi/180.) , -cos(Phi_d*pi/180.) , 0.d0 /)
+            !   PolBasis(:,1,i_Peak)= (/-cos(Thet_d*pi/180.)*PolBasis(2,2,i_Peak) ,cos(Thet_d*pi/180.)*PolBasis(1,2,i_Peak) ,&
+            !            sin(Thet_d*pi/180.) /)
+            !   PolBasis(:,3,i_Peak)= (/-sin(Thet_d*pi/180.)*PolBasis(2,2,i_Peak) ,sin(Thet_d*pi/180.)*PolBasis(1,2,i_Peak) ,&
+            !            -cos(Thet_d*pi/180.) /)
+            !   Call GetAntPol(Thet_d, Phi_d, i_ant, i_chunk, StLoc, Tref_dim, &
+            !         T2_dim, PolBasis(1,1,i_Peak), alpha, W, CnuRt(0,1,i_peak)) ! get FFT spectrum around peak for (t,p) directions
+            !Else
                Call GetAnt(i_ant, i_chunk, StLoc, Tref_dim, T2_dim, CnuRt(0,1,i_peak)) ! get nu-spectrum for reference antenna
                !write(2,*) 'ref:',i_ant,i_peak, StLoc, Tref_dim, T2_dim, SubSample_Offset
-            EndIf
+            !EndIf
             If(.not. Production) then
                CC_val=abs(CTime_spectr(StLoc+Tref_dim/2,i_ant,i_chunk))/2.
                CC_Phase=abs(CTime_spectr(StLoc+1,i_ant,i_chunk))
@@ -281,11 +281,11 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
             goto 9
         endif
         !RTTrace2(1:T2_dim)= Real(CTime_spectr(StLoc + 1:StLoc + T2_dim,i_ant,i_chunk))
-         If(Polariz) Then
-            !RTTrace21(1:T2_dim)= Real(CTime_spectr(StLoc + 1:StLoc + T2_dim,i_ant+1,i_chunk))
-            Call CrossCorrPol(CnuRt(0,1,i_peak), i_ant, i_chunk, StLoc, T2_dim, &
-               i_Peak, SubSample_Offset, CrCor, CrCorp)
-         Else
+         !If(Polariz) Then
+         !   !RTTrace21(1:T2_dim)= Real(CTime_spectr(StLoc + 1:StLoc + T2_dim,i_ant+1,i_chunk))
+         !   Call CrossCorrPol(CnuRt(0,1,i_peak), i_ant, i_chunk, StLoc, T2_dim, &
+         !      i_Peak, SubSample_Offset, CrCor, CrCorp)
+         !Else
             Call CrossCorr(CnuRt(0,1,i_peak), i_ant, i_chunk, StLoc, T2_dim, SubSample_Offset, CrCor)
             !If(i_ant.lt.5) write(2,*) i_ant,i_peak,j_corr, StLoc, T2_dim, SubSample_Offset,CrCor(T2_dim),CrCor(1:2)
             ! Checked: for the self correlation the max of the real part is (almost) at 1 (delta-t=0, where you would expect it,
@@ -294,7 +294,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
             ! For a true self correlation this cannot happen, however the reference-antenna spectrum lenght 'Tref_dim'is padded
             !  with zeros to reach the length 'T2_dim' of the spectra for which the cross correlations are calculated. This
             !  difference in length is the culprit.
-         EndIf
+         !EndIf
         !
         Call SearchWin(Peak_IRef(i_Peak), i_ant, i_chunk, SourcePos(1,i_Peak), SearchRange)
         ! write(2,*) 'Before  CrossCorr_Max', SearchRange, Polariz, Ant_nrMax, j_corr,Safety
@@ -303,27 +303,27 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
    !TotSW=TotSW+CPUCC
    !TotCCM=TotCCM-CPUCC
         If(j_corr .eq. 1) SearchRange=Safety !  i_Peak, CrCor, ACCorr, RCCorr, RtMax, Aval, Rval, Ival, SearchRange, Error)
-        If(Polariz) Then
-            Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCorp, ACCorr, RtMaxp, CC_val, CC_Phase, SearchRange, Errorp)
-            !write(2,*) 'j_corr+Ant_nrMax/2=', j_corr+Ant_nrMax/2, i_Peak, CC_val, Ant_nrMax, j_corr
-            !flush(unit=2)
-            CCorr(:,j_corr+Ant_nrMax/2,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
-            !write(2,*) 'inbetween  CrossCorr_Max', SearchRange, Polariz
-            !flush(unit=2)
+        !If(Polariz) Then
+        !    Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCorp, ACCorr, RtMaxp, CC_val, CC_Phase, SearchRange, Errorp)
+        !    !write(2,*) 'j_corr+Ant_nrMax/2=', j_corr+Ant_nrMax/2, i_Peak, CC_val, Ant_nrMax, j_corr
+        !    !flush(unit=2)
+        !    CCorr(:,j_corr+Ant_nrMax/2,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
+        !    !write(2,*) 'inbetween  CrossCorr_Max', SearchRange, Polariz
+        !    !flush(unit=2)
+        !    Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
+        !    CCorr(:,j_corr,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
+        !    !If(Abs(RtMaxp-RtMax) .gt. .1) then
+        !    !   write(2,*) 'timing difference (t - p) polarizations', i_Peak, Antenna_SAI, RtMax-RtMaxp, 'samples'&
+        !    !         ,Errorp-Error
+        !    !EndIf
+        !    If(Abs(RtMaxp-RtMax) .lt. 1.) then
+        !       dtAnt_tp(i_SAI/2)=dtAnt_tp(i_SAI/2)+ RtMax-RtMaxp  ! difference in timing for theta and phi pol; Obsolete
+        !       NSrc_tp(i_SAI/2)=NSrc_tp(i_SAI/2)+  1
+        !    endif
+        !Else
             Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
             CCorr(:,j_corr,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
-            !If(Abs(RtMaxp-RtMax) .gt. .1) then
-            !   write(2,*) 'timing difference (t - p) polarizations', i_Peak, Antenna_SAI, RtMax-RtMaxp, 'samples'&
-            !         ,Errorp-Error
-            !EndIf
-            If(Abs(RtMaxp-RtMax) .lt. 1.) then
-               dtAnt_tp(i_SAI/2)=dtAnt_tp(i_SAI/2)+ RtMax-RtMaxp  ! difference in timing for theta and phi pol; Obsolete
-               NSrc_tp(i_SAI/2)=NSrc_tp(i_SAI/2)+  1
-            endif
-        Else
-            Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
-            CCorr(:,j_corr,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
-        EndIf
+        !EndIf
    !call cpu_time(CPUCC)
    !TotCCM=TotCCM+CPUCC
         !If(searchrange.gt.50) write(2,*) j_corr,'SearchRange:',SearchRange, RtMax
@@ -924,7 +924,7 @@ End Subroutine ReImAtMax
 Subroutine GetRefAnt(ChunkNr)
    ! with the dual option the relative distance between the two polarity antennas should be small
    use DataConstants, only : ChunkNr_dim
-   use DataConstants, only : Polariz
+!   use DataConstants, only : Polariz
    use Chunk_AntInfo, only : Ant_IDs, Ant_pos, RefAnt
    use ThisSource, only : Dual
    use constants, only : dp
@@ -944,15 +944,15 @@ Subroutine GetRefAnt(ChunkNr)
          j=0
          Do i_ante=1,MaxRefAnt ! build table of relative distances
             if(mod(Ant_IDs(i_ante,i_chunk),2) .ne. i_e) cycle       ! check this is an even antenna
-            If(Polariz) Then  ! the reference should be at the same position
-               If((Ant_IDs(i_ante,i_chunk)+1) .eq. Ant_IDs(i_ante+1,i_chunk)) Then ! Reference antenna found
-                  RefAnt(i_chunk,0)=i_ante
-                  RefAnt(i_chunk,1)=i_ante+1
-                  Goto 9
-               Else
-                  cycle
-               EndIf
-            EndIf
+            !If(Polariz) Then  ! the reference should be at the same position
+            !   If((Ant_IDs(i_ante,i_chunk)+1) .eq. Ant_IDs(i_ante+1,i_chunk)) Then ! Reference antenna found
+            !      RefAnt(i_chunk,0)=i_ante
+            !      RefAnt(i_chunk,1)=i_ante+1
+            !      Goto 9
+            !   Else
+            !      cycle
+            !   EndIf
+            !EndIf
             Do i_anto=1,MaxRefAnt
                If(j.ge. MA ) exit
                if(mod(Ant_IDs(i_anto,i_chunk),2) .ne. i_o) cycle       ! check this is an odd antenna

@@ -308,7 +308,7 @@ Program LOFAR_Imaging
     use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
     use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode, Utility, release
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, Diagnostics, EdgeOffset, Calibrations, OutFileLabel
-    use DataConstants, only : Polariz
+    use DataConstants, only : Interferometry ! Polariz
     use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth, StStdDevMax_ns
     use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal ! , PeakPos
     use FitParams, only : FitIncremental, WriteCalib, FullAntFitPrn,  AntennaRange
@@ -316,7 +316,7 @@ Program LOFAR_Imaging
     use FitParams, only : FullSourceSearch ! , SigmaGuess
     use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
-    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, AntennaNrError
+    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
     use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
@@ -337,11 +337,10 @@ Program LOFAR_Imaging
     Character(LEN=250) :: TxtIdentifier, TxtImagingPars
     Character(LEN=250) :: Txt20Identifier, Txt20ImagingPars
     Logical :: XcorelationPlot, prnt=.false. ! CrossCorrelate=.false. ,
-    Logical :: Interferometry=.false.
-    Logical :: E_FieldsCalc=.true.
+    !Logical :: Interferometry=.false.
+    !Logical :: E_FieldsCalc=.true.
     Integer :: i_dist, i_guess, nxx, valueRSS
     NAMELIST /Parameters/ RunOption &
-         !,  Explore, ImagingRun, Interferometry !, RealCorrelation, E_FieldsCalc &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
          , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
@@ -507,9 +506,9 @@ Program LOFAR_Imaging
          !
          WriteSimulation(2)=-1
          CalibratedOnly=.False.
-         E_FieldsCalc=.false.
+         !E_FieldsCalc=.false.
          RealCorrelation=.False.
-         Polariz= E_FieldsCalc
+         !Polariz= E_FieldsCalc
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
          Call PrintValues(XcorelationPlot,'XcorelationPlot', &
          'Produce a plot of the cross-correlation functions (real or absolute).')
@@ -530,7 +529,7 @@ Program LOFAR_Imaging
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
          Call PrintValues(StStdDevMax_ns,'StStdDevMax_ns', &
-         'Stations are excluded when the standard deviation in antenna-arraval times '//&
+         'Stations are excluded when the standard deviation in antenna-arrival times '//&
          'for a pulse in one station exceeds this value.')
          !
          ! Pre-process inputdata for sources to be used in calibration
@@ -546,7 +545,7 @@ Program LOFAR_Imaging
          XcorelationPlot=.false.
          FitIncremental=.true.
          Interferometry=.false.
-         Polariz=.false.  ! ????
+         !Polariz=.false.  ! ????
          RealCorrelation=.false.
          !FitRange_Samples=170
          FitRange_Samples=86 ! 90  !  some cases 70 is better, sometimes 90, 80 seems to be worse i.e. highly non-linear!
@@ -584,13 +583,13 @@ Program LOFAR_Imaging
          FitRange_Samples=7
          Dual=.false.
          CurtainHalfWidth=-1
-         Polariz=Dual  !
+         !Polariz=Dual  !
          CalibratedOnly=.False.
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
          !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
-         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
-            'Produce a plot of the cross-correlation functions (real or absolute).')
+         !Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+         !   'Produce a plot of the cross-correlation functions (real or absolute).')
          Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
@@ -603,7 +602,7 @@ Program LOFAR_Imaging
          FitRange_Samples=7
          CurtainHalfWidth=-1
          Dual=.true.
-         Polariz=Dual  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
+         !Polariz=.true.  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
          PeakNr_dim=2
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
@@ -611,7 +610,6 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(TimeBase,'TimeBase', &
             'Time-offset from the start of the data, best if kept the same for all analyses for this flash')
-         !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.' ) !
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.' )
          Call PrintValues(ChainRun,'ChainRun', &
             'Automatically start jobs (for - previous or + following timeslots, made to follow a negative leader.' )
@@ -632,13 +630,13 @@ Program LOFAR_Imaging
          FitRange_Samples=7
          Dual=.false.
          CurtainHalfWidth=-1
-         Polariz=Dual  !
+         !Polariz=Dual  !
          CalibratedOnly=.true.
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
          !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
-         Call PrintValues(XcorelationPlot,'XcorelationPlot', &
-            'Produce a plot of the cross-correlation functions (real or absolute).')
+         !Call PrintValues(XcorelationPlot,'XcorelationPlot', &
+         !   'Produce a plot of the cross-correlation functions (real or absolute).')
          Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
@@ -767,12 +765,12 @@ Program LOFAR_Imaging
          !
          !
          i_chunk=0 ! scratch
-         If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
+         !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
          !
       CASE(8)
          Call PeakInterferoOption
-         If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
+         !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
   End SELECT
 

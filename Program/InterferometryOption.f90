@@ -25,7 +25,7 @@ Subroutine InterferometerRun
    Use Interferom_Pars, only : IntfPhaseCheck, N_smth, IntPowSpec, NrPixSmPowTr
    use DataConstants, only : OutFileLabel, DataFolder, Calibrations, Time_Dim !, Cnu_dim,
    !use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
-   use DataConstants, only : Polariz
+   !use DataConstants, only : Polariz
    use Chunk_AntInfo, only : StartT_sam, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
    use ThisSource, only : Dual, CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use FitParams, only : AntennaRange
@@ -47,13 +47,13 @@ Subroutine InterferometerRun
    Integer :: Date_T(8)
    character*100 :: shellin, IntfRun_file
    Character*7 :: PreAmble
-   Logical :: Interferometry=.true., E_FieldsCalc
-   NAMELIST /Parameters/ Interferometry, Dual, E_FieldsCalc  &  ! just those that are of interest for interferometry
+   Logical :: Interferometry=.true. !, E_FieldsCalc
+   NAMELIST /Parameters/ Interferometry, Dual &!, E_FieldsCalc  &  ! just those that are of interest for interferometry
          , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
          , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations &
          , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
    !    .
-   E_FieldsCalc=Polariz
+   !E_FieldsCalc=.true.  !  Polariz
    IntfSmoothWin=N_smth
    !
    ! Get center voxel

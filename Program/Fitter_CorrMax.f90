@@ -270,7 +270,7 @@ Subroutine JacobianCorrTime ( meqn, nvar, X_p, nf, Jacobian, uiparm, urparm, ufp
 Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
     use constants, only : dp,sample,c_mps
     use DataConstants, only : Station_nrMax, Ant_nrMax, Production
-    use DataConstants, only : Polariz
+!    use DataConstants, only : Polariz
     use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
     use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped, StStdDevMax_ns
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos, Ant_RawSourceDist
@@ -390,9 +390,9 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                     If(FitParam(i) .eq. i_stat) then
                         If(Fit_AntOffset) then
                            i_StOff=X_Offset(i) + i_SAI-Tot_UniqueAnt(i_stat-1)-1 ! position of this parameter in array X
-                           If(polariz) then  ! This needs to agree with the settings in X2Source
-                              i_StOff=X_Offset(i) + (i_SAI-Tot_UniqueAnt(i_stat-1)-1)/2 ! position of this parameter in array X, count even only
-                           EndIf
+                           !If(polariz) then  ! This needs to agree with the settings in X2Source
+                           !   i_StOff=X_Offset(i) + (i_SAI-Tot_UniqueAnt(i_stat-1)-1)/2 ! position of this parameter in array X, count even only
+                           !EndIf
                            !write(2,*) 'i_StOff:',i_StOff,i,i_stat,Antenna_SAI, X_Offset(i), i_SAI, Tot_UniqueAnt(i_stat-1)
                         else
                            i_StOff=X_Offset(i)       ! Station offset for fitting station timing

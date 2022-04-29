@@ -2,13 +2,11 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
    use constants, only : dp,sample
    use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
-   !use DataConstants, only : Polariz
-   !use FitParams, only : Explore
-    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
-    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
-    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos, CalibratedOnly
-    use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist, Simulation, WriteSimulation
-    use Chunk_AntInfo, only : NormOdd, NormEven ! Powr_eo,NAnt_eo
+   use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
+   use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
+   use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos, CalibratedOnly
+   use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist, Simulation, WriteSimulation
+   use Chunk_AntInfo, only : NormOdd, NormEven ! Powr_eo,NAnt_eo
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    use HDF5_LOFAR_Read, only : filename, Group_names, Group_nr ! , Group_max
    use HDF5_LOFAR_Read, only : DSet_names, DSet_nr, Ant_ID, STATION_ID !, DSet_max, ANTENNA_POSITION
@@ -329,12 +327,15 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    EndIf
    !
    If(Ant_nr(i_chunk).le.6) then
-      write(2,*) Ant_nr(i_chunk),' are too few active antennas for chunck starting at ',StartT_sam(i_chunk)
-      If(AntennaNrError.lt.0) then
-         stop 'AntennaRead'
-      Else
-         AntennaNrError=1
+      write(2,*) Ant_nr(i_chunk),' are too few active antennas for chunk starting at ',StartT_sam(i_chunk)
+      write(*,*) Ant_nr(i_chunk),' are too few active antennas for chunk starting at ',StartT_sam(i_chunk)
+      AntennaNrError=AntennaNrError+1
+      If(AntennaNrError.gt.10) then
+         write(2,*) 'AntennaNrError:',AntennaNrError
+         stop 'Too few antennas fo a while'
       Endif
+   Else
+      AntennaNrError=0
    Endif
    !
    write(*,*) ' '
