@@ -22,7 +22,7 @@ Subroutine FindCallibr(SourceGuess)
 !      2) This also requires that the Y- (i_ant=even) and X- (i_ant=even+1) dipoles are both active at the same
 !        antenna location (in the same chunck).
    use Chunk_AntInfo, only : Unique_SAI, StartT_sam, TimeFrame, tot_uniqueant
-   use DataConstants, only : Polariz, Ant_nrMax
+   use DataConstants, only : Ant_nrMax
    use ThisSource, only : Dual, RealCorrelation
    use ThisSource, only : NrP, t_ccorr, SourcePos, RefAntErr, ExclStatNr, Peak_eo, ChunkNr, TotPeakNr
    use ThisSource, only : Nr_corr, PeakNr, PeakNrTotal, PlotCCPhase, Safety, PolBasis, Tref_dim, T2_Dim
@@ -59,8 +59,7 @@ Subroutine FindCallibr(SourceGuess)
     Integer :: UpSF= 16, i_SAI ! UpSampleFactor
    !
    !       Initialize
-   !Polariz=(Dual .and. RealCorrelation)
-   Call Find_unique_StatAnt()  ! works in polariz mode
+   Call Find_unique_StatAnt()
    !
    Do i=-Safety,Safety
      t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
@@ -73,7 +72,7 @@ Subroutine FindCallibr(SourceGuess)
 !   flush(unit=2)
    Nr_Corr=0
  !  ExclStatNr(:,:)=0
-   Call GetRefAnt(ChunkNr_dim)      ! works also in polariz mode
+   Call GetRefAnt(ChunkNr_dim)
    !
    i_peak=0
    PeakNr1=0
@@ -158,12 +157,8 @@ Subroutine FindCallibr(SourceGuess)
    !write(2,*) 'SourcePos:',SourcePos
    !flush(unit=2)
    !
-   If(Polariz) then
-      write(2,*) 'Use theta polarization for antenna correlations'
-      Allocate( PolBasis(1:3,1:3,1:PeakNrTotal) )
-   Endif
-   write(2,*) 'FullSourceSearch: ', FullSourceSearch
-   flush(unit=2)
+   !write(2,*) 'FullSourceSearch: ', FullSourceSearch
+   !flush(unit=2)
    FitNoSources=.not.FullSourceSearch
    PulsPosCore=.false.
    If(FitIncremental) then
@@ -196,7 +191,7 @@ Subroutine FindCallibr(SourceGuess)
       !write(2,*) 'PeakNrTotal=',PeakNrTotal
       Do i_peak=1,PeakNrTotal
          If(PeakRMS(i_Peak).gt. 25.) cycle
-         write(2,"(i2,i7,', x,y,z=', 3F9.0,', RMS=',F7.1)") i_peak,Peakpos(i_peak),SourcePos(:,i_Peak),PeakRMS(i_Peak)
+         write(2,"(i2,i7,', N,E,h=', 3F9.0,', RMS=',F7.1)") i_peak,Peakpos(i_peak),SourcePos(:,i_Peak),PeakRMS(i_Peak)
          If((SourcePos(2,i_Peak)/1000. .lt. XFrameEi) .or. (SourcePos(2,i_Peak)/1000. .gt. XFrameEf)) cycle
          If((SourcePos(1,i_Peak)/1000. .lt. XFrameNi) .or. (SourcePos(1,i_Peak)/1000. .gt. XFrameNf)) cycle
          If(SourcePos(1,i_Peak) .ne. SourcePos(1,i_Peak)) cycle  ! check for NaN
@@ -217,22 +212,24 @@ Subroutine FindCallibr(SourceGuess)
     !
 1   continue
     !
-    If(Polariz) Then
-      Allocate( Cnu01(0:T2_Dim/2,0:Ant_nrMax/2) )
-      Cnu01(:,:)=0.d0
-      MeanCircPol=.true.
-    EndIf
+    !If(Polariz) Then
+    !  Allocate( Cnu01(0:T2_Dim/2,0:Ant_nrMax/2) )
+    !  Cnu01(:,:)=0.d0
+    !  MeanCircPol=.true.
+    !EndIf
+    MeanCircPol=.false.
     PlotCCPhase=.true.
     Call BuildCC(StatMax,DistMax)
    !
-   If(MeanCircPol) Then
+   If(MeanCircPol) Then  ! Obsolete option
       call RFTransform_su(UpSF*T2_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       Allocate( ST01T(1:UpSF*T2_dim) )
       Allocate( ST01nu(0:UpSF*T2_dim/2) )
       !    Write(2,*) 'Mean t-p dt:',SUM(dtAnt_tp(:))/SUM(NSrc_tp(:)),'Polariz',Polariz, T2_dim, Tref_dim
       Do i=1, N_FitStatTim
          k = FitParam(i)   ! =Station number
-         If(Fit_AntOffset .and. Polariz) then ! The other cases are dealt with in X2Source
+      !   If(Fit_AntOffset .and. Polariz) then ! The other cases are dealt with in X2Source
+         If(Fit_AntOffset) then ! The other cases are dealt with in X2Source
          ! Here we want to take care of the timing difference between odd and even antennas only
             Do j= 1,(Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1))/2  ! Keep antenna delay difference for even and odd
                i_SAI=Tot_UniqueAnt(k-1)+2*j-1
@@ -286,7 +283,6 @@ Subroutine FindCallibr(SourceGuess)
       Call WriteCalibration ! was MergeFine
    Endif
    !
-   !Call GLE_Corr()
    PlotCCPhase=.false.
    Return
     !
@@ -309,7 +305,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !logical :: FitNoSources=.false.
     !
     !
-    write(2,*) '=== New Round ============================================================'
+    !write(2,*) '=== New Round ============================================================'
     flush(unit=2)
     CalcHessian=.false.
     SpaceCov(1,1)=-.1 ; SpaceCov(2,2)=-.1 ; SpaceCov(3,3)=-.1 ;
@@ -327,8 +323,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
         FitPos(1)=-1 ; FitPos(2)=-2 ; FitPos(3)=-3 ; FitPos(4)=-4
     endif
     Call SetFitParamsLMA(X,Fitfirst,FitPos) ! Important to call 'SetFitParamsLMA' after 'GetCorrSingAnt'
-    write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
-    flush(unit=2)
+    !write(2,*) 'N_FitPar1 , N_FitStatTim',N_FitPar , N_FitStatTim
+    !flush(unit=2)
     !
     !stop 'FitCycle'
     !write(2,*) 'Fit with Nr_Corr=',Nr_Corr,'============================================================'

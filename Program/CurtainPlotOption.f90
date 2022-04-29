@@ -216,7 +216,7 @@ End Subroutine GLEscript_CurtainPlot
 !====================================
 Subroutine GLE_Corr()
     use DataConstants, only : Station_nrMax, DataFolder
-    use DataConstants, only : Polariz, Ant_nrMax
+    use DataConstants, only :  Ant_nrMax
     use Chunk_AntInfo
     use ThisSource, only : CCorr, PeakNrTotal, CorrAntNrs, Nr_Corr, Safety, Peak_eo, ChunkNr, Peakpos, CCorr_Err, RefAntErr
     use FitParams, only : N_FitPar_max
@@ -238,21 +238,21 @@ Subroutine GLE_Corr()
     !
     !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
     i_tp2=0
-    If(polariz) i_tp2=1
+    !If(polariz) i_tp2=1
     Do i_peak=1,PeakNrTotal
       Do i_tp=0,i_tp2
         i_eo=Peak_eo(i_peak)
         i_chunk=ChunkNr(i_peak)
         Station=Ant_Stations(CorrAntNrs(1,i_eo,i_chunk),i_chunk)
         pBase=0
-        If(polariz) then
-            ext=tp(i_tp)
-            If(i_tp.eq.1) pBase=Ant_nrMax/2
-            write(XCorrPlot,"('XCP_',I3.3,A2,'.gle')") i_peak,ext
-        Else
+        !If(polariz) then
+        !    ext=tp(i_tp)
+        !    If(i_tp.eq.1) pBase=Ant_nrMax/2
+        !    write(XCorrPlot,"('XCP_',I3.3,A2,'.gle')") i_peak,ext
+        !Else
             ext=EveOdd(i_eo)
             write(XCorrPlot,"('XCP_',I3.3,'.gle')") i_peak
-        EndIf
+        !EndIf
         i=0
         J_corr_st(i)=1
         Do j_corr=1,Nr_Corr(i_eo,i_chunk)
@@ -360,11 +360,12 @@ Subroutine GLE_Corr()
 End Subroutine GLE_Corr
 !=================================
 ! ===========================================================================
-Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
-   use constants, only : dp
+Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF, VoxLoc)
+!  To make curtain plots for the polarized fields for the antennas
+   use constants, only : dp,pi
    !use DataConstants, only : Time_dim, DataFolder, OutFileLabel
    !use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
-   use Chunk_AntInfo, only : Ant_Stations, Nr_UniqueStat, Unique_StatID,     Ant_IDs
+   use Chunk_AntInfo, only : Ant_Stations, Nr_UniqueStat, Unique_StatID,  Ant_IDs, Ant_pos
    use DataConstants, only : Station_nrMax
    Use Interferom_Pars, only : IntFer_ant,  Nr_IntferCh ! the latter gives # per chunk
    use ThisSource, only : ChunkNr
@@ -372,7 +373,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: unt, WWidth, i_chunk
-   Real(dp), intent(in) :: dChi_ap(*), dChi_at(*), Chi2pDF, Power_p(*), Power_t(*)
+   Real(dp), intent(in) :: dChi_ap(*), dChi_at(*), Chi2pDF, Power_p(*), Power_t(*), VoxLoc(1:3)
    Character(Len=*), intent(in) :: FileA, Label
    Character(Len=*), intent(in) :: file
    integer :: I_ant, i_stat, Stat_ID, counter
@@ -380,7 +381,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !Character(len=41) :: txt
    Character(len=5) :: Station_Mnem
    real*8 :: dChi_sp(1:Nr_UniqueStat), dChi_st(1:Nr_UniqueStat)
-   Real*8 :: StPowr_p(1:Nr_UniqueStat), StPowr_t(1:Nr_UniqueStat)
+   Real*8 :: StPowr_p(1:Nr_UniqueStat), StPowr_t(1:Nr_UniqueStat), phi(1:Nr_UniqueStat)
    real*8 :: plot_offset, HOffSt_p, HOffSt_t, PlotW, Sep, whiteness
    !
    !vsize=Nr_UniqueStat*2 34
@@ -459,8 +460,23 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
          counter=counter+1
          dChi_st(i_stat)=dChi_st(i_stat)*(counter-1)/counter + dChi_at(j_IntFer)/counter  ! keep running mean
          StPowr_t(i_stat)=StPowr_t(i_stat)*(counter-1)/counter + Power_t(j_IntFer)/counter  ! keep running mean
+         Phi(i_stat)=180.+atan2( VoxLoc(2)-Ant_pos(2,i_ant,i_chunk) , VoxLoc(1)-Ant_pos(1,i_ant,i_chunk) ) *180./pi ! \phi=0 = south
       EndDo
       Write(Unt,"(' end graph')")
+
+
+      !Ras(1)=(VoxLoc(1)-Ant_pos(1,i_ant,i_chunk))/1000.  ! \vec{R}_{antenna to source}
+      !Ras(2)=(VoxLoc(2)-Ant_pos(2,i_ant,i_chunk))/1000.
+      !Ras(3)=(VoxLoc(3)-Ant_pos(3,i_ant,i_chunk))/1000.
+      !HorDist= Ras(1)*Ras(1) + Ras(2)*Ras(2)  ! =HYPOT(X,Y)
+      !D=sqrt(HorDist + Ras(3)*Ras(3))
+      !HorDist=sqrt( HorDist ) ! =HYPOT(X,Y)
+      !Thet_r=atan(HorDist,Ras(3))  ! Zenith angle
+      !Thet_d =Thet_r*180/pi
+      !write(2,*) i_stat,Phi(i_stat),MOD(phi(i_stat),90.d0),i_ant,i_chunk,Ant_pos(2,i_ant,i_chunk)
+
+
+
    EndDo
 901   Format('amove ',2F5.1,/'begin graph',/'  size 27 2',/'  vscale 1',&
          /'  hscale 1',/'   NoBox',&
@@ -487,6 +503,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
         whiteness=1/(1+2*dChi_st(i_stat)/Chi2pDF)
         Write(unt,904) HOffSt_t+1.5, plot_offset+.5, 1.-whiteness, whiteness, dChi_st(i_stat)
         Write(unt,905) HOffSt_t+3.5, plot_offset+.5,  sqrt(StPowr_t(i_stat))            ! text in right side
+        Write(unt,905) HOffSt_t+5.5, plot_offset+.5,  MOD(phi(i_stat),90.d0)-45.           ! text in right side
     Enddo
 904   Format('amove ',2F5.1,/'set color rgb(',F3.1,',0.0,',F3.1,') ',/'write "',F5.1,'"',/'Set color black')
 905   Format('amove ',2F5.1,/'write "',F5.0,'"')

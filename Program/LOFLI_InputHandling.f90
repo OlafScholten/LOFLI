@@ -290,7 +290,7 @@ Subroutine ReadPeakFitInfo()
                write(2,*) 'PeakNr_dim will be exceeded for #',i_peak
                Write(2,*) 'Expected:   Core/Reference antenna |i |i_eo |i_c |k |N |E |h | dt " in format ',FrMT
                Write(2,*) 'Culprit: "',trim(lname),'"'
-               stop 'FindCallibr:ReadPeakInfo problem'
+               stop 'ReadPeakInfo problem'
             endif
             If(i_ca.ne.i_c) then
                 i_chunk=i_chunk+1
@@ -402,7 +402,7 @@ Subroutine DualReadPeakInfo(i_eo,i_chunk)
     use ThisSource, only : Dual, PeakNr, PeakNrTotal !, PlotCCPhase, Safety, Nr_corr
     use ThisSource, only : PeakPos, Peak_eo
     use DataConstants, only : PeakNr_dim, ChunkNr_dim
-    use DataConstants, only : Polariz
+!    use DataConstants, only : Polariz
     use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
     Implicit none
     Integer, intent(in) :: i_eo,i_chunk
@@ -432,7 +432,7 @@ Subroutine PrntNewSources()
    use ThisSource, only : Nr_Corr, CorrAntNrs, ExclStatNr
    use Chunk_AntInfo, only : Ant_Stations, Unique_StatID, Nr_UniqueStat, StartT_sam, ChunkStTime_ms, ChunkFocus
    use Constants, only : Sample
-   use DataConstants, only : Polariz, RunMode, Station_nrMax
+   use DataConstants, only : RunMode, Station_nrMax
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    integer ( kind = 4 ) :: i,j, i_Peak, i_chunk, i_eo, i_stat, i_ant, j_corr, count(0:1,1:Station_nrMax), Station_ID
@@ -489,41 +489,17 @@ Subroutine PrntNewSources()
    !
    !
    Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, -----); RMS[ns], sqrt(chi^2/df), Excluded: '
-      If(Polariz) Then  ! Obsolete?
-         write(2,*) 'PrntNewSources: Was not sure if this options is used anywhere, but obviously it is'
-         i_chunk=1
-         j=0
-         Do i_Peak = 1,PeakNrTotal
-            If(i_chunk.eq.ChunkNr(i_Peak)) Then
-               j=j+1
-            Else
-               i_eo=1
-               Do i=i_Peak-j, i_Peak-1
-                  Call PrntCompactSource(i)
-               Enddo
-               j=1
-            EndIf
-            i_chunk=ChunkNr(i_Peak)
-            i_eo=0
-            Call PrntCompactSource(i_Peak)
-         Enddo  !  i_Peak = 1,PeakNrTotal
-         i_eo=1
-         Do i=PeakNrTotal-j+1, PeakNrTotal
-            Call PrntCompactSource(i)
-         Enddo
-      Else
-         i_chunk=0
-         Do i_Peak = 1,PeakNrTotal
-            If(i_chunk.ne.ChunkNr(i_Peak)) then
-               i_chunk=ChunkNr(i_Peak)
-               Write(2,"(5x,F13.6, 3F10.3,i9)")  ChunkStTime_ms(i_chunk), ChunkFocus(:,i_chunk)/1000, i_chunk
-             !  write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',StartT_sam(i_chunk),&
-             !     '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
-            Endif
-            Call PrntCompactSource(i_Peak)
-         Enddo  !  i_Peak = 1,PeakNrTotal
-      EndIf
-   !EndIf
+   i_chunk=0
+   Do i_Peak = 1,PeakNrTotal
+      If(i_chunk.ne.ChunkNr(i_Peak)) then
+         i_chunk=ChunkNr(i_Peak)
+         Write(2,"(5x,F13.6, 3F10.3,i9)")  ChunkStTime_ms(i_chunk), ChunkFocus(:,i_chunk)/1000, i_chunk
+       !  write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',StartT_sam(i_chunk),&
+       !     '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
+      Endif
+      Call PrntCompactSource(i_Peak)
+   Enddo  !  i_Peak = 1,PeakNrTotal
+   !
 End Subroutine PrntNewSources
 !==========================================
 Subroutine PrntCompactSource(i_Peak)

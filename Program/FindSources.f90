@@ -150,7 +150,6 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
             Call SourceFitCycle(StatMax,DistMax)
             ! Real(dp), save :: CCShapeCut_lim=0.8        ! limit set on CCShapeCut
             CCShapeCut=CCShapeCut_lim ! Should be lower for Dual option
-            !If(Peakpos(1).eq. 16155 .and. i_dist.eq.2) Call GLE_Corr()
             !stop 'FindStatCall-1'
             !if(i_peakS.eq.2) stop 'FindStatCall-1'
             !If(DistMax.gt.25.) write(2,*) '(sqrt(SpaceCov(i,i)),i=1,3):',DistMax,(sqrt(SpaceCov(i,i)),i=1,3),Sigma
@@ -166,7 +165,6 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                (TimeFrame*1000+i_peakS),SourcePos(:,1), FitQual
             cycle
          Endif
-         !If(i_peakS.eq.13) Call GLE_Corr()
    !   STOP
          !
          !SourceSPos(:,i_eo,i_peakS)=SourcePos(:,1)
