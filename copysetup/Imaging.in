@@ -2,24 +2,23 @@
  RunOption='Impulsive'
  AntennaRange=100
  FitRange_Samples=70 ! 20
- Sigma_AntT= 3          ! 3=S ;  2=T
- SearchRangeFallOff=4.0  ! 4.5=v ; 4=w ; 3.5=def
- ChiSq_lim= 80
  Dual=.false.
  SaturatedSamplesMax=10 ,
-! CalibratedOnly=.false.
+ CalibratedOnly=.false.
 
  NoiseLevel = 200.
- Calibrations="Calibrations202203311709.dat" ! FldCal 2.40 antenna CS021 RS305 NoSrc !
+  Calibrations="Hil21C-3-202204260923.cal" ! Hilbert T  1.44 antenna    
  
- ExcludedStat= "RS508", "RS509"  ! too many saturated antennas
-! SignFlp_SAI=   21078, 125028, 142092, 142093, 145032, 145033, 166015 
+! ExcludedStat=  "RS210", "RS310", "CS401", "RS406", "RS407"  ! Too few reasonably good calibration sources
+ SignFlp_SAI=  142092, 142093
  PolFlp_SAI=  32086, 
- BadAnt_SAI=   2085,   4089,   7091,   7094,   7095,  11086,  11087,  21086,  21087,  21094
-              21095,  26084,  26085,  30086,  30087,  30090,  30091, 161086, 125087, 130086
-             130087, 130088, 130089, 167084, 167085, 167086, 167087, 188095,
- OutFileLabel="" &end 
+ BadAnt_SAI=  11086,  11087, 141091, 161086, 130086, 130087, 130088, 130089, 150086, 166089, 167084
+             167085, 167086, 167087, 189085, 189087, 189089, 189091,
+&end 
 
-  750. , 30., +5.,   5., 0 1500 !  StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+  208 , -20. 0.0 4., 0. 2500 ! SE StartTime_ms , SourceGuess(3)#1, StartingTime [ms], StoppingTime [ms] (after real start)
+
    --- ---------- -------- ------------- -   nohup ./Imaging.sh  >Imaging.log 2>&1  & 
+Nr_UniqueStat=  6       3    11   141   150   181   189
+Nr_UniqueAnt=  67   CS003 CS011 CS301 RS310 CS501 RS509
 

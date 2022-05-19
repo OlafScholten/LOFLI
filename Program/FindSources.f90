@@ -34,7 +34,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    use ThisSource, only : RefAntErr, SourcePos, Dual, Peak_Offst, CCShapeCut
    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim
    use FitParams, only : MaxFitAntDistcs, FitIncremental, Fit_PeakNrTotal, FitQual, Sigma, MaxFitAntD_nr
-   use FitParams, only : N_FitPar_max, N_FitStatTim, Nr_TimeOffset, PulsPosCore, CalcHessian, N_EffAnt, Max_EffAnt
+   use FitParams, only : N_FitStatTim, Nr_TimeOffset, PulsPosCore, CalcHessian, N_EffAnt, Max_EffAnt  ! N_FitPar_max,
    use FitParams, only : FullSourceSearch, SigmaGuess, SpaceCov
    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    use Explore_Pars, only : NMin, NMax, Emin, EMax
@@ -53,8 +53,8 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    Integer :: Date_T(8)
    Integer :: PeakSP(MaxPeaksPerChunk,0:2), PeakSWl(MaxPeaksPerChunk,0:2), PeakSWu(MaxPeaksPerChunk,0:2)
    Integer :: PeakSAmp(MaxPeaksPerChunk,0:2), PeakD_nr
-   Integer :: Wu,Wl, CalSource(10),i_cal
-   Integer :: Peakpos_0, PeakNrSearched, PeakNrFound, PeakNrGood ! pulse position for an virtual antenna at the core of CS002
+   Integer :: Wu,Wl, CalSource(10),i_cal, PeakNrSearched, PeakNrFound, PeakNrGood, i_FvStr
+   Integer :: Peakpos_0 ! pulse position for an virtual antenna at the core of CS002
    Real(dp), external :: RefracIndex
    !integer, external :: XIndx
    !       Initialize
@@ -177,8 +177,12 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          ! Real(dp), save :: ChiSq_lim=10              ! limit set on the chi-square (FitQual)
          ! Real(dp), save :: EffAntNr_lim=0.8        ! limit set on the ratio of effective number of used antennas v.s. available number
          If(Max_EffAnt.lt.10) exit
-         If(i_peakS.eq.1 .and. i_eo.ne.1) Write(18,"(' ', F13.6, 3F11.2,i9)")  &
+         If(i_peakS.eq.1 .and. i_eo.ne.1) Then
+            i_FvStr=0
+            Write(18,"(' ', F13.6, 3F11.2,i9)")  &
                         1000.d0*StartT_sam(1)*sample, SourcePos(:,1)/1000., (TimeFrame*1000+i_peakS)
+            Flush(Unit=18)
+         EndIf
          If((DistMax .lt. Dist_Lim) .and. ( (N_EffAnt*1./Max_EffAnt) .gt. EffAntNr_lim) &
             .and. ( Sigma(1) .lt. 999. ) .and. ( Sigma(2) .lt. 999.) &
             .and. ( Sigma(3) .lt. 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) ) .and. ( Sigma(3) .gt. 0.) &
@@ -204,11 +208,13 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                !
                !searching for good peaks to be used for improving calibration
                !If(i_peakS.lt.10 .and. wl.le.10 .and. Wu.le.10) &
-               If(i_peakS.lt.10 .and. (FitQual .lt. ChiSq_lim/2.) ) &
-                  Write(18,"('C',i2,' 2 1',I8,3(F10.2,','),F12.5,';',f9.3,',',3(f8.4,','),2(I4,','),I7,',',2(I3,','),I3)") &
-                     i_peakS, Peakpos_0, SourcePos(:,1), &
+               If(i_peakS.lt.10 .and. (FitQual .lt. ChiSq_lim/2.) ) Then
+                  i_FvStr=i_FvStr+1
+                  Write(18,"('C',i2,' 2 1',I8,3(F10.2,','),F12.5,';',f9.3,',',2(I4,','),I7,',',2(I3,','),2I3)") &
+                     i_FvStr, Peakpos_0, SourcePos(:,1), &
                      (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps , FitQual &
-                     , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu, i_eo
+                     ,  N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu, i_eo, i_peakS
+               EndIf
                If(wl.le.5 .and. Wu.le.5 .and. FitQual.lt. 20. .and. i_cal .lt.10) Then ! see for a possible 5-star source
                   If(PeakSAmp(i_peakS,i_eo).gt.PeakSAmp(1,i_eo)/10.) then
                !StartT_sam(1)=(StartTime_ms/1000.)/sample + (TimeFrame-1)*(Time_dim-2*EdgeOffset)  ! in sample's

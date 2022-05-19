@@ -9,7 +9,6 @@ Subroutine SourceTryal(DistMax)
    use ThisSource, only : CorrAntNrs, CCorr_max, SourcePos
    use FitParams, only : Sigma, SpaceCov, CalcHessian
    use DataConstants, only : Production
-   !use FitParams, only : N_FitPar_max, N_FitStatTim, Nr_TimeOffset, PulsPosCore, CalcHessian, Kalman
    use constants, only : dp,pi
    Implicit none
    Real(dp), intent(in) :: DistMax

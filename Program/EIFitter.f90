@@ -191,7 +191,7 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
     use constants, only : dp,sample,c_mps
     use DataConstants, only : Station_nrMax, Ant_nrMax
 !    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err
-    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakRMS, PeakChiSQ, ExclStatNr
+    use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakChiSQ, ExclStatNr
     use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1,  N_fit, AntPeak_OffSt, Chi2pDF
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos

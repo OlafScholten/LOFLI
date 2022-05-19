@@ -220,10 +220,13 @@ End Module StationMnemonics
 Module Calibration
     use constants, only : dp
     use DataConstants, only : Ant_nrMax, Station_nrMax
-    Character(len=5), save :: Fine_STMnm(1:Station_nrMax)          ! time calibration data
-    Real(dp), save :: Fine_STDelay(1:Station_nrMax)! time calibration data
-    Real(dp), save :: Fine_AntDelay(1:Ant_nrMax)! time calibration data
-    Integer, save :: SAI_AntDelay(1:Ant_nrMax), Nr_AntDelay, Nr_StatDelay, CalibrDelay(1:Ant_nrMax)  ! time calibration data
+    Character(len=5), save :: Fine_STMnm(1:Station_nrMax)          ! station mnemonics for which Ever Calibrations Have Been Generated (ECHBG)
+    Real(dp), save :: Fine_STDelay(1:Station_nrMax)! time calibration data for stations
+    Real(dp), save :: Fine_AntDelay(1:Ant_nrMax)! time calibration data for antennas
+    Integer, save :: SAI_AntDelay(1:Ant_nrMax)  ! SAI of antennas for which ECHBG
+    Integer, save :: CalibrDelay(1:Ant_nrMax)  ! =1 if this antenna was used when writing cal-file
+    Integer, save :: Nr_AntDelay, Nr_StatDelay  ! Nr of antennas or stations for which ECHBG
+    Integer, save :: StationInCal(Station_nrMax)  ! =1 if this station was used when writing cal-file
 Contains
 ! -------------------------------------------------
 Subroutine ReadCalib()
@@ -329,12 +332,17 @@ Subroutine ReadCalib()
    EndIf
    !
    Nr_StatDelay=0
+   StationInCal(:)=0
    Do  ! get station calibrations
-       read(9,*,IOSTAT=nxx) txt, Delay
+      read(9,"(A60)",IOSTAT=nxx) tst  ! Check for a new-style calibration file
        if(nxx.ne.0) exit
+       read(tst,*,IOSTAT=nxx) txt, Delay, n
+       !write(2,*) nxx,txt, Delay, n,tst
+       if(nxx.ne.0) n=0
            Nr_StatDelay=Nr_StatDelay+1
            Fine_STMnm(Nr_StatDelay) = txt
            Fine_STDelay(Nr_StatDelay)= Delay ! already in samples
+           StationInCal(Nr_StatDelay)=n
    enddo
    close(unit=9)
    !
@@ -403,7 +411,7 @@ Subroutine WriteCalibration ! MergeFine
    !Use Chunk_AntInfo, only : Fine_STMnm, Fine_STDelay, Fine_AntDelay, SAI_AntDelay, Nr_AntDelay, Nr_StatDelay, CalibrDelay ! all these are generated in 'ReadCalib'
    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt, FitQual
    use unque,only : Double_IR_sort
-   use StationMnemonics, only : Station_ID2Mnem
+   use StationMnemonics, only : Statn_ID2Mnem,Station_ID2Mnem
    Implicit none
    Real(dp) :: Delay, mean(Station_nrMax), UpDate_STDelay(1:Ant_nrMax)=0.
    character(len=5) :: txt, Station_Mnem!, Fine_STMnm(Station_nrMax), LOFAR_STMnm(Station_nrMax)
@@ -417,7 +425,7 @@ Subroutine WriteCalibration ! MergeFine
    WRITE(Date_mn,"(I4,I2.2,I2.2, I2.2,I2.2)") &
        DATE_T(1),DATE_T(2),DATE_T(3),(DATE_T(i),i=5,6)
    !
-   i_fine=Nr_AntDelay
+   i_fine=Nr_AntDelay ! all antennas, ECHBG
    UpDate_STDelay(:)=0.  ! merge with station/antenna delays obtained from fit
    If(Fit_AntOffset) then
       Do i_stat=1,Nr_UniqueStat  ! set fine-offset to values obtained from present fit
@@ -425,7 +433,7 @@ Subroutine WriteCalibration ! MergeFine
         !write(*,*) 'i-asai',Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)
         Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
             SAI=Unique_SAI(i_SAI)  !     SAI=1000*station_ID + Ant_ID
-            Ant=MAXLOC(SAI_AntDelay(1:i_fine), MASK = SAI_AntDelay(1:i_fine) .eq. SAI) ! obtain position in the calibration data array
+            Ant=MAXLOC(SAI_AntDelay(1:Nr_AntDelay), MASK = SAI_AntDelay(1:Nr_AntDelay) .eq. SAI) ! obtain position in the calibration data array
             !write(2,*) 'i_SAI=',i_SAI,SAI,SAI_AntDelay(Ant(1)),Ant(1)
             If(Ant(1) .ne. 0) then  ! this antenna was already in the list
                UpDate_STDelay(Ant(1))= Fit_TimeOffsetAnt(i_SAI)
@@ -453,7 +461,7 @@ Subroutine WriteCalibration ! MergeFine
    i_unq=1
    n=1
    Nr_WriteStat=Nr_UniqueStat
-   Do i=1,Nr_AntDelay
+   Do i=1,Nr_AntDelay  !  loop over all antenna delays, old & new
       k=NINT(SAI_AntDelay(i)/1000.)
       If(k.eq.i_stat) then  ! update running sum for this station
          Mean(i_unq)=Mean(i_unq)+ Fine_AntDelay(i)
@@ -499,8 +507,8 @@ Subroutine WriteCalibration ! MergeFine
    write(2,"(A,1x,L,F6.2,'  ')") '  Calibrations="'//TRIM(CalibrationFileName)//'" ! '//cmnt,HeightCorrectIndxRef, FitQual  ! trim(DataFolder)//
    Write(19,"(A4,1x,A,A,L)") '!01 ',Date_mn,' HeightCorrectIndxRef= ',HeightCorrectIndxRef
    Do i=1,Nr_AntDelay
-      k=NINT(SAI_AntDelay(i)/1000.)
-      Call Station_ID2Mnem(k,Station_Mnem)
+      !k=NINT(SAI_AntDelay(i)/1000.)
+      !Call Station_ID2Mnem(k,Station_Mnem)
       ! Check wether this antenna is part of the present analysis, i.e. in Unique_SAI(1:Nr_UniqueAnt)
       n=COUNT(Unique_SAI(1:Nr_UniqueAnt).eq. SAI_AntDelay(i))
       !Fine_AntDelay(i)= Fine_AntDelay(i) +UpDate_STDelay(i)
@@ -513,9 +521,9 @@ Subroutine WriteCalibration ! MergeFine
       n=Ant_Stations(IntFer_ant(1,1),1) ! If(allocated(IntFer_ant))
    EndIf
    !
-   i_fine=Nr_StatDelay
+   i_fine=Nr_StatDelay  ! all stations, ECHBG; will be increased with the newly found ones
    Do k=1,Nr_WriteStat    ! Write stationdelays
-     If(Unique_StatID(k).le. 0) exit  ! should not happen
+     If(Unique_StatID(k).le. 0) exit  ! should not happen; The first are the stations
      Call Station_ID2Mnem(Unique_StatID(k),Station_Mnem)
      !write(2,*) 'mnem',k,Unique_StatID(k),Station_Mnem
      !core=((RunMode.eq.1) .and. (Station_Mnem(1:2) .eq. 'CS'))  ! zero the calibration timings for the core stations
@@ -540,14 +548,21 @@ Subroutine WriteCalibration ! MergeFine
          !write(2,*) 'i_fine',i_fine,UpDate_STDelay(i_fine)
      endif
    Enddo
-   Nr_StatDelay=i_fine
-   write(2,*) 'Calibration constant zeroed for ref-station:', Fine_STMnm(k_ref)
-   flush(unit=2)
+   Nr_StatDelay=i_fine  ! all stations, ECHBG, increased with the newly found ones
+   !write(2,*) 'Calibration constant zeroed for ref-station:', Fine_STMnm(k_ref)
+   !flush(unit=2)
    ! RefAnt(i_chunk,i_eo)
    write(2,"(' station',1x,'NewCalibrations; Updated with [samples]')")
    Do i=1,i_fine
-      write(2,"(1x,A5,3F13.3)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref), UpDate_STDelay(i)
-      write(19,"(1x,A5,F14.4)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref)
+      n=0
+      Do k=1,Nr_UniqueStat
+         If(Statn_ID2Mnem(Unique_StatID(k)) .ne. Fine_STMnm(i) ) cycle
+         n=1
+         exit
+      Enddo
+      !n=COUNT(Unique_SAI(1:Nr_UniqueAnt).eq. Fine_STMnm(i))
+      write(2,"(1x,A5,2F13.3,i5)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref), UpDate_STDelay(i),n
+      write(19,"(1x,A5,F14.4,i5)") Fine_STMnm(i), Fine_STDelay(i)-Fine_STDelay(k_ref), n
    enddo
    Close(unit=19)
    !

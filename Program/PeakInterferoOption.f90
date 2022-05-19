@@ -29,7 +29,7 @@ Subroutine PeakInterferoOption()
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
    real ( kind = 8 ) :: X(N_FitPar_max)
    !
-   integer :: i, j, k, i_ant, i_eo, i_chunk, i_stat, StatID, nxx
+   integer :: j, k, i_ant, i_eo, i_chunk, i_stat, StatID, nxx ! i,
    integer :: i_loc(1), i_Peak
    Logical :: FitNoSources
    character*10 :: StochOption
@@ -84,7 +84,7 @@ Subroutine PeakInterferoOption()
          !write(2,*) 'from XIndx:', k,i,i_peak
        If(k .gt. N_FitPar_max) Then
          write(2,*) 'Too many fit parameters, ',k, &
-            'exceeds max of', N_FitPar_max,' for i,i_peak=',i,i_Peak
+            'exceeds max of', N_FitPar_max,' for i_peak=',i_Peak
          stop 'ECallibrate: too many parameters'
        Endif
        X( k:k+2 ) = SourcePos(1:3,i_Peak)
@@ -121,7 +121,7 @@ Subroutine WriteInterfRslts(i_Peak)
    use DataConstants, only : DataFolder, OutFileLabel
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF, BoundingBox, StartTime_ms
-   use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, PeakPos, SourcePos
+   use ThisSource, only : PeakNrTotal, ChunkNr, PeakChiSQ,  PeakPos, SourcePos
    use Chunk_AntInfo, only : StartT_sam
    use GLEplots, only : GLEplotControl
    Implicit none

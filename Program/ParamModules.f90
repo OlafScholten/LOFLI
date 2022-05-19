@@ -24,7 +24,7 @@ Module Chunk_AntInfo
     Real(dp), save, allocatable :: Ant_pos(:,:,:)
     Complex(dp), save, allocatable :: CTime_spectr(:,:,:)
     Integer, parameter :: ExcludedStat_max=35
-    integer, parameter :: N_Chunk_max=20
+    integer, parameter :: N_Chunk_max=40
     Integer, save :: Unique_StatID(1:Station_nrMax), Nr_UniqueStat=0
     Integer, save :: Unique_SAI(1:Ant_nrMax), Nr_UniqueAnt=0
     Integer, save :: Tot_UniqueAnt(0:Station_nrMax)      ! highest ranknr in Unique_SAI of unique_antenna for station Unique_StatID(i_stat)
@@ -185,7 +185,7 @@ End Module ThisSource
 Module FitParams
     use constants, only : dp
     use DataConstants, only : Ant_nrMax, Station_nrMax
-    integer, parameter :: N_FitPar_max=200
+    integer, parameter :: N_FitPar_max=500
     Logical, save :: Fit_AntOffset=.false.  ! .false. ! when .true. fit the off-sets for each antenna in the stations to be fitted
     Logical, save :: FitIncremental=.true.
     Logical, save :: CalcHessian=.false.
@@ -201,7 +201,7 @@ Module FitParams
     Integer :: i_SAI
     Integer, save :: Fit_PeakNrTotal  ! total number of sources that are fitted (some may be the same for even and odd antennas)
     Integer, save :: FitParam(N_FitPar_max), N_FitPar, N_FitStatTim, Nr_TimeOffset !, X_Offset(0:Station_nrMax)
-    Integer, save ::  X_Offset(0:100)
+    Integer, save ::  X_Offset(0:N_FitPar_max)
     Integer, save :: PeakS_dim=80  ! Number of pulses searched for in the even/odd numbered reference antenna
     Integer, save :: N_EffAnt, Max_EffAnt
     Real(dp), save :: ParamScaleFac(N_FitPar_max)

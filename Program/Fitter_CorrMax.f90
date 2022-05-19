@@ -326,6 +326,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
    Character(len=5) :: Station_Mnem
    Real(dp) :: IndxRefrac
    Real(dp), external :: RefracIndex
+   Integer, external :: SourceNr
     !
     prn=.false.
     StCal=.false.  ! Calculate fit statistics per source
@@ -489,7 +490,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             PeakRMS(i_Peak)= sqrt(sum(RMS(:,i_Peak))/sum(Cnt(:)))
         Endif
         If(prn) then
-            write(2,"(A,I3,I2,A,I7,A, 2f7.2,A,3(F11.2,','),A,F7.3)", ADVANCE='NO') 'i_Peak=',i_Peak,i_eo, &
+            write(2,"(A,I3,I2,A,I7,A, 2f7.2,A,3(F11.2,','),A,F7.3)", ADVANCE='NO') 'i_src=',SourceNr(i_Peak),i_eo, &
                 ', PeakPos=',PeakPos(i_Peak),', Chi^2/DegrF=', PeakChiSQ(i_Peak), &
                 sum(ChiSq(:,i_Peak))/(sum(Cnt(:))-sum(Dropped(:,i_Peak))), &
                 ', source position:',SourcePos(:,i_Peak),' RefAntTimeErr:',RefAntErr(i_Peak)

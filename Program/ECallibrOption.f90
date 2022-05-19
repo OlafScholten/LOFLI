@@ -50,12 +50,12 @@ Subroutine E_Callibr()
    Logical :: FitNoSources
    character*10 :: StochOption
    character*80 :: lname
-   real(dp) :: x1,x2,x3,t, Time_width, Space_Spread(1:3)
+   real(dp) :: t, Time_width, Space_Spread(1:3)
    !real(dp) :: dt,B, MTC, dtI
    Integer :: i_SAI
    !
    !       Read appropriate data chunks
-   Call  ReadPeakFitInfo()
+   Call  ReadPeakFitInfo(SourceGuess(:,1))
  !  Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  !  write(*,"(A,i3,A)") achar(27)//'[45m # of data-blocks read in=',ChunkNr_dim,achar(27)//'[0m'
   ! Do i_chunk=1, ChunkNr_dim
