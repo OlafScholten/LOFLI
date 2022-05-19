@@ -98,6 +98,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    Enddo ! i_peak
    !
    Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//'LOFAR_Time'//TRIM(OutFileLabel)//'*.dat') !  Command to delete curtain files
+   !   Call GLEplotControl(SpecialCmnd='rm '//TRIM(DataFolder)//TRIM(GLE_file)//'.gle') !  Command to delete curtain files
    Return
 End Subroutine PlotAllCurtainSpectra
 ! ===========================================================================
@@ -126,7 +127,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     ch2=PeakPos(i_Peak)+CurtainWidth
     !vsize=Nr_UniqueStat*2 34
     !
-    write(2,*) 'GLEscript_CurtainPlot:Nr_UniqueStat=', Nr_UniqueStat
+    !write(2,*) 'GLEscript_CurtainPlot:Nr_UniqueStat=', Nr_UniqueStat
     Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
     Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
     Write(unt,"(A,I2,3(/A),3(/A,I0))") 'size 63 ',2*Nr_UniqueStat+8,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
@@ -210,6 +211,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     Close(unit=unt)
     !
     Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(file)//'.gle') !  Command to produce curtain plots
+    Call GLEplotControl(SpecialCmnd='rm '//TRIM(file)//'.gle') !  Command to delete curtain files
     !
     return
 End Subroutine GLEscript_CurtainPlot
@@ -363,7 +365,7 @@ End Subroutine GLE_Corr
 Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF, VoxLoc)
 !  To make curtain plots for the polarized fields for the antennas
    use constants, only : dp,pi
-   !use DataConstants, only : Time_dim, DataFolder, OutFileLabel
+   !use DataConstants, only : DataFolder!, OutFileLabel
    !use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
    use Chunk_AntInfo, only : Ant_Stations, Nr_UniqueStat, Unique_StatID,  Ant_IDs, Ant_pos
    use DataConstants, only : Station_nrMax
@@ -519,6 +521,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    write(10,"('rm ',A,'.dat')") trim(FileA)//'PhiMod_'//TRIM(Label)
    write(10,"('rm ',A,'.dat')") trim(FileA)//'ThDat_'//TRIM(Label)
    write(10,"('rm ',A,'.dat')") trim(FileA)//'ThMod_'//TRIM(Label)
+   Call GLEplotControl(SpecialCmnd='rm '//TRIM(file)//'.gle') !  Command to delete curtain files
  !  !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder) !    remove files; clean-up
    !
    return

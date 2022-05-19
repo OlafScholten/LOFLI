@@ -126,7 +126,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
     use ThisSource, only : Safety, T2_Dim, Tref_dim, prntCCNrm, TotPeakNr, PeakPos, RefAntErr
     use ThisSource, only : CC_Wid, CC_Max, CC_Int, CC_WidRef, CC_Qual, CCShapeCut
     use FitParams, only : MeanCircPol, i_SAI
-    use FitParams, only : N_FitPar_max, Fit_AntOffset, Fit_TimeOffsetAnt, Fit_TimeOffsetStat, PulsPosCore
+    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetAnt, Fit_TimeOffsetStat, PulsPosCore  ! N_FitPar_max, 
     use constants, only : dp,pi,ci,sample
     use StationMnemonics, only : Station_ID2Mnem, Statn_ID2Mnem
     Use Interferom_Pars, only : dtAnt_tp, NSrc_tp

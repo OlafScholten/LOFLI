@@ -745,7 +745,7 @@ Program LOFAR_Imaging
          Call ImpulsImagRun
        ! =====2 2 2 2 2 2 2 2
       CASE(2)  ! Calibrate                          RunMode=2
-         Call ReadPeakFitInfo
+         Call ReadPeakFitInfo(SourceGuess)
          !
          write(*,*) 'start fitting'
          Call FindCallibr(SourceGuess) ! Find Station Callibrations

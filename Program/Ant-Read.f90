@@ -54,7 +54,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',StartT_sam(i_chunk)*1000.d0*sample &
       ,' [ms] =',StartT_sam(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
    !Write(2,*) 'SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
-   write(*,"(A,f8.2,A)") achar(27)//'[33m @',StartT_sam(i_chunk)*1000.d0*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
+   write(*,"(A,i3,A,f8.2,A)") achar(27)//'[33m',i_chunk,' @',StartT_sam(i_chunk)*1000.d0*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1

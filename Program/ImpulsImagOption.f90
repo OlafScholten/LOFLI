@@ -102,6 +102,9 @@ Subroutine ImpulsImagRun
    Open(unit=18,STATUS='unknown',ACTION='write', FILE = TRIM(Sources)//'-5star-'//TRIM(OutFileLabel)//'.dat')
    write(18,*) '! StartT_sam[ms]:', '1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
+   Write(18,"(' ', A13, 3A11,A9)")  'StartT','N[km]','E[km]','h[km]','label'
+   Write(18,"('C # 2 1',A8,3(A10,','),A12,';',A9,',',3(A8,','),2(A4,','),A7,',',2(A3,','),A3)") &
+      'Peakpos','N[m]','E[m]','h[m]','t[ms]','Chi^2','Std_N','Std_E','Std_h','N_a','N_mx','Ampl','W_l','W_u','eo'
    Do TimeFrame=ChunkNr_start, ChunkNr_stop
       write(*,"(A,i6,A)", ADVANCE='NO') achar(27)//'[31m Processing block# ',TimeFrame,achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
       i_chunk=1

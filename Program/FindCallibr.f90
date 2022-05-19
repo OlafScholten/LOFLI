@@ -83,6 +83,7 @@ Subroutine FindCallibr(SourceGuess)
   ! Endif
    !write(2,*) 'ReadErrh: ',ReadErr
    !flush(unit=2)
+   write(2,*) 'FindCallibr:',ChunkNr_dim,TotPeakNr(1,ChunkNr_dim)
    If((RunMode.eq.1) .or. (TotPeakNr(1,ChunkNr_dim).eq.0)) then  ! Find peak positions instead of reading them from input
       Do i_chunk=1, ChunkNr_dim     ! get the NrP strongest peaks in this time block
          Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
@@ -150,12 +151,12 @@ Subroutine FindCallibr(SourceGuess)
       EndDo  ! i_chunk=1, ChunkNr_dim
       PeakNrTotal=PeakNr1
    endif
-   !write(2,*) 'PeakNrTotal:',PeakNrTotal
-   !write(2,*) 'Peakpos:',Peakpos
-   !write(2,*) 'Peak_eo:',Peak_eo
-   !write(2,*) 'ChunkNr:',ChunkNr
-   !write(2,*) 'SourcePos:',SourcePos
-   !flush(unit=2)
+   write(2,*) 'PeakNrTotal:',PeakNrTotal
+   write(2,*) 'Peakpos:',Peakpos
+   write(2,*) 'Peak_eo:',Peak_eo
+   write(2,*) 'ChunkNr:',ChunkNr
+   write(2,*) 'SourcePos:',SourcePos
+   flush(unit=2)
    !
    !write(2,*) 'FullSourceSearch: ', FullSourceSearch
    !flush(unit=2)
@@ -340,7 +341,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
 !    write(2,"(A,I4,A,I3,A,i4,A,F7.2,A)") 'N_FitPar=',N_FitPar ,', N_FitStatTim=', N_FitStatTim, &
 !        ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
     Call FitCCorr(X)  ! fit source
-    write(2,*) 'chi-square=',FitQual, ', Average RMS=',SUM(PeakRMS(1:PeakNrTotal))/PeakNrTotal, PeakRMS(1:PeakNrTotal)
+    write(2,*) 'chi-square=',FitQual, ', Average RMS=',SUM(PeakRMS(1:PeakNrTotal))/PeakNrTotal,&
+      ', per source:', PeakRMS(1:PeakNrTotal)
     flush(unit=2)
     Call X2Source(X)
     !
@@ -440,7 +442,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       EndIf
       Call Station_Mnem2ID(FP_Mnem(i),k)
       !write(2,*) 'FP_Mnem(i)2:',i, FP_Mnem(i),k
-      If(k.eq.0) exit
+      If(k.eq.0) cycle ! exit
       N_FitPar=N_FitPar+1
       FP_s(N_FitPar)=k
       !write(2,*) i,FP_Mnem(i),FP_s(i)

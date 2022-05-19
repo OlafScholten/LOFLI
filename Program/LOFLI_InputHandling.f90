@@ -212,15 +212,15 @@ Subroutine PreReadPeakFitInfo(ChunkNr_dim,i_peak)
       stop 'Chunk number too small'
    EndIf
    If(ChunkNr_dim.gt.N_Chunk_max) Then
-      Write(2,*) lname
-      write(2,*) 'ChunkNr_dim:',ChunkNr_dim, 'too large, last line:', lname
+      !Write(2,*) lname
+      Write(2,"(A,I3,A,I2,A,A)") 'ChunkNr_dim:',ChunkNr_dim, 'too large (max=',N_Chunk_max,') last line:', lname
       stop 'Chunk number too large'
    EndIf
    !
    write(2,*) 'number of calibration chunks:',ChunkNr_dim
 End Subroutine PreReadPeakFitInfo
 !=================================
-Subroutine ReadPeakFitInfo()
+Subroutine ReadPeakFitInfo(NEh)
 !   Read-in the peakpos and source guesses for individual pulses.
 !
 !
@@ -234,7 +234,8 @@ Subroutine ReadPeakFitInfo()
    use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    use FFT, only : RFTransform_su,DAssignFFT
    Implicit none
-   integer :: i_eo, i_chunk, i_dist, i, j, k, i_c,i_ca,i_eoa, i_d
+   Real(dp), intent(out) :: NEh(1:3)
+   integer :: i_eo, i_chunk, i_dist, i, j, k, i_c,i_ca,i_eoa, i_d, n_shft
    Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
    integer :: i_Peak, nxx
    Integer, parameter :: lnameLen=210
@@ -243,8 +244,7 @@ Subroutine ReadPeakFitInfo()
    character*1 :: Label
    character*35 :: Frmt
    Integer :: i_s,i_pos, n_chunk
-   Real(dp) :: T1, NEh(1:3)
-   Real(dp) :: D,t
+   Real(dp) :: T1, D, t
     !
 
    Allocate(ChunkStTime_ms(1:ChunkNr_dim))
@@ -261,7 +261,7 @@ Subroutine ReadPeakFitInfo()
    Call RFTransform_su(Time_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    !
    ExclStatNr(:,:)=0
-   TotPeakNr(0,:)=0
+   TotPeakNr(:,:)=0
    RefAntErr(1:PeakNr_dim) = 0.
    PeakNr(:,:)=0
    i_chunk=0
@@ -272,7 +272,7 @@ Subroutine ReadPeakFitInfo()
    t=0.
    !
    Call GetNonZeroLine(lname)
-   Do  ! perform some pre-scanning of the input to now the number of chunks that will be used
+   Do
       Read(lname(2:lnameLen),*,iostat=nxx) T1,NEh(:)  ! just dummy arguments
       !write(2,*)  nxx, lname
       If(nxx.ne.0) exit  ! Neither a new-chunk line or a pulse-info line
@@ -332,6 +332,7 @@ Subroutine ReadPeakFitInfo()
                   Endif
                Enddo
             endif
+            If(i_eoa.eq.0 .and. (RunMode.eq.7)) i_pos=i_pos-4  !  shift when going from Hilbert to Field
             Peakpos(i_Peak)=i_pos
             ChunkNr(i_Peak)=i_chunk
             RefAntErr(i_Peak) = 0.
@@ -511,10 +512,11 @@ Subroutine PrntCompactSource(i_Peak)
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: i_Peak
-   integer ( kind = 4 ) :: i,k, i_chunk,i_eo
+   integer ( kind = 4 ) :: i,k, i_chunk,i_eo, i_src
    Character(len=5) :: Station_Mnem
    Real(dp) :: RDist,Time
    Real(dp), external :: tShift_smpl
+   Integer, external :: SourceNr
    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
    !
    i_chunk=ChunkNr(i_Peak)
@@ -529,10 +531,11 @@ Subroutine PrntCompactSource(i_Peak)
    EndIf
    Time=( StartT_sam(ChunkNr(i_Peak)) + PeakPos(i_Peak) - tShift_smpl(SourcePos(:,i_Peak)) )*Sample_ms
    !
-   If(i_Peak.lt.100) Then
-      Write(2,"('C',3i2,I8)", ADVANCE='NO') i_Peak,i_eo,ChunkNr(i_Peak),k
+   i_src=SourceNr(i_Peak)
+   If(i_src.lt.100) Then
+      Write(2,"('C',3i2,I8)", ADVANCE='NO') i_src,i_eo,ChunkNr(i_Peak),k
    Else
-      Write(2,"('C',i2.2,2i2,I8)", ADVANCE='NO') i_Peak-100,i_eo,ChunkNr(i_Peak),k
+      Write(2,"('C',i2.2,2i2,I8)", ADVANCE='NO') MODULO(i_src,100),i_eo,ChunkNr(i_Peak),k
    EndIf
    Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
    If(RunMode.le.3) Then
@@ -555,4 +558,34 @@ Subroutine PrntCompactSource(i_Peak)
    write(2,*) ' '
    Return
 End Subroutine PrntCompactSource
+!==========================================
+Pure Integer Function SourceNr(i_Peak)
+!   Integer, external :: SourceNr
+   !use constants, only : dp,Sample_ms
+   !use FitParams, only : station_nrMax
+   !use DataConstants, only : RunMode
+   !use ThisSource, only : PeakPos, Peak_eo, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
+   use ThisSource, only : Dual, PeakNr, TotPeakNr, ChunkNr, PeakPos, Peak_eo
+   !use Chunk_AntInfo, only : Unique_StatID, Ant_pos, Ant_RawSourceDist, RefAnt, StartT_sam
+   !use StationMnemonics, only : Statn_ID2Mnem
+   Implicit none
+   Integer, intent(in) :: i_Peak
+   integer ( kind = 4 ) :: i, i_chunk
+   !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
+   !
+   SourceNr=i_Peak
+   !write(2,*)'SourceNr',SourceNr,Dual,Peak_eo(i_Peak)
+   If(Dual .and. (Peak_eo(i_Peak).eq.1) ) then
+      i_chunk=ChunkNr(i_Peak)
+      Do i=TotPeakNr(0,i_chunk)-PeakNr(0,i_chunk)+1,TotPeakNr(0,i_chunk)
+         !write(2,*) 'peakpos-i',i,TotPeakNr(0,i_chunk)-i,Peakpos(TotPeakNr(0,i_chunk)-i),k
+         If(Peakpos(i).eq. Peakpos(i_Peak) ) then
+            SourceNr=i
+            exit
+         Endif
+      Enddo
+   endif
+   !
+   Return
+End Function SourceNr
 !===========================
