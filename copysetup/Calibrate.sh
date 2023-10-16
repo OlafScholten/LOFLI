@@ -4,7 +4,7 @@
 source ../ShortCuts.sh
 #Prog="LOFAR-Imag"${Vrsn}
 Prog="LOFAR-Imag"
-source ${UtilDir}compile.sh
+source ${UtilDir}compileHDF5program.sh
 
 # start Calibration run
 ${ProgramDir}$Prog  ${FlashFolder} <Calibrate.in

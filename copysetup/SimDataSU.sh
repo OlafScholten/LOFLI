@@ -1,12 +1,14 @@
 #!/bin/bash
 # 
 # 
+
 source ../ShortCuts.sh
 Prog="LOFAR-Imag"
 source ${UtilDir}compileHDF5program.sh
 
 # start Imaging run
-${ProgramDir}$Prog  ${FlashFolder}  <FCallibrate.in
+${ProgramDir}$Prog  ${FlashFolder} <SimData.in
+#./GLE-plots.sh
 exit
 #gle -d pdf plot-corr_01.gle
 #gle -d pdf plot-corr_02.gle

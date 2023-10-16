@@ -3,7 +3,10 @@
 # 
 source ../ShortCuts.sh
 Prog="PowerTrace"
-source ${UtilDir}/compile.sh
+#source ${UtilDir}/compile.sh
+
+source ${UtilDir}compileHDF5program.sh
+
 
 # start Exploration run
 ${ProgramDir}/$Prog  <PwT.in

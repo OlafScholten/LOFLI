@@ -4,7 +4,8 @@
 source ../ShortCuts.sh
 #Prog="LOFAR-Imag"${Vrsn}
 Prog="LOFAR-Imag"
-source ${UtilDir}compile.sh
+#source ${UtilDir}compile.sh
+source ${UtilDir}compileHDF5program.sh
 
 # start Imaging run
 ${ProgramDir}$Prog  ${FlashFolder} <Imaging.in

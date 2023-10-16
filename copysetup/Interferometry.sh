@@ -3,7 +3,8 @@
 # 
 source ../ShortCuts.sh
 Prog="LOFAR-Imag"
-source ${UtilDir}compile.sh
+#source ${UtilDir}compile.sh
+source ${UtilDir}compileHDF5program.sh
 
 # start Interferometry run
 ${ProgramDir}$Prog  ${FlashFolder} <Interferometry.in
