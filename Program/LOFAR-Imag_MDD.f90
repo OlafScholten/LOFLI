@@ -427,11 +427,12 @@ Program LOFAR_Imaging
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='PkInt'//TRIM(OutFileLabel)//'.out')
          RunMode=8
          Sources1='PeakInterferometry (Interferometry)'
-      CASE("M")  ! MultiplePointSourcesInterferometry
-         Write(*,*) 'MultiplePointsources-Interferometry, OutFileLabel=',TRIM(OutFileLabel)
-         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MSInt'//TRIM(OutFileLabel)//'.out')
+      CASE("M")  ! MultipleDeltaDipolesCompositeSource
+         Write(*,*) 'MultipleDeltaDipoles-CompositeSource, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MDDCS'//TRIM(OutFileLabel)//'.out')
+         !OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MDDRS'//TRIM(OutFileLabel)//'.out')
          RunMode=9
-         Sources1='MultiplePointSources (Interferometry)'
+         Sources1='MultipleDeltaDipoles (Interferometry)'
       CASE DEFAULT  ! Help
          Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
          Write(*,*) '- "Explore" for first exploration of this flash to get some idea of the layout and timing'
@@ -643,6 +644,21 @@ Program LOFAR_Imaging
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
          !
+      CASE("M")  ! MDD-Composite Source            RunMode=9
+         ! Pre-process inputdata for sources to be used in calibration
+         ChunkNr_dim=1
+         PeakNr_dim=1
+         PeakNrTotal=1  ! one of these is obsolete now
+         FitRange_Samples=7
+         CurtainHalfWidth=-1
+         !Polariz=Dual  !
+         CalibratedOnly=.true.
+         If(IntfSmoothWin.lt.3) IntfSmoothWin=3
+         N_smth=IntfSmoothWin
+         Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
+         Call PrintValues(AntennaRange,'AntennaRange', &
+            'Maximum distance (from the core, in [km]) for  antennas to be included.')
+         !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'
    End SELECT
@@ -772,6 +788,11 @@ Program LOFAR_Imaging
          Call PeakInterferoOption
          !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
+      CASE(9)  ! MDD Composite Source search         RunMode=9
+         !RunMode = 4  ! temporary fix for GLE
+         Call MultipleDDSourcesOption()
+         Call GLEplotControl( Submit=.true.)
+      ! =============3 3 3 3 3 3 3 3 3
   End SELECT
 
    stop
@@ -831,3 +852,14 @@ Subroutine AntennaSanity()
     Return
 End Subroutine AntennaSanity
 !
+!    Include 'MDD-Pars.f90'
+!    Include 'MDD-Option.f90'
+!    Include 'MDD-Rtns.f90'
+!    Include 'MDD-Fitter.f90'
+    Include 'MDDC-Pars.f90'
+    Include 'MDDC-Option.f90'
+  !  Include 'MDDCp-Rtns.f90'
+  !  Include 'MDDCp-Fitter.f90'
+    Include 'MDDC-Rtns.f90'
+    Include 'MDDC-Fitter.f90'
+!    Include 'CurtainPlotOption-MDD.f90'

@@ -34,7 +34,7 @@ Subroutine EI_Run
    integer :: i_eo, i, Nr_IntFer !,j, i_s, i_loc(1), i_ant, j_corr, Station, j_IntFer, i_nu, nxx
    Real(dp) :: PixLocPol(1:3) !, SmPow
    Integer :: Date_T(8)
-   integer :: i_N, i_E, i_h !, N_h,  N_hlow, N_Eup, N_Elow
+   integer :: i_N, i_E, i_h, error !, N_h,  N_hlow, N_Eup, N_Elow
    Complex(dp), allocatable :: CMCnu(:,:,:), CMTime_Pix(:,:)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
@@ -45,7 +45,7 @@ Subroutine EI_Run
    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
    Nr_IntFer=Nr_IntFerCh(i_chunk)
    Call PixBoundingBox()      !  allocate array space, sets IntfNuDim
-   Call Alloc_EInterfImag_Pars
+   Call Alloc_EInterfImag_Pars  ! initialize FFT to appropriate window
    Allocate( CMCnu(Nr_IntFer,0:IntfNuDim,1:3),  CMTime_pix(1:2*IntfNuDim,1:3) )
    Call EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !Nr_IntFerMx=Nr_IntFerCh(i_chunk) since there is only a single chunk
@@ -95,7 +95,7 @@ Subroutine EI_Run
             !WRITE(*,"(A,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' A:',(DATE_T(i),i=5,8), achar(27)//'[0m'
          !endif
          !
-         Call EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)         !InterfEngine
+         Call EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix, error)         !InterfEngine
          !
          Call EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
          !
@@ -400,7 +400,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use FFT, only : RFTransform_CF !, RFTransform_CF2CT
    use StationMnemonics, only : Statn_ID2Mnem
-   Use Interferom_Pars, only : IntfBase, SumStrt, IntfLead, SumWindw  !, IntfPhaseCheck
+   Use Interferom_Pars, only : IntfBase, SumStrt, SumWindw  !, IntfPhaseCheck
    Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerCh, Nr_IntFerMx
    Use Interferom_Pars, only : IntFer_ant
    Use Interferom_Pars, only : CenLoc, t_shft, t_offsetPow, tMin, tMax
@@ -417,7 +417,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    Real(dp) :: Cur2E(1:3,1:3), E2Cur(1:3,1:3)
    Real(dp) :: Ras(1:3), Vec_p(1:3), Vec_t(1:3), Aip(1:3), Ait(1:3)
    Real(dp) :: HorDist, Thet_r ,Phi_r, dfreq, D, W, dnu, nu
-   Real(dp) :: AntSourceD(1:Nr_IntFer), Weight(1:Nr_IntFer), thet_d(1:Nr_IntFer), Phi_d(1:Nr_IntFer)
+   Real(dp) :: AntSourceD(1:Nr_IntFer), Weight(1:Nr_IntFer), thet_d(1:Nr_IntFer), Phi_d(1:Nr_IntFer), WNrm
    Real(dp) :: Rtime(1:2*IntfNuDim), AntennaNorm=1.! e-4
    Complex(dp) :: Cnu0(0:IntfNuDim), Cnu1(0:IntfNuDim), Sp, St
    Real(dp) :: AntW(2), NRM
@@ -447,10 +447,13 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
       Phi_d(j_IntFer)=Phi_r*180/pi
       If(j_IntFer.eq.1) Then
          Weight(1)= AntSourceD(1)*AntSourceD(1)/(Ras(3)*Ras(3)*Nr_IntFer)  ! to normalize at unity for the reference antenna and A=(1,1,0)
+         WNrm = AntSourceD(1)*AntSourceD(1)/(Ras(3)*Ras(3)*Nr_IntFer)  ! to normalize at unity for the reference antenna and A=(1,1,0)
       EndIf
-      Weight(j_IntFer)= Ras(3)*Ras(3)*Weight(1)/(AntSourceD(j_IntFer)*AntSourceD(j_IntFer)) ! changed Febr 2022 to make it more similar to 1/noise power
+      !Weight(j_IntFer)= Ras(3)*Ras(3)*Weight(1)/(AntSourceD(j_IntFer)*AntSourceD(j_IntFer)) ! changed Febr 2022 to make it more similar to 1/noise power
+      Weight(j_IntFer)= Ras(3)*Ras(3)* WNrm /(AntSourceD(j_IntFer)*AntSourceD(j_IntFer)) ! changed Nov 2022 to make it more similar to 1/noise power
+      !Weight(j_IntFer)= Ras(3)*Ras(3)* WNrm*AntSourceD(1)/(AntSourceD(j_IntFer)**3) ! changed Nov 2022 to make it more similar to 1/noise power
       If((AntSourceD(j_IntFer)/AntSourceD(1)).lt.1. ) Then  ! The factor between E-field and signal is approx square of this
-         Weight(j_IntFer)= Weight(1) ! changed Febr 2022 to make it more similar to 1/noise power
+         Weight(j_IntFer) = Weight(1)
       EndIf  ! this gives a much smoother and narrower interference max
       !Write(2,*) j_IntFer,Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)), &
       !      AntSourceD(j_IntFer),Thet_d(j_IntFer),Phi_d(j_IntFer)
@@ -465,6 +468,13 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
          Enddo
       Enddo
    Enddo
+   If(Nr_IntFer.lt.200) then
+      !write(2,"(A,F11.3,300F8.2)") 'EISetupSpec(old); W:',Weight(1),Weight(1:Nr_IntFer)/Weight(1)
+      write(2,"(A,F11.3,300F8.2)") 'EISetupSpec(new); W:',Weight(1),Weight(1:Nr_IntFer)/Weight(1)
+      !write(2,"(A,I5,300F8.2)") 'EISetupSpec(try); Weights:',Nr_IntFer,Weight(1:Nr_IntFer)/Weight(1)
+      write(2,"(A,I5,300F8.1)") 'EISetupSpec; distances   :',Nr_IntFer,AntSourceD(1:Nr_IntFer)/AntSourceD(1)
+      write(2,"(A,5x,300I8.3)") 'EISetupSpec; Stations    :',Ant_Stations(IntFer_ant(1:Nr_IntFer,i_chunk),i_chunk)
+   EndIf
    !
    !write(2,*) 'Trace A=', Cur2E(1,1)+Cur2E(2,2)+Cur2E(3,3)
    Call Inverse33(Cur2E,E2Cur, alpha, PolBasis)  ! PolBasis are normalized to unity
@@ -535,13 +545,13 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    tMax=((StartT_sam(i_chunk)+SumStrt+SumWindw)*sample-t_shft)*1000.
    write(2,*) 'Source time window start@', tMin, '[ms], end@', tMax
    t_offsetPow=((StartT_sam(i_chunk)+SumStrt)*sample)*1000.d0-TimeBase
-   Flush(unit=2)
+   !Flush(unit=2)
    !
    Return
 End Subroutine EISetupSpec
 !-----------------------------------------------
 ! =========================
-Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
+Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix, error)
    ! Phase shifts the Curr Mom Contr of the individual antennas to obtain Current Moment for a pixel in time
    !
    use constants, only : dp, ci, pi
@@ -552,13 +562,16 @@ Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
    use FFT, only : RFTransform_CF2CT
    Implicit none
    Integer, intent(in) :: Nr_IntFer, IntfNuDim
-   Complex(dp), intent(out) ::  CMTime_pix(1:2*IntfNuDim,1:3), CMCnu(Nr_IntFer,0:IntfNuDim,1:3)
+   Complex(dp), intent(in) ::  CMCnu(Nr_IntFer,0:IntfNuDim,1:3)
+   Complex(dp), intent(out) ::  CMTime_pix(1:2*IntfNuDim,1:3)
+   Integer, intent(out) :: error
    Integer :: i, i_ant, i_nu, j_IntFer,i_freq, inu1, inu2
    Complex(dp) :: Phase(Nr_IntFer), dPhase(Nr_IntFer), CMnu_pix(0:IntfNuDim,1:3)
    complex(dp), parameter :: ipi=ci*pi
    Real(dp) :: RDist, dt_AntPix, dnu
    !InterfEngine
    CMnu_pix(:,:)=0.
+   error=0
    dnu=100./IntfNuDim   ! [MHz] Jones matrix is stored on 1MHz grid
    inu1=Int(Freq_min/dnu)+1
    !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
@@ -569,7 +582,9 @@ Subroutine EIEngine(Nr_IntFer, IntfNuDim, CMCnu, CMTime_pix)
       dt_AntPix=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
       ! check dt_AntPix in range
       If(ABS(dt_AntPix).gt.IntfLead) then
-         write(2,*) 'Warning, time-shift=',dt_AntPix,'[samples] out of range for pixel',PixLoc
+         !write(2,*) 'Warning, time-shift=',dt_AntPix,'[samples] out of range for pixel',PixLoc
+         error=-j_IntFer
+         CMTime_pix(:,:)=tiny(dnu)
          Return
       Endif
       dphase(j_IntFer)= exp(-ipi*dt_AntPix/IntfNuDim)
@@ -646,6 +661,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
             i_s, t_shft*1000.
          write(29,"(g12.4,5(',',i5),',',i8,',',i5,6(',',f9.4),' !')") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
             N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:2)*180./pi ,d_loc(3), d_loc(1:3)
+         write(29,"('! Sample',T10,'I1+I2=I12',T22,'Q/I12%',T30,'U/I12%',T38,'V/I12%',T45,'I3/I12%  for central pixel')")
       Do i_s=1, SumWindw
          Do i=1,3
             Do j=1,3

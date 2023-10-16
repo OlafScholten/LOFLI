@@ -14,12 +14,13 @@
 !
     Include 'TrackModule.f90'
     Include 'Fitter_Ampl.f90'
-    Include 'FFT_routines.f90'
+!!!!!!!    Include 'FFT_routines.f90'
     Include 'System_Utilities.f90'
     Include 'GLEplotUtil.f90'
     !
 PROGRAM rewriteEvent
 ! copied from C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\Imaging\LOFAR-MAP
+   Use constants, only : dp, CI, pi, c_l
    Use Tracks, only : PreDefTrackNr, PreDefTrackFile
    Use Tracks, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, NLongTracksMax, TrackLenMax, TrackENr, TrackE, TrackNrLim
    Use Tracks, only : Wtr, MaxTrackDist, TimeWin, HeightFact, datfile !,  WriDir
@@ -33,11 +34,15 @@ PROGRAM rewriteEvent
    Character*8 :: extension
    character*100 :: pars
    Character*20 :: Utility, release
-  Character(len=180) :: lineTXT
-  integer :: i,j,k, nxx, d_Ampl  ! unit,
-  Real*8 :: Qual, t_start, dt_MTL, AmplitudePlot
-  integer :: kk, jk, wrunt, DelNEff, N_EffAnt !, Max_EffAnt
-  Logical :: EndInput
+   Character(len=180) :: lineTXT
+   Character(len=180) :: BckgrFile
+   integer :: i,j,k, nxx, d_Ampl  ! unit,
+   Real*8 :: Qual, t_start, dt_MTL, AmplitudePlot
+   integer :: kk, jk, wrunt, DelNEff, N_EffAnt !, Max_EffAnt
+   Logical :: EndInput
+   real*8 :: dD , dtau ! bin width for distance and tau
+   Integer :: Dnr, Ntau  ! number of distance points
+   Character*4 :: Optn
   !
   !unit=12
   d_Ampl=1  ! bin size for amplitude histogram
@@ -45,7 +50,8 @@ PROGRAM rewriteEvent
    d_AmplScale=AmplScale/d_Ampl
   !OPEN(UNIT=unit,STATUS='REPLACE',FILE='RunGLEplots.bat')
   OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='FlashImage.out')
-  !write(2,*) 'Program RewriteEvent alias Track-v19 alias FlashImage'
+  write(2,*) 'Program RewriteEvent alias Track-v19 alias FlashImage' &
+      ,', limited version with source statistics disabled because of FFT calls needing library.'
   Utility='Track&Qual.Control'
   release='v21'
   Call System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)  ! set Flash name & folder names
@@ -57,7 +63,7 @@ PROGRAM rewriteEvent
       !
       ! Read in selection criteria from stdin and apply to located sources
       ! Unit=29 is opened
-      Call SelSources(Qual, t_start, EndInput)
+      Call SelSources(Qual, t_start, EndInput)  ! read input constraints and apply
       If(EndInput) exit
       If(EventNr.le.1) then
         write(2,*)'EventNr=',EventNr
@@ -110,6 +116,7 @@ PROGRAM rewriteEvent
       !
       write(29,"(1x,I3,I8,F7.2,F8.4,2x,A,1x,F6.2, 2(f8.3,f10.0,f8.3),f8.3,1x,A)") LongTrackNr, EventNr, Qual, t_start, &
           TRIM(FlashName)//'/'//TRIM(datfile), AmplitudePlot, a1,b1,c1,a2,b2,c2,d2, ' !'
+      write(29,"('! SourceLab',T15,'time',T29,'x=East',T46,'y=North',T61,'z=h',T80,'Ampl',T87,'Wl',T92,'Wr')")
       Do j=1,EventNr  !  finally write all accepted source to file
          write(29,"(1x,i8,4(2x,g14.8),3x,F7.2,2x,I3,2x,I3)")  Label(1,j),RA(1:4,j), Label(2,j)*AmplScale, Label(3:4,j)
       enddo
@@ -124,16 +131,50 @@ PROGRAM rewriteEvent
             Call BinTracks(dt_MTL)  ! t_Mean Track Location
          EndIf
          !
-         Call AnalyzeBurst ! Analyze how many sources occur within a certain time-resolution
+!!!!!!!!!!!!!!         Call AnalyzeBurst ! Analyze how many sources occur within a certain time-resolution
       EndIf
+      !
+      !  Read additional options
+      !  Corr (=correlate sources following Frankfurt AI paper)
+      !  Qual (=analysis of quality factors, make 2D scatter plots)
+      !  Bckg (=make plot including data from indicated file in grey, in folder 'files')
+      BckgrFile=''
+      read(*,*,iostat=nxx) Optn
+      If(nxx.eq.0) Then
+         If(Optn.eq.'Corr') then
+            BACKSPACE(unit=5)  ! stdin
+            read(*,*,iostat=nxx) Optn, dD, Dnr, dtau
+            If(nxx.eq.0) Then
+            Call ApplyCorrelator(RA,EventNr, dD, Dnr, dtau, Ntau)
+            Else
+               write(2,*) 'Optn=Corr', 'expected parameters are: dD, Dnr, dtau'
+            EndIf
+         ElseIf(Optn.eq.'Bckg') then
+            BACKSPACE(unit=5)  ! stdin
+            read(*,*,iostat=nxx) Optn, BckgrFile
+            If(nxx.ne.0) BckgrFile=''
+         ElseIf(Optn.eq.'Qual') then
+            Call ApplyQualityAna
+         Else
+           BACKSPACE(unit=5)  ! stdin
+         EndIf
+      else
+         BACKSPACE(unit=5)  ! stdin
+         write(2,*) 'no option used, ',Optn,', possible is: Corr, Qual, Bckg'
+      endif
       !
       !    write(pars,"(1x,A20)") FlashFolder//'/'//trim(datfile)//'_s'
       !    write(pars,"(1x,A20)") trim(datfile)//'_s'
       !write(pars,"(A)") TRIM(DataFolder)//trim(datfile)
       !SystemCommand="call GLE -d pdf -o Map_"//trim(datfile)//".pdf ../Utilities/LeaderTrack.gle "//trim(pars)
       !SystemCommand="call GLE -d pdf -o Imp_"//trim(datfile)//".pdf ../Utilities/SourcesPlot.gle "//trim(pars)
-      Call GLEplotControl(PlotType='SourcesPlot', PlotName='Imp_'//TRIM(datfile), &
+      If(BckgrFile.ne.'') then
+         Call GLEplotControl(PlotType='SourcesPlotBckgr', PlotName='Imp_'//TRIM(datfile), &
+            PlotDataFile=TRIM(DataFolder)//trim(datfile), Submit=.false., Bckgr=TRIM(DataFolder)//trim(BckgrFile) )
+      Else
+         Call GLEplotControl(PlotType='SourcesPlot', PlotName='Imp_'//TRIM(datfile), &
             PlotDataFile=TRIM(DataFolder)//trim(datfile), Submit=.false.)
+      EndIf
       ! call flush(unit_number)
       !      CALL SYSTEM(SystemCommand,stat)
       !write(2,*) SystemCommand
@@ -149,7 +190,6 @@ PROGRAM rewriteEvent
          !write(2,*) SystemCommand
          !write(unit,*) SystemCommand
       EndIf
-      !
 998   write(2,*) '======================================='
    enddo !  end of the main reading loop
    !
@@ -165,7 +205,7 @@ Subroutine SelSources(Qual,t_start, EndInput)
    !              Opened file 29 with header written
    Use Tracks, only : TrackNr, TOrder
    Use Tracks, only : datfile
-   Use Tracks, only : RA, maxd, EventNr, Label
+   Use Tracks, only : RA, maxd, EventNr, Label, QualIndic
    use DataConstants, only : FlashFolder  !, DataFolder, FlashName, Windows
    IMPLICIT none
    Real*8, intent(out) :: Qual,t_start
@@ -176,7 +216,7 @@ Subroutine SelSources(Qual,t_start, EndInput)
    Character*130 :: ZoomBox
    real*8 :: ICVal, Height_1, Chi_max, R_ex, xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax
    Integer :: i,j, Nxx, DelNEff
-   real*8 :: x,y,z,t, val, sigma(1:3), Q
+   real*8 :: x,y,z,t, val, sigma(1:3), Q, Chi
    character*100 :: txt
    integer :: N_EffAnt, Max_EffAnt, Ampl, Wl, Wu
    !
@@ -188,7 +228,7 @@ Subroutine SelSources(Qual,t_start, EndInput)
    EndInput=.false.
 1  Continue
    Call GetNonZeroLine(lineTXT)
-   read(lineTXT,*,iostat=nxx) datafile, ICVal, datfile, xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, ZoomBox
+   read(lineTXT,*,iostat=nxx) datafile, ICVal, datfile, xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, ZoomBox ! old format
    if(nxx.ne.0) then
       Old=.false.
       R_ex=-1.
@@ -217,6 +257,22 @@ Subroutine SelSources(Qual,t_start, EndInput)
    If(ZoomBox.ne.'NoBox')  ZoomBox=TRIM(DataFolder)//ZoomBox
    Write(2,"(A,F7.2,A,F7.2,A,F7.2)") 'quality cuts: sigma(z)=', ICVal,'[m] @', Height_1,'[km]'
    !Write(2,"(A,I2,A)") 'Effective antenna cut=',DelNEff,' less than the maximum'
+   If(xMin.gt.xMax) Then
+      write(2,*) 'xMin,xMax given in wrong order:',xMin,xMax
+      stop "wrong x-limits"
+   EndIf
+   If(yMin.gt.yMax) Then
+      write(2,*) 'yMin,yMax given in wrong order:',yMin,yMax
+      stop "wrong y-limits"
+   EndIf
+   If(zMin.gt.zMax) Then
+      write(2,*) 'zMin,zMax given in wrong order:',zMin,zMax
+      stop "wrong z-limits"
+   EndIf
+   If(tMin.gt.tMax) Then
+      write(2,*) 'tMin,tMax given in wrong order:',tMin,tMax
+      stop "wrong t-limits"
+   EndIf
    write(2,*) trim(datafile),' ', TRIM(datfile), xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax
    !
    OPEN(unit=28,FILE=trim(datafile)//'.csv',FORM='FORMATTED',STATUS='OLD',ACTION='READ') ! space separated values
@@ -257,14 +313,20 @@ Subroutine SelSources(Qual,t_start, EndInput)
       !if(ICVal.gt.val) cycle
       !If(sigma(3).gt. ICVal) cycle
       z=z/1000.d0                   ! convert to [km]
-      If(z.gt. Height_1) then
-         Q=sigma(3)*Height_1
-      Else
-         Q=sigma(3)*z
-      Endif
-      If(Q.gt. ICVal .and. val.gt.ICVal) cycle
+      Chi=sqrt(val)
+      !If(Height_1 .gt. 0) then
+         If(z.gt. Height_1) then
+            Q=sigma(3)*Height_1
+         Else
+            Q=sigma(3)*z
+         Endif
+         If(Q.gt. ICVal .and. val.gt.ICVal) cycle
+      !Else
+      !   Q=sigma(3)/Chi
+      !   If(Q .gt. ICVal) cycle
+      !EndIf
       If(.not. old) then
-         Q=sqrt(val)
+         Q=Chi
          If(DelNEff .lt. 0) then
             Q=Q + R_ex*(Max_EffAnt-N_EffAnt)/Max_EffAnt
          else
@@ -275,6 +337,7 @@ Subroutine SelSources(Qual,t_start, EndInput)
       j=j+1
       RA(1,j)=t ;  RA(2,j)=x/1000.d0 ;  RA(3,j)=y/1000.d0 ;  RA(4,j)=z   ! units [ms], [km], [km], [km]
       Label(1,j)=i ;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
+      QualIndic(1,j)=Chi ; QualIndic(2:4,j)=sigma(1:3)
       if(j.eq.maxd) then
          write(*,*) 'Max. dimension reached of', maxd,' at',i
          write(2,*) 'Max. dimension reached of', maxd,' at',i
@@ -344,13 +407,13 @@ Subroutine Assign2Tracks
       n_cls=0  ! number of close-lying tracks
       !write(2,*) j,RA(1,j),TrackPos(1:3,1)
       Do i=1,TrackNr
-         dist=0.         ! distance to the next point (in time)
+         !dist=0.         ! distance to the next point (in time)
          dist=((TrackPos(3,i)-RA(4,j))/HeightFact)**2  ! weigh vertical distance by factor "HeightFact" less
          !dist=dist/25.      ! used to weigh vertical distance by factor 5 less
          dist=dist +(TrackPos(1,i)-RA(2,j))**2  ! changed to factor 1 less weight for z
          dist=dist +(TrackPos(2,i)-RA(3,j))**2
-         Dist=sqrt(dist)       ! distance to the next point (in time)
-         !If(j.lt.5) Write(2,*) j,Dist,i,TrackPos(3,i)
+         Dist=sqrt(dist)       ! distance of track-head(i) to the next (in time) source(j)
+         !If(i.lt.2) Write(2,*) j,RA(1,j),Dist,i,TrackPos(3,i)
          If(dist .gt. MaxTrackDist) cycle
          ! write(*,*) TrackNr,j,i,dist,TrackPos(1:3,i)
          ! Add to existing Track
@@ -463,6 +526,9 @@ Subroutine ConstructTracks
         !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
         write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
         OPEN(unit=29,FILE=TRIM(DataFolder)//trim(datfile)//trim(extension),FORM='FORMATTED',STATUS='unknown')
+        write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
+        write(29,"('!',T7,'time',T22,'x=East',T38,'y=North',T53,'z=height',T73,'x=East',T89,'y=North',T104,'z=height', &
+            T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
         !write(29,*) 'TrackNr=',i
         !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
         Xsq=0.
@@ -583,14 +649,15 @@ Subroutine BinTracks(dt_MTL)
       !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
       write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
       OPEN(unit=27,FILE=TRIM(DataFolder)//trim(datfile)//'_bin_'//trim(extension),FORM='FORMATTED',STATUS='unknown')
-      write(27,"('! nr', 4(1x,A14),3x,3(1x,A12),2x,A10)") 't [ms]','E [km]','N','h','v_E','v_N','v_h','v [10^6m/s]'
+      write(27,"('!',F5.3,'Binned, t [ms]',T24,'E [km]',T39,'N',T53,'h',T73,'v_E',T86,'v_N',T99,'v_h',T110,'v[km/ms]', &
+         T124,'Ave_t[ms]')")   dt_MTL
       t_old=-99
       i_MTL=0  ! just counter for filled bins
       MeanTrackLoc(1:4,:)=0.
       !write(2,*) 'long track',i_LongTr,' has ',t_MTL,'bins of ',dt_MTL,'[ms]'
       !Call Flush(2)
       t0=RA(1,TrackE(1,i)) ! start time of this track
-      Do k=1,TrackENr(i)
+      Do k=1,TrackENr(i)  ! average location over bin with length dt_MTL
          j=TrackE(k,i) ! j= rank-number of k-th source on track i
          t_MTL=TOrder*(RA(1,j)-t0)/dt_MTL
          !write(2,*) i_old,t_MTL,i,j,MeanTrackLoc(1,1:t_MTL)
@@ -619,7 +686,7 @@ Subroutine BinTracks(dt_MTL)
             !If(t_old.gt.0) then
                dt=TOrder*(MeanTrackLoc(1,k)-MeanTrackLoc(1,k-1))
                dist=sqrt(SUM((MeanTrackLoc(2:4,k)-MeanTrackLoc(2:4,k-1))**2))
-               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g10.4)") k, &
+               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") k, &
                   MeanTrackLoc(1:4,k),(MeanTrackLoc(2:4,k)-MeanTrackLoc(2:4,k-1))/dt, dist/dt, &
                   (MeanTrackLoc(1,k)+MeanTrackLoc(1,k-1))/2.
             !Endif
@@ -627,6 +694,19 @@ Subroutine BinTracks(dt_MTL)
          !Endif
       Enddo
       close(unit=27)
+      if(i_LongTr.eq.1) Then  ! write track for the first, may be used for interferometric tracing
+         OPEN(unit=27,FILE=TRIM(DataFolder)//trim(datfile)//'_track.dat',FORM='FORMATTED',STATUS='unknown')
+         Do k=1,i_MTL
+            If(TOrder.gt.0) Then  ! order in increasing time
+               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") k, &
+                     MeanTrackLoc(1:4,k)
+            Else
+               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") k, &
+                     MeanTrackLoc(1:4,i_MTL-k+1)
+            EndIf
+         Enddo
+         close(unit=27)
+      EndIf
    enddo
     !
    Return
@@ -639,7 +719,7 @@ Subroutine AnalyzeBurst()
     Use Tracks, only : TOrder, datfile
     Use constants, only : dp
    use DataConstants, only : DataFolder  !, FlashFolder, FlashName, Windows
-    use FFT, only : RFTransform_su, DAssignFFT, RFTransform_CF
+!!!!!!    use FFT, only : RFTransform_su, DAssignFFT, RFTransform_CF
     IMPLICIT none
     integer, parameter :: TB_max=131072, N_nu=TB_max/2  ! 65536 ! 65536=2^16 ; 32768=2^15 ! 2048=2^11 ! 262144=2^18 ! 131072=2^17
     real*8 :: t_resol,T_max, T_min, TimeDur, A, B
@@ -688,7 +768,7 @@ Subroutine AnalyzeBurst()
          If(i.eq.1) then
             write(extension,"(i2.2,A4)") tr,'.dat' !,& SourceTimeDistribution (STD)
             OPEN(unit=27,FILE=TRIM(DataFolder)//trim(datfile)//'_STD-'//trim(extension),FORM='FORMATTED',STATUS='unknown')
-            write(27,"('! ', 4(1x,A14),3x,3(1x,A12),2x,A10)") 't [ms]','Amplitude','N','h','v_E','v_N','v_h','v [10^6m/s]'
+            write(27,"('! ', T8,'time[ms]',T33,'PulseDensity',T49,'resol[ms]=',F9.6)") t_resol
             Do T=1,NTSampl
                write(27,*) T_min+T*t_resol/2.,TBurst_trace(T)
             enddo
@@ -696,11 +776,11 @@ Subroutine AnalyzeBurst()
          endif
       enddo  ! tr
       !
-      Call RFTransform_su(TB_max)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!!!!!!!!      Call RFTransform_su(TB_max)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       !
-      Call RFTransform_CF(TBurst_trace,Cnu)
+!!!!!!!      Call RFTransform_CF(TBurst_trace,Cnu)
       OPEN(unit=27,FILE=TRIM(DataFolder)//trim(datfile)//'_STD-nu.dat',FORM='FORMATTED',STATUS='unknown')
-      write(27,"('! ', 4(1x,A14),3x,3(1x,A12),2x,A10)") 'nu [kHz]','Amplitude','N','h','v_E','v_N','v_h','v [10^6m/s]'
+      write(27,"('! ',T6,'freq[1/ms]',T31,'Ampl',T57,'Not rebinned')")
       d_nu=1./(t_resol*TB_max/2)
       F_Th=d_nu/2
       N_k=0
@@ -712,7 +792,7 @@ Subroutine AnalyzeBurst()
          nu=T*d_nu
          If(nu.gt.F_th) then
             write(27,*) B/N_k,A/N_k, nu, BinSize, N_k
-            F_th=1.05*nu
+            F_th=1.05*nu ! to re-bin results
             N_k=1
             A=ABS(Cnu(T))
             B=nu
@@ -724,7 +804,7 @@ Subroutine AnalyzeBurst()
          !write(27,*) T*d_nu,ABS(Cnu(T))
       enddo
       Close(unit=27)
-      Call DAssignFFT()         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+!!!!!!      Call DAssignFFT()         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       !
     enddo ! i, track number
 end Subroutine AnalyzeBurst
@@ -734,8 +814,9 @@ Subroutine ReadPreDefTr(PreDefTrackFile)
    Use Tracks, only : PreDefTrack, tNrS_max, PreDefTrackNr, PreDefTrackNr_Max, NrPreDefTrackPoints_Max, tNrS
    IMPLICIT none
    Character(len=100), Intent(IN) :: PreDefTrackFile
-   Integer :: nxx, i_track, i_t
+   Integer :: nxx, i_track, i_t, lab,i
    Character(len=5) :: Extension
+   character(len=80) :: line
    !
    PreDefTrackNr=0
    tNrS(1:PreDefTrackNr_Max)=1  ! needed in GetPreDefTrPos
@@ -747,8 +828,13 @@ Subroutine ReadPreDefTr(PreDefTrackFile)
          exit
       Endif
       !write(2,*) 'ReadPreDefTr:',trim(PreDefTrackFile)//trim(extension)
-      Do i_t=1,NrPreDefTrackPoints_Max
-         read(22,*,iostat=nxx) PreDefTrack(0:3, i_t, i_track)
+      i_t=0
+      Do i=1,NrPreDefTrackPoints_Max
+         read(22,"(A80)",iostat=nxx) line
+         If(nxx.ne.0) exit
+         if(line(1:1).eq.'!') cycle
+         i_t=i_t+1
+         read(line,*,iostat=nxx) lab, PreDefTrack(0:3, i_t, i_track)
          !write(2,*) PreDefTrack(0:3, i_t, i_track), i_t, i_track
          If(nxx.ne.0) exit
       Enddo
@@ -795,6 +881,223 @@ Subroutine GetPreDefTrPos(t_source,TrackPos)
    EndDo
    Return
 End Subroutine GetPreDefTrPos
+! ----------------------------------------------------------------------------------------
+Subroutine ApplyCorrelator(RA,EventNr, dD, Dnr, tauMax, Tnr)
+   Use constants, only : dp, CI, pi, c_l
+   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows, RunMode
+   Use Tracks, only : datfile !,  WriDir
+   use GLEplots, only : GLEplotControl
+   IMPLICIT none
+   Integer, parameter :: N_it=200, N_id=5  ! for the TD-trace plots
+   real*8, intent(IN) :: RA(4,*)  ! 1=t [ms]  2-4= E,N,h in [km]
+   Integer, intent(IN) :: EventNr  ! number of sources stored in RA, passing the selection criteria
+   real*8, intent(IN) :: dD  ! bin width for fine-distance
+   real*8, intent(IN) :: tauMax  ! Max range for t-grid for calculating \zeta (coarse t-grid)
+   Integer, intent(IN) :: Dnr  ! number of fine-distance points
+   Integer, intent(IN) :: Tnr  ! number of fine-time points range will be full range; not used, set equal to N_it
+   Integer :: i, i_src, j_src, m_src, n_src
+   real*8 :: TD_corr(0:Dnr), T2D_corr(0:Dnr), T4D_corr(0:Dnr), nD_dens(0:Dnr), TD_var(0:Dnr), T2D_var(0:Dnr), nrm, TD_dd
+   real*8 :: T_span, D_span, dT, t_ij, t_mn, d_ij, d_mn
+   Integer :: nD_corr(0:Dnr), T_trace(0:N_it,0:N_id), i_t, i_d,i_m
+   Real*8 :: TDCC(0:N_it,0:N_id), t_trace_CC(0:N_it,0:N_id), W_d, Omg_d, Omg_t, W_t
+   Integer :: n_corr_t(0:N_it), i_Ct
+   Real(dp) :: D_corr_t(0:N_it), n_dens_t(0:N_it), t_range_Ct, dt_Ct
+   !
+   t_range_Ct=5.  ! [ms]
+   dt_Ct=t_range_Ct/N_it  ! [ms]
+   nD_corr(0:Dnr)=0
+   TD_corr(0:Dnr)=0.
+   T2D_corr(0:Dnr)=0.
+   T4D_corr(0:Dnr)=0.
+   D_corr_t(:)=0.
+   n_corr_t(:)=0
+   T_span=RA(1,EventNr)-RA(1,1)+1.D-9  ! for rough t-binning
+   If(tauMax.gt. 0.) Then
+      T_span=tauMax
+   EndIf
+   dT=T_span/N_it  ! for  t-binning
+   D_span=dD*Dnr  ! for rough d-binning
+   write(2,*) T_span, dT, D_span
+   T_trace(:,:)=0
+   Omg_t=dT
+   Omg_d=dD
+   TDCC(:,:)=0.
+   TD_dd = D_span/(4.*N_id)  ! d_bin size for t-trace plots; factor 4 to get better resolution for the smaller distances
+   !
+   Do i_src=1,EventNr-1
+      Do j_src=i_src+1,EventNr
+         d_ij=sqrt( SUM((RA(2:4,i_src)-RA(2:4,j_src))**2) )
+         i=FLOOR(d_ij/dD)
+         If(i.gt.Dnr) i=Dnr
+         t_ij=ABS(RA(1,j_src)-RA(1,i_src))  ! Is already positive because of the presorting in RA
+         TD_corr(i)=TD_corr(i) + t_ij
+         T2D_corr(i)=T2D_corr(i) + t_ij**2
+         T4D_corr(i)=T4D_corr(i) + t_ij**4
+         nD_corr(i)=nD_corr(i)+1
+         !
+         i_t=FLOOR(t_ij/dT)
+         If(i_t.gt.N_it) i_t=N_it
+         i_d=Floor( d_ij/TD_dd )  ! factor 4 to get better resolution for the smaller distances
+         If(i_d.gt.N_id) Then
+            If(i_t.gt.N_it) cycle
+            i_d=N_id
+         EndIf
+         T_trace(i_t,i_d)=T_trace(i_t,i_d)+1
+         !
+         i_Ct=FLOOR(t_ij/dt_Ct)
+         If(i_Ct .gt. N_it) i_Ct=N_it
+         n_corr_t(i_Ct) = n_corr_t(i_Ct) +1
+         D_corr_t(i_Ct) = D_corr_t(i_Ct) + d_ij
+         !
+         If(EventNr.lt.-200) Then
+            Do m_src=1,EventNr-1
+               Do n_src=i_src+1,EventNr
+                  d_mn=sqrt( SUM((RA(2:4,m_src)-RA(2:4,n_src))**2) )
+                  If(abs(d_ij-d_mn) .gt. 3.*Omg_d) cycle
+                  t_mn=ABS(RA(1,m_src)-RA(1,n_src))
+                  i_d=Floor( N_id*(d_ij+d_mn)/(2.*D_span) )
+                  w_d=exp(-((d_ij-d_mn)/Omg_d)**2)
+                  Call AddTDCC(t_ij, t_mn, Omg_t, dt, w_d, TDCC(0,i_d), N_it)
+                  Call AddTDCC(t_ij,-t_mn, Omg_t, dt, w_d, TDCC(0,i_d), N_it)
+               EndDo ! n_src=i_src+1,EventNr
+            EndDo ! m_src=1,EventNr-1
+         EndIf
+      EndDo ! j_src=i_src+1,EventNr
+      If(EventNr.lt.200) write(2,*) 'i_src:', i_src, TDCC(:,1)
+      flush(unit=2)
+   EndDo ! i_src=1,EventNr-1
+   !
+   write(2,*) 'tD_correlations, distance step=',dD
+   !
+   !Normalize
+   !nT_corr(0:N_it)=sum(T_trace(0:N_it,:))
+   D_corr_t(:)=D_corr_t(:)/(n_corr_t(:)+0.00001)
+   n_dens_t(:)=n_corr_t(:)/(dt_Ct*(EventNr-1)*EventNr/2.)
+   TD_corr(:)=TD_corr(:)/(nD_corr(:)+0.001)
+   T2D_corr(:)=T2D_corr(:)/(nD_corr(:)+0.001)
+   T4D_corr(:)=T4D_corr(:)/(nD_corr(:)+0.001)
+   TD_var(:)=sqrt(T2D_corr(:)-TD_corr(:)**2)
+   T2D_var(:)=sqrt(T4D_corr(:)-T2D_corr(:)**2)
+   T2D_corr(:)=sqrt(T2D_corr(:))
+   nD_dens(:)=nD_corr(:)/(dD*(EventNr-1)*EventNr/2.)
+   T_trace(:,:)=T_trace(:,:)! /(dt*dD*(EventNr-1)*EventNr)  ! same as the binned \zeta density from the notes
+   OPEN(unit=29,FILE=TRIM(DataFolder)//trim(datfile)//'TDcorr.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
+   write(29,"(2x,A,1x,I6,1x,F6.3,i5,' !')") trim(datfile), EventNr, dD, Dnr
+   Do i=0,Dnr
+      nrm=nD_corr(i)+0.001
+      !write(2,*) (i+0.5)*dD,nD_corr(i),TD_corr(i), T2D_corr(i), TD_var(i), sqrt(T2D_var(i))
+      write(29,*) (i+0.5)*dD,nD_dens(i),TD_corr(i), T2D_corr(i), TD_var(i), sqrt(T2D_var(i))
+   EndDo ! i=0,Dnr
+   close(unit=29)
+   !
+   OPEN(unit=29,FILE=TRIM(DataFolder)//trim(datfile)//'TDtrace.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
+   write(29,"(2x,A,1x,F8.3,1x,F6.3,i5,' !')") trim(datfile), T_span, TD_dd, N_id
+   Do i_t=0,N_it-1
+      !Write(2,*) i_t,T_trace(i_t,:)
+      Write(29,*) (i_t+0.5)*dt_Ct, n_dens_t(i_t), D_corr_t(i_t), (i_t+0.5)*dT, T_trace(i_t,:)/(dt*dD*(EventNr-1)*EventNr)
+   EndDo ! i_t=0,N_it
+   close(unit=29)
+   !
+   Omg_t=dT  ! smoothing window should be fair larger than bin-width for the trace
+   t_trace_CC(:,:)=0
+   Do i_d=0, N_id
+      W_t=0.
+      !W_t=SUM(T_trace(:,i_d))
+      !write(2,*) 'i_d:', i_d, W_t*W_t/((dt*dD*(EventNr-1)*EventNr)**2)
+      !W_t=W_t/(N_it+1.)
+      Do i_t= 0, N_it
+         Do i_m= 0, N_it
+            w_d=(T_trace(i_t,i_d)-W_t)*(T_trace(i_m,i_d)-W_t)
+            Call AddTDCC(i_t*dt, i_m*dt, Omg_t, dt, w_d, t_trace_CC(0,i_d), N_it)
+            Call AddTDCC(i_t*dt, -i_m*dt, Omg_t, dt, w_d, t_trace_CC(0,i_d), N_it)
+            Call AddTDCC(-i_t*dt, i_m*dt, Omg_t, dt, w_d, t_trace_CC(0,i_d), N_it)
+            Call AddTDCC(-i_t*dt, -i_m*dt, Omg_t, dt, w_d, t_trace_CC(0,i_d), N_it)
+         EndDo
+      EndDo
+      !W_t=SUM(T_trace(:,i_d))
+      !write(2,*) 'i_d:', i_d, W_t*W_t/((dt*dD*(EventNr-1)*EventNr)**2)
+      !t_trace_CC(:,i_d)=(t_trace_CC(:,i_d)-2*W_t*W_t/(N_it+1.))/((dt*dD*(EventNr-1)*EventNr)**2)
+      t_trace_CC(:,i_d)=t_trace_CC(:,i_d)*dD/((dt*dD*(EventNr-1)*EventNr)**2)
+      W_t = SUM(t_trace_CC(:,i_d))
+      write(2,*) 'SUM(t_trace_CC(:,i_d)):', W_t
+      !t_trace_CC(:,i_d)=t_trace_CC(:,i_d) - w_d
+   EndDo
+   !
+   OPEN(unit=29,FILE=TRIM(DataFolder)//trim(datfile)//'TtrCC.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
+   Do i_t=0,N_it
+      If(EventNr.lt.200) Write(2,*) i_t,TDCC(i_t,:)
+      !Write(2,*) i_t,t_trace_CC(i_t,:)
+      Write(29,*) i_t*dT, T_trace_CC(i_t,:)
+   EndDo ! i_t=0,N_it
+   close(unit=29)
+   !
+   Call GLEplotControl(PlotType='TD_corrPlot', PlotName='TDcorr_'//TRIM(datfile), &
+         PlotDataFile=TRIM(DataFolder)//trim(datfile), Submit=.false.)
+End Subroutine ApplyCorrelator
+!-----------------------------------------------------
+Subroutine AddTDCC(t_ij,t_mn, Omg_t, dt, w_d, TDCC, tCC_dim)
+   Use constants, only : dp, CI, pi, c_l
+   IMPLICIT none
+   real(dp), intent(IN) :: t_ij, t_mn, Omg_t, dt, w_d
+   Integer, intent(IN) :: tCC_dim
+   Real(dp), intent(INOUT) :: TDCC(0:tCC_dim)
+   Real(dp) :: Del_t, W_t, t_cc
+   Integer :: it_low, it_upp, i_t,i
+   Real(dp), save :: OmgT_old=-1.
+   Real(dp), save :: Wt_i(0:100), d_Wt
+   If(OmgT_old.ne.Omg_t) Then
+      d_Wt=3./99.
+      Do i_t=0,100
+         t_cc=i_t*d_Wt ! to cover the full range for 3 sigma in close to 100 intervals
+         Wt_i(i_t)=exp(-(t_cc)**2)
+      EndDo ! i_t=it_low, it_upp
+      OmgT_old = Omg_t
+      W_t=(Wt_i(0)+2.*SUM( Wt_i(1:100) ))*d_Wt
+      Wt_i(:)=Wt_i(:)/W_t
+      write(2,*) 'Wt_i', Wt_i(:)
+   EndIf
+   Del_t=(t_ij-t_mn)  !   t_ij >0   exp(-(T_cc-(t_ij-t_mn))**2/omg**2)
+   it_low=CEILING((-3*Omg_t+Del_t)/dt)
+   If(it_low.lt.0) it_low=0
+   If(it_low.gt.tCC_dim) return
+   it_upp=FLOOR((3*Omg_t+Del_t)/dt)
+   If(it_upp.lt.0) return
+   If(it_upp.gt.tCC_dim) it_upp=tCC_dim
+   Do i_t=it_low, it_upp
+      t_cc=dt*i_t
+      i=NINT( ABS((t_cc-Del_t)/(d_Wt*Omg_t)) )
+      !W_t=exp(-((t_cc-Del_t)/Omg_t)**2)
+      W_t=Wt_i(i)*dt/Omg_t
+      TDCC(i_t)=TDCC(i_t) + W_d*W_t
+   EndDo ! i_t=it_low, it_upp
+   !write(2,*) 'it_low, it_upp', t_ij,t_mn, it_low, it_upp, TDCC(it_low: it_upp)
+   Return
+End Subroutine AddTDCC
+! ----------------------------------------------------------------------------------------
+Subroutine ApplyQualityAna()  ! du -sh  directory size
+   Use constants, only : dp
+   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows, RunMode
+   Use Tracks, only : datfile !,  WriDir
+   use GLEplots, only : GLEplotControl
+   Use Tracks, only : EventNr, Label, QualIndic
+   IMPLICIT none
+   Integer :: i, i_src
+   !
+         Write(2,*) 'option: ','Qual'
+   !
+   OPEN(unit=29,FILE=TRIM(DataFolder)//trim(datfile)//'QuAna.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
+   write(29,"(2x,A,1x,I6,1x,F6.3,i5,' !')") trim(datfile), EventNr
+   Write(2,*) 'Quality Indicator analysis, writing ',trim(datfile), EventNr
+   Do i_src=1,EventNr
+      write(29,*) Label(1:4,i_src), QualIndic(1:4,i_src)
+   EndDo ! i_src=1,EventNr-1
+   !
+   close(unit=29)
+   !
+   Call GLEplotControl(PlotType='QualContrPlot', PlotName='QC_'//TRIM(datfile), &
+         PlotDataFile=TRIM(DataFolder)//trim(datfile), Submit=.false.)
+End Subroutine ApplyQualityAna
+!-----------------------------------------------------
 ! ----------------------------------------------------------------------------------------
 !     shellin = 'gle /d pdf '//trim(dummy3(i))//'.gle'
 !     CALL system(shellin)

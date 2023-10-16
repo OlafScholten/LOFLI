@@ -42,6 +42,7 @@ Module Chunk_AntInfo
     Integer, save :: AntennaNrError=0
     Integer, save :: TimeFrame
     Integer, save :: PeaksPerChunk=500  ! actual max number of peaks that will be used (set on input)
+    Integer, save :: Station_OutOfRange(1:Station_nrMax) ! number of time cleanPeak finds the trace for this station is insufficient to hold the pulse
     Integer, parameter :: MaxPeaksPerChunk=500             ! Maximal number of peaks per chunck
     !Integer, save :: PeakD_nr                      ! obtained number of peaks while in 'Dual' option
     !Integer, save, allocatable :: PeakSP(:,:)     ! peak Sample nr
@@ -117,7 +118,7 @@ Module ThisSource
     Real(dp), save :: StStdDevMax_ns=100.d0  ! Maximum allowed standard deviation in antenna-arraval times for a pulse in one station while calibrating
     Complex(dp), save, allocatable :: CnuRt(:,:,:)
     Real(dp), save, allocatable :: t_CCorr(:)
-    integer, save, allocatable :: Unique_pos(:)  ! Used in Xindx to store the peakpositions to find double peaks
+    !integer, save, allocatable :: Unique_pos(:)  ! Used in Xindx to store the peakpositions to find double peaks
     Real(dp), save, allocatable :: CC_WidRef(:)  ! Estimate of the width of the cross correlation
     Real(dp), save, allocatable :: CC_Qual(:,:)  ! Quality of the cross correlation
     Real(dp), save :: CCShapeCut=0.1            ! Shape Quality cut parameter use to cut correlation spectra that differ from the self-correlation
@@ -175,7 +176,7 @@ Module ThisSource
        Allocate( Dropped(1:Station_nrMax,1:PeakNr_dim) ) ! Number of antennas effectively dropped from the fitting
        Dropped(:,:)=0
        Allocate( t_CCorr(-Safety:Safety) )
-       Allocate( Unique_pos(1:PeakNr_dim) ) ! Used in Xindx to store the peakpositions to find double peaks
+       !Allocate( Unique_pos(1:PeakNr_dim) ) ! Used in Xindx to store the peakpositions to find double peaks
        Allocate( CC_WidRef(1:PeakNr_dim) ) ! Estimate of the width of the cross correlation
        Allocate( CC_Qual(1:Ant_nrMax,1:PeakNr_dim) ) ! Quality of the cross correlation
        !write(2,"(A,o10,i7)") 'from Alloc_ThisSource, T2_dim:', T2_dim, T2_dim
@@ -185,7 +186,7 @@ End Module ThisSource
 Module FitParams
     use constants, only : dp
     use DataConstants, only : Ant_nrMax, Station_nrMax
-    integer, parameter :: N_FitPar_max=500
+    integer, parameter :: N_FitPar_max=700
     Logical, save :: Fit_AntOffset=.false.  ! .false. ! when .true. fit the off-sets for each antenna in the stations to be fitted
     Logical, save :: FitIncremental=.true.
     Logical, save :: CalcHessian=.false.

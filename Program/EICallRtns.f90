@@ -130,7 +130,7 @@ Subroutine EI_PolarizPeak(i_Peak)
    Call EI_PolSetUp(Nr_IntFerCh(i_chunk), IntfBase, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
       Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak))
    Windw=3*N_Smth
-   !write(2,*) 'EI_PolarizPeak:W_ap='
+   !write(2,*) 'EI_PolarizPeak: Outpt=',Outpt
    write(Label,"('Pk ',i4.2)") i_Peak
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
       Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), &

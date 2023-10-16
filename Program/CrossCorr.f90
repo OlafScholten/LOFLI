@@ -65,15 +65,15 @@ Subroutine BuildCC(StatMax,DistMax)
                ! N.B. It loops over all antenna's not knowing the polarity of the peak
                If(i_ant.eq.ReferenceAnt) cycle
                 If(Ant_Stations(i_ant,i_chunk) .ne. Station) then
-                    Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))
+                    Dist=sqrt(sum((Ant_pos(:,i_ant,i_chunk)-Ant_pos(:,1,i_chunk))**2))  ! should be ReferenceAnt and not 1 ???
                     Station=Ant_Stations(i_ant,i_chunk)
                 endif
                 ! write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
                 ! flush(unit=2)
                 !
-                If(Ant_Stations(i_ant,i_chunk) .gt. StatMax) cycle  ! Limit to antennas near the superterp
-                If(Dist .gt. DistMax*1000.) cycle  ! Limit to antennas near the superterp
-                if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. i_eo) cycle       ! limit to odd antennas
+                If(Ant_Stations(i_ant,i_chunk) .gt. StatMax) cycle
+                If(Dist .gt. DistMax*1000.) cycle  ! Limit to antennas near the superterp (dist in [m], DistMax in [km])
+                if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. i_eo) cycle       ! keep antenna orientation
                 !If(Polariz) Then
                 !  if((Ant_IDs(i_ant+1,i_chunk)-Ant_IDs(i_ant,i_chunk)) .ne. 1) cycle       ! limit to even-odd antenna pairss
                 !EndIf
@@ -126,7 +126,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
     use ThisSource, only : Safety, T2_Dim, Tref_dim, prntCCNrm, TotPeakNr, PeakPos, RefAntErr
     use ThisSource, only : CC_Wid, CC_Max, CC_Int, CC_WidRef, CC_Qual, CCShapeCut
     use FitParams, only : MeanCircPol, i_SAI
-    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetAnt, Fit_TimeOffsetStat, PulsPosCore  ! N_FitPar_max, 
+    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetAnt, Fit_TimeOffsetStat, PulsPosCore  ! N_FitPar_max,
     use constants, only : dp,pi,ci,sample
     use StationMnemonics, only : Station_ID2Mnem, Statn_ID2Mnem
     Use Interferom_Pars, only : dtAnt_tp, NSrc_tp
@@ -158,26 +158,26 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
    !endif
    !
    !
-    !prnt = .true.
-    !prntCCNrm = .true.
-    j_corr=j_corr+1
-    CorrAntNrs(j_corr,i_eo, i_chunk)=i_ant
-    if(j_corr.eq. 1) then
-        If((i_eo.eq.0) .and. (i_chunk.eq.1)) then
-            PeakNr1=1
-        elseif(i_eo.eq.0) then
-            PeakNr1=TotPeakNr(1,i_chunk-1) + 1
-        Else
-            PeakNr1=TotPeakNr(0,i_chunk) + 1
-        Endif
-    Endif
-    If(PeakNr1.gt.TotPeakNr(i_eo,i_chunk)) return
-    !
-    Do i_stat=1,Nr_UniqueStat  ! Get station number from unique list to retrieve timing-offset
-        If(Unique_StatID(i_stat).eq. Ant_Stations(i_ant,i_chunk)) exit
-    Enddo
-    StatFineOff=Fit_TimeOffsetStat(i_stat)
-    Antenna_SAI=1000*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
+   !prnt = .true.
+   !prntCCNrm = .true.
+   j_corr=j_corr+1
+   CorrAntNrs(j_corr,i_eo, i_chunk)=i_ant
+   if(j_corr.eq. 1) then
+     If((i_eo.eq.0) .and. (i_chunk.eq.1)) then
+         PeakNr1=1
+     elseif(i_eo.eq.0) then
+         PeakNr1=TotPeakNr(1,i_chunk-1) + 1
+     Else
+         PeakNr1=TotPeakNr(0,i_chunk) + 1
+     Endif
+   Endif
+   If(PeakNr1.gt.TotPeakNr(i_eo,i_chunk)) return
+   !
+   Do i_stat=1,Nr_UniqueStat  ! Get station number from unique list to retrieve timing-offset
+     If(Unique_StatID(i_stat).eq. Ant_Stations(i_ant,i_chunk)) exit
+   Enddo
+   StatFineOff=Fit_TimeOffsetStat(i_stat)
+   Antenna_SAI=1000*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
    Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
        If(Unique_SAI(i_SAI).eq. Antenna_SAI) exit
    enddo
@@ -268,16 +268,17 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
         CC_val =0.
         CC_Phase =0.
         !CCorr(:,j_corr,i_Peak)=0.
+        !If(j_corr.gt. 140)        write(2,*) 'I_ant=71936:',j_corr, i_ant, PulsPosCore, StLoc, Time_dim, T2_dim
         If(StLoc.lt.100) then
             If(.not. Production) write(2,*) '****StLoc=',StLoc,' reaches below 100, ', &
                Statn_ID2Mnem(Unique_StatID(i_stat)),i_Peak
-            CCorr(:,j_corr,i_Peak)=0
+            CCorr(:,j_corr,i_Peak)=0  !  antenna effectively excluded
             goto 9
         endif
         If(StLoc.gt.(Time_dim-T2_dim-100) ) then
             If(.not. Production) write(2,*) '****StLoc=',StLoc, ' reaches above safe upper-limit by', &
                StLoc-(Time_dim-T2_dim-100),'; ', Statn_ID2Mnem(Unique_StatID(i_stat)),i_Peak
-            CCorr(:,j_corr,i_Peak)=0
+            CCorr(:,j_corr,i_Peak)=0  !  antenna effectively excluded
             goto 9
         endif
         !RTTrace2(1:T2_dim)= Real(CTime_spectr(StLoc + 1:StLoc + T2_dim,i_ant,i_chunk))
@@ -321,7 +322,8 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
         !       NSrc_tp(i_SAI/2)=NSrc_tp(i_SAI/2)+  1
         !    endif
         !Else
-            Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
+         !If(SearchRange.le.1) Write(2,*) 'GetCorrSingAnt:SearchRange', SearchRange, j_corr
+         Call CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, ACCorr, RtMax, CC_val, CC_Phase, SearchRange, Error)
             CCorr(:,j_corr,i_Peak)=ACCorr(:)/CC_val  !  /maxval(CCorr(:,j_corr,i_Peak)); used for plotting
         !EndIf
    !call cpu_time(CPUCC)
@@ -693,6 +695,7 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
       TrueCC(-i) = TrueCC(-i)*B
    Enddo
    Range=NINT(SearchRange*SearchRangeFallOff)
+   !write(2,*) 'CrossCorr_Max:',Range, Safety, SearchRange, SearchRangeFallOff
    if(Range.gt.Safety) Range=Safety
    !if(i_ant.eq.1) write(2,*) 'TrueCC', TrueCC(-Range:Range)
    !if(i_ant.eq.1) write(2,*) 'CrCor', crcor(T2_dim), crcor(1), crcor(2)
@@ -794,6 +797,7 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
 !         Call spline_cubic_val( 2*Safety+1, t_ccorr(-Safety), TrueCC(-Safety), TrueCC_pp(-Safety), RtMax, CCval)
          Call spline_cubic_val( 2*Range+1, t_ccorr(-Range), TrueCC(-Range), TrueCC_pp(-Range), RtMax, CCval)
       EndIf
+   !write(2,*) 'CrossCorr_Max:RtMax=',RtMax, range
       If(abs(RtMax).gt.2.*SearchRange)  Then
          Error = Error+20  ! time samples
          If(.not. Production) write(2,*) 'Large deviation:',SearchRange,RtMax, Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),i_ant

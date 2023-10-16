@@ -20,7 +20,7 @@ Subroutine SI_Run
     !CTime_sum, SumStrt, SumWindw, IntFer_ant, IntfLead,
    Use Interferom_Pars, only : polar, N_pix, d_loc, CenLocPol, CenLoc, PixLoc, Nr_IntFer, IntFer_ant
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten !, MaxIntfIntenLoc
-   Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !, SlcInten, NrSlices, SliceLen, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
+   Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec
    use constants, only : dp, ci, pi !, Sample, Refrac, c_mps
    use StationMnemonics, only : Statn_ID2Mnem
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
@@ -88,7 +88,7 @@ Subroutine SI_Run
       EndDo   ! Loop over distances or heights
       !
       !----------------------------------------
-      Call OutputIntfPowrTotal(IntFer_ant(1), i_eo)
+      Call OutputIntfPowrTotal(IntFer_ant(1,1), i_eo)
       If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)
       Call OutputIntfSlices(i_eo)
       !
@@ -117,7 +117,7 @@ Subroutine InterfEngineB(i_eo, i_N, i_E, i_h, Nr_IntFer)
    !InterfEngine
    Cnu_pix(:)=0.
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
-      i_ant=IntFer_ant(j_IntFer)
+      i_ant=IntFer_ant(j_IntFer,1)
       Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
       dt_AntPix=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
       ! check dt_AntPix in range
@@ -171,7 +171,7 @@ Subroutine SISelectAntennas(i_eo)
       If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
       if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. i_eo) cycle       ! limit to odd antennas
       j_IntFer=j_IntFer+1
-      IntFer_ant(j_IntFer)=i_ant
+      IntFer_ant(j_IntFer,i_chunk)=i_ant
       If(j_IntFer .ge. Nmax_IntFer) then
          Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
          exit
@@ -180,7 +180,7 @@ Subroutine SISelectAntennas(i_eo)
    !stop
    Nr_Intfer=j_IntFer
 !   SlcNrm=1./(SliceLen*Nr_IntFer*Nr_IntFer)
-   RefAnt(i_chunk,i_eo)=IntFer_ant(1)  ! for curtainplot
+   RefAnt(i_chunk,i_eo)=IntFer_ant(1,i_chunk)  ! for curtainplot
    Return
 End Subroutine SISelectAntennas
 !-----------------------------------------------
@@ -210,7 +210,7 @@ Subroutine SISetupSpec(i_eo)
    !
    CTime_sum(:)=0.
    Do j_IntFer=1,Nr_Intfer
-      i_ant=IntFer_ant(j_IntFer)
+      i_ant=IntFer_ant(j_IntFer,1)
       !write(2,*) i_ant, j_IntFer, Ant_pos(:,i_ant,i_chunk)
       CTime_spectr(:,i_ant,i_chunk)=CTime_spectr(:,i_ant,i_chunk)/100.  ! to undo the factor that was introduced in antenna-read
       RTime(:)=REAL(CTime_spectr(IntfBase:IntfBase+IntfDim,i_ant,i_chunk))
@@ -270,7 +270,7 @@ Subroutine SISetupSpec(i_eo)
    !   ,  IntFer_ant(Nr_IntFer/2+1), Cnu(Nr_IntFer/2+1,IntfNuDim/2)
    CTime_sum(:)=CTime_sum(:)/Nr_IntFer
    !
-   i_ant=IntFer_ant(1)
+   i_ant=IntFer_ant(1,1)
    t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
    write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
       ', time difference with central pixel=',t_shft*1000.,'[ms]'
@@ -286,7 +286,7 @@ Subroutine SISetupSpec(i_eo)
          i_s=1+i*N_smth
          SmPow=0.
          Do j=-N_smth,N_smth
-            SmPow=SmPow+smooth(j)*(ABS(CTime_spectr(SumStrt+i_s+j,IntFer_ant(1),i_chunk)))**2
+            SmPow=SmPow+smooth(j)*(ABS(CTime_spectr(SumStrt+i_s+j,IntFer_ant(1,i_chunk),i_chunk)))**2
          Enddo
          RefSmPowTr(i)=SmPow
       Enddo

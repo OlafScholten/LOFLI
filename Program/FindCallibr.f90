@@ -49,7 +49,7 @@ Subroutine FindCallibr(SourceGuess)
    !character*80 :: lname  ! Should be 80 to be compatible with "GetNonZeroLine"
    character*10 :: txt
    character*35 :: Frmt
-   real(dp) :: x1,x2,x3,t
+   real(dp) :: x1,x2,x3,t, ZeroCalOffset
    logical :: FitNoSources=.true.
    logical :: NewPeak
     real(dp) :: dt,B, MTC, dtI
@@ -155,7 +155,11 @@ Subroutine FindCallibr(SourceGuess)
    write(2,*) 'Peakpos:',Peakpos
    write(2,*) 'Peak_eo:',Peak_eo
    write(2,*) 'ChunkNr:',ChunkNr
-   write(2,*) 'SourcePos:',SourcePos
+   write(2,"(1x,A,100F12.3)") 'SourcePos1:',SourcePos(1,1:PeakNrTotal)
+   write(2,"(1x,A,100F12.3)") 'SourcePos2:',SourcePos(2,1:PeakNrTotal)
+   write(2,"(1x,A,100F12.3)") 'SourcePos3:',SourcePos(3,1:PeakNrTotal)
+   write(2,*) TotPeakNr
+   write(2,*) PeakNr
    flush(unit=2)
    !
    !write(2,*) 'FullSourceSearch: ', FullSourceSearch
@@ -278,11 +282,12 @@ Subroutine FindCallibr(SourceGuess)
       MeanCircPol=.false.
    Endif
    Write(2,"(//,A,F5.1)") ' ==== Summary of new parameters, stations will be dropped when timing-StDev exceeds ', StStdDevMax_ns
-   Call PrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
+   ZeroCalOffset=0.
    If(WriteCalib) then
-      Call WriteCalibration ! was MergeFine
+      Call WriteCalibration(ZeroCalOffset) ! was MergeFine
    Endif
+   Call PrntNewSources(ZeroCalOffset)
    !
    PlotCCPhase=.false.
    Return
@@ -462,11 +467,13 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
       FP_s(1:i)=pack(Unique_StatID(1:Nr_UniqueStat), mask(1:Nr_UniqueStat) )
       !write(2,*) 'FP_s',FP_s(0:Nr_UniqueStat)
       !Flush(unit=2)
+      N_FitPar=i
    ElseIf(option.eq. 'ante') Then
       Fit_AntOffset=.true.
       write(2,*) 'fit calibration for antennas in stations separately'
    endif
    !
+   Write(2,"(A,I3,A)") "Fitting timings for",N_FitPar," stations"
    If(FitNoSources) Write(2,*) 'No source parameters are being fitted'
    Return
    !

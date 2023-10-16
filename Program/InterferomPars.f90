@@ -40,6 +40,9 @@ Module Interferom_Pars
    Real(dp), allocatable :: MaxSmPowQ(:), MaxSmPowU(:), MaxSmPowV(:)
    Real(dp), allocatable ::  MaxSmPowI3(:), MaxSmPowU1(:), MaxSmPowV1(:), MaxSmPowU2(:), MaxSmPowV2(:)
    Real, allocatable :: PixSmPowTr(:,:,:,:)  ! Array can be huge, and single precision should be sufficient
+   Real(dp), save :: RMSGridInterpol(1:3)=(/0.d0,0.d0,0.d0/)  ! to keep statistics on shift from gridpoint.
+   Integer, save :: NGridInterpol=0  ! the number of sources used for calculating RMSGridInterpol
+   Integer, save :: NGridExtrapol=0  ! Number pf times the grid interpolation goes beyond the set limit of 0.75 (in 3D grid spacing) and thus looks like extrapolate 
    Integer :: N_smth=40  ! 40 gives much better localization than 20, less radial scatter (checked 5 Febr 2021)
    Integer :: N_fit ! sets window used for calibration fitting
    Real(dp), allocatable, save :: smooth(:)

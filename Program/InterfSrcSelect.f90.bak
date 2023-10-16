@@ -283,7 +283,7 @@ PROGRAM InterfSrcSel
 
 999 continue
    Call GLEplotControl( Submit=.true.)
-   ! stop ! prints error messages that are to be ignored
+    stop
 !--------------------------------------------------
 End Program InterfSrcSel
 !===============================================

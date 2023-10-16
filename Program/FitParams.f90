@@ -1,6 +1,6 @@
     !include 'C:/OlafsUtil/Spline/MGMR3D_spline.f90'
     !Include '../../NumLib/Spline/MGMR3D_spline.f90'  ! ~/NumLib
-    Include 'MGMR3D_spline.f90'  ! ../../NumLib
+!    Include 'MGMR3D_spline.f90'  ! ../../NumLib
     !Include '/home/olaf/NumLib/Spline/MGMR3D_spline.f90'  ! should have been  ~/NumLib  which did not work
     ! Fitter included after the module, needed to properly define the function to optimize
     ! v17 : offset in Nr_TimeOffset reduced by 1 in XIndx
@@ -338,23 +338,41 @@ End Subroutine Find_unique_StatAnt
 !===================================
 Integer Function XIndx(i,i_peak)
     use FitParams, only : FitParam, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset
-    use DataConstants, only : PeakNr_dim, RunMode
+    use DataConstants, only : PeakNr_dim, RunMode, ChunkNr_dim
     !use FittingParameters
-    use ThisSource, only : PeakNrTotal, PeakPos, Dual, Unique_pos
+   use ThisSource, only :  PeakNr, TotPeakNr, ChunkNr
+    use ThisSource, only : PeakNrTotal, PeakPos, Dual !, Unique_pos
     use unque, only : unique
     Implicit none
     logical, save :: First=.true.
     integer, intent(in) :: i, i_Peak ! i stands for the parameter label as in FitParam(N_FitStatTim+i)
-    integer :: k, i_pk
+    integer :: k, i_pk, i_chunk
     integer,dimension(:),allocatable :: vec_unique
+    integer, save, allocatable :: Unique_pos(:),Fit_PeakNrChk(:)  ! Used in Xindx to store the peakpositions to find double peaks
     !integer, save :: Unique_pos(1:PeakNr_dim)
     !Integer :: i_chunk, i_eo, k
     If(first) then
        If(Dual) then
-         Call unique(PeakPos(1:PeakNrTotal),vec_unique)
-         Fit_PeakNrTotal=size(vec_unique)
-         Unique_pos(1:Fit_PeakNrTotal)=vec_unique(1:Fit_PeakNrTotal)
-         Deallocate(vec_unique)
+         Allocate( Unique_pos(1:PeakNr_dim) ) ! Used in Xindx to store the peakpositions to find double peaks
+         Allocate( Fit_PeakNrChk(0:ChunkNr_dim) ) ! Used in Xindx to store the peakpositions to find double peaks
+         Fit_PeakNrTotal=0
+         Fit_PeakNrChk(0)=0
+         i_pk=1
+         Do i_chunk=1, ChunkNr_dim
+         !TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
+         !PeakNr(i_eo,i_chunk)=        ! number of peaks for this (i_eo,i_chunk)
+            Call unique(PeakPos(i_pk:TotPeakNr(1,i_chunk)),vec_unique)
+            i_pk=TotPeakNr(1,i_chunk)+1
+            k=size(vec_unique)
+            Unique_pos(Fit_PeakNrTotal+1:Fit_PeakNrTotal+k)=vec_unique(1:k)
+            Fit_PeakNrTotal=Fit_PeakNrTotal+k
+            Fit_PeakNrChk(i_chunk)=Fit_PeakNrTotal
+            Deallocate(vec_unique)
+         Enddo
+         !Call unique(PeakPos(1:PeakNrTotal),vec_unique)
+         !Fit_PeakNrTotal=size(vec_unique)
+         !Unique_pos(1:Fit_PeakNrTotal)=vec_unique(1:Fit_PeakNrTotal)
+         !Deallocate(vec_unique)
          !write(2,*) 'Fit_PeakNrTotal=',Fit_PeakNrTotal
        else
          Fit_PeakNrTotal=PeakNrTotal
@@ -364,7 +382,8 @@ Integer Function XIndx(i,i_peak)
     i_pk=i_Peak
     k=0
     If(Dual .and. (FitParam(N_FitStatTim+i).ne.4) ) then
-        Do k=1,Fit_PeakNrTotal
+        i_chunk=ChunkNr(i_Peak)
+        Do k=Fit_PeakNrChk(i_chunk-1)+1,Fit_PeakNrChk(i_chunk)
             If(Unique_pos(k) .eq. PeakPos(i_Peak)) then
                 i_pk=k
                 exit

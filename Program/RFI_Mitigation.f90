@@ -503,7 +503,7 @@ Subroutine BuildRFIFilter()
 ! A more important effect is that the power of a single chunk is given by the sum(over frequency) of squares.
 !     The normalization 'powr' is calculated as a sum of squares of average amplitudes. Since an average (or sum) of squares
 !     is larger than the square of average amplitudes, the norm, 'powr', is thus too small. Phenomenologically it should be
-!     increased by a factor of about 1.12
+!     increased by a factor of about 1.12 = sqrt(4/pi) since Freq_s(:)=Freq_s(:) + abs(Cnu_s(:))
 !
    use constants, only : dp,pi ! ,ci, sample
    use DataConstants, only : Time_dim, Cnu_dim
@@ -543,8 +543,8 @@ Subroutine BuildRFIFilter()
          Filtring=Filtring + 1
       Endif
          Powr=Powr + Freq_s(nu)*Freq_s(nu)*nu_fltr(nu)
-   Enddo
-   ! apply (sum of square) in stead of (square of sum) factor (4/pi)
+   Enddo  ! nu=nu_i-dnu,nu_f!
+   ! apply (sum of square) in stead of (square of sum) factor (4/pi) since Freq_s(:)=Freq_s(:) + abs(Cnu_s(:))  and later /NBackgr
    Powr=Powr*4./pi
    Freq_s(:)=Freq_s(:)/sqrt(Powr)  ! Normalize the average frequency spectrum
    !Write(2,*) '# filtered frequencies=',Filtring,', RMS=',sqrt(Powr) !,FiltPwr

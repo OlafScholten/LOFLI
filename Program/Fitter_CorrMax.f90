@@ -1,6 +1,6 @@
     !include 'C:/OlafsUtil/Minimizer_ASA/asa047.f90'
     !Include '../../NumLib/LSQ/nl2sol.f90'
-    Include 'nl2sol.f90'
+!    Include 'nl2sol.f90'
 !=================================
 Subroutine FitCCorr(X)
 !   Use method of steepest descent by calling routine PRAXIS

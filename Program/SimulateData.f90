@@ -3,6 +3,7 @@
     Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
     Include 'MappingUtilities.f90'
     !Include 'GLEplotUtil.f90'
+    Include 'AntFuncCnst.f90'
     Include 'AntFunct.f90'
     !Include 'Ant-Read.f90'
     !Include 'CrossCorr.f90'
@@ -11,12 +12,12 @@
 !-----------------------------------
 !-----------------------------------
 Program Simulate_Data
-   use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
+   use constants, only : dp,sample,pi,  c_mps ! ,Refrac,pi,ci
    use DataConstants, only : Station_nrMax
    use AntFunCconst, only : Freq_min, Freq_max
    use AntFunCconst, only : J_0p, J_0t, J_1p, J_1t,Gain
    use AntFunCconst, only : Ji_p0,Ji_t0,Ji_p1,Ji_t1
-   use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt, RFTransform_su, DAssignFFT, RFTransform_CF2RT
+   use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_su, DAssignFFT, RFTransform_CF2RT  ! , RFTransform_CF_Filt
 ! from: https://gcc.gnu.org/onlinedocs/gcc-4.9.4/gfortran/SELECTED_005fCHAR_005fKIND.html
          !Description:
          !    SELECTED_CHAR_KIND(NAME) returns the kind value for the character set named NAME, if a character set with such a name is supported, or -1 otherwise. Currently, supported character sets include “ASCII” and “DEFAULT”, which are equivalent, and “ISO_10646” (Universal Character Set, UCS-4) which is commonly known as Unicode.
@@ -55,7 +56,7 @@ Program Simulate_Data
    Complex(dp), allocatable :: CTime_0(:), CTime_1(:)
    Real(dp), allocatable :: FTime_0(:,:), FTime_1(:,:)
    Complex(dp), allocatable :: CNu_s(:), CNu_0(:), CNu_1(:), CNu_p(:), CNu_t(:)
-   Real(dp), allocatable :: nu_Fltr(:) !, Av, Bv, FiltFact
+   !Real(dp), allocatable :: nu_Fltr(:) !, Av, Bv, FiltFact
    !
    Real(dp) :: Ras(1:3), Vec_p(1:3), Vec_t(1:3)
    Real(dp) :: D, HorDist, A_p,A_t, FracGalacNoisePow, GN, IstN, TotalGain, NormPulseAmp0Bckg, TimingErr_ns
@@ -64,20 +65,29 @@ Program Simulate_Data
    Character(len=12) :: Station_name, Lab1, Lab2, Lab3, Lab4
    Integer :: i_file, i_ant, j_ant, Ant_nr, i_sample, k, Ant_IDs(1:AntpStat)
    Integer,save :: EvenOdd=-1
-   Integer :: inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, nxx
-   Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
-   Integer :: i_freq, i_nu, i_src, SrcNr, i_sampl
+   Integer :: inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, nxx, N_even, N_odd
+   Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr, N_TRID, NrmStI
+   Real(dp) :: BckgrPwr_0, BckgrPwr_1, NormEvenOdd=1.d2 !,StatAnt_Calib !,StartTime_ms
+   Integer :: i_freq, i_nu, i_src, SrcNr, i_sampl, IntfSmoothWin
    Character(LEN=180) :: lname
    Character(len=20) :: Utility, release, Antennas, Simulation, OutFileLabel, Folder
    INTEGER :: DATE_T(8),i
    Real :: random_stdnormal
-   NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples, TimingErr_ns !, &
+   NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples, TimingErr_ns, IntfSmoothWin !, &
    !   SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh
    !
    Open(unit=2,STATUS='unknown',ACTION='write', FILE ="Simulate.out")
    FracGalacNoisePow=0.5
    OutFileLabel=""
    TimingErr_ns = 1 ! [ns]
+   IntfSmoothWin=20
+   N_even=0
+   N_odd=0
+   BckgrPwr_0=0.
+   BckgrPwr_1=0.
+   !EmpNoiseNorm=sqrt(sqrt(4/pi)/2.) ! empirical fudge factor to set background=1., do not really understand, possibly related to adding random numbers for background
+   ! factor 1/2 to
+   !NormEvenOdd=1.d2   ! to undo the action of NormEven & NormOdd in AntennaRead
    !
    Read(*,NML = Parameters)
    !
@@ -110,7 +120,7 @@ Program Simulate_Data
    allocate( CTime_0(1:NtSamples), CTime_1(1:NtSamples) )
    allocate( FTime_0(1:NtSamples,1:AntpStat), FTime_1(1:NtSamples,1:AntpStat))
    allocate( CNu_s(0:NnuSamples), CNu_0(0:NnuSamples), CNu_1(0:NnuSamples), CNu_p(0:NnuSamples), CNu_t(0:NnuSamples))
-   allocate( nu_Fltr(0:NnuSamples) )!, Av, Bv, FiltFact
+   !allocate( nu_Fltr(0:NnuSamples) )!, Av, Bv, FiltFact
    !
    If( TRIM(Simulation).eq.TRIM(Antennas) ) then
       write(2,*) 'Simulation and Antennas should be different: ', TRIM(Simulation),'=', TRIM(Antennas)
@@ -119,12 +129,55 @@ Program Simulate_Data
    !
    write(2,NML = Parameters)
    Call AntFieParGen()
+   Call RFTransform_su(NtSamples)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   dnu=100./NnuSamples   ! [MHz] Jones matrix is stored on 1MHz grid
+   inu1=Int(Freq_min/dnu)+1
+   inu2=Int(Freq_max/dnu)-1
+   !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
+   !nu_Fltr(:)=0.
+   !nu_Fltr(inu1:inu2)=1.
    !
    TotalGain=0.
    Do i_freq=Freq_min,Freq_max
       TotalGain=TotalGain + Gain(i_freq)*Gain(i_freq)
    EndDo
    TotalGain=sqrt(TotalGain)*(Freq_max-Freq_min) ! take out bandwidth to get total power gain
+   NormPulseAmp0Bckg=PulseRespWidth*sqrt(14.)/TotalGain  !  14 probably effective frequency band LOFAR
+   !
+   ! Calculation of norm to agree with the TRI-D imager
+   Sample_Offset = NtSamples/2 ! in units of sample size
+   SubSample_Offset = 0.
+   RTime_s(:)=0.
+   RTime_s(Sample_Offset)=1.
+   Call RFTransform_CF(RTime_s,Cnu_s(0)) ! delta peak at right time
+   !Call RFTransform_CF2CT(Cnu_s(0),CTime_1(1) )
+   !write(2,*) sqrt(SUM(abs(CTime_1(:))**2)),CTime_1(Sample_Offset-1),CTime_1(Sample_Offset),CTime_1(Sample_Offset+1)
+   Cnu_s(0:inu1-1)=0.
+   Cnu_s(inu2+1:NnuSamples)=0.
+   ! previous is same as:
+   !nu_Fltr(:)=1.
+   !Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s(0)) ! delta peak at right time
+   !Cnu_s(0:inu1-1)=0.
+   !Cnu_s(inu2+1:NnuSamples)=0.
+   Do i_nu=inu1,inu2   ! Increment frequency spectrum with this antenna
+      nu=i_nu*dnu
+      i_freq=Int(nu)
+      dfreq=nu-i_freq ! phase-shifts are zero for centran pixel, no timeshift!!
+      Cnu_s(i_nu) = ((1.-dfreq)*Gain(i_freq) + dfreq*Gain(i_freq+1))* Cnu_s(i_nu)
+   Enddo
+   Call RFTransform_CF2CT(Cnu_s(0),CTime_1(1) )
+   N_TRID=0.
+   Do i_sampl=-IntfSmoothWin/2, IntfSmoothWin/2
+      N_TRID=N_TRID + (ABS(CTime_1(Sample_Offset+i_sampl)))**2  ! smooth(j)*
+      !write(2,*) i_sampl, ABS(CTime_1(Sample_Offset+i_sampl))
+   EndDo
+   N_TRID=(N_TRID/IntfSmoothWin)
+
+   NrmStI=N_TRID*(NormPulseAmp0Bckg**2)
+   i_sampl=IntfSmoothWin/2
+   write(2,"(A,F7.4,A,F7.4,A,F9.3,A,I3)") 'TRI-D re-norm', sqrt(NrmStI),', Intensity at window edge=', 100* &
+      (0.5*(ABS(CTime_1(Sample_Offset-i_sampl))+ABS(CTime_1(Sample_Offset+i_sampl)))/ABS(CTime_1(Sample_Offset)))**2 &
+      ,'% of peak, TotalGain=', TotalGain, ', slicing window IntfSmoothWin=',IntfSmoothWin
    !
    Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure.dat')
    !
@@ -132,15 +185,7 @@ Program Simulate_Data
    Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
    !
    call random_seed()
-   Call GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr)
-   !
-   Call RFTransform_su(NtSamples)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-   dnu=100./NnuSamples   ! [MHz] Jones matrix is stored on 1MHz grid
-   inu1=Int(Freq_min/dnu)+1
-   inu2=Int(Freq_max/dnu)-1
-   !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band
-   nu_Fltr(:)=0.
-   nu_Fltr(inu1:inu2)=1.
+   Call GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr,NrmStI)
    !
    Station_name='CXnnn'
    SourceGuess(:)=SourcesListLocNEh(:,1)
@@ -192,7 +237,7 @@ Program Simulate_Data
       ! Start constructing traces
       !
       Call RelDist(SourceGuess,Ant_pos(:,1),RDist)
-      StatStartTime=SourcesListTms(1)/(Sample*1000.)+RDist-200 ! place first source at sample 50 in trace
+      StatStartTime=SourcesListTms(1)/(Sample*1000.)+RDist-200 ! place first source at sample 200 in trace
       StatStartTime=StatStartTime + TimingErr_ns * random_stdnormal()/5. ! to convert timing error to samples
       write(22,*) 'StartTime[ms]=', StatStartTime*(Sample*1000.), 'N_samples=', NtSamples, &
             'N_ant=', Ant_nr, 'P_noise= 1.'  ![ms],,&  =noise power
@@ -219,49 +264,59 @@ Program Simulate_Data
          EndDo
          Call RFTransform_CF(RTime_0,Cnu_p(0))
          Call RFTransform_CF(RTime_1,Cnu_t(0)) ! pure noise, flat frequency spectrum
+         !
          ! Get Zenithal antenna function
-         !Cnu_0(:)=0.
-         !Cnu_1(:)=0.
          Thet_d =0.
          Phi_d =0.
          Call AntFun(thet_d ,Phi_d ) ! sets J_0p,J_0t,J_1p,J_1t;  Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
-         !J_0p(:)=CONJG(J_0p(:))
-         !J_1p(:)=CONJG(J_1p(:))
-         !J_0t(:)=CONJG(J_0t(:))
-         !J_1t(:)=CONJG(J_1t(:))
-         IstN=sqrt((1.-FracGalacNoisePow)*0.33)
-         GN=sqrt(FracGalacNoisePow*12.) ! phenomenological factor to have similar power in GalNoise as in InstNoise (when GalacNoise=1.)
+         !
+         IstN=sqrt((1.-FracGalacNoisePow)*NnuSamples/(inu2-inu1))
+         GN=(sqrt((FracGalacNoisePow)*NnuSamples/(inu2-inu1)))/sqrt(0.0273) ! *4.62 ! phenomenological factor to have similar power in GalNoise as in InstNoise (when GalacNoise=1.)
+         !write(2,*) 'FracGalacNoisePow', FracGalacNoisePow, IstN, GN, (inu2-inu1)*1./NnuSamples
          GN= GN*(inu2+inu1)*dnu/TotalGain
+         !write(2,*) 'GalacNoisePow', (inu2+inu1),dnu,TotalGain, (inu2+inu1)*dnu/TotalGain, (inu2-inu1)*1./NnuSamples
+         !  GalacNoisePow        2252   4.8828125000000000E-002   17.869174845587548        6.1536662129170869       0.699218750
+         !
+         Cnu_0(0:inu1-1)=0.
+         Cnu_0(inu2+1:NnuSamples)=0.
+         Cnu_1(0:inu1-1)=0.
+         Cnu_1(inu2+1:NnuSamples)=0.
          Do i_nu=inu1,inu2   ! Pull through antenna function with 1/nu frequency spectrum
             nu=i_nu*dnu
             i_freq=Int(nu)
             dfreq=nu-i_freq
-            Cnu_0(i_nu)=IstN*Cnu_0(i_nu) + &
+            Cnu_0(i_nu)=(IstN*Cnu_0(i_nu) + &
                         ((1.-dfreq)*J_0p(i_freq) + dfreq*J_0p(i_freq+1)) * Cnu_p(i_nu)*GN/nu + &
-                        ((1.-dfreq)*J_0t(i_freq) + dfreq*J_0t(i_freq+1)) * Cnu_t(i_nu)*GN/nu
-            Cnu_1(i_nu)=IstN*Cnu_1(i_nu) + &
+                        ((1.-dfreq)*J_0t(i_freq) + dfreq*J_0t(i_freq+1)) * Cnu_t(i_nu)*GN/nu)
+            Cnu_1(i_nu)=(IstN*Cnu_1(i_nu) + &
                         ((1.-dfreq)*J_1p(i_freq) + dfreq*J_1p(i_freq+1)) * Cnu_p(i_nu)*GN/nu + &
-                        ((1.-dfreq)*J_1t(i_freq) + dfreq*J_1t(i_freq+1)) * Cnu_t(i_nu)*GN/nu
+                        ((1.-dfreq)*J_1t(i_freq) + dfreq*J_1t(i_freq+1)) * Cnu_t(i_nu)*GN/nu)
          Enddo
-         !write(2,*) 'Galactic background added=',SUM(ABS(Cnu_0(:))**2),SUM(ABS(Cnu_1(:))**2)
+         BckgrPwr_0=BckgrPwr_0 + SUM(ABS(Cnu_0(:))**2)/2.
+         BckgrPwr_1=BckgrPwr_1 + SUM(ABS(Cnu_1(:))**2)/2.  !=mean power per time sample
+         N_even=N_even +1
+         N_odd=N_odd +1
+         !write(2,*) 'Ave background power=', BckgrPwr_0/N_even, BckgrPwr_1/N_odd !  (should be about 1. to be consistent with Ant-read.f90)
          !
          !stop
          !Cnu_0(:)=0.
          !Cnu_1(:)=0.
-         NormPulseAmp0Bckg=PulseRespWidth*sqrt(14.)/TotalGain
          Do i_src=1,SrcNr
             !write(2,*) 'Galactic background=',SUM(ABS(Cnu_p(:))**2),SUM(ABS(Cnu_t(:))**2)
             Call RelDist(SourcesListLocNEh(:,i_src),Ant_pos(:,j_ant),RDist)
             T_Offset=RDist - StatStartTime +SourcesListTms(i_src)/(Sample*1000.)  ! in units of samples
             Sample_Offset = INT(T_Offset) ! in units of sample size
+            !write(2,*) 'Sample_Offset for src=', i_src, Sample_Offset, &
+            !      ' ,antenna=', Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
             If(Sample_Offset.le.0 .or. Sample_Offset.ge.NtSamples) Then
-               !write(2,*) 'Sample_Offset out of range for src=', i_src, Sample_Offset
+               write(2,*) '*****Sample_Offset out of range for src=', i_src, Sample_Offset, &
+                     ' ,antenna=', Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
                cycle
             EndIf
             SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
             RTime_s(:)=0.
             RTime_s(Sample_Offset)=1.
-            Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s(0)) ! delta peak at right time
+            Call RFTransform_CF(RTime_s,Cnu_s(0)) ! delta peak at right time, filtering done while selecting proper frequencies.
             ! get t and p oriented signals
             !
             Ras(:)=(SourcesListLocNEh(:,i_src)-Ant_pos(:,j_ant))/1000.  ! \vec{R}_{antenna to source}
@@ -291,7 +346,7 @@ Program Simulate_Data
                !write(2,*) 'PolDirection',i_src,Vec_p(:), A_p, Vec_t(:), A_t, SUM( SourcesListAmpNEh(:,i_src)*Ras(:) )
                !write(2,*) 'PolDirection',i_src, A_p, A_t, SUM( SourcesListAmpNEh(:,i_src)*Ras(:) )
             !EndIf
-            If((j_ant.eq.3) .and.  (i_src.eq. 1)) Then
+            If((j_ant.eq.3) .and.  (i_src.eq. -1)) Then
                write(2,*) 'thet_d,phi_d', thet_d,phi_d, Ant_pos(:,j_ant), A_p/A_t
                i_freq=(Freq_min + Freq_max)/2
                write(2,*) i_freq, 'p', Ji_p0(i_freq)*J_0p(i_freq)+Ji_p1(i_freq)*J_1p(i_freq), &
@@ -313,26 +368,18 @@ Program Simulate_Data
             !      SUM(ABS(Cnu_1(:))**2)*NtSamples/PulseRespWidth, A_p, A_t, Sample_Offset
             !stop
          EndDo ! i_src=1,SrcNr
-         !Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )
-         Call RFTransform_CF2RT(Cnu_0(0),FTime_0(1,j_ant) )
-         !RTime_s(:)=Real(FTime_0(:,j_ant))
-         !SubSample_Offset=0.
-         !Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s(0)) !
-         !Call RFTransform_CF2CT(Cnu_s(0),FTime_1(1,j_ant) )
-         !write(2,*) '0', FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)
-         !write(2,*) 'r',FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)/FTime_1(Sample_Offset-10:Sample_Offset+10,j_ant)
-         !write(2,*) 'a0', Abs(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant))
-         !write(2,*) 'ar',Abs(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant)/FTime_1(Sample_Offset-10:Sample_Offset+10,j_ant))
-         !stop
          !
-         !Call RFTransform_CF2CT(Cnu_0(0),FTime_0(1,j_ant) )  ! RFTransform_CF2RT(Cnu,RD)
-         !Call RFTransform_CF2RT(Cnu_0(0),RTime_s(1) )  ! RFTransform_CF2RT(Cnu,RD)
-         !write(2,*) 'r',Real(FTime_0(Sample_Offset-10:Sample_Offset+10,j_ant))/RTime_s(Sample_Offset-10:Sample_Offset+10)
-         !stop
+         Call RFTransform_CF2RT(Cnu_0(0),FTime_0(1,j_ant) )
          Call RFTransform_CF2RT(Cnu_1(0),FTime_1(1,j_ant) )
          If(i_file.eq.1 .and. j_ant.eq.1) Then
-         Call RFTransform_CF2CT(Cnu_0(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
-         Call RFTransform_CF2CT(Cnu_1(0),CTime_1(1) )
+            Call RFTransform_CF2CT(Cnu_0(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
+            Call RFTransform_CF2CT(Cnu_1(0),CTime_1(1) )
+            write(2,*) '* background power/sample=', BckgrPwr_0, BckgrPwr_1 !  (should be about 1. to be consistent with Ant-read.f90)
+            write(2,*) '* total power in background=', NtSamples*BckgrPwr_0, NtSamples*BckgrPwr_1
+            write(2,*) '* power in sources only:', &
+               NtSamples*(SUM(ABS(Cnu_0(:))**2)/2.-BckgrPwr_0), NtSamples*(SUM(ABS(Cnu_1(:))**2)/2.-BckgrPwr_1)
+               ! this is the first cycle so N_odd=N_even=1
+            write(2,*) '* total power, backgr + sources=',SUM(FTime_0(:,j_ant)**2),SUM(FTime_1(:,j_ant)**2)
             Open(unit=23,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_RefAntTrace.dat')
             write(2,*) 'spectrum of ant=',j_ant,' written to:','files/'//TRIM(Simulation)//'_RefAntTrace.dat'
             Do i_sampl=1,NtSamples
@@ -341,23 +388,25 @@ Program Simulate_Data
          EndIf
       Enddo ! j_ant=1,NrAnt
       !
+      !NormEvenOdd   ! to undo the action of NormEven & NormOdd in AntennaRead
       Do i_sampl=1,NtSamples
-         write(22,*) (FTime_0(i_sampl,j_ant), FTime_1(i_sampl,j_ant), j_ant=1,Ant_nr)
+         write(22,*) (NormEvenOdd *FTime_0(i_sampl,j_ant), NormEvenOdd *FTime_1(i_sampl,j_ant), j_ant=1,Ant_nr)
          !write(2,*) i_sample, Sample_Offset
       Enddo
       Close(unit=22)
       Close(unit=12)
       !
    Enddo !  i_file=1,StationNrMax
+   write(2,*) 'Ave background power (all antennas)=', BckgrPwr_0/N_even, BckgrPwr_1/N_odd, N_even, N_odd, NtSamples !  (should be about 1. to be consistent with Ant-read.f90)
    Close(unit=14)
    Close(unit=24)
    Call DAssignFFT()
    !
-   Stop
+   Stop "normal ending of 'Simulate_Data'"
 End Program Simulate_Data
 !=====================================
-Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr)
-   use constants, only : dp,sample,pi, Refrac, c_mps ! ,Refrac,pi,ci
+Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh, SourcesListTS,SrcNr, NrmStI)
+   use constants, only : dp,sample_ms,pi, c_mps ! ,Refrac,pi,ci
    !Use RandomFunc, only : random_stdnormal, random_stdnormal3D
    Implicit none
    !
@@ -365,6 +414,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Real(dp), intent(out) :: SourcesListLocNEh(3,SrcNrMax), SourcesListTms(SrcNrMax), SourcesListAmpNEh(3,SrcNrMax)
    Real(dp), intent(out) :: SourcesListTS(SrcNrMax)  !  Souce time in samples
    Integer, intent(out) :: SrcNr
+   Real(dp), intent(in) :: NrmStI
    !
    Character(len=12) :: Lab1  !, Lab2, Lab3, Lab4  Station_name,
    Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
@@ -374,11 +424,14 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Character(LEN=180) :: lname
    Real :: x,y,z, RGV(1:3) ! Random Gaussian distributed Vector
    Real :: random_stdnormal
+   Real(dp) :: IndxRefrac, I12, I123
+   Real(dp), external :: RefracIndex
    !
    SrcNr=0
    Do !i_src=1,SrcNrMax
       If(SrcNr.eq.SrcNrMax) exit
       Call GetNonZeroLine(lname)
+      write(2,"(A,i4,A,A,A)") 'input line for source',SrcNr+1,':"',TRIM(lname),'"'
       Read(lname,*,IOSTAT=nxx) Lab1
       If(nxx.ne.0) exit
       ! Check for repetitive source in time
@@ -457,13 +510,16 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    EndDo
    If(SrcNr.le.0) Then
       write(2,*) 'No valid sources have been entered:',lname
-   EndIf
+   EndIf !
+   write(2,"(T4,'#',T7,'Dt[smpl]',T18,'t[smpl]',T30,'(N,E,h) [km]', T61,'Ampl(N,E,h)',T87,'I123_TRI-D')")
    Do i_src=1,SrcNr
-      t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*Refrac/c_mps ! in [ms] due to signal travel distance
+      !t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*Refrac/c_mps ! in [ms] due to signal travel distance
+      t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*RefracIndex(SourcesListLocNEh(3,i_src))/c_mps ! in [ms] due to signal travel distance
       !write(2,*) i_src,t_shft
-      SourcesListTms(i_src)=SourcesListTS(i_src)*(Sample*1000.)+t_shft  ! source time at core
-      write(2,*) i_src,(SourcesListTms(i_src)-SourcesListTms(1))/(Sample*1000.), &
-         SourcesListTS(i_src), SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src)
+      SourcesListTms(i_src)=SourcesListTS(i_src)*Sample_ms+t_shft  ! source time at core
+      I123=SUM(SourcesListAmpNEh(:,i_src)*SourcesListAmpNEh(:,i_src))*NrmStI
+      write(2,"(I4,F9.2,F9.1,2x, 3F10.4,2x,3F8.2,2x,F12.2)") i_src,(SourcesListTms(i_src)-SourcesListTms(1))/Sample_ms, &
+         SourcesListTS(i_src), SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src), I123
    Enddo
    write(2,*) 'Nr of sources=',SrcNr, ', time of first source pulse at the core=',SourcesListTms(1)
    Flush(unit=2)

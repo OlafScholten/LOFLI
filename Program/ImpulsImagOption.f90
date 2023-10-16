@@ -7,8 +7,10 @@ Subroutine ImpulsImagRun
    use FitParams, only : FullSourceSearch, SigmaGuess, AntennaRange, SearchRangeFallOff, Sigma_AntT
    use Chunk_AntInfo, only : StartT_sam, AntennaNrError, DataReadError, TimeFrame !, BadAnt_nr, BadAnt_SAI ExcludedStatID,
    use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk !TimeBase, Simulation, WriteSimulation
+   use Chunk_AntInfo, only : Station_OutOfRange, Unique_StatID, Nr_UniqueStat
    use FFT, only : RFTransform_su,DAssignFFT
    use Explore_Pars, only : NMin, NMax, Emin, EMax
+   use StationMnemonics, only : Statn_ID2Mnem
    use GLEplots, only : GLEplotControl
    Implicit none
    INTEGER :: DATE_T(8),i
@@ -33,6 +35,7 @@ Subroutine ImpulsImagRun
    write(2,"(A)") 'Input line-1: "'//Mark//'|'//TRIM(lname)// &
          '" !  Reference/Source-| t_0 & position, ImagingStartingTime[ms] (after t_0), ImagingStoppingTime[ms] '
    Read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,1), StartingTime, StoppingTime  ! Start time offset = 1150[ms] for 2017 event
+   Write(2,*) 'Better points to the center of the region to be imaged, to minimize out-of-range antennas.'
    If(nxx.ne.0) then
       write(2,*) 'Parsing error in input line'
       stop 'ImpulsiveImager; reading error'
@@ -96,6 +99,7 @@ Subroutine ImpulsImagRun
    !
    ChunkNr_start=StartingTime/(1000.d0*sample*(Time_dim-2*EdgeOffset))+1
    ChunkNr_stop=StoppingTime/(1000.d0*sample*(Time_dim-2*EdgeOffset))+1
+   Station_OutOfRange(:)=0
    !ChunkNr_start=1501 ; ChunkNr_stop=1900 ! No Time Frame == ChunkNr
    write(*,"(A,i5,A)") achar(27)//'[45m # of data-blocks read in=',(ChunkNr_stop-ChunkNr_start),achar(27)//'[0m'
    If((ChunkNr_stop-ChunkNr_start).gt.3) Production=.true.
@@ -104,7 +108,11 @@ Subroutine ImpulsImagRun
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
    Write(18,"(' ', A13, 3A11,A9)")  'StartT','N[km]','E[km]','h[km]','label'
    Write(18,"('C # 2 1',A8,3(A10,','),A12,';',A9,',',3(A8,','),2(A4,','),A7,',',2(A3,','),A3)") &
-      'Peakpos','N[m]','E[m]','h[m]','t[ms]','Chi^2','Std_N','Std_E','Std_h','N_a','N_mx','Ampl','W_l','W_u','eo'
+      'Peakpos','N[m]','E[m]','h[m]','t[ms]','Chi^2','N_a','N_mx','Ampl','W_l','W_u','eo'
+!                  Write(18,"('C',i2,' 2 1',I8,3(F10.2,','),F12.5,';',f9.3,',',2(I4,','),I7,',',2(I3,','),2I3)") &
+!                     i_FvStr, Peakpos_0, SourcePos(:,1), &
+!                     (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps , FitQual &
+!                     ,  N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu, i_eo, i_peakS
    Do TimeFrame=ChunkNr_start, ChunkNr_stop
       write(*,"(A,i6,A)", ADVANCE='NO') achar(27)//'[31m Processing block# ',TimeFrame,achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
       i_chunk=1
@@ -122,6 +130,7 @@ Subroutine ImpulsImagRun
       !
       Call SourceFind(TimeFrame,SourceGuess,units)
       !
+      flush(unit=2)
       !
    EndDo !  i_chunk
    !
@@ -137,7 +146,11 @@ Subroutine ImpulsImagRun
    close(unit=14)
    close(unit=12)
    !
-   write(*,*) NMin, NMax, Emin, EMax
+   Do j=1,Nr_UniqueStat
+      write(2,*) 'Station_included:',Statn_ID2Mnem(Unique_StatID(j)),Unique_StatID(j) ! , ' #:',Station_OutOfRange(j)
+   EndDo
+   !write(*,*) 'Station_OutOfRange:',Station_OutOfRange(1:Nr_UniqueStat)
+   write(*,*) 'BoundingBox (N,E):',NMin, NMax, Emin, EMax
    If((NMax-Nmin).gt.(Emax-Emin)) Then
       NMin=NMin -.5
       NMax=NMax +.5

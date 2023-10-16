@@ -30,6 +30,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    use DataConstants, only : Production, Time_dim, EdgeOffset
    use Chunk_AntInfo, only : Ant_Stations, StartT_sam, NoiseLevel
    use Chunk_AntInfo, only : MaxPeaksPerChunk, PeaksPerChunk!, PeakSP, PeakSWl, PeakSWu, PeakSAmp, PeakD_nr
+   use Chunk_AntInfo, only : Station_OutOfRange, Station_nrMax, Nr_UniqueStat
    use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, TotPeakNr, PeakPos, Peak_eo, ChunkNr
    use ThisSource, only : RefAntErr, SourcePos, Dual, Peak_Offst, CCShapeCut
    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim
@@ -49,12 +50,14 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    !
    integer :: i, j, k, i_ant, i_eo, i_chunk=1, i_eo_s=0, i_eo_f=1
    integer :: i_Peak, StLoc, StatMax, nxx, i_peakS, i_dist, i_distmin
+   Integer :: OutOfRange(1:Station_nrMax)
    Real(dp) :: DistMax, KalSource(0:3), KalCoVariance(0:3,0:3)
    Integer :: Date_T(8)
    Integer :: PeakSP(MaxPeaksPerChunk,0:2), PeakSWl(MaxPeaksPerChunk,0:2), PeakSWu(MaxPeaksPerChunk,0:2)
    Integer :: PeakSAmp(MaxPeaksPerChunk,0:2), PeakD_nr
    Integer :: Wu,Wl, CalSource(10),i_cal, PeakNrSearched, PeakNrFound, PeakNrGood, i_FvStr
    Integer :: Peakpos_0 ! pulse position for an virtual antenna at the core of CS002
+   integer :: NoSourceFound
    Real(dp), external :: RefracIndex
    !integer, external :: XIndx
    !       Initialize
@@ -119,7 +122,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          !StatMax=Ant_Stations(1,1)
          StatMax=1050
          CalcHessian=.false.
-         write(2,"(A,i3,A,i6,A,i6,A)") 'FindSource; i_peak:',i_peakS,'@',Peakpos(1),&
+         If(.not.production) write(2,"(A,i3,A,i6,A,i6,A)") 'FindSource; i_peak:',i_peakS,'@',Peakpos(1),&
             ', ampl=',PeakSAmp(i_peakS,i_eo),'=================='
          !production=.false.
          !
@@ -127,7 +130,15 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          If(FullSourceSearch) then
             i_distmin=2
             DistMax=MaxFitAntDistcs(i_distmin) ! Distance will effectively be limited in 'SourTryal' by the value of 'FitRange'
-            Call SourceTryal(DistMax)
+      !      Call SourceTryal(DistMax,i_peakS, NoSourceFound)
+      !      Call SourceTryal(DistMax,i_peakS, NoSourceFound)
+      !      Call SourceTryal(DistMax,i_peakS, NoSourceFound)
+            Call SourceTryal_v2(DistMax,i_peakS, NoSourceFound)
+            !write(2,*) 'NoSourceFound:',NoSourceFound
+            If(NoSourceFound.ne.0) Then
+               If(.not.production) write(2,*) '================',i_peakS,' LMA search failed ==============='
+               cycle
+            EndIf
             !Call SourceTryal(MaxFitAntDistcs(i_distmin))
             i_distmin=2
          Else
@@ -183,6 +194,9 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                         1000.d0*StartT_sam(1)*sample, SourcePos(:,1)/1000., (TimeFrame*1000+i_peakS)
             Flush(Unit=18)
          EndIf
+         If(.not.production) write(2,*) 'selectioncriterium', DistMax, Dist_Lim, (N_EffAnt*1./Max_EffAnt), EffAntNr_lim, &
+            Sigma(1), Sigma(2), Sigma(3) , 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) , Sigma(3), &
+            FitQual, ChiSq_lim
          If((DistMax .lt. Dist_Lim) .and. ( (N_EffAnt*1./Max_EffAnt) .gt. EffAntNr_lim) &
             .and. ( Sigma(1) .lt. 999. ) .and. ( Sigma(2) .lt. 999.) &
             .and. ( Sigma(3) .lt. 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) ) .and. ( Sigma(3) .gt. 0.) &
@@ -196,8 +210,9 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                   (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps, FitQual &
                   , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
                !write(*,*) 'Wu,Wl',Peakpos_0,Wl,Wu
-               Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu) ! clean peak only when decent source location was obtained
+               Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu, OutOfRange) ! clean peak only when decent source location was obtained
                PeakNrFound=PeakNrFound+1
+               Station_OutOfRange(1:Nr_UniqueStat)=Station_OutOfRange(1:Nr_UniqueStat)+ OutOfRange(1:Nr_UniqueStat)
                If(FitQual.lt.25.) then
                   NMin = Min(NMin,SourcePos(1,1)/1000.) ! Extremes in [km]
                   EMin = Min(EMin,SourcePos(2,1)/1000.)
@@ -241,10 +256,10 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                EndIf
             EndIf
             !
-            write(2,*) '================',i_peakS,' is located ===============', Sigma(1:3), &
+            If(.not.production) write(2,*) '================',i_peakS,' is located ===============', Sigma(1:3), &
                N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
          Else
-            write(2,*) '================',i_peakS,' out of bounds ===============', Sigma(1:3), &
+            If(.not.production) write(2,*) '================',i_peakS,' out of bounds ===============', Sigma(1:3), &
                N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
          Endif
          !If(i_peakS.gt.6) stop 'SourceFind'
@@ -314,7 +329,9 @@ Subroutine SourceFitCycle(StatMax,DistMax)
       Do i_Peak=1,PeakNrTotal
          If(FitPos(i).eq.4) then
            X(  XIndx(i,i_Peak) ) = RefAntErr(i_Peak)
-         else
+         elseIf(FitPos(i).eq.3) then
+           X(  XIndx(i,i_Peak) ) = abs(SourcePos(FitPos(i),i_Peak))
+         Else
            X(  XIndx(i,i_Peak) ) = SourcePos(FitPos(i),i_Peak)
          EndIf
       Enddo
@@ -335,29 +352,30 @@ Subroutine SourceFitCycle(StatMax,DistMax)
    endif
    Call FitCCorr(X)  ! fit source
    Call X2Source(X)
-   If(N_FitPar.eq.4) Then
-      If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,4F9.1, A,F8.2, A,2I4, A,3G11.3)") &
-         'Max distance=',DistMax,'[km], fitted:', X( 1:N_FitPar ),', chi^2/ndf=', FitQual &
-         ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
-   Else
-      If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,3F9.1, A,F8.2, A,2I4, A,3G11.3)") &
-         'Max distance=',DistMax,'[km], fitted:', X( 1:3 ),', chi^2/ndf=', FitQual &
-         ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
-   EndIf
+   !If(N_FitPar.eq.4) Then
+   !   If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,4F9.1, A,F8.2, A,2I4, A,3G11.3)") &
+   !      'Max distance=',DistMax,'[km], fitted:', X( 1:N_FitPar ),', chi^2/ndf=', FitQual &
+   !      ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
+   !Else
+   !   If(Production .and. DistMax.gt.20.)  write(2,"(A,F7.2,A,3F9.1, A,F8.2, A,2I4, A,3G11.3)") &
+   !      'Max distance=',DistMax,'[km], fitted:', X( 1:3 ),', chi^2/ndf=', FitQual &
+   !      ,' N_Ant=',N_EffAnt,Max_EffAnt, ', sigma[m]:',(sqrt(SpaceCov(i,i)),i=1,3)
+   !EndIf
    !
 End Subroutine SourceFitCycle
 !=====================================
-Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu)
+Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu, OutOfRange)
 !  Zero spectrum at the good peak inorder not to find it twice
 !  v13:  Zeroing window is made peak dependent
    use ThisSource, only : Nr_Corr, CorrAntNrs, Tref_dim, RefAntErr, Peak_Offst
-   use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Ant_RawSourceDist, Ant_Stations
+   use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Ant_RawSourceDist, Ant_Stations, Station_nrMax
    use DataConstants, only : Time_dim
    use constants, only : dp,pi
    Implicit none
    integer, intent(in) :: i_eo_in, PeakPos, Wl, Wu
    Real(dp), intent(in) :: SourcePos(3)
-   Integer :: j_corr, i_chunk=1, i_ant, i_Peak=1, StLoc, i, HW_size=5, Zero_dim, i_eo, i_eo_s,i_eo_f, Wi
+   integer, intent(out) :: OutOfRange(1:Station_nrMax)
+   Integer :: j_corr, i_chunk=1, i_ant, i_Peak=1, StLoc, i, HW_size=5, Zero_dim, i_eo, i_eo_s,i_eo_f, Wi, i_stat
    Real(dp) :: Rdist,Hann(1:2*Tref_dim)
 
    !write(*,*) i_eo,PeakPos,SourcePos,Tref_dim
@@ -382,6 +400,7 @@ Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu)
    Else
       i_eo_s=i_eo_in ; i_eo_f=i_eo_in
    Endif
+   OutOfRange(:)=0
    Do i_eo=i_eo_s,i_eo_f
       Do j_corr=1,Nr_Corr(i_eo,i_chunk) ! assumes PulsPosCore=.false.
          i_ant=CorrAntNrs(j_corr,i_eo,i_chunk)
@@ -390,7 +409,10 @@ Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu)
          StLoc=PeakPos + INT(Rdist) - Peak_Offst(i_Peak) - Wi
          !write(*,*) j_corr,StLoc
          If((StLoc.lt.1).or.(StLoc.gt.Time_dim-Zero_dim)) then
-            write(2,*) 'ERROR, CleanPeak out of bounds',StLoc, i_ant, Ant_Stations(i_Ant,i_chunk)
+            write(2,*) 'ERROR, CleanPeak out of bounds',StLoc,Time_dim,', for:', &
+                  j_corr, Ant_Stations(i_Ant,i_chunk),RDist,'[samples]'
+            Call Conv_Station_ID2i(Ant_Stations(i_Ant,i_chunk), i_stat)
+            OutOfRange(i_stat)=1
             cycle
          Endif
          !If(PeakPos.eq.10657) write(*,*) i_eo,J_corr,i_ant,StLoc
@@ -417,6 +439,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    use unque, only : Double_sort
    use constants, only : dp
    use DataConstants, only : EdgeOffset, Time_dim, RunMode  ! , ChunkNr_dim
+   use DataConstants, only : Production
    Implicit none
    Integer, intent(in) :: PeakS_dim, i_chunk
    Integer, intent(out) :: PeakSWu(PeakS_dim,0:2), PeakSWl(PeakS_dim,0:2), PeakSP(PeakS_dim,0:2)  ! Peaks positions
@@ -440,7 +463,8 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    PeakSP(:,:)=0
    Do i_eo=0,1
       i_ant= RefAnt(i_chunk,i_eo)
-       write(2,*) i_eo, ', Reference antenna=',i_ant,Ant_IDs(i_ant,i_chunk),', @position ',Ant_pos(:,i_ant,i_chunk)
+      If(.not.production) &
+         write(2,*) i_eo, ', Reference antenna=',i_ant,Ant_IDs(i_ant,i_chunk),', @position ',Ant_pos(:,i_ant,i_chunk)
        HEnvel(:)=abs(CTime_spectr(:,i_ant, i_chunk))
       ! write(label,"(I2.2,I3.3)") TimeFrame,Ant_IDs(i_ant,i_chunk)
       ! OPEN(unit=30,FILE='TimeTrace'//label//'.dat',FORM='FORMATTED',STATUS='unknown')
@@ -496,10 +520,10 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
       Enddo   !  j=1,2*PeaksPerChunk
       i_peak=i_peak-1
       HEnvel(:)=abs(CTime_spectr(:,i_ant, i_chunk))  ! to get rid of all zeroed parts
-      Write(2,"(A,i3,A)", ADVANCE='NO') 'Peak(',i_peak,'):'
-      Write(2,"(20i6)") PeakSP(1:i_peak,i_eo)
-      Write(2,"(A)", ADVANCE='NO') 'Peakval = '
-      Write(2,"(20i6)") PeakSAmp(1:i_peak,i_eo)
+      If(.not.production) Write(2,"(A,i3,A)", ADVANCE='NO') 'Peak(',i_peak,'):'
+      If(.not.production) Write(2,"(20i6)") PeakSP(1:i_peak,i_eo)
+      If(.not.production) Write(2,"(A)", ADVANCE='NO') 'Peakval = '
+      If(.not.production) Write(2,"(20i6)") PeakSAmp(1:i_peak,i_eo)
       !Write(2,"(A)", ADVANCE='NO') 'PeakSWl='
       !Write(2,"(20i6)") PeakSWl(:,i_eo)
       !Write(2,"(20f6.0)") HEnvel(PeakSP(:,i_eo)-PeakSWl(:,i_eo))
@@ -520,7 +544,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
          i=0
          j=0
          Do j=1,i_peak
-            write(2,"(I2)", Advance='no') j
+            If(.not.production) write(2,"(I2)", Advance='no') j
             Call Inv5StarPk(HEnvel, PeakSP(j,i_eo), Windw, AvePos, TotAmpl, StDev)
             !write(2,*) '***** ',j,PeakSP(j,i_eo),'position offset=',AvePos,', StDev=',StDev, &
             !', power=',StDev*PeakSAmp(j,i_eo), ' or', TotAmpl
@@ -542,7 +566,7 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
                PeakSAmp(j,i_eo)=w
             EndIf
          EndDo
-         write(2,*)
+         If(.not.production) write(2,*)
       EndIf
       !write(*,*) 'done:',i_eo
    enddo  ! i_eo=0,1
@@ -555,14 +579,14 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
    !stop
    !Flush(unit=2)
    !write(*,*) 'end polarity'
-   write(2,"(A)", ADVANCE='NO') 'even sort:'
-   Write(2,"(20i6)") SPeak(:,1,0)
+   If(.not.production) write(2,"(A)", ADVANCE='NO') 'even sort:'
+   If(.not.production) Write(2,"(20i6)") SPeak(:,1,0)
    !SPeak(:,1,1)=PeakSP(:,1)
    !SPeak(:,2,1)=PeakSWu(:,1)
    !SPeak(:,3,1)=PeakSWl(:,1)
    !Call Double_sort(SPeak(:,:,1))
-   write(2,"(A)", ADVANCE='NO') ' odd sort:'
-   Write(2,"(20i6)") SPeak(:,1,1)
+   If(.not.production) write(2,"(A)", ADVANCE='NO') ' odd sort:'
+   If(.not.production) Write(2,"(20i6)") SPeak(:,1,1)
    peak0=1
    peak1=1
    peak2=0
@@ -618,20 +642,20 @@ Subroutine DualPeakFind(PeakS_dim, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, 
       PeakSAmp(Peak2,2)=-SPeak(Peak2,1,0)/2
    EndDo
    !
-   Write(2,"(A)", ADVANCE='NO') 'PeakSP(double)='
-   Write(2,"(20i6)") PeakSP(1:PeakD_nr,2)
-   Write(2,"(A)", ADVANCE='NO') 'Peakval(Dual)='
-   Write(2,"(20I6)") -SPeak(1:PeakD_nr,1,0)/2
-   Write(2,"(A,i3)", ADVANCE='NO') 'PeakSWl(Dual)='
-   Write(2,"(20i6)") PeakSWl(1:PeakD_nr,2)
-   Write(2,"(A,i3)", ADVANCE='NO') 'PeakSWu(Dual)='
-   Write(2,"(20i6)") PeakSWu(1:PeakD_nr,2)
+   If(.not.production) Write(2,"(A)", ADVANCE='NO') 'PeakSP(double)='
+   If(.not.production) Write(2,"(20i6)") PeakSP(1:PeakD_nr,2)
+   If(.not.production) Write(2,"(A)", ADVANCE='NO') 'Peakval(Dual)='
+   If(.not.production) Write(2,"(20I6)") -SPeak(1:PeakD_nr,1,0)/2
+   If(.not.production) Write(2,"(A,i3)", ADVANCE='NO') 'PeakSWl(Dual)='
+   If(.not.production) Write(2,"(20i6)") PeakSWl(1:PeakD_nr,2)
+   If(.not.production) Write(2,"(A,i3)", ADVANCE='NO') 'PeakSWu(Dual)='
+   If(.not.production) Write(2,"(20i6)") PeakSWu(1:PeakD_nr,2)
    !Write(2,"(A,i3)", ADVANCE='NO') 'ordered pol0='
    !Write(2,"(20i6)") SPeak(:,1,0)
    !Write(2,"(A,i3)", ADVANCE='NO') 'ordered pol1='
    !Write(2,"(20i6)") SPeak(:,1,1)
    !write(*,*) 'end DualPeakFind',PeakD_nr
-   Write(2,*) ' PeakD_nr',PeakD_nr
+   If(.not.production) Write(2,*) ' PeakD_nr',PeakD_nr
    Return
 End Subroutine DualPeakFind
 !==================
@@ -661,3 +685,19 @@ Subroutine Inv5StarPk(HEnvel, PeakPos, Windw, AvePos, Ampl, StDev)
          ', halfwindow=',Windw
    endif
 End Subroutine Inv5StarPk
+!=============================
+Subroutine Conv_Station_ID2i(Station_ID,i_stat)
+   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat
+   Implicit none
+   integer, intent(in) :: Station_ID
+   integer, intent(out) :: i_stat
+   integer :: i
+   i_stat=1
+   Do i=1, Nr_UniqueStat      ! Get station number from the Unique_StatID list
+       If(Unique_StatID(i).eq. Station_ID) Then
+          i_stat=i
+          exit
+       EndIf
+   enddo
+   Return
+End Subroutine Conv_Station_ID2i

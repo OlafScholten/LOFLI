@@ -1,6 +1,6 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
-   use constants, only : dp,sample
+   use constants, only : dp,sample, HeightCorrectIndxRef
    use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
@@ -25,7 +25,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Real(dp) :: RTime_s(1:Time_dim)
    Complex(dp) :: CNu_s(0:Cnu_dim), CTime_s(1:Time_dim)
    integer :: Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
-   Real*8 :: Powr, Powr_eo(0:1)
+   Real*8 :: Powr, Powr_eo(0:1), NormEvenOdd=1.d2
    Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
    Integer, save :: WallCount
    Real,save :: CPUstartTime, CPUstopTime=-1., WallstartTime=0, WallstopTime=-1.
@@ -49,7 +49,6 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    TotWallFit=TotWallFit - WallstopTime +WallstartTime
    !WRITE(*,"(A,F9.3,F12.6,A)") 'Totals Fit, Wall & CPU:',TotCPUFit, TotWallFit, '[s]'  ! count_rate, count_max
    !
-   !
    !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
    Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',StartT_sam(i_chunk)*1000.d0*sample &
       ,' [ms] =',StartT_sam(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
@@ -59,7 +58,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
    !write(2,*) 'Simulation,WriteSimulation(2):', Simulation,WriteSimulation(:), 'file14open:',file14open
-   If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then
+   If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then  ! imaging on real data (="") or 'SelectData' (.gt.0) options
       If(file14open) then
          Rewind(unit=14)
          Rewind(unit=12)
@@ -74,9 +73,10 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       EndIf
       Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
       Call SimulationRead(SourceGuess)
+      Powr_eo(:)=1.d0  ! only matters that Powr_eo(0) and Powr_eo(1) are equal
       goto 9
    Endif
-   If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
+   If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then  ! 'SelectData' option
       Call CreateNewFolder(Simulation) ! create new folder when needed
       Open(Unit=30,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
       write(2,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
@@ -201,15 +201,34 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                   N_one=COUNT( Chunk(:).gt.2045 .or. Chunk(:).lt.-2045)  !! saturates at 2047
                   !NZero=COUNT( Chunk(:).lt.-2020)  !! saturates at 2047
                   If(N_one.gt.SaturatedSamplesMax) Then
-                     write(2,"(A,I4,', chunk#',I4,A,I3,', @')",ADVANCE='NO') &
-                           Statn_ID2Mnem(STATION_ID), Ant_ID, i_chunk, ', #Saturated Samples=',N_one
-                     Do i_time=1,Time_dim
-                        If(Chunk(i_time).gt.2020 .or. Chunk(i_time).lt.-2020) Then
-                           Write(2,"(1x,I6,':',I5)",ADVANCE='NO') i_time, Chunk(i_time)
-                        EndIf
-                     EndDo
-                     Write(2,*) ' '
+                     write(2,"(A,I4,', chunk#',I4,A,I4,', @')",ADVANCE='NO') &
+                           Statn_ID2Mnem(STATION_ID), Ant_ID, i_chunk, ' excluded, #Saturated Samples=',N_one
+                     If(N_one.lt.10) then
+                        Do i_time=1,Time_dim
+                           If(Chunk(i_time).gt.2020 .or. Chunk(i_time).lt.-2020) Then
+                              Write(2,"(1x,I6,':',I5)",ADVANCE='NO') i_time, Chunk(i_time)
+                           EndIf
+                        EndDo
+                        Write(2,*) ' '
+                     Else
+                        Write(2,*) ' too many to list!'
+                     EndIf
                      cycle
+                  Else
+                     If(N_one.ge.1) Then
+                        write(2,"(A,I4,', chunk#',I4,A,I3,', @')",ADVANCE='NO') &
+                              Statn_ID2Mnem(STATION_ID), Ant_ID, i_chunk, ' used with #Saturated Samples=',N_one
+                        If(N_one.lt.10) then
+                           Do i_time=1,Time_dim
+                              If(Chunk(i_time).gt.2020 .or. Chunk(i_time).lt.-2020) Then
+                                 Write(2,"(1x,I6,':',I5)",ADVANCE='NO') i_time, Chunk(i_time)
+                              EndIf
+                           EndDo
+                           Write(2,*) ' '
+                        Else
+                           Write(2,*) ' too many to list!'
+                        EndIf
+                     EndIf
                   EndIf
               EndIf
               If(Diagnostics) Then
@@ -229,6 +248,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               Ant_IDs(Ant_nr(i_chunk),i_chunk)=Ant_ID
               Ant_Stations(Ant_nr(i_chunk),i_chunk)=STATION_ID
               Ant_pos(:,Ant_nr(i_chunk),i_chunk)=LFRAnt_crdnts(:)
+              !write(2,*) Ant_nr(i_chunk), ' ,position: ', LFRAnt_crdnts(:)
               !
               sgn=+1
               If(any(SignFlp_SAI(1:SgnFlp_nr) .eq. StAntID,1) ) sgn=-1 ! Take care of sign flips
@@ -236,11 +256,11 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                  If(RunMode.eq.1) then
                   RTime_s(:)=Chunk(:)*Hann(:)*sgn
                  Else
-                  RTime_s(:)=Chunk(:)*Hann(:)*sgn*100./sqrt(Powr) !  sqrt(power) level is normalized to 100.
+                  RTime_s(:)=Chunk(:)*Hann(:)*sgn*NormEvenOdd/sqrt(Powr) !  sqrt(power) level is normalized to 100.
                  Endif
               Else
                  RTime_s(WriteSimulation(1):WriteSimulation(1)+WriteSimulation(2))= &
-                     Chunk(WriteSimulation(1):WriteSimulation(1)+WriteSimulation(2))*sgn*100./sqrt(Powr) ! /Time_dim)
+                     Chunk(WriteSimulation(1):WriteSimulation(1)+WriteSimulation(2))*sgn*NormEvenOdd/sqrt(Powr) ! /Time_dim)
               EndIf
               !SubSample_Offset=0.
               Call RFTransform_CF_Filt(RTime_s,nu_fltr,SubSample_Offset,Cnu_s)
@@ -276,14 +296,14 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
                EndIf
             EndIf
           Enddo
-          If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then
+          If((Simulation.ne."") .and. (WriteSimulation(2).gt.0)) Then !  'SelectData' option
                write(30,*) STATION_ID,TRIM(Statn_ID2Mnem(STATION_ID))
                AntNr_up=Ant_nr(i_chunk)
                !Call CreateNewFolder(Simulation) ! create new folder when needed
                Open(Unit=31,STATUS='unknown',ACTION='write', &
                      FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Statn_ID2Mnem(STATION_ID))//'.dat')
                Write(31,*) 'StartTime_ms= ',(StartT_sam(i_chunk)+WriteSimulation(1)+RDist)*sample*1000.d0, &
-                     ' N_samp= ', WriteSimulation(2), ' noise_power= 100.'
+                     ' N_samp= ', WriteSimulation(2), ' noise_power= 1.'
                Do i_ant=AntNr_lw,AntNr_up
                   i_eo=mod(Ant_IDs(i_ant,i_chunk),2)
                   If(i_eo.eq.0) then
@@ -340,10 +360,12 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    write(*,*) ' '
    Powr_eo(:)=Powr_eo(:)/NAnt_eo(:)
-   NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
-   NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
-9  Continue
+9  Continue  ! entry after simulation read
+   NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor 100 (and more) that was introduced in antenna-read
+   NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor that was introduced in antenna-read
    write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd
+   write(2,*) sum(ABS(CTime_spectr(:,10,1))**2),Time_dim,Powr
+   write(2,*) 'Height-Corrected Index of Refraction=', HeightCorrectIndxRef
    !write(2,*) 'NAnt_eo:',NAnt_eo(:)
    !
    ! time recording
@@ -545,7 +567,6 @@ Subroutine SimulationRead(SourceGuess)
    use Chunk_AntInfo, only : StartT_sam
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
    use Chunk_AntInfo, only : CTime_spectr, Ant_RawSourceDist
-   use Chunk_AntInfo, only : NormOdd, NormEven !Powr_eo,NAnt_eo
    use AntFunCconst, only : Freq_min, Freq_max
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    use FFT, only : RFTransform_CF, RFTransform_CF2CT, RFTransform_CF_Filt!,Hann
@@ -645,8 +666,6 @@ Subroutine SimulationRead(SourceGuess)
          !
          !flush(Unit=2)
       EndDo
-      !Powr_eo(0)=Powr_eo(0)+ (AntNr_up-AntNr_lw)*Powr
-      !NAnt_eo(0)=NAnt_eo(0)+ AntNr_up-AntNr_lw
       Ant_nr(i_chunk)=AntNr_up
       !write(2,*) 'Ant_IDs',Ant_IDens(1:Ant_nr(i_chunk),i_chunk)
       RTime_s(:)=0.
@@ -664,22 +683,45 @@ Subroutine SimulationRead(SourceGuess)
          !flush(Unit=2)
          Sample_Offset = INT(T_Offset) ! in units of sample size
          SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
-         !write(2,*) 'Sample_Offset',Sample_Offset,j_ant
-         If( (1+Sample_Offset).lt.1) write(2,*) 'too low',(1+Sample_Offset)
-         If( (NrSamples+Sample_Offset).gt.Time_dim) write(2,*) 'too high',(NrSamples+Sample_Offset)
+         !write(2,*) 'Sample_Offset',Sample_Offset,j_ant,NrSamples,Time_dim
+         If( (1+Sample_Offset).lt.1) Then
+            write(2,*) 'For ',TRIM(Station_name(i_file)),' first sample ',(1+Sample_Offset), &
+               ' too low, reading only from 1 till',NrSamples+Sample_Offset
+            If(NrSamples.gt.Time_dim/2) write(2,*) 'warning messages are created (but may be ignored)',&
+               ' since the simulated trace is of the order of the internal buffer size',NrSamples,Time_dim
+            If((NrSamples+Sample_Offset).lt.100) Then
+               write(2,*) 'skip this Station completely (less than 100 readable samples)'
+               write(*,*) 'Station ',TRIM(Station_name(i_file)),' dropped'
+               Ant_nr(i_chunk)=AntNr_lw
+               exit
+            EndIf
+         EndIf
+         If( (NrSamples+Sample_Offset).gt.Time_dim) Then
+            write(2,*)  'For ',TRIM(Station_name(i_file)),' last sample ',(NrSamples+Sample_Offset), &
+               ' too high, reading only from',Sample_Offset,' till',Time_dim
+            If(NrSamples.gt.Time_dim/2) write(2,*) 'warning messages are created (but may be ignored)',&
+               ' since the simulated trace is of the order of the internal buffer size',NrSamples,Time_dim
+            If((Sample_Offset+100).gt.Time_dim) Then
+               write(2,*) 'skip this Station completely (less than 100 readable samples)'
+               write(*,*) 'Station ',TRIM(Station_name(i_file)),' dropped'
+               Ant_nr(i_chunk)=AntNr_lw
+               exit
+            EndIf
+         EndIf
          Do i_sample=1,NrSamples
             read(12,*) spec(1:AntNr_up-AntNr_lw)
             !write(2,*) i_sample, Sample_Offset
             If( (i_sample+Sample_Offset).lt.1) cycle
             If( (i_sample+Sample_Offset).gt.Time_dim) exit
-            RTime_s(i_sample+Sample_Offset)=spec(j_ant)*100./sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
+            RTime_s(i_sample+Sample_Offset)=spec(j_ant)/sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
          Enddo
          Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s)
          Call RFTransform_CF2CT(Cnu_s,CTime_spectr(1,i_ant,i_chunk) )
          !
       Enddo ! j_ant=1,NrAnt
       Close(unit=12)
-      AntNr_lw=AntNr_up
+      AntNr_lw=Ant_nr(i_chunk) ! to give the right results when trying to read out-of-bounds
+      AntNr_up=Ant_nr(i_chunk)
       !
    Enddo !  i_file=1,StationNrMax
    Close(unit=14)
@@ -687,9 +729,6 @@ Subroutine SimulationRead(SourceGuess)
       write(2,*) 'number of antennas=',AntNr_up,' less than lower limit.'
       stop 'too few antennas'
    EndIf
-   !Powr_eo(1)=Powr_eo(0)
-   !NAnt_eo(1)=NAnt_eo(0)
-   NormOdd=1. ; NormEven=1.
    !
    ! stop
    !

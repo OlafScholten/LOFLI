@@ -1,11 +1,13 @@
 !-----------------------------------------
  !-------------------------------------------
  !------------------------------------------
-    Include 'ConstantsModules.f90'
-    Include 'FFT_routines.f90'
-    Include 'ParamModules.f90'
-    Include 'HDF5_LOFAR_Read.f90'
-    Include 'MappingUtilities.f90' ! h5-read
+!    Include 'ConstantsModules.f90'
+!    Include 'FFT_routines.f90'
+!     Include 'AntFunct.f90'
+!     Include 'InterferomPars.f90'
+!    Include 'ParamModules.f90'
+!    Include 'HDF5_LOFAR_Read.f90'
+!    Include 'MappingUtilities.f90' ! h5-read
 !-----------------------------------
 Program PowerTrace
 !
@@ -85,7 +87,7 @@ Program PowerTrace
 end program PowerTrace
 !=================================
 Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_eo)
-   use constants, only : dp,sample, Refrac, c_mps  !pi,ci
+   use constants, only : dp,sample, c_mps  ! Refrac,  pi,ci
    use DataConstants, only : Time_dim, Cnu_dim  ! , ChunkNr_dim
    use HDF5_LOFAR_Read, only : filename, Group_names, Group_nr ! , Group_max
    use HDF5_LOFAR_Read, only : DSet_names, DSet_nr, Ant_ID, STATION_ID !, DSet_max, ANTENNA_POSITION
@@ -109,6 +111,8 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
    Integer :: i,i_file,i_grp,i_dst, ir_file,ir_grp,ir_dst, i_sampl, i_samplM
    Integer :: i_ant, i_time, i_eo, unt, nxx, StAntID, sgn
    Real*8 :: SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset,StatAnt_Calib
+   Real(dp) :: IndxRefrac
+   Real(dp), external :: RefracIndex
    !
    Rewind(unit=14)
    Rewind(unit=12)
@@ -122,6 +126,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
          read(14,*) DSet_nr, Group_Names(i_grp)
          Do i_dst=1,DSet_nr
               read(14,*) DSet_Names(i_dst), STATION_ID, Ant_ID
+              write(2,*) 'STATION_ID & ReqStat_ID', STATION_ID , ReqStat_ID
               If(STATION_ID .ne. ReqStat_ID) cycle
               i_eo=Mod(Ant_ID,2)
               If(i_eo.ne.ReqStat_eo) cycle
@@ -155,8 +160,11 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
               !
       ! antRead: Dset_offset=StartT_sam(i_chunk) + RDist + DIPOLE_CALIBRATION_DELAY/Sample + StatAnt_Calib - SAMPLE_NUMBER_first
               Sample_Offset= INT((StartTime_ms/1000. + DIPOLE_CALIBRATION_DELAY)/Sample)+ StatAnt_Calib- SAMPLE_NUMBER_first   ! in units of samples
-              Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
-              write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*Refrac/(c_mps*Sample)
+              !Sample_Offset= Sample_Offset+Rdist + DistSRC*Refrac/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
+              !write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*Refrac/(c_mps*Sample)
+              Sample_Offset= Sample_Offset+Rdist + DistSRC*RefracIndex( SourceCoor(3) )/(c_mps*Sample)  ! Changed to -DistSRC March 10,2022
+              write(2,*) 'Sample_Offset', Sample_Offset, Rdist,  DistSRC*RefracIndex( SourceCoor(3) )/(c_mps*Sample)
+
               SubSample_Offset = 0
               OverLap=128
               If(Mod(UpS,2).ne.0) UpS=UpS+1
@@ -217,6 +225,7 @@ Subroutine MkPwrTrace(SourceCoor,StartTime_ms,dTime_ms,UpS,ReqStat_ID, ReqStat_e
       Enddo ! i_grp=1,Group_nr
       !
    Enddo ! i_file=1,....
+   write(2,*) 'No data written to file, station not found?; try other station.'
    !
 9  continue
    write(*,*) ' '

@@ -7,7 +7,7 @@ Module constants
     !REAL(dp), parameter :: Refrac=1.0003     ! set in routine 'AveIndxRefr'
     real(dp), save :: RotMat(3,3) ! Rotation matrix from ITRF to local Superterp coordinates
     real(dp), parameter :: center_CS002(3)= (/ 3826577.5, 461021.3125, 5064893.0 /)
-    real(dp), parameter :: sample=5.d-9   ! Sample length in seconds
+    real(dp), parameter :: sample=5.d-9   ! Sample length in seconds [s/sample]
     real(dp), parameter :: sample_ms=5.d-6   ! Sample length in miliseconds
     !Logical, save :: HeightCorrectIndxRef=.false.
     Logical, save :: HeightCorrectIndxRef=.true.

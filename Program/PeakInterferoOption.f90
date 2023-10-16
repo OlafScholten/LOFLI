@@ -21,9 +21,9 @@ Subroutine PeakInterferoOption()
    Use Interferom_Pars, only : IntFer_ant,  Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Alloc_EInterfCalib_Pars
    use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
-    use LOFLI_Input, only : ReadSourceTimeLoc
+   ! use LOFLI_Input, only : ReadSourceTimeLoc
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
-   Use Calibration, only : WriteCalibration ! was MergeFine
+   !Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp) :: SourceGuess(3,N_Chunk_max)
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
@@ -34,7 +34,7 @@ Subroutine PeakInterferoOption()
    Logical :: FitNoSources
    character*10 :: StochOption
    character*80 :: lname
-   real(dp) :: x1,x2,x3,t, Time_width, Space_Spread(1:3)
+   real(dp) :: x1,x2,x3,t, Time_width, Space_Spread(1:3), ZeroCalOffset
    !real(dp) :: dt,B, MTC, dtI
    Integer :: i_SAI
    !
@@ -109,7 +109,8 @@ Subroutine PeakInterferoOption()
    Call EI_PrntFitPars(X)
     !
    Write(2,"(//,A)") ' ==== Summary of new parameters ===='
-   Call PrntNewSources
+   ZeroCalOffset=0.
+   Call PrntNewSources(ZeroCalOffset)
    !
    !
    Return

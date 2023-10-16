@@ -4,11 +4,15 @@ Module GLEplots
    use DataConstants, only : RunMode ! 1=Explore; 2=Calibrate; 3=Impulsive imager; 4=Interferometry
    implicit none
 Contains
-Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
-   character(LEN=*), intent(in), optional :: PlotType, PlotName, PlotDataFile, SpecialCmnd
+Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit, Bckgr)
+   character(LEN=*), intent(in), optional :: PlotType, PlotName, PlotDataFile, SpecialCmnd, Bckgr
    Logical, intent(in), optional :: Submit
    Character(len=40), save :: BatchFile=''
    character*100 :: shellin
+   !Character(len=19), parameter :: CallGLE='call GLE -d pdf -o '  ! space at end is important
+   !Character(len=5), parameter :: PJ='.pdf ' ! space at end is important
+   Character(len=26), parameter :: CallGLE='call GLE -d jpg -r 300 -o '  ! space at end is important
+   Character(len=5), parameter :: PJ='.jpg ' ! space at end is important
    !
    !inquire(unit=10, opened=itsopen)  ; if ( itsopen ) then okay  ; logical itsopen
    If(BatchFile.eq. '' .and. (present(PlotType) .or. present(SpecialCmnd))) Then  ! Open unit 10
@@ -31,6 +35,8 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
             BatchFile='Afig-FldCal'//trim(OutFileLabel)
          CASE(8)  ! PeakInterferometry
             BatchFile='Afig-PkInt'//trim(OutFileLabel)
+         CASE(9)  ! PeakInterferometry
+            BatchFile='Afig-MDD'//trim(OutFileLabel)
          CASE DEFAULT
             write(2,*) 'not a foreseen plotting RunMode:',RunMode
             write(*,*) 'not a foreseen plotting RunMode:',RunMode
@@ -52,16 +58,31 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit)
             !PlotDataFile='files/AmplFit'//trim(datafile(1))//TRIM(OutFileLabel)//TRIM(extension)
             !PlotName=trim(datafile(1))//TRIM(extension)//TRIM(OutFileLabel)//'AmplFit'
             If(Windows) Then
-               Write(10,"(A)") &
-                  "call GLE -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+               If(present(Bckgr)) Then
+                  Write(10,"(A)") &
+                  CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+                        //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'//' "'//TRIM(FlashFolder)//trim(Bckgr)//'"'
+               Else
+                  Write(10,"(A)") &
+                  CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
                         //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'
+                  !"call GLE -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+                  !      //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'
+               EndIf
             Else
-               write(10,"(A)") &
+               If(present(Bckgr)) Then
+                  Write(10,"(A)") &
+                  "gle -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+                        //TRIM(FlashFolder)//TRIM(PlotDataFile)//' '//TRIM(FlashFolder)//trim(Bckgr) !//'"'
+               Else
+                  Write(10,"(A)") &
                   "gle -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
                         //TRIM(FlashFolder)//TRIM(PlotDataFile)
+               EndIf
                If((PlotType.eq.'InterfContour') .or. (PlotType.eq.'EIContour')) then
                   write(10,"('rm ',A,'{*.z,*-cvalues.dat,*-clabels.dat,*-cdata.dat}')") TRIM(DataFolder)
-                  write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") TRIM(DataFolder)
+                  write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") &
+                              TRIM(DataFolder)//trim(OutFileLabel)
                EndIf
             EndIf
    EndIf

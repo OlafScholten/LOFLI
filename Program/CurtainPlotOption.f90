@@ -392,7 +392,7 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    HOffSt_p=4
    HOffSt_t=HOffSt_p+PlotW+Sep
    !
-   Write(2,*) 'GLEscript_Curtains:Nr_UniqueStat=',Nr_UniqueStat
+   !Write(2,*) 'GLEscript_Curtains:Nr_UniqueStat=',Nr_UniqueStat
    Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
    Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
    Write(unt,"(A,I2,3(/A),2(/A,I0))") 'size 63 ',Nr_UniqueStat+9,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
@@ -441,13 +441,15 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
          dn=dn+1
          Write(Unt,902) trim(FileA)//'PhiDat_'//TRIM(Label), dn, j_IntFer+1, dn, '0', MODULO(i_ant,11)
          dn=dn+1
-         Write(Unt,902) trim(FileA)//'PhiMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
+         Write(Unt,903) trim(FileA)//'PhiMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
          counter=counter+1
          dChi_sp(i_stat)=dChi_sp(i_stat)*(counter-1)/counter + dChi_ap(j_IntFer)/counter  ! keep running mean
          StPowr_p(i_stat)=StPowr_p(i_stat)*(counter-1)/counter + Power_p(j_IntFer)/counter  ! keep running mean
       EndDo
       !write(2,*) 'dn:',dn,j_IntFer
+      Write(unt,"(T6,'let d',i0,'=0.',/T6,'d',i0,' line lstyle 0 lwidth 0.01')") dn+1, dn+1
       Write(Unt,"(' end graph')")
+      !Write(unt,"('amove ',F5.1,' yg(0)',/'rline ',F5.1' 0')") HOffSt_p, PlotW
       plot_offset=i_stat + 2
       Write(Unt,901) HOffSt_t, plot_offset!,trim(FileA), TRIM(Label),j_IntFer, trim(FileA), TRIM(Label),j_IntFer, i_c, i_c ! subgraph for this antenna pair ! , ADVANCE='NO'
       dn=0
@@ -458,35 +460,26 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
          dn=dn+1
          Write(Unt,902) trim(FileA)//'ThDat_'//TRIM(Label), dn, j_IntFer+1, dn, '0', MODULO(i_ant,11)
          dn=dn+1
-         Write(Unt,902) trim(FileA)//'ThMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
+         Write(Unt,903) trim(FileA)//'ThMod_'//TRIM(Label), dn, j_IntFer+1, dn, '4', MODULO(i_ant,11)
          counter=counter+1
          dChi_st(i_stat)=dChi_st(i_stat)*(counter-1)/counter + dChi_at(j_IntFer)/counter  ! keep running mean
          StPowr_t(i_stat)=StPowr_t(i_stat)*(counter-1)/counter + Power_t(j_IntFer)/counter  ! keep running mean
          Phi(i_stat)=180.+atan2( VoxLoc(2)-Ant_pos(2,i_ant,i_chunk) , VoxLoc(1)-Ant_pos(1,i_ant,i_chunk) ) *180./pi ! \phi=0 = south
       EndDo
+      Write(unt,"(T6,'let d',i0,'=0.',/T6,'d',i0,' line lstyle 0 lwidth 0.01')") dn+1, dn+1
       Write(Unt,"(' end graph')")
-
-
-      !Ras(1)=(VoxLoc(1)-Ant_pos(1,i_ant,i_chunk))/1000.  ! \vec{R}_{antenna to source}
-      !Ras(2)=(VoxLoc(2)-Ant_pos(2,i_ant,i_chunk))/1000.
-      !Ras(3)=(VoxLoc(3)-Ant_pos(3,i_ant,i_chunk))/1000.
-      !HorDist= Ras(1)*Ras(1) + Ras(2)*Ras(2)  ! =HYPOT(X,Y)
-      !D=sqrt(HorDist + Ras(3)*Ras(3))
-      !HorDist=sqrt( HorDist ) ! =HYPOT(X,Y)
-      !Thet_r=atan(HorDist,Ras(3))  ! Zenith angle
-      !Thet_d =Thet_r*180/pi
-      !write(2,*) i_stat,Phi(i_stat),MOD(phi(i_stat),90.d0),i_ant,i_chunk,Ant_pos(2,i_ant,i_chunk)
-
-
-
-   EndDo
+      !Write(unt,"('amove ',F5.1,' yg(0)',/'rline ',F5.1' 0')") HOffSt_t, PlotW
+   EndDo ! i_stat=1,Nr_UniqueStat
+   !
 901   Format('amove ',2F5.1,/'begin graph',/'  size 27 2',/'  vscale 1',&
          /'  hscale 1',/'   NoBox',&
          /'   xaxis min t_min max t_max',/'   x1axis off',&
          /'   yaxis ',/'   y1axis off')
 !         /'   yaxis  min -scl max scl',/'   y1axis off')
 902   Format('     data "',A,'.dat" d',i0,'=c1,c',I0,&
-         /'     d',i0,' line lwidth 0.04 lstyle ',A,' color MyCol',i0,'$')
+         /'     d',i0,' line lwidth 0.04 lstyle ',A,' color MyCol',i0,'$')   ! data
+903   Format('     data "',A,'.dat" d',i0,'=c1,c',I0,&
+         /'     d',i0,' line lwidth 0.1 lstyle ',A,' color MyCol',i0,'$')   ! model; thicker dots
     !
     Write(unt,"(A,2F5.1,/A,F6.2,A)") 'amove ',HOffSt_t,Nr_UniqueStat+7.5, 'write "Chi^2/dof=',Chi2pDF,'"'
     Write(unt,"('set lstyle 0',/'set lwidth 0.01',/'set hei 0.7')")
@@ -495,12 +488,12 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
     Do i_stat=1,Nr_UniqueStat  ! put labels
 !   HOffSt_t=HOffSt_p+PlotW+Sep
         plot_offset=i_stat  + 3
-        Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_p, plot_offset,    PlotW  ! hline
+        !Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_p, plot_offset,    PlotW  ! hline
         Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_p-1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'  ! text on left
         whiteness=1/(1+2*dChi_sp(i_stat)/Chi2pDF)
         Write(unt,904) HOffSt_p-4.0+PlotW, plot_offset+.5, 1.-whiteness, whiteness, dChi_sp(i_stat)            ! text in right side
         Write(unt,905) HOffSt_p-1.5+PlotW, plot_offset+.5,  sqrt(StPowr_p(i_stat))            ! text in right side
-        Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_t, plot_offset,    PlotW
+        !Write(unt,"('amove ',2F5.1,/'rline ',F5.1' 0')") HOffSt_t, plot_offset,    PlotW
         Write(unt,"('amove ',2F5.1,/A,A5,A)") HOffSt_t+PlotW+1.5, plot_offset,'write "',Statn_ID2Mnem(Unique_StatID(i_stat)),'"'
         whiteness=1/(1+2*dChi_st(i_stat)/Chi2pDF)
         Write(unt,904) HOffSt_t+1.5, plot_offset+.5, 1.-whiteness, whiteness, dChi_st(i_stat)

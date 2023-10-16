@@ -1,6 +1,6 @@
 !=================================
-    Include 'EICallRtns.f90'
-    Include 'EIFitter.f90'
+!    Include 'EICallRtns.f90'
+!    Include 'EIFitter.f90'
 !================================
 !=================================
 Subroutine E_Callibr()
@@ -37,13 +37,13 @@ Subroutine E_Callibr()
    Use Interferom_Pars, only : IntFer_ant, StartTime_ms, Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Alloc_EInterfCalib_Pars
    use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
-    use LOFLI_Input, only : ReadSourceTimeLoc
+   ! use LOFLI_Input, only : ReadSourceTimeLoc
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp) :: SourceGuess(3,N_Chunk_max)
    integer, save ::  FP_s(0:N_FitPar_max)!, FP(0:4)
-   real ( kind = 8 ) :: X(N_FitPar_max)
+   real ( kind = 8 ) :: X(N_FitPar_max), ZeroCalOffset
    !
    integer :: i, j, k, i_ant, i_eo, i_chunk, i_stat, StatID, nxx
    integer :: i_loc(1), i_Peak
@@ -168,11 +168,12 @@ Subroutine E_Callibr()
    Call EI_PrntFitPars(X)
     !
    Write(2,"(//,A)") ' ==== Summary of new parameters ===='
-   Call PrntNewSources
    ! Merge values for "Fit_TimeOffsetStat" with input from 'FineCalibrations.dat'
+   ZeroCalOffset=0.
    If(WriteCalib) then
-      Call WriteCalibration ! was MergeFine
+      Call WriteCalibration(ZeroCalOffset) ! was MergeFine
    Endif
+   Call PrntNewSources(ZeroCalOffset)
    !
    Return
     !

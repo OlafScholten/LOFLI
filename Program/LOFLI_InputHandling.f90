@@ -122,44 +122,61 @@ MODULE LOFLI_Input
       Call PrintValues(RunOption,'RunOption')
       Call PrintValues(OutFileLabel,'OutFileLabel')
    End Subroutine PrintParIntro
-!
-   Subroutine ReadSourceTimeLoc(StartTime_ms, CenLoc)
-      use constants, only : dp, Sample, c_mps
-      use Chunk_AntInfo, only : TimeBase
-      Implicit none
-      Real(dp), intent(OUT) :: StartTime_ms, CenLoc(1:3)
-      Integer, parameter ::lnameLen=180
-      Character(LEN=lnameLen) :: lname
-      Real(dp) :: t_shft
-      Integer :: j
-      Real(dp), external :: tShift_ms
-      !
-      Call GetNonZeroLine(lname)
-      Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
-      !Call PrintValues(lname,'input line-1', 'time & position' )
-      write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
-         '" !  Core/Source-| time, & position'
-      Call Convert2m(CenLoc)
-      StartTime_ms=StartTime_ms+TimeBase
-      t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
-      !
-      j = iachar(lname(1:1))  ! convert to upper case if not already
-      if (j>= iachar("a") .and. j<=iachar("z") ) then
-         lname(1:1) = achar(j-32)
-      end if
-      SELECT CASE (lname(1:1))
-         CASE("S")  ! time at Source (central voxel) is given
-            StartTime_ms=StartTime_ms+t_shft
-         CASE DEFAULT  ! time at reference antenna is given
-      End SELECT
-      write(2,"(A,F12.6,A,F12.6,A,A,2(F9.4,','),F9.4,A)") &
-         ' True start time trace, adding base, at core (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]',&
-         ' for source @(N,E,h)=(', CenLoc(1:3)/1000., ' ) km'
-      Return
-   End Subroutine ReadSourceTimeLoc
    !
 END MODULE LOFLI_Input
 ! ============================================================
+Subroutine ReadSourceTimeLoc(StartTime_ms, CenLoc)
+   use constants, only : dp, Sample, c_mps
+   use Chunk_AntInfo, only : TimeBase
+   use PredefinedTracks, only : GetTrPos, GetTrTime, PreDefTrackFile, t_track
+   Implicit none
+   Real(dp), intent(OUT) :: StartTime_ms, CenLoc(1:3)
+   Integer, parameter ::lnameLen=180
+   Character(LEN=lnameLen) :: lname
+   Real(dp) :: t_shft
+   Integer :: j,nxx=0
+   Real(dp), external :: tShift_ms
+   !
+   Call GetNonZeroLine(lname)
+   Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, CenLoc  ! Start time
+   !Call PrintValues(lname,'input line-1', 'time & position' )
+   If(nxx.ne.0) Then  ! no CenLoc was given, but probably a track-name
+      Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, PreDefTrackFile, t_track  ! Start time
+      If(nxx.eq.0 .and. t_track.gt.0.0 ) Then  !  t_track was specified
+         Call  GetTrPos( t_track, CenLoc)
+      Else
+         Read(lname(2:lnameLen),*,iostat=nxx) StartTime_ms, PreDefTrackFile  ! Start time
+         Call  GetTrPos( StartTime_ms, CenLoc)
+      EndIf
+      If(nxx.ne.0) Then
+         write(2,*) 'problems decoding input line 1**************8 '
+         write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
+            '" !  Core/Source-| time, & position --or--   -| Midtrack_time, Track_file, track_time'
+         stop 'Problem in ReadSourceTimeLoc'
+      EndIf
+      lname(1:1)='S'
+   EndIf
+   write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
+      '" !  Core/Source-| time, & position --or--   -| Midtrack_time, Track_file, track_time'
+   Call Convert2m(CenLoc)
+   StartTime_ms=StartTime_ms+TimeBase
+   t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
+   !
+   j = iachar(lname(1:1))  ! convert to upper case if not already
+   if (j>= iachar("a") .and. j<=iachar("z") ) then
+      lname(1:1) = achar(j-32)
+   end if
+   SELECT CASE (lname(1:1))
+      CASE("S")  ! time at Source (central voxel) is given
+         StartTime_ms=StartTime_ms+t_shft
+      CASE DEFAULT  ! time at reference antenna is given
+   End SELECT
+   write(2,"(A,F12.6,A,F12.6,A,A,2(F9.4,','),F9.4,A)") &
+      ' True start time trace, adding base, at core (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]',&
+      ' for source @(N,E,h)=(', CenLoc(1:3)/1000., ' ) km'
+   Return
+End Subroutine ReadSourceTimeLoc
+!--------------------------------------------------------------------------------
 Subroutine PreReadPeakFitInfo(ChunkNr_dim,i_peak)
    use constants, only : dp
    use DataConstants, only : RunMode
@@ -187,7 +204,7 @@ Subroutine PreReadPeakFitInfo(ChunkNr_dim,i_peak)
       Read(lname,FMTSrces,iostat=nxx) &
           i_s,i_eo,i_c,i_pos,  NEh(:) ! just dummy arguments
       If(nxx.eq.0 .and. (i_s.ge.0) .and. (i_eo.ge.0 .and. i_eo.lt.3) .and. (i_c.gt.0) .and. (i_pos.gt.1000) ) Then ! check for pulse-info
-         !  Determine number of peaks/sorces that are included in the calibration search
+         !  Determine number of peaks/sources that are included in the calibration search
          If(.not.(RunMode.eq.7 .and. i_eo.eq.1)) i_peak=i_peak+1
          If((RunMode.eq.2) .and. i_eo.eq.2) i_peak=i_peak+1 ! assume both polarities for Dual
          If(ChunkNr_dim.eq.0) Then
@@ -428,7 +445,8 @@ Subroutine DualReadPeakInfo(i_eo,i_chunk)
     Return
 End Subroutine DualReadPeakInfo
 !==========================================
-Subroutine PrntNewSources()
+Subroutine PrntNewSources(ZeroCalOffset)
+   use constants, only : dp
    use ThisSource, only : PeakNrTotal, ChunkNr, Peak_eo, ChunkNr, Dual, Dropped
    use ThisSource, only : Nr_Corr, CorrAntNrs, ExclStatNr
    use Chunk_AntInfo, only : Ant_Stations, Unique_StatID, Nr_UniqueStat, StartT_sam, ChunkStTime_ms, ChunkFocus
@@ -436,6 +454,7 @@ Subroutine PrntNewSources()
    use DataConstants, only : RunMode, Station_nrMax
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
+   Real(dp), intent(in) :: ZeroCalOffset
    integer ( kind = 4 ) :: i,j, i_Peak, i_chunk, i_eo, i_stat, i_ant, j_corr, count(0:1,1:Station_nrMax), Station_ID
    integer ( kind = 4 ) :: Peaks(0:1)
    integer, external :: XIndx
@@ -489,7 +508,8 @@ Subroutine PrntNewSources()
    EndIf
    !
    !
-   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, -----); RMS[ns], sqrt(chi^2/df), Excluded: '
+   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, -----); RMS[ns], sqrt(chi^2/df), Excluded: ' &
+      ,'Peak positions shifted by ', ZeroCalOffset, 'due to time-calibration offset'
    i_chunk=0
    Do i_Peak = 1,PeakNrTotal
       If(i_chunk.ne.ChunkNr(i_Peak)) then
@@ -498,12 +518,12 @@ Subroutine PrntNewSources()
        !  write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',StartT_sam(i_chunk),&
        !     '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
       Endif
-      Call PrntCompactSource(i_Peak)
+      Call PrntCompactSource(i_Peak,ZeroCalOffset)
    Enddo  !  i_Peak = 1,PeakNrTotal
    !
 End Subroutine PrntNewSources
 !==========================================
-Subroutine PrntCompactSource(i_Peak)
+Subroutine PrntCompactSource(i_Peak,ZeroCalOffset)
    use constants, only : dp,Sample_ms
    use FitParams, only : station_nrMax
    use DataConstants, only : RunMode
@@ -512,6 +532,7 @@ Subroutine PrntCompactSource(i_Peak)
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: i_Peak
+   Real(dp), intent(in) :: ZeroCalOffset
    integer ( kind = 4 ) :: i,k, i_chunk,i_eo, i_src
    Character(len=5) :: Station_Mnem
    Real(dp) :: RDist,Time
@@ -527,7 +548,7 @@ Subroutine PrntCompactSource(i_Peak)
       k=PeakPos(i_Peak)-NINT(RDist-Ant_RawSourceDist(RefAnt(i_chunk,i_eo),i_chunk)) ! in samples due to signal travel distance to reference
    ElseIf(RunMode.ge.7) Then
       i_eo=2
-      k=PeakPos(i_Peak)
+      k=PeakPos(i_Peak)+ZeroCalOffset
    EndIf
    Time=( StartT_sam(ChunkNr(i_Peak)) + PeakPos(i_Peak) - tShift_smpl(SourcePos(:,i_Peak)) )*Sample_ms
    !

@@ -29,7 +29,8 @@ Module Tracks
    !
    integer, parameter :: maxd=123000
    real*8 :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
-   Integer :: Label(4,maxd)  ! Unique source label
+   Integer :: Label(4,maxd)  ! Unique source label and amplitude and widths
+   real :: QualIndic(4,maxd)  ! Quality indicators
    Integer :: EventNr  ! number of sources stored in RA, passing the selection criteria
    !
    Integer, parameter :: Nmax_Ampl=5000
@@ -48,12 +49,12 @@ SUBROUTINE HPSORT_mult_RI(RA,IA,N)
 !*                by the Heapsort method             *
 !* ------------------------------------------------- *
 !* INPUTS:                                           *
-!*	    N	  size of table RA                   *
-!*          RA	  table to be sorted, real values               *
-!*          IA	  table to be rearranged, integer values                *
-!* OUTPUT:                                           *
-!*	    RA    table sorted in ascending order    *
-!*	    IA    table rearranged following order RA   *
+!*	    N	  size of table RA                                                                  *
+!*          RA(1,1:N)	  table to be sorted, real values                                    *
+!*          RA(*,1:N) [real] and IA(*,1:N) [integer]	 rearranged like  RA(1,1:N)            *
+!* OUTPUT:                                                                                   *
+!*	    RA    table sorted in ascending order                                                 *
+!*	    IA    table rearranged following order RA                                             *
 !*                                                   *
 !* NOTE: The Heapsort method is a N Log2 N routine,  *
 !*       and can be used for very large arrays.      *
@@ -111,6 +112,7 @@ SUBROUTINE HPSORT_mult_RI(RA,IA,N)
 END SUBROUTINE HPSORT_mult_RI
 !-----------------------
   Subroutine Selection_sort(a)  ! same as in MappingUtilities.f90
+  ! Smallest value first
   ! From:  https://rosettacode.org/wiki/Sorting_algorithms/Selection_sort#Fortran
     INTEGER, INTENT(IN OUT) :: a(:)
     INTEGER :: i, minIndex, temp
@@ -154,11 +156,11 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    character*100, intent(in), optional :: SelFileName
    Integer :: SourceAmp(1:NrSources)  !  Amplitudes of sources in the i^th track
    !
-   Integer :: i,k, i_Ampl, i_AmplMax, i_cut, i_MaxFit
+   Integer :: i,k, i_Ampl, i_AmplMax, i_cut, i_MaxFit,N_bins
    Integer ( kind = 4 ) :: meqn, nvar  ! Number of data points to fit & number of parameters
    Character*8 :: extension
-   Real*8 :: Max_Ampl, Ampl10, X(4),ChiSQDF, AmplBin,  ZeroErr=0.25
-   Real*8 :: Fit_exp(Nmax_Ampl), Fit_pow(Nmax_Ampl)
+   Real*8 :: Max_Ampl, Ampl10, X(4),ChiSQDF, AmplBin, Counts2BinValue, ZeroErr=1., HistNrm ! 0.25
+   Real*8 :: Fit_exp(Nmax_Ampl), Fit_pow(Nmax_Ampl),a,b,c
    Real(dp), save :: Tiny=epsilon(Tiny)
    !
    !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
@@ -175,48 +177,74 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndIf
    CALL Selection_sort(SourceAmp)  ! Re-order  sources according to pulse amplitude
    !
+   Fit_exp(:)=0.0
+   Fit_pow(:)=0.0
+   N_bins=-1
+   !
    If(MaxAmplFitPercent.lt.0.) MaxAmplFitPercent=0.1
    Max_Ampl=SourceAmp(NrSources)*AmplScale
    Ampl10=SourceAmp(NrSources*9/10)*AmplScale  ! 10 percentile amplitude
    write(2,"(A,I8,A,F9.1,A,F8.2,A,F8.2,A,I4)") 'Amplitudes (#=',NrSources,'), max@', Max_Ampl, &
       ', 5-pctile@', SourceAmp(NrSources*95/100)*AmplScale, ', 10-pctile@', Ampl10
    i_cut=NrSources*(1.-MaxAmplFitPercent/100)
-   If(i_cut.gt.0) then
-      write(2,"(A,F7.3,A,F8.2,A,F8.2,A,I4)") 'Amplitude with ', MaxAmplFitPercent, &
-         'pctile as included in fit @', SourceAmp(i_cut)*AmplScale
+   If(i_cut.ge.0) then
+      If(i_cut.eq.0) i_cut=1
+      write(2,"(A,F7.3,A,F8.2,A,I4,F8.2)") 'Amplitude with ', MaxAmplFitPercent, &
+         'pctile as included in fit @', SourceAmp(i_cut)*AmplScale,', i_cut=', i_cut, SourceAmp(1)*AmplScale
    Else
-      i_cut=NrSources  !  No cut
+      i_cut=NrSources  !  No sources in fit
    Endif
    !
    d_AmplScale=1.1  ! factor for log bins
+   ! Automatic scaling
+   If(NrSources.gt.50) Then
+      N_bins=Nmax_Ampl-2  ! -2 for a stable fit with analytic function
+      If(NrSources.lt.N_bins) N_bins=NrSources/10
+      d_AmplScale=log(1.d0*SourceAmp(NrSources)/SourceAmp(1))/N_bins
+      d_AmplScale=exp(d_AmplScale)
+      write(2,*) 'Automatic amplitude histogram scaling;', d_AmplScale, N_bins, &
+            SourceAmp(1)*AmplScale, SourceAmp(NrSources)*AmplScale
+      !write(2,*) ';', d_AmplScale**N_bins, 1.* SourceAmp(NrSources)/SourceAmp(1)
+   EndIf
+   !
    AmplBin=SourceAmp(1)*d_AmplScale  ! scaled up by factor 1/AmplScale, always start in the first bin
    i_Ampl=1
    i_MaxFit=0
    Ampl_Hist(:)=0
+   HistNrm=0.  ! =\int I N(I) dI
+   !Ampl10=0.
    Do k=1,NrSources
-      Do While( SourceAmp(k) .gt. AmplBin)
-         Ampl_Hist_W(i_Ampl)= AmplScale*AmplBin*(d_AmplScale-1.)/sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
+      Do While( SourceAmp(k) .gt. AmplBin)  ! start from the smallest amplitude and fill up bins
+         Counts2BinValue=(AmplScale*AmplBin*(d_AmplScale-1.))
+         Ampl_Hist_W(i_Ampl)= Counts2BinValue/sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
          Ampl(i_Ampl)=AmplScale*AmplBin*(1.+d_AmplScale)/2.  ! In true units
-         Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/(AmplScale*AmplBin*(d_AmplScale-1.))
+         Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/Counts2BinValue
+         HistNrm=HistNrm + Ampl_Hist(i_Ampl)*Ampl(i_Ampl)*AmplScale*AmplBin*(d_AmplScale-1.)
+         !Ampl10=Ampl10 + Ampl_Hist(i_Ampl)*AmplScale*AmplBin*(d_AmplScale-1.)  ! equals tot nr of sources, as it should
+         ! chi^2 = sum_i (Ampl_Hist(i) - model) * Ampl_Hist_W(i)
+         !write(2,*) k, i_Ampl, AmplBin,Ampl(i_Ampl), Ampl_Hist(i_Ampl)*Counts2BinValue, Ampl_Hist_W(i_Ampl)/Counts2BinValue
          AmplBin=AmplBin*d_AmplScale
-         If(i_cut .gt. k) i_MaxFit=i_Ampl   !  Still include this bin in fitting
-         i_Ampl=i_Ampl+1
+         If(i_cut .gt. k) i_MaxFit=i_Ampl+1   !  Still include this bin in fitting
+         i_Ampl=i_Ampl+1  ! start to fill next bin
          If(i_Ampl .ge. Nmax_Ampl) goto 9
       Enddo
       Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)+1.
-      !write(2,*) k, i_Ampl, AmplBin, Ampl_Hist(i_Ampl)
    EndDo
 9  Continue
-   Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/AmplBin*(d_AmplScale-1.)
-   Ampl_Hist_W(i_Ampl)= 1./sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
-   Ampl(i_Ampl)=AmplScale*AmplBin*(1.+d_AmplScale)/2.
+   !write(2,*) NrSources, SourceAmp(NrSources) , AmplBin, Ampl_Hist(i_Ampl), i_Ampl, Ampl10, HistNrm
+   Counts2BinValue=(AmplScale*AmplBin*(d_AmplScale-1.))
+   Ampl_Hist_W(i_Ampl)= Counts2BinValue/sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
+   Ampl(i_Ampl)=AmplScale*AmplBin*(1.+d_AmplScale)/2.  ! In true units
+   Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/Counts2BinValue
+   !write(2,*) N_bins, i_Ampl, Ampl(i_Ampl), Ampl_Hist(i_Ampl), Ampl_Hist_W(i_Ampl)
    i_AmplMax=i_Ampl
    If(i_Ampl .ge. Nmax_Ampl) Then
       Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)+NrSources-k  !  Fill out the highest bin with remainder, when necessary
       i_AmplMax=Nmax_Ampl-1
+      write(2,*) 'i_Ampl .ge. Nmax_Ampl', i_Ampl,Nmax_Ampl, AmplBin,Ampl(i_Ampl)
    EndIf
    If(i_MaxFit.eq.0) i_MaxFit=i_AmplMax
-   !write(2,*) i_AmplMax, NrSources, i_MaxFit
+   !write(2,*) i_AmplMax, NrSources, ', i_MaxFit:',i_MaxFit
    !write(2,*) Ampl(i_AmplMax), SourceAmp(NrSources), AmplBin
    !
    flush(unit=2)
@@ -238,9 +266,15 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    X(3)=0.
    Call FitAmpl(Meqn, nvar, X,ChiSq1, Fit_exp(i_AmplTh) )
    a1=X(1)
-   b1=exp(x(2))
+   b1=(x(2))
    c1=x(3)
    d1=0.
+   If(Meqn.lt.0) Then ! no fitting possible
+      write(2,*) 'no fitting possible of a1--d1'
+      !flush(unit=2)
+      goto 5
+   EndIf
+   b1=exp(x(2))
    !goto 8
    If(c1.lt.0.) then
       i_AmplTh=4 ! first index for fitting in histogram
@@ -270,6 +304,11 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    b2=x(2)!*d_Ampl**(X(1)-1)
    c2=x(3)!*d_Ampl
    d2=0.
+   If(Meqn.lt.0) Then ! no fitting possible
+      write(2,*) 'no fitting possible of a2--d2'
+      !flush(unit=2)
+      goto 8
+   EndIf
    If(c2.lt.0.) then
 1     FitFunc=1 ; nvar=2 ! F(A)=b (A)^(-a) with   where A is true amplitude
       !      CalcN = -X(2) * (i_Ampl)**(-X(1))
@@ -290,15 +329,67 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndIf
    !
 8  continue
-   If(present(SelFileName)) then
+   !   write(2,*) 'entering SelFileName', present(SelFileName)
+   !   flush(unit=2)
+   If(present(SelFileName) .and. N_bins.gt.1) then
       !write(2,*) (d_AmplScale-1.),Ampl(1)
+      !write(2,*) 'entering pre-logscaling', N_bins
+      !flush(unit=2)
+      a=Ampl(1) ; b=Ampl(N_bins)  ! set scale for plots to cover at least factor 10
+      !write(2,*) 'entering logscaling', a,b
+      !flush(unit=2)
+      If(b/a.lt.10.) Then
+         c=sqrt(10.*a/b)
+         a=a/c ; b=b*c
+      EndIf
+      c=log(a)/log(10.)
+      !write(2,*) 'c=log(a)/log(10.):',c,a
+      If(c.lt.0) Then
+         i=int(c)-1 ;
+      Else
+         i=int(c)
+      EndIf
+      c=10.**i  ! next lower power of 10
+      If(a.gt.5.*c) Then
+         a=5.*c
+      ElseIf(a.gt.3.*c) Then
+         a=3.*c
+      ElseIf(a.gt.2.*c) Then
+         a=2.*c
+      Else
+         a=c
+      EndIf
+      !write(2,*) i,c,a
+      If(a.lt.0.01) a=0.01
+      c=log(b)/log(10.)
+      !write(2,*) 'c=log(b)/log(10.):',c,b
+      If(c.lt.0) Then
+         i=int(c)-1 ;
+      Else
+         i=int(c)
+      EndIf
+      c=10.**i  ! next lower power of 10
+      If(b.lt.2.*c) Then
+         b=2.*c
+      ElseIf(b.lt.3.*c) Then
+         b=3.*c
+      ElseIf(b.lt.5.*c) Then
+         b=5.*c
+      Else
+         b=10.*c
+      EndIf
+      !write(2,*) i,c,b
+      !  End log amplitude scale
       Nrm1=0.  ; Nrm2=0.
+      !write(2,*) 'N_bins:',N_bins
       OPEN(unit=28,FILE=TRIM(SelFileName)//'.dat', FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
-      write(28,"(1x,'0 ',2I8,1x, 6(1x,g10.4),f7.3,1x,A,A)")  i_MaxFit, i_AmplMax, &
+      write(28,"(1x,F8.2,2F10.2, 6(1x,g10.4),f7.3,1x,A,A)") a, Ampl(i_MaxFit), b, &
          a1,b1,c1,a2,b2,c2,d2, TRIM(SelFileName),' ! by AmplitudeFit' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
-      Do i_Ampl=1,i_MaxFit ! i_AmplMax  !  finally write all accepted source to file
+      Do i_Ampl=1,i_AmplMax !N_bins ! i_MaxFit ! i_AmplMax  !  finally write all accepted source to file
          !Ampl10=(Ampl(1)/NrSources*(d_AmplScale-1.))*Ampl(i_Ampl)*Ampl(i_Ampl)
-         Ampl10=1./(NrSources*Ampl(1)) * Ampl(i_Ampl)*Ampl(i_Ampl)
+         Ampl10= Ampl(i_Ampl)*Ampl(i_Ampl)/HistNrm  ! norm changed 18 Lan 2023
+         !Ampl10=1./(NrSources*Ampl(1)) * Ampl(i_Ampl)*Ampl(i_Ampl)
+         !write(2,"(1x,I5,7(1x,g14.6))") i_Ampl, Ampl(i_Ampl), Ampl10*Ampl_Hist(i_Ampl), Ampl10, Ampl_Hist(i_Ampl)
          write(28,"(1x,I5,7(1x,g14.6))") i_Ampl, Ampl(i_Ampl), Ampl10*Ampl_Hist(i_Ampl),Ampl10/Ampl_Hist_W(i_Ampl), &
                Ampl10*Fit_exp(i_Ampl)+Tiny, Ampl10*Fit_pow(i_Ampl)+Tiny, Fit_pow(i_Ampl)
          Nrm1=Nrm1+Fit_exp(i_Ampl)*(Ampl(i_Ampl+1)-Ampl(i_Ampl))
@@ -308,7 +399,7 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndIf
    Nrm=NrSources*Ampl(1)
    write(2,"(1x,A, f6.2, A, f7.4, g10.3, g11.3, A,2g11.3)") '$b *exp(-a*A-c/A^2); \chi^2=$',ChiSq1, &
-                                    ',with  a,b,c= ',a1,b1/Nrm,c1,'; nrm=', Nrm
+                                    ',with  a,b,c= ',a1,b1/Nrm,c1,'; nrm=', Nrm, HistNrm
    write(2,"(1x,A, f6.2, A, f7.3, g10.3, g11.3, A,2g11.3)") '$b *A^-a *exp(-c/A); \chi^2=$',ChiSq2, &
                                     ',with  a,b,c= ',a2,b2/Nrm,c2,'; nrm=', Nrm
    Return

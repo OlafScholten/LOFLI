@@ -293,7 +293,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
    Use Interferom_Pars, only : PixLoc, PixelPower, MaxSmPow, N_smth, Nr_IntFerMx, Nr_IntFerCh, i_chunk, IntfNuDim
    Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
-   Use Interferom_Pars, only : alpha, PolBasis !, PowerScale
+   Use Interferom_Pars, only : alpha, PolBasis  ,    NGridInterpol, RMSGridInterpol, NGridExtrapol
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax, AmpltPlot, t_offsetPow
    Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RatMax, PixPowOpt
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
@@ -333,8 +333,8 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    !
    If(Dual) Then
       OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat')
-      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
-         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,I5,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
+         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth, NrPixSmPowTr  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
       Write(2,*) 'In OutputIntfPowrMxPos, data written to file:', &
             trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat'
       write(2,*) 'Header:tMin-.0005-TimeBase, tMax+.0005-TimeBase,  TimeBase,  CenLoc(:), ', &
@@ -494,6 +494,11 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    If(Dual) Then
       DeAllocate( CMTime_pix )
    EndIf
+   If (NGridInterpol.gt.0) Then
+      write(2,"(A,I5,A,3F5.2,A,I4,A)") 'GridInterpol:', NGridInterpol, ', RMS of interpolation [grid spacing]=' &
+         ,sqrt(RMSGridInterpol(:)),'; ', NGridExtrapol &
+         ,' interpolations beyond 3-D limit of 0.75; ideal interpolation distance=sqrt(1/12)=0.29'
+   EndIf
    write(2,"(A,2I6,2F6.3,A,3F7.3,A,I7,A,F9.1)") 'number of sources in plots:',NMx,NBar, NoiseLevel, RatMax
    If(NMx.gt.1) then
       Call GLEplotControl(PlotType='SourcesPlot', PlotName='IntfMx'//TRIM(txt)//TRIM(OutFileLabel), &
@@ -520,15 +525,13 @@ Real*8 Function Sq(x)
 Real*8 x
 Sq=x
 End Function Sq
+!-----------------------------------------------
 Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    ! Do a 3D parabolic fit to interpolate around the maximal pixel
    !--------------------------------------------
    use constants, only : dp
    Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix !, IntFer_ant
-   Use Interferom_Pars, only : PixelPower, MaxSmPow !,    NrPixSmPowTr, MaxIntfIntenLoc ! Nr of smoothed slices
-   !Use Interferom_Pars, only : PowrThresh
-   Use Interferom_Pars, only : MaxSmPowGrd, PixSmPowTr
-   !Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc   !IntfBase, IntfDim, IntfPhaseCheck, SumStrt, SumWindw
+   Use Interferom_Pars, only : PixelPower, MaxSmPow, MaxSmPowGrd, PixSmPowTr, RMSGridInterpol, NGridInterpol, NGridExtrapol
    Implicit none
    Integer, intent(in) :: i
    Real(dp), intent(out) :: d_gr(1:3), SMPow, Qualty(1:3)
@@ -539,6 +542,8 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Real(dp) :: A, B
    Real(dp), parameter :: D0=0.75 ! maximal distance (in grid spacings) for the interpolated point from the max-intensity voxel
    Real(dp) :: Paraboloid ! , Sq
+   !Real(dp), save :: RMSGridInterpol(1:3)=(/0.d0,0.d0,0.d0/)
+   !Integer, save :: NGridInterpol=0
    Logical :: Check=.false.
    !Logical :: Check=.true.  !  .false.
    !
@@ -686,10 +691,14 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !
    !write(2,*) 'y0:',y0,det3
    !write(2,*) 'FindInterpolMx:', i_gr(:), d_gr(:)
+   RMSGridInterpol(:)=(RMSGridInterpol(:)*NGridInterpol+d_gr(:)*d_gr(:))/(NGridInterpol+1)
+   NGridInterpol=NGridInterpol+1
+   !write(2,*) 'GridInterpol:', NGridInterpol, RMSGridInterpol(:)
    B=sqrt(SUM(d_gr(:)*d_gr(:)))  ! Limit the max distance from the most intense voxel
    If(B.gt.D0) Then
-      write(2,*) 'Interpolation distance shortend:',B
+      write(2,"(A,F5.2,A,3F5.2)") 'Interpolation distance shortend:',B, ', stepsizes were (in grid spacings)', d_gr(:)
       d_gr(:)=d_gr(:)*D0/B
+      NGridExtrapol=NGridExtrapol+1
    EndIf
    SMPow=Paraboloid(y0,Ay,By,Ry,d_gr)  ! construct intensity at intepolated position of max
    !
@@ -906,13 +915,13 @@ Subroutine EI_PolarizSlice(i_slice)
    EndIf
    !
    Output=2
-   If(SumWindw/N_Smth.ge.5) Output=1
+   If(SumWindw/N_Smth.ge.11) Output=1
    i_sample=IntfLead + 1+i_slice*N_smth
    FitDelay(:)=0.
    write(Label,"('Slc ',i4.2)") i_slice
    write(2,"(1x,A,i4,A,I5,A,2(F9.4,','),F9.4,A)") 'Slice',i_slice,', Ref. ant. sample=',IntfBase+i_sample, &
       ', Max Intensity @ (N,E,h)=(',PixLoc(:)/1000.,') [km]'
-   !write(2,*) ' i_sample, i_chunk:', i_sample, i_chunk, Nr_IntFerCh(:),'fitdelay:',FitDelay
+   !write(2,*) 'EI_PolarizSlice: i_sample, i_chunk:', i_sample, i_chunk, Output, Nr_IntFerCh(i_chunk) ! ,'fitdelay:',FitDelay
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, i_sample, i_chunk, PixLoc(:), AntPeak_OffSt(1,1), &
       Cnu_p0(0,1,1), Cnu_t0(0,1,1), Cnu_p1(0,1,1), Cnu_t1(0,1,1), Output, DelChi, Label, ExclStat)
    !

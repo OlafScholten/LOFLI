@@ -1,5 +1,3 @@
-    Include 'InterferometryOptSbRtns.f90'
-    !
 Subroutine InterferometerRun
     !+++++++++ What is used:
     !- Loop over antennas
@@ -19,45 +17,38 @@ Subroutine InterferometerRun
     ! - End pixelLoop
     !- End antennaLoop
     !++++++++++++++++++++++
-   Use Interferom_Pars, only : Polar, NewCenLoc, ChainRun, StartTime_ms, AmpltPlot, i_chunk
+   Use Interferom_Pars, only : Polar, NewCenLoc, ChainRun,  StartTime_ms, AmpltPlot, i_chunk
    Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc, PixLoc, IntFer_ant
    Use Interferom_Pars, only : SumStrt, SumWindw, NrSlices, SliceLen
    Use Interferom_Pars, only : IntfPhaseCheck, N_smth, IntPowSpec, NrPixSmPowTr
-   use DataConstants, only : OutFileLabel, DataFolder, Calibrations, Time_Dim !, Cnu_dim,
+   !Use Interferom_Pars, only : PixPowOpt
+   use DataConstants, only : OutFileLabel, DataFolder, Time_Dim !, Cnu_dim,
    !use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
    !use DataConstants, only : Polariz
-   use Chunk_AntInfo, only : StartT_sam, TimeFrame, TimeBase, ExcludedStat, NoiseLevel, RefAnt, Simulation
-   use ThisSource, only : Dual, CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
-   use FitParams, only : AntennaRange
-   use constants, only : dp, ci, pi, Sample, c_mps
+   use Chunk_AntInfo, only : StartT_sam, TimeFrame,   NoiseLevel, RefAnt, Simulation
+   use ThisSource, only : CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
+   !use FitParams, only : AntennaRange
+   use constants, only : dp, ci, pi, Sample, c_mps, sample_ms
    use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
    !use StationMnemonics, only : Statn_ID2Mnem
    use HDF5_LOFAR_Read, only : CloseDataFiles
-   use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    use GLEplots, only : GLEplotControl
-    use LOFLI_Input, only : ReadSourceTimeLoc
+   use PredefinedTracks, only : PreDefTrackFile
+   !use LOFLI_Input, only : ReadSourceTimeLoc
    !use mod_test
    Implicit none
-   integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu, IntfSmoothWin, nxx
+   integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu,  nxx
    Integer, parameter ::lnameLen=180
    character(len=5) :: txt
    character(Len=1) :: Mark
    Character(LEN=lnameLen) :: lname
-   Real(dp) :: SmPow, t_shft
+   !Real(dp) :: SmPow,  MidTime_ms
    Integer :: Date_T(8)
-   character*100 :: shellin, IntfRun_file
    Character*7 :: PreAmble
-   Logical :: Interferometry=.true. !, E_FieldsCalc
-   NAMELIST /Parameters/ Interferometry, Dual &!, E_FieldsCalc  &  ! just those that are of interest for interferometry
-         , IntfPhaseCheck, IntfSmoothWin, TimeBase  &
-         , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations &
-         , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
+   Real(dp), external :: tShift_ms
    !    .
-   !E_FieldsCalc=.true.  !  Polariz
-   IntfSmoothWin=N_smth
-   !
    ! Get center voxel
-   Call ReadSourceTimeLoc(StartTime_ms, CenLoc)
+   Call ReadSourceTimeLoc(StartTime_ms, CenLoc)  ! routine resides in "LOFLI_InputHandling.f90
    !Call GetNonZeroLine(lname)
    !Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
    !write(2,"(A)") 'Interferometry input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
@@ -81,7 +72,7 @@ Subroutine InterferometerRun
    ! Get grid:
    Call GetMarkedLine(Mark,lname)
    write(2,"(A)") 'Input line-2: "'//Mark//'|'//TRIM(lname)// &
-      '" !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)'
+      '" !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing)'
    Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
    If(nxx.ne.0) then
       write(2,*) 'reading error in 2nd line:'
@@ -99,9 +90,9 @@ Subroutine InterferometerRun
    !d_loc(1)=d_N  ;  d_loc(2)=d_E   ;  d_loc(3)=d_h
    N_pix(:,1)=-N_pix(:,2)
    If(polar) then
-   write(2,*) 'Polar coordinates used for grid!!'
-   d_loc(1)=d_loc(1)*pi/180.   ! convert to radian
-   d_loc(2)=d_loc(2)*pi/180.   ! convert to radian
+      write(2,*) 'Polar coordinates used for grid!!'
+      d_loc(1)=d_loc(1)*pi/180.   ! convert to radian
+      d_loc(2)=d_loc(2)*pi/180.   ! convert to radian
    Endif
    !
    ! Start with interferometry setup
@@ -137,6 +128,11 @@ Subroutine InterferometerRun
       write(2,*) 'Window starting sample should be positive'
       Stop 'Window starting sample should be positive'
    EndIf
+
+   If(PreDefTrackFile.ne.'') Then  ! time was mid-time on track
+      StartTime_ms=StartTime_ms-sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
+   EndIf
+
    write(2,"(20(1x,'='))")
    !
    !  Read the time traces
@@ -218,35 +214,115 @@ Subroutine InterferometerRun
    Call GLEplotControl(PlotType=TRIM(PreAmble)//'Contour', PlotName=TRIM(PreAmble)//'Contour'//TRIM(OutFileLabel), &
             PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel), Submit=.true.)
    !
-   write(2,*) 'NewCenLoc', NewCenLoc
-   If((ChainRun.ne.0).and.(NewCenLoc(1).ne.0.d0)) then
+   write(2,*) 'NewCenLoc', NewCenLoc, ' , ChainRun=', ChainRun
+   If(ChainRun.ne.0) Call ChainRuns(NewCenLoc)
+   Return
+    !
+End Subroutine InterferometerRun
+!-------------------------------------------------------------
+Subroutine ChainRuns(NewCenLoc)
+! Run several TRI-D calculations in a series
+! If no TrackFile is specified, the new center location is taken as the bary-center of the present run (=ewCenLoc)
+! With a TrackFile there are two options,
+!     t_track is not given (=negative):
+!        Inch along the track to see the sources on the track with the TRI-D imager
+!     t_track is given (=positive):
+!        Inch along the track to see possible sources on the track with the TRI-D imager that is
+!            run at a fixed time as given by StartTime_ms.
+   Use Interferom_Pars, only : Polar, ChainRun,  StartTime_ms, AmpltPlot
+   Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc
+   Use Interferom_Pars, only : SumStrt, SumWindw, N_smth
+   !Use Interferom_Pars, only : IntfPhaseCheck, N_smth, IntPowSpec, NrPixSmPowTr
+   Use Interferom_Pars, only : PixPowOpt
+   use DataConstants, only : OutFileLabel, DataFolder, Calibrations !, Cnu_dim,
+   !use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr, Ant_pos, Ant_RawSourceDist
+   !use DataConstants, only : Polariz
+   use Chunk_AntInfo, only : TimeBase, ExcludedStat, NoiseLevel,  Simulation, SaturatedSamplesMax
+   !use ThisSource, only : CurtainHalfWidth,  Peakpos, SourcePos
+   use FitParams, only : AntennaRange
+   use constants, only : dp, ci, pi, Sample, c_mps, sample_ms
+   !use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
+   !use StationMnemonics, only : Statn_ID2Mnem
+   !use HDF5_LOFAR_Read, only : CloseDataFiles
+   use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
+   use PredefinedTracks, only : GetTrPos, GetTrTime, PreDefTrackFile, t_track
+   Implicit none
+   Real(dp), intent(inout) :: NewCenLoc(1:3)
+   integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu, IntfSmoothWin, nxx
+   Integer, parameter ::lnameLen=180
+   character(len=5) :: txt
+   character(Len=1) :: Mark
+   Character(LEN=lnameLen) :: lname
+   Real(dp) :: t_shft, MidTime_ms, t_new
+   character*100 :: shellin, IntfRun_file
+   Character*5 :: RunOption='TRI-D' !, E_FieldsCalc
+   Real(dp), external :: tShift_ms
+   NAMELIST /Parameters/ RunOption &!, E_FieldsCalc  &  ! just those that are of interest for interferometry
+         , IntfSmoothWin, TimeBase, PixPowOpt  &
+         , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations, SaturatedSamplesMax &
+         , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
+   !
+   If(ChainRun.eq.0) Return
+   write(2,*) StartTime_ms, t_track
+   t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
+   StartTime_ms=StartTime_ms-t_shft-TimeBase
+   StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
+   If(t_track.le.0.) Then
       If(ChainRun.gt.0) Then
          ChainRun=ChainRun-1
-         StartTime_ms=StartTime_ms+0.3
-         write(txt,"(':+',I2.2)") ChainRun
+         StartTime_ms=StartTime_ms+sample_ms*SumWindw
+         !write(txt,"('#+',I2.2)") ChainRun
+         txt='#+01'
       Else
          ChainRun=ChainRun+1
-         StartTime_ms=StartTime_ms-0.3
-         write(txt,"(':-',I2.2)") -ChainRun
+         StartTime_ms=StartTime_ms-sample_ms*SumWindw
+         !write(txt,"('#-',I2.2)") -ChainRun
+         txt='#-01'
       EndIf
+      If(PreDefTrackFile.ne.'') Then  ! With a track defined StartTime_ms is actually midtime
+         Call  GetTrPos(StartTime_ms, NewCenLoc)
+         write(2,*) 'NewCenLoc from track', StartTime_ms, NewCenLoc
+      EndIf
+      t_new=-1.
+   Else
+      If(ChainRun.le.0) Then
+         write(2,*) 'Chainrun should be positive for the "Follow a track at fixed time" (FTFT) option '
+         Stop 'Negative Chainrun with FTFT'
+      Endif
+      ChainRun=ChainRun-1
+      Call GetTrTime( t_track, t_new, NewCenLoc)
+      write(2,*) 't_track(old)=',t_track,', t_track(new)=',t_new,', NewCenLoc from track =',  NewCenLoc
+      txt='#+01'
+   EndIf
+   !
+
+   If(NewCenLoc(1).ne.0.d0) then
       !write(2,*) 'txt1',txt,ChainRun
       j=LEN(TRIM(OutFileLabel))
       k=j
       Do i=1,j
-         If(OutFileLabel(i:i) .eq. ':') Then
+         If(OutFileLabel(i:i) .eq. '#') Then
             k=i-1
+            read(OutFileLabel(k+3:k+4),*) i_s
+            i_s=i_s+1
+            write(OutFileLabel(k+3:k+4),"(I2.2)") i_s
             exit
          Endif
       Enddo
-      If(i_nu.eq.0) k=1
-      OutFileLabel(k+1:k+4)=txt(1:4)
+      If(k.eq.j) OutFileLabel(k+1:k+4)=txt(1:4)
       IntfRun_file='A-Intf_'//TRIM(OutFileLabel)
-      write(2,*) 'jk',j, OutFileLabel, i_nu, txt, ChainRun, IntfRun_file
+      write(2,*) 'OutFileLabel: ',TRIM(OutFileLabel),', ChainRun=', ChainRun, ', IntfRun_file:', IntfRun_file
       Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(IntfRun_file)//'.in' )
+      !
+      IntfSmoothWin=N_smth
       write(10,NML = Parameters)
       !
-      Write(10,"(F9.3, 3F10.4, F6.1)") StartTime_ms-TimeBase, NewCenLoc/1000. ! Start time
-!  239.7 , -25.42  37.28   5.54,  50 !-i- PID=25216;  StartTime_ms, (N,E,h)CenLoc, DistMax[km]
+      If(PreDefTrackFile.ne.'') Then
+         Write(10,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
+      Else
+         Write(10,"('S',F12.6, 3F10.4, F6.1)") StartTime_ms, NewCenLoc/1000. ! Start time at the source location
+         !  239.7 , -25.42  37.28   5.54,  50 !-i- PID=25216;  StartTime_ms, (N,E,h)CenLoc, DistMax[km]
+      EndIf
       lname(1:1)="C"
       If(Polar) then
          lname(1:1)="P"
@@ -255,7 +331,7 @@ Subroutine InterferometerRun
       EndIf
       write(10,"(A,3(I5,F9.5))") lname(1:1),N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
 !P  40 .003, 15 .01 , 20 10. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]  ; VeryFine resolution extended grid(vfe)
-      Write(10,"(2I7,I6,F7.3,F9.4)") SumStrt, SumWindw, NrSlices, AmpltPlot
+      Write(10,"('F',2I7,F7.3,F9.4)")  SumStrt, SumWindw,  AmpltPlot
 !   2000  60040 10 0.01 0.1 ! Ini [samples] starting loc & window for summing power & slice number & powerthresh & PlotAmplitude
       Close(Unit=10)
       Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(IntfRun_file)//'.sh' )
@@ -264,7 +340,7 @@ Subroutine InterferometerRun
          '#','#', &
          'source ../ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
 !         'source ${UtilDir}/compile.sh',  &
-         'cp ${ProgramDir}LOFAR-Imag-v20 ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when runnung 'ps' or 'top'
+         'cp ${ProgramDir}LOFAR-Imag ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when runnung 'ps' or 'top'
          './Imag-'//TRIM(OutFileLabel)//'.exe  ${FlashFolder} <'//TRIM(IntfRun_file)//'.in',  &
          'rm Imag-'//TRIM(OutFileLabel)//'.exe'
       Close(unit=10)
@@ -277,4 +353,5 @@ Subroutine InterferometerRun
    EndIf
    Return
     !
-End Subroutine InterferometerRun
+End Subroutine ChainRuns
+!=========================================

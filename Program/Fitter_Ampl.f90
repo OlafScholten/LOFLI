@@ -6,7 +6,7 @@ Subroutine FitAmpl(Meqn, nvar, X,ChiSQDF, BestFit)
    Use Tracks,  only : i_AmplTh, Nmax_Ampl, AmplScale, Ampl_Hist, FitFunc
    ! i_AmplTh=first entry that will be included in the fit
     Implicit none
-    Integer( kind = 4 ), intent(in) :: Meqn
+    Integer( kind = 4 ), intent(inout) :: Meqn
     integer ( kind = 4 ),intent(in) :: nvar    ! number of parameters
     real ( kind = 8 ), intent(inout) :: X(4)
     real ( kind = 8 ), intent(out) :: ChiSQDF
@@ -23,8 +23,12 @@ Subroutine FitAmpl(Meqn, nvar, X,ChiSQDF, BestFit)
     real ( kind = 8 ),allocatable :: v(:) !  in NL@SOL: real ( kind = 8 ) v(93 + n*p + 3*n + (p*(3*p+33))/2)
     integer ( kind = 4 ) :: NF
     !
+    !     write(2,*) 'entering fitting', nvar, Meqn
+    !      flush(unit=2)
     If(nvar.ge.Meqn) then
       Write(2,*) '****** too few values to fit, ',Meqn, FitFunc
+      Meqn=-1
+      !    flush(unit=2)
       Return
     EndIf
     v_dim=93 + Meqn*nvar + 3*Meqn + nvar*(3*nvar+33)/2

@@ -44,7 +44,7 @@ Subroutine EI_Fitter(X, Time_width, Space_Spread)
     !Call RFTransform_su(2*IntfNuDim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     !
     Meqn=0          ! total number of data-points that enter in the chi^2 search
-    N_fit=N_Smth/2+1   ! number of smaples on each side of pulse to be included in fitting
+    N_fit=N_Smth/2+1   ! number of samples on each side of pulse to be included in fitting
     !
     Do i_Peak=1,PeakNrTotal
       i_chunk=ChunkNr(i_Peak)
@@ -319,7 +319,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
 !   use ThisSource, only : ExclStatNr
-   use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain  !J_0p,J_0t,J_1p,J_1t,
+   ! use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1 , Gain  !J_0p,J_0t,J_1p,J_1t,
    use GLEplots, only : GLEplotControl
    use Interferom_Pars, only :IntfNuDim, dnu, inu1, inu2
    use FFT, only : RFTransform_CF, RFTransform_CF2CT
@@ -365,6 +365,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    !
    TestCh2=.false.
    If(Outpt.ge.2) TestCh2=.true.
+   !write(2,*) 'Outpt:', Outpt,  TestCh2
    ! Basis for Stokes parameters
 !   D=SUM(PixLoc(:)*PixLoc(:))  ; HVRBasis(:,3)=PixLoc(:)/sqrt(D)  ! radial, out
 !   HVRBasis(1,1)=-PixLoc(2)  ; HVRBasis(2,1)=PixLoc(1) ; HVRBasis(3,1)=0.  ! horizontal
@@ -427,7 +428,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
             wap_PB(i,j_IntFer)=0.
             wat_PB(i,j_IntFer)=0.
          Enddo
-         Do j=-N_smth,N_smth ! copy for later use
+         Do j=-N_smth,N_smth
             wEtime_ap(j,j_IntFer)=0.
             wEtime_at(j,j_IntFer)=0.
          Enddo
@@ -493,6 +494,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Power_t(:)=0.
       AveAmp_ap(:)=0.
       AveAmp_at(:)=0.
+      !write(2,*) 'N_fit, N_smth', N_fit, N_smth
    EndIf    ! If(TestCh2)
    !
    If(N_fit.gt.0) then
@@ -503,6 +505,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    !
    dChi_ap(:)=0.  ;     dChi_at(:)=0.
    Do j=-N_s,N_s ! fold time-dependence with smoothing function
+      If(smooth(j).le. 0.) cycle
       Do m=1,3  ! convert to time
          AiF(m)=SUM( Ai(m,:)*FTime_PB(i_s+j,:) )
       Enddo
@@ -519,7 +522,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       !   Del_p = ABS( wEtime_ap(j,j_IntFer) -SUM( wap_PB(:,j_IntFer)*AiF(:) ) ) ! true difference (measured-calculated)for this antenna
       !   Del_t = ABS( wEtime_at(j,j_IntFer) -SUM( wat_PB(:,j_IntFer)*AiF(:) ) )
       ! NB should absolute difference be fitted or the real part?
-         Mod_p=SUM( wap_PB(:,j_IntFer)*AiF(:) ) ! weighted model E-field
+         Mod_p=SUM( wap_PB(:,j_IntFer)*AiF(:) ) ! weighted model E-field !Check with simulation
          Mod_t=SUM( wat_PB(:,j_IntFer)*AiF(:) )
          Del_p = Real( wEtime_ap(j,j_IntFer) - Mod_p ) ! true difference (measured-calculated)for this antenna
          Del_t = Real( wEtime_at(j,j_IntFer) - Mod_t )
@@ -537,8 +540,16 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
          EndIf
       Enddo ! j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
       !write(2,*) 'j',j,smooth(j), Del_p, Del_t,AiF(1), FdotI
+      !write(2,*) 'EI_PolGridDel: Outpt', Outpt,  TestCh2
       !flush(unit=2)
       If(TestCh2) then
+         !write(2,*) j, smooth(j), Stk(1,1), AiF(:)
+         If(smooth(j).gt. 0.) Then
+            D=sqrt(sum(abs(AiF(:))**2))
+            sw=sqrt(abs(AiF(1))**2)
+            !write(2,"(A,I4,F12.2,3x,6F7.2,F12.1)") 'j,AiF(:):',j,sum(abs(AiF(1:2))**2), &
+            !   AiF(1)/D, AiF(2:3)*conjg(AiF(1))/(sw*D), sum(abs(AiF(:))**2)
+         EndIf
          write(31,FMT)  j, REAL( wEtime_ap(j,1:Nr_IntFer) )  ! Data
          write(32,FMT)  j, REAL( wEtime_at(j,1:Nr_IntFer) )
          write(33,FMT)  j,( REAL( SUM( wap_PB(:,j_IntFer)*AiF(:) ) ), j_IntFer=1,Nr_IntFer)  ! model
@@ -573,7 +584,8 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Write(GLE_file,"('CuP-',A,A)") TRIM(OutFileLabel),trim(txt)
       Call GLEscript_Curtains(30, GLE_file, N_s, i_chunk, trim(DataFolder)//TRIM(OutFileLabel), TRIM(txt), &
                dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF, VoxLoc(:))
-      Write(2,"(16x,A,5x,A,5x,A,6x,A,2x,A,4x,A)") 'D', 'Power','weight','delta_chi^2'!,'Power','d_chi/sqrt(P)'
+      !Write(2,"(16x,A,5x,A,5x,A,6x,A,2x,A,4x,A)") 'D', 'Power','weight','delta_chi^2'!,'Power','d_chi/sqrt(P)'
+      write(2,*) 'Make CurtainPlot ',TRIM(OutFileLabel),trim(txt)
    EndIf
    !
    !Chi2pDF=(Esq_ak-FdotI)/(2.*Nr_IntFer)    !  Reasonable approximation to chi^2
@@ -678,6 +690,10 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu_
    !Real(dp) :: dt_AntPix_0, dt_AntPix_1
    !
    IntfDim=2*IntfNuDim  !  should be about =512
+   Cnu_p0(:,:)=0.
+   Cnu_p1(:,:)=0.
+   Cnu_t0(:,:)=0.
+   Cnu_t1(:,:)=0.
    !
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas to detremine t- and p- polarized trace for central pixel; needed for noise estimate
       i_ant=IntFer_ant(j_IntFer,i_chunk)
