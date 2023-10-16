@@ -1,0 +1,10 @@
+SHELL = /bin/sh
+
+#echo 'starting'
+#$(info starting)
+
+include UpdateLibraryLOFLI.mak
+
+clean:
+	-rm -f *.o
+	
