@@ -8,7 +8,13 @@ ParentDir="copysetup"
 #FlashFolder='18D-1'
 #FlashFolder='20B-10'
 #FlashFolder='21C-1'
-FlashFolder='21C-9'
+#FlashFolder='21C-9'
+#FlashFolder='21C-7'
+#FlashFolder='21D-1'
+#FlashFolder='21D-3'
+#FlashFolder='21D-4'
+#FlashFolder='21E-1'
+FlashFolder='21E-7'
 
 
 #Year="2020"
