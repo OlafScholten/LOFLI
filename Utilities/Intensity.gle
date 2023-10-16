@@ -25,9 +25,10 @@ begin graph
   vscale 1
   hscale 1
    NoBox
-   xaxis log !dticks 0.001
+   xaxis log min a max c ! dticks 0.001  ! nticks 10
+   ! xlabels log l1  ! l25b
 !   xaxis off
-   yaxis log min 0.1 max 100.! min scl_min max scl log
+   yaxis log min 0.1 ! max 100.! min scl_min max scl log
 !   yaxis off
      data DataFile$ d1=c2,c3 d2=c2,c4 d5=c2,c5 d6=c2,c6  ignore 1 !
      d6 line lwidth 0.06 color blue    
@@ -44,6 +45,10 @@ begin key
     !line color green lwidth 0.02 text "Max \theta_o"
     !line color magenta lwidth 0.02 text "Ave \theta_o"
 end key
+set   color green
+amove xg(b) 4
+aline xg(b) 4+3*verSz/4 
+set color black
 
 set hei .7
 set just LC            

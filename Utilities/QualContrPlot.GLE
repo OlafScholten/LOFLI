@@ -1,0 +1,179 @@
+size   53 30
+B=10
+H=10
+bsh=1.5
+dB=2*bsh+B
+dH=bsh+H
+
+set lwidth 0.04
+set font pstr
+set hei .7
+file$='../21D-1/files/21D1eNLb'
+
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+
+filedat$=file$+'QuAna.dat'  
+fopen filedat$ inchan read
+freadln inchan label$ NrSrcs 
+
+
+! Start plotting
+amove 3.0 4 ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C8     ignore 1
+  d3 marker dot msize 0.1 color red
+end graph
+
+amove 1.5 0.5*dH+3
+begin rotate 90
+text \sigma(h) [m]
+!tex "$\sigma(h)$ [m]"
+end rotate
+
+amove 3.0 4+dh ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C2     ignore 1
+  d3 marker dot msize 0.1 color black
+end graph
+
+amove 1.5 1.5*dH+3
+begin rotate 90
+text I
+end rotate
+
+amove 2+b*0.5 1.5
+text chi [ns]
+
+!-------------------------------------------
+amove 3.0+db 4 ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C7     ignore 1
+  d3 marker dot msize 0.1 color red
+end graph
+
+amove 1.5+db 0.5*dH+3
+begin rotate 90
+tex "$\sigma(E)$ [m]"
+end rotate
+
+amove 3.0+db 4+dh ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C6     ignore 1
+  d3 marker dot msize 0.1 color black
+end graph
+
+amove 1.5+db 1.5*dH+3
+begin rotate 90
+text \sigma(N) [m]
+end rotate
+
+amove 2+b*0.5+db 1.5
+text chi [ns]
+
+!-------------------------------------------
+amove 3.0+2*db 4 ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c8,C7     ignore 1
+  d3 marker dot msize 0.1 color red
+end graph
+
+amove 1.5+2*db 0.5*dH+3
+begin rotate 90
+tex "$\sigma(E)$ [m]"
+end rotate
+
+amove 3.0+2*db 4+dh ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c8,C6     ignore 1
+  d3 marker dot msize 0.1 color black
+end graph
+
+amove 1.5+2*db 1.5*dH+3
+begin rotate 90
+text \sigma(N) [m]
+end rotate
+
+amove 2+b*0.5+2*db 1.5
+text \sigma(h) [m]
+
+!-------------------------------------------
+amove 3.0+3*db 4 ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C3     ignore 1
+  d3 marker dot msize 0.1 color red
+end graph
+
+amove 1.5+3*db 0.5*dH+3
+begin rotate 90
+text W_l
+end rotate
+
+amove 3.0+3*db 4+dh ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis !min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis !min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  !y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c5,C4     ignore 1
+  d3 marker dot msize 0.1 color black
+end graph
+
+amove 1.5+3*db 1.5*dH+3
+begin rotate 90
+text W_u
+end rotate
+
+amove 2+b*0.5+3*db 1.5
+text chi [ns]
+!-----------------------
+
+translate -0. -0.5
+include note.gle
+@note label$ 
+

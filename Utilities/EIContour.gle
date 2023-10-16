@@ -91,7 +91,7 @@ Sub EIPlots
       x1ticks length -.2
       x2ticks length +.2
       ytitle "power"
-      data dfile$ d1=c1,c2 d1=c1,c3   ignore 1
+      data dfile$ d1=c1,c2 d2=c1,c3   ignore 1
       d1 line color green lwidth 0.02
       d2 line color red lwidth 0.02
    end graph

@@ -1,4 +1,4 @@
-size 22 43
+size 23 43+3
 set font pstr fontlwidth 0.08 hei 1.2 just CC
 fontSz=0.8
 
@@ -20,12 +20,18 @@ if(nargs() > 0 ) then
 end if
 DataFile$=labl$+"IntfSpecPolrz_d.dat"    ! DLsIntfSpecPolrz_d.dat 
    fopen DataFile$ inchanw read
-   freadln inchanw tmin tmax   TimeBase CenLoc1 CenLoc2 CenLoc3 Name$ PixPowOpt zero N_smth
-SpecDataFile$=labl$+"Trace_01.dat"    ! 
-   fopen SpecDataFile$ inchanS read
-   freadln inchanS s_min   s_max  ! sample numbers
-
-N_slice = (s_max-s_min)/N_smth
+   freadln inchanw tmin tmax   TimeBase CenLoc1 CenLoc2 CenLoc3 Name$ PixPowOpt zero N_smth N_slice
+   
+dfile$=labl$+"_EISpeceo.csv"   ! resummed hilbert transform over   SSm  samples for complete trace of the chunck
+   fopen dfile$ inchan read
+   freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus
+dwfile$=labl$+"_EISpec.csv"
+   fopen dwfile$ inchanw read
+   freadln inchanw cc_max 
+   freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h
+   
+s_min=1 !(1+N_smth)
+s_max=WinLength !(1+N_slice*N_smth)   
 s_Med = (s_max+s_min)/2
 K=1
 Markers = N_slice
@@ -45,18 +51,46 @@ text slice time [samples]
 !write "s_min   s_max: "   s_min   s_max
 !amove 10.  12
 !write "s_Med N_slice: "   s_Med N_slice
+
 amove 2.  2
 begin graph
-  size horSz verSz
-  vscale 1
-  hscale 1
-   xaxis min s_min max s_max hei fontSz
-   yaxis  min 0. 
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_min max s_max !nticks 4
+   !yaxis min Ymin max Ymax
+   yaxis log min 1.e-2
+   !title "power spectrum [arb]"
+   !xtitle "t [samples]+"+OS$
+   x1ticks length -.2
+   x2ticks length +.2
    y1axis off
-   y2axis on
-     data SpecDataFile$ d1=c1,c4 d2=c1,c5 ignore 1
-     d1 line lwidth curveW color magenta
-     d2 line lwidth curveW color green
+   y2labels on
+   !ytitle "power"
+   data dwfile$ d1=c1,c2  ignore 2
+   d1 line color red lwidth curveW
+end graph
+begin key
+    nobox
+    position tr
+    set color black
+    line color red lwidth curveW text "(1+2) center"
+end key
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xaxis hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xaxis off
+   yaxis log min 1.e-2 ! max +100 ! log ! min scl_min max scl log
+   y2axis off
+   !y1axis on
+   !data DataFile$ d1=c2,c3   ignore 1 !
+   data DataFile$ d1=c1,c3 d2=c1,c5  ignore 1 !
+   let d3=d2*d1/100
+   d1 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
+   d3 marker circle  msize MarkSz  lstyle 2 color magenta
 end graph
 set lwidth 0.01
 i=0
@@ -71,29 +105,36 @@ while i < Markers-1
    !amove 10.  15+i
    !write "i: " i
 Next
-set lwidth 0.04
-amove 2.  2
-begin graph
-   size horSz verSz
-   vscale 1
-   hscale 1
-   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
-   !xaxis hei fontSz ! dticks  1 dsubticks .2  ! length=7
-   yaxis min 0. ! max +100 ! log ! min scl_min max scl log
-   y2axis off
-   !y1axis on
-   !data DataFile$ d1=c2,c3   ignore 1 !
-   data DataFile$ d1=c1,c3   ignore 1 !
-   d1 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
-end graph
-begin key
-   position tr
-   line lwidth curveW color magenta text \phi
-   line lwidth curveW color green text \theta
-end key
 set just TL
 amove xg(s_Min)+0.5 verSz+2.-0.5
-write 'I'
+write 'I'  ! +dwfile$
+set lwidth 0.04
+
+amove 2.  3.+7*verSz
+   begin graph
+      size horSz verSz
+      vscale 1
+      hscale 1
+      xaxis min offset/200 max (offset+WinLength)/200
+      !xaxis min 0 max WinLength
+      yaxis  log min 1.e-2
+      title "power @( "+format$(CenLoc1,"fix 3")+", "+format$(CenLoc2,"fix 3")+", "+format$(CenLoc3,"fix 3")+")km"
+      x2title "t [\mu s] +"+format$(StartTime_ms,"fix 3")+" [ms] - "+format$(tshft_mus,"fix 3")+" [ms]"
+      x1ticks length +.2
+      x2ticks length +.2
+      !ytitle "power"
+      data dfile$ d1=c1,c2 d2=c1,c3   ignore 1
+      d1 line color green lwidth curveW
+      d2 line color red lwidth curveW
+   end graph
+   begin key
+       nobox
+       position tr
+       set color black
+       line color green lwidth curveW text "Y-ref, even"
+       line color red lwidth curveW text "X-ref, odd"
+   end key
+
 !set hei .7
 !amove 2+0.5*HorSz  0.7
 
@@ -175,7 +216,7 @@ begin graph
    hscale 1
    xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
    xlabels off
-   yaxis min 0.0 
+   yaxis log
    data DataFile$ d1=c1,c23  ignore 1
    d1 marker circle  msize MarkSz   lstyle 2
 end graph
@@ -203,25 +244,6 @@ begin key
    marker fcircle  msize MarkSz  color blue text "CirPol"
 end key
 
-amove 2.  2.+7*verSz
-begin graph
-   size horSz verSz
-  vscale 1
-  hscale 1
-   xaxis min s_min max s_max
-   x1labels off
-   x2labels on
-   yaxis  
-   !y1axis off
-   !y2axis on
-     data SpecDataFile$ d1=c1,c2 d2=c1,c3 ignore 1
-     d1 line lwidth curveW color red
-     d2 line lwidth curveW color blue
-end graph
-begin key
-   position tl
-   line lwidth curveW color red text "even ref ant"
-   line lwidth curveW color blue text "odd ref ant"
-end key
+
 
 

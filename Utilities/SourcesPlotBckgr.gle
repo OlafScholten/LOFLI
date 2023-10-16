@@ -6,11 +6,10 @@ Z=Z1
 !fontSz=1.0
 fontSz=0.8
 bsh=2.5*fontSz    ! 1.5
-!HorOff=1.5+bsh
-HorOff=1.0+bsh
+HorOff=1.5+bsh
 VerOff=2.0+bsh
 B=14+Z1-Z
-size   HorOff+B+Z+bsh-1.5 VerOff+B+Z+2*Z1+3*bsh ! ----------------------------
+size   HorOff+B+Z+bsh VerOff+B+Z+2*Z1+3*bsh ! ----------------------------
 !
 declare sub Clr Cscale
 include "RdYlBl.gle"
@@ -18,10 +17,23 @@ include "ClrOld.gle"
 include "MaxMin.gle"
 include "ColorLegenda.gle"
 include "IntfBox.gle"
-!
-file$='../20A-7/files/IntfSpecSelSE20A7-E3IMMx_0'
+
+UnderFileDatA$=''   ! 'files/19A1-Rx.dat'
+NBckgr=0
+!UnderFileDatB$='files/19A1-R626.dat'
+UFSymb$='fcircle'
+UFSymbSz=.7
+greylevelA$=Grey20
+!greylevelB$=Grey10
+
+file$='files/IntfSpecSel1580#+Mx_d'
 if(nargs() > 0 ) then 
-    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+   file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+   if(nargs() > 1 ) then 
+      UnderFileDatA$=arg$(2)  ! Should include the appropriate path to make this script machine independent
+      NBckgr=1
+      !UnderFileDatA$='files/19A1-Rx.dat'
+   end if
 end if
 filedat$=file$+'.dat'
 !filedat$='../files/'+file$+'.dat'
@@ -145,7 +157,7 @@ End If
 
 ! Start plotting
 amove HorOff top 
-write label$  "; Q="  Q "ns, "  EventNr " sources"
+write label$  "; Q="  Q "ns, "  EventNr " sources" 
 
 amove HorOff VerOff+h+Z+bsh ! (time,h) ---------------------------------------------------
 begin graph
@@ -208,6 +220,10 @@ if(Z>0) then
       Else
          data filedat$ d3=c2,c1 d4=c3,c5  d5=c2,c6    ignore 10
       End If
+      IF NBckgr=1 then
+         data UnderFileDatA$ d14=c3,c5 ignore 2
+         d14 marker UFSymb$ msize UFSymbSz color greylevelA$
+      End If
       ! d4 marker cross msize 0.1 color blue
    end graph
    if(bbx=-2) then  IntfBox_Eh
@@ -247,6 +263,10 @@ if(Z>0) then
          data filedat$ d3=c2,c1 d4=c5,c4  d5=c2,c6    ignore 2
       Else
          data filedat$ d3=c2,c1 d4=c5,c4  d5=c2,c6    ignore 10
+      End If
+      IF NBckgr=1 then
+         data UnderFileDatA$ d14=c5,c4 ignore 2
+         d14 marker UFSymb$ msize UFSymbSz color greylevelA$
       End If
       ! d4 marker cross msize 0.3 color blue
    end graph
@@ -298,6 +318,10 @@ begin graph
       data filedat$ d3=c2,c1 d4=c3,c4  d5=c2,c6 ignore 2
    Else
       data filedat$ d3=c2,c1 d4=c3,c4  d5=c2,c6 ignore 10
+   End If
+   IF NBckgr=1 then
+      data UnderFileDatA$ d14=c3,c4 ignore 2
+      d14 marker UFSymb$ msize UFSymbSz color greylevelA$
    End If
    ! d4 marker cross msize 0.2 color blue
    !data file$+'1.dat' d5=c2,c3
@@ -399,7 +423,7 @@ amove HorOff+0.5*(B+z)  VerOff+h+z+bsh-1.7*fontSz
 !text time [ms] (t_offst
 write "time [ms] (+" t_offst " [ms])"
 
-amove HorOff-bsh VerOff+0.5*h
+amove 1.5 VerOff+0.5*h
 begin rotate 90
    text Northing [km]
    rmove 0.5*h+Z/2 0 

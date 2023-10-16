@@ -160,8 +160,13 @@ begin graph
   data file$+'1.dat' d1=c1,c12   ignore 1
   d1 svg_smooth 5 marker cross msize 0.1 color blue
   data file$+'_bin_1.dat' d2=c10,c9   ignore 1
-  d2 line lwidth 0.05 color red
+   d2 line lwidth 0.05 color red
 end graph
+begin key
+    pos tc nobox
+    line lwidth 0.05 text "binned" color red
+    line lwidth 0.05 text "running mean" color  blue
+end key
 set just TR
 amove  HorOff+B-fontsz VerOff+3*dH+H-0.5*fontsz
 text Velocity [10^6 m/s]

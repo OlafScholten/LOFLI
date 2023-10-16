@@ -14,7 +14,7 @@ FlaYear=${FlaArray[1]}
 ArchiveDir=/home/olaf/kaptdata/lightning_data/${FlaYear}/${FlaUTC}
 #
 echo "Flash: "${FlaID}":"
-echo " Year: "$FlaYear":"
+echo " Year: "$FlaYear
 echo " @UTC: "$FlaUTC":"
 echo " Arch: "$ArchiveDir":"
 #exit
