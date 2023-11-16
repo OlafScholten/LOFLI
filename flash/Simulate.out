@@ -1,0 +1,13 @@
+ Max number of sources = SrcNrMax =        1000
+ Number of samples in the time trace = NtSamples =        4096  =2^          12
+&PARAMETERS
+ ANTENNAS="simulation/S1-1     ",
+ SIMULATION="simulation/Discr    ",
+ FRACGALACNOISEPOW= 0.50000000000000000     ,
+ OUTFILELABEL="                    ",
+ SRCNRMAX=1000       ,
+ NTSAMPLES=4096       ,
+ TIMINGERR_NS=  1.0000000000000000E-002,
+ INTFSMOOTHWIN=50         ,
+ /
+ Using environment variable: AntennaFun; Antenna Function from files: "LBA_Vout_*.txt"

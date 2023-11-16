@@ -1,0 +1,24 @@
+&Parameters 
+ RunOption='Impulsive'
+ AntennaRange=100
+ FitRange_Samples=70 ! 20
+ Dual=.false.
+ SaturatedSamplesMax=10 ,
+ CalibratedOnly=.false.
+
+ NoiseLevel = 200.
+  Calibrations="Hil20B-6-202310172202.cal" ! Hilbert T  1.44 antenna    
+ 
+! ExcludedStat=  "RS210", "RS310", "CS401", "RS406", "RS407"  ! Too few reasonably good calibration sources
+!! SignFlp_SAI=  142092, 142093
+! PolFlp_SAI=  32086, 
+ BadAnt_SAI=   4084,   4085,   5091,   7095,  11086,  11087,  26084,  26085, 141094, 141095
+             161088, 161092, 161093, 106095, 125082, 125083, 189086, 189087,
+&end 
+
+R  357 , -20. 0.0 4., 0. 2400 ! 
+
+   --- ---------- -------- ------------- -   nohup ./Imaging.sh  >Imaging.log 2>&1  & 
+Nr_UniqueStat=  6       3    11   141   150   181   189
+Nr_UniqueAnt=  67   CS003 CS011 CS301 RS310 CS501 RS509
+

@@ -1,0 +1,5 @@
+call GLE -d jpg -r 300 -o H2f#+03AmplFit.jpg %UtilDir%Intensity.gle "%FlashFolder%\files/AmplFitH2f#+03Mx_d"
+call GLE -d jpg -r 300 -o ISS_H2f#+03.jpg %UtilDir%SourcesPlot.gle "%FlashFolder%\files/IntfSpecSelH2f#+03Mx_d"
+call GLE -d jpg -r 300 -o TrSc_flash-all.jpg %UtilDir%TrackScatt.gle "%FlashFolder%\files/flash-all"
+call GLE -d jpg -r 300 -o flash-allAmplFit.jpg %UtilDir%Intensity.gle "%FlashFolder%\files/AmplFitflash-allMx_d"
+call GLE -d jpg -r 300 -o Imp_flash-all.jpg %UtilDir%SourcesPlot.gle "%FlashFolder%\files/flash-all"
