@@ -1,0 +1,13 @@
+#!/bin/bash
+# 
+# 
+source ${LL_BaseDir}/ShortCuts.sh
+Prog="LOFAR-Imag_MDD"
+rm ${LL_bin}${Prog}  ! to make sure program is recompiled
+#use command     find / -xdev -name *lapack*
+
+source ${LL_scripts}RunProgram.sh "MDDCS.in"
+exit
+#sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata
+
+

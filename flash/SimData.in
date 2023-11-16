@@ -1,0 +1,18 @@
+
+&Parameters 
+ RunOption='SelectData' 
+ Calibrations="Calibrations202201311810.dat" ! FldCal chi^2=1.39 with 19 &  SaturatedSamplesMax=3 
+ BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+             181055, 106063, 130049, 130063, 130091, 145048, 145054, 145084, 146072, 169072
+             188049, 188091, 189054, 189084,
+ SignFlp_SAI=   161072, 161073,
+ Simulation="simulation/S1-1"  ,
+ TimeBase=850.
+ SaturatedSamplesMax= 5     ! Maximum number of saturates time-samples per chunk of data
+ AntennaRange=100  ! [km]
+!  OutFileLabel="CalSrc"   
+ &end 
+S  137.685   -4.157, -32.71, 5.59  ! OutFileLabel="1577Z"  
+F 2000 2200 10   ! Ini [samples] starting loc & window for summing power  & PlotAmplitude
+
+

@@ -1,0 +1,126 @@
+&Parameters
+ SMPowCut = 1.e4
+ AmpltPlot=0.01
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2f#+"
+ OutFileLabel="H",
+ xmin=16.50 , xmax=+20.5, ymin=63.0, ymax=65., zmin=8.7, zmax=9.3  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.65 , tmax=6.5
+&End
+!&Parameters ===
+
+
+&Parameters
+ SMPowCut = 100
+ AmpltPlot=10.
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="a",
+ xmin=16.60 , xmax=+17.0, ymin=63.5, ymax=63.9, zmin=9.06, zmax=9.18  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.71 , tmax=4.76
+&End
+
+!&Parameters ===
+
+&Parameters
+ SMPowCut = 3.e2
+ AmpltPlot=10
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="b",
+ xmin=17 , xmax=+17.5, ymin=63.7, ymax=64.4, zmin=8.9, zmax=9.2  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.75 , tmax=4.81
+&End
+
+&Parameters
+ SMPowCut = 5.e2
+ AmpltPlot=10
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="c",
+ xmin=17.50 , xmax=+18., ymin=64.2, ymax=64.6, zmin=8.8, zmax=9.2  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.79 , tmax=4.85
+&End
+
+&Parameters
+ SMPowCut = 1.e3
+ AmpltPlot=10
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="d",
+ xmin=18. , xmax=+18.5, ymin=64.2, ymax=64.6, zmin=8.8, zmax=9.3  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.82 , tmax=4.94
+&End
+
+&Parameters
+ SMPowCut = 1.e3
+ AmpltPlot=10
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="e",
+ xmin=18.50 , xmax=+19.0, ymin=64.0, ymax=64.5, zmin=8.7, zmax=9.1  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.9 , tmax=5.2
+&End
+
+&Parameters
+ SMPowCut = 1.e3
+ AmpltPlot=10
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="",
+ xmin=19.0 , xmax=+20.1, ymin=63.5, ymax=64.4, zmin=8.7, zmax=9.1  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.95 , tmax=5.9
+&End
+
+
+&Parameters ===
+
+&Parameters
+ SMPowCut = 3.e5
+ AmpltPlot=0.01
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="H",
+ xmin=16.50 , xmax=+20.5, ymin=63.0, ymax=65., zmin=8.7, zmax=9.3  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.65 , tmax=6.5
+&End
+&Parameters ===
+
+&Parameters
+ SMPowCut = 1.e4
+ AmpltPlot=0.01
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="M",
+ xmin=16.50 , xmax=+20.5, ymin=63.0, ymax=65., zmin=8.7, zmax=9.3  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.65 , tmax=6.5
+&End
+
+
+&Parameters
+ SMPowCut = 1.e3
+ AmpltPlot=0.01
+ MaxAmplFitPercent=0.001
+ ZoomClip = .true.
+ datafile=  "H2#+"
+ OutFileLabel="",
+ xmin=16.50 , xmax=+20.5, ymin=63.0, ymax=65., zmin=8.7, zmax=9.3  ! for NLa 37.10 37.6 -25.5 -25.25  5.35 5.8 
+  tmin=4.65 , tmax=6.5
+&End
+
+
+&Parameters ===
+
+Virtual machine at Kapteyn:
+https://vmserverws.astro.rug.nl/
+spice console
+

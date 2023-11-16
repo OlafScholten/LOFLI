@@ -1,0 +1,106 @@
+&Parameters   RunOption= "TRI-D"
+! IntfPhaseCheck=.false.
+! CurtainPlot=.true.
+ AntennaRange=100  ! [km]
+ IntfSmoothWin=19
+ TimeBase=907.
+ SaturatedSamplesMax= 100     ! Maximum number of saturates time-samples per chunk of data
+ SignFlp_SAI=  142092, 142093
+! SignFlp_SAI=   21078, 125028, 142092, 142093, 145032, 145033, 166015 
+! PolFlp_SAI=   021092,  30028,  32092, 106044, 106064, 125028 
+!               145032, 146092, 166014, 181048, 181092,  189076 
+ Calibrations = "Calibrations202104261256.dat"  ! chi-sq=3.53
+  Calibrations="Hil20B-6-202310172202.cal" ! Hilbert T  4.74  
+  Calibrations="Fld20B-6-202310222306.cal" ! FldCal  T  0.21  
+ BadAnt_SAI=   5095,   7093,  11089,  13088,  13089,  17084,  17085,  17094,  17095, 101085
+             141083, 141086, 141087, 167094,
+ 
+ ChainRun=0, NoiseLevel=0.01, OutFileLabel="H2t3"  &end  
+S   4.71  , "20B6x-HANL2_track.dat"  !    Reference/Source-| time, & position
+C   75 3.8, 115 1.9, 22 7.5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+F  2000  1000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
+   --- ---------- -------- ------------- -   nohup ./Interferometry.sh  >InterferometryH2t3.log 2>&1  & 
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+
+ ChainRun=0, NoiseLevel=0.01, OutFileLabel="H2tst"  &end  
+S   500  , "20B6x-HANL2_track.dat" 4.71 !    Reference/Source-| time, & position
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+F  2000  1000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
+   --- ---------- -------- ------------- -   nohup ./Interferometry.sh  >InterferometryH2tst.log 2>&1  & 
+C   100 2.5, 150 1.25, 30 5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+C   75 3.8, 115 1.9, 22 7.5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+C   10 5, 15 2.5, 5 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+   --- ---------- -------- ------------- -   nohup ./A-Intf_H2f#+60.sh  >A-Intf_H2f#+60.log 2>&1  & 
+ 
+ ChainRun=0, NoiseLevel=0.01, OutFileLabel="H2t3"  &end  
+S   4.71  , "20B6x-HANL2_track.dat"  !    Reference/Source-| time, & position
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+F  2000  1000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
+   --- ---------- -------- ------------- -   nohup ./Interferometry.sh  >InterferometryH2t2.log 2>&1  & 
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+
+ ChainRun=10, NoiseLevel=0.01, OutFileLabel="H2f"  &end  
+S   4.71  , "20B6x-HANL2_track.dat"  !    Reference/Source-| time, & position
+C   75 3.8, 115 1.9, 22 7.5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+F  2000  2000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
+   --- ---------- -------- ------------- -   nohup ./Interferometry.sh  >InterferometryH2f.log 2>&1  & 
+C   100 2.5, 150 1.25, 30 5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+C   75 3.8, 115 1.9, 22 7.5  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+C   50 5, 80 2.5, 15 10  !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+   --- ---------- -------- ------------- -   nohup ./A-Intf_H2f#+60.sh  >A-Intf_H2f#+60.log 2>&1  & 
+
+
+
+
+   0.6 , -6.140,  -28.530,   6.3  !  StartTime_ms, CenLoc, DistMax[km] 
+P   25 .003, 20 .01, 20 5. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   2000  60040 1000 1 ! Ini [samples] starting loc & window for summing power & slice number & PlotAmplitude
+   25000  5000 10 1 ! Ini [samples] starting loc & window for summing power & slice number
+   27650  1500 10 1 ! Ini [samples] starting loc & window for summing power & slice number
+   25250  6000 30 1 ! Ini [samples] starting loc & window for summing power & slice number
+eve     6,    0.63930,  -28.51689,   -6.14586,    6.25742,  93.1597      29.8352      12.1067     -102.162    ,  -2.6062       3.8080      -3.0506    
+odd     6,    0.63933,  -28.50916,   -6.14423,    6.25001,  106.948      29.8259      12.0960     -102.162    ,  -2.6263       3.2710      -3.9786    
+   --- ---------- -------- ------------- -   nohup ./Interferometry.sh  >Interferometryini.log 2>&1  & 
+   --- ---------- -------- ------------- -   -
+   1271.6 , -72283.     21531.   5682. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   60 .0025, 30 .02, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   26000  4000 20 ! SW-b1 [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -72150.,  +22510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   60 .02, 30 .1, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   26000  4000 20 ! SW-b [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -72150.,  +22510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   60 .02, 30 .1, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   19000  2000 10 ! SW-a [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   100 .05, 30 .25, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   19000  2000 10 ! [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .003, 50 .03, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   26250  2500 10 ! Ini [samples] starting loc & window for summing power & slice number
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .003, 50 .03, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   27500  600 10 ! "Ini-b" [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .003, 50 .03, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   28750  400 10 ! "Ini-c" [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .003, 50 .03, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   27500  600 ! "Ini-b" [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .003, 50 .03, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   26250  1250 ! Ini-a [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+   1271.6 , -6150.,  -28510.,   6225. , 5 !  StartTime_ms, CenLoc, DistMax[km] 
+   50 .025, 50 .25, 1 200. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]
+   25000  5000 ! [samples] starting loc and window for summing power
+   --- ---------- -------- ------------- -   -
+
