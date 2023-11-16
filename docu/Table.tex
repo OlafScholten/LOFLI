@@ -1,0 +1,84 @@
+\begin{table}[!ht]
+\caption{Possible {\tt ParameterNames} in the {\tt ShPars} namelist and their default values. \tablab{ShPars}}
+\begin{tabular}{|l l |l l|}
+\hline
+\\  \verb<A_CHX< & = 2.5                  &    \verb<OBSDIST_DIM< & =      42
+\\  \verb<ATMHEI_DIM< & =       2000      &    \verb<OBSDIST_STEP< & =  10.0
+\\  \verb<ATMHEI_STEP< & =  10.0          &    \verb<PADDING< & =       5000
+\\  \verb<F_LIM< & =  1.0                 &    \verb<PANCAKEINCFIELD< & = 0.41
+\\  \verb<F_OVER_BETA< & =  250.0         &    \verb<RH0< & =  2.92E-4
+\\  \verb<INTEGRATECURRENT< & = -0.01     &    \verb<SAMPLINGTIME< & = 5.0
+\\  \verb<INTENSITY_WEIGHT< & =F          &    \verb<SELECTFH< & =       4
+\\  \verb<J0T< & =  12.0                  &    \verb<STPARRANGE< & =   11
+\\  \verb<J0Q< & = 0.25                   &    \verb<TEST< & =F
+\\  \verb<LAM_TC< & =  0.05               &    \verb<TTRACE_STEP< & =  0.02
+\\  \verb<LAM_100< & =  7.0               &    \verb<U0< & =  60.0
+\\  \verb<LAMX< & =  100.0                &    \verb<X_MAX< & =700
+\\  \verb<MOLIERERADIUS< & =  27.0        &    \verb<X_0< & =  36.7
+\\  \verb<NU_MIN< & =  30.0               &    \verb<XDEPALPHA< & =  0.0
+\\  \verb<NU_MAX< & =  80.0               &    \verb<GroundLevel< & =  0.0
+\\  \verb<Zen_sh< & =  0 .0               &    \verb<Azi_sh< & =  0.0
+\\  \verb<Zen_B< & =   90.0               &    \verb<Azi_B< & =  0.0
+\\  \verb<Energy_sh< & =  1.e9            &    & \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+\Omit{
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width=\textwidth]{TC-tr.pdf}
+        \caption{Vertical shower with $X_0$=180 and $\Xmax$=820}\figlab{v-drift-vert}
+    \end{subfigure}
+    ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc.
+      %(or a blank line to force the subfigure onto a new line)
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width=\textwidth]{TC-tr-H.pdf}
+        \caption{Horizontal shower at various heights} \figlab{v-drift-hor-rho}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width=\textwidth]{TC-H3000-X.pdf}
+        \caption{Horizontal shower at various energies} \figlab{v-drift-hor-Xmax}
+    \end{subfigure}
+\caption{\small
+CONEX-MC results for the drift velocity are compared with the parametrization of \eqref{Def-sigma-1}. The GRAND magnetic field is used.}\figlab{v-drift}
+\end{figure}
+
+}
+
+A typical example of an input is as follows.
+
+\begin{linenumbers}
+\begin{verbatim}
+  &ShPars IntegrateCurrent=-0.01 , nu_min=0 , nu_max=8000000
+   nu_min=30 , nu_max=80
+  Intensity_Weight=.false.
+ SAMPLINGTIME=5     ! in [ns]
+ StParRange = -11    ! in down-sampled sample times for calculation of Stokes parameters
+ F_lim=1.
+  J0T = 14.77, zen_B=22.19 , azi_B=-90.   ! direction magnetic field at LOFAR (49.5 mu T)
+ ! J0T = 16.8, zen_B=27 , azi_B=-90.   ! direction magnetic field at GRAND (56 mu T)
+ x_0=200, X_max=690. , GROUNDLEVEL=  0.0
+ energy_sh=2.e7, zen_sh=20
+  &end
+
+ 0.  0.   !  shift_x [m], shift_y [m], alpha_vB [deg]
+ step
+8.0 51.4198405287 103.495733281
+5.0 35.0 -90.0
+3.0 21.2132034356 -45.0
+
+ 5, 7, 11, 12  0 0
+ data\coreas_456_set1_37
+
+grid 25
+dist 50
+dist 75
+dist 250
+theta 90.
+!-------------------------------------------------------
+\end{verbatim}
+\end{linenumbers}

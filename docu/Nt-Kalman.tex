@@ -1,0 +1,28 @@
+\section{Kalman filter}
+
+These notes build on the Master thesis of Alex Pel, in particular eqs. (4.37--42).
+
+Rewriting the equations, introducing the column state vector for antenna $a$ after $k$ iterations where this iteration includes the measured pulse arrival time for this antenna
+\beq
+x^a_k= (t^s_k+R_{k,a} , \vec{x}^s_k)^T
+\eeq
+where $t^s_k$ and $\vec{x}^s_k$ are the time and the position of the source emitting the pulse and $R_{k,a}=|\vec{a}-\vec{x}^s_k|/c$ where $\vec{a}$ denotes the position of the antenna. Iteration $(k-1)$ includes all data up to those of antenna $(a-1)$ and not that of antenna $a$.
+
+We thus have now
+\beq 
+x^a_{k-1}= (t^s_{k-1}+R_({k-1},a) , \vec{x}^s_{k-1})^T
+\eeq
+as the prediction for the state vector for antenna {a} using only the measurements of antennas $1 \cdots a-1$.
+
+We need to introduce the covariance matrix $C$ (called $P$ by Alex Pel). The predicted covariance matrix $C^a_{k-1}$ for the state vector $x^a_{k-1}$ is related to the covariance matrix $C^{a-1}_{k-1}$ as
+\beq
+C^a_{k-1} = J_{k-1} \, C^{a-1}_{k-1} \, (J_{k-1})^T
+\eeq
+where
+\beq
+J_{k-1}=\begin{bmatrix} 1&\vec{d}_{k-1}\\0& \mathbb{1} \end{bmatrix}
+\eeq
+is the propagator for the error matrix from $(a-1)$ to $a$ with   
+\beq
+\vec{d}_{k-1}={\partial (R_{k-1,a}-R_{k-1,a-1}) \over \partial \vec{x}^s_{k-1}
+\eeq

@@ -1,0 +1,60 @@
+\section{Tables and such}
+
+Namelist input for LOFLI.
+Note that none of the lines giving an array of values in the namelist that continues on the following line should have a comma at the end, for the other input lines this is optional. Several keywords may appear on a single line if separated by a comma. Anything after an exclamation mark (within the namelist) is treated as a comment. A complete list of namelist keywords is given in \tabref{LOFLI-namelist}.
+
+
+\begin{table}[!ht]
+\caption{Possible {\tt ParameterNames} in the {\tt \&Parameters} namelist of LOFLI (closed off with {\tt \&end}) and their default values.  All character following an exclamation sign `!' will be ignored on any input line.
+\tablab{LOFLI-namelist}
+}
+\begin{tabular}{|l l |p{11cm}|}
+\hline
+\multicolumn{1}{|c}{Parameter} & \multicolumn{1}{c|}{Default} & \multicolumn{1}{c|}{Description} \\
+\hline
+\multicolumn{2}{|c|}{options} &
+% \\ \cline{1-2} &
+\\ \verb!RunOption! & =  "none"  &
+\\ \verb!CurtainPlot! & =  .false.  &
+   Produce a curtain plot where the pulses are aligned for a source at position `SourceGuess',  see \secref{Curtainplot}.
+\\  \verb!ImagingRun! & =  .false.  &  Search for all sources, see \secref{Imag}.
+\\  \verb!Explore! & =  .false.  &   Explore the structure of the flash, see \secref{Explore}.
+\\  \verb!Dual! & =  .true.  &
+   Image odd and even polarization simultaneously, see \seclab{Calibration} and \secref{Imag}.
+\\  \verb!FitIncremental! & =  .true.  &
+   When calibrating this may be on or off, see \seclab{Calibration}.
+\\  \verb!RealCorrelation! & =  .false. &
+   At some point it would be nice to use the real part of the correlation function in stead of its Hilbert envelope, see \subref{RIAM}.
+\\ \multicolumn{2}{|c|}{Calibration} &
+\\  \verb!Calibrations! & =  ---  &
+   Specify the name of the user-made calibration file, see \secref{Scal}.
+\\  \verb!Fit_AntOffset! & =  .false.  &  When set the delays for the individual antennas are searched for.
+\\  \verb!WriteCalib! & =  .false.  &  Write the user-made calibration data to file.
+\\ \multicolumn{2}{|c|}{Antennas} &
+\\  \verb!SignFlp_SAI! & =  ---  &  Single Antenna ID's of those where the polarity is wrong, see \secref{Explore}.
+\\  \verb!PolFlp_SAI! & =  ---  & Single Antenna ID's of those where even-odd should be interchanged.
+\\  \verb!BadAnt_SAI! & =  ---  &  Single Antenna ID's of those that should be excluded from further processing.
+\\  \verb!ExcludedStat! & =  ---  &  Names of complete stations that should be omitted from the analysis.
+\\ \multicolumn{2}{|c|}{Imaging Control} &
+\\  \verb!ChunkNr_dim! & =  1  &  Number of chunks to be used for the calibration run, see \seclab{Calibration}.
+\\  \verb!PeakNr_dim! & =  ---  &  maximum number of pulses in the reference antennas that can be taken into account. Make sure that this is not too low, see \secref{Fcal}
+\\  \verb!FitRange_Samples! & =  ---  & total number of channels for which the cross correlations are calculated. The values for 'Safety', see SubRef{GCSA} is equated to this.
+\\  \verb!AntennaRange! & =  100  &
+Maximal distance, in [km], from the core for which the antennas are included in the analysis, see \secref{Scal}.
+\\  \verb!CCShapeCut_lim! & =  0.6  &  Maximal value for the shape parameter, see \subref{RIAM}.
+\\  \verb!ChiSq_lim! & =  50 &
+Maximal value for the RMS$^2$ for sources to be written to file, see SubRef{SF}.
+\\  \verb!EffAntNr_lim! & =  .8  &  minimal fraction of antennas to be retained during source finding, see SubRef{SF}.
+\\  \verb!Sigma_AntT! & =  2  &  Intrinsic size for the search window (in [samples]) in addition to what is obtained from the covariance matrix, see \subref{RIAM}
+\\  \verb!SearchRangeFallOff! & =  4.  &  Used in the calculation of the search window, see {RIAM}.
+\\ \multicolumn{2}{|c|}{Other} &
+\\ \verb!Diagnostics! & =  .false.  &  output control
+\\ \verb!FullAntFitPrn! & =  .false.  &  output control
+\\ \verb!OutFileLabel! & =  " "  &   possible special label for the output files for this run.
+\\\hline
+\end{tabular}
+\end{table}
+
+  
+
+

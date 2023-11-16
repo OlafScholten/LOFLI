@@ -1,0 +1,36 @@
+
+\section{Compare Calibrations}\seclab{CompCal}
+
+The purpose of \verb!"CompareCalibr.sh"! or  \verb!"CompareCalibr.bat"! is to list the differences between two calibration files stored in the folder \verb!"/Book"! of the main flash-working directory `FlashFolder'.
+
+The file names to be processed are read from  \verb!"CompareCalibr.in"! looking like
+
+\begin{linenumbers}
+%\tiny
+\resetlinenumber
+\begin{verbatim}
+"Calibrations202202060953.dat"
+"Calibrations202202061011.dat"
+\end{verbatim}
+\end{linenumbers}
+
+\subsection{Additional details}
+none
+
+\subsection{Figures and print-out}%\seclab{RFI-out}
+
+No figure, print out file \verb!"CalComp.out"! looks like
+
+\begin{linenumbers}
+\tiny
+\resetlinenumber
+\begin{verbatim}
+ Calibrations202202061011.dat minus Calibrations202202060953.dat in [ns]
+ CS001 CS002 CS003 CS004 CS005 CS006 CS007 CS011 CS013 CS017 CS021 CS026 CS030 CS032 CS101 CS103 CS401 CS201 CS501 CS301 CS302 CS024 CS031 CS028
+  0.06  0.00  0.02  0.03  0.03  0.00  0.02  0.04 -0.00  0.03 -0.00  0.03 -0.04  0.04 -0.03  0.03  0.03  0.06 -0.07  0.10  0.13  0.08 -0.01 -0.06
+ RS106 RS205 RS208 RS305 RS306 RS307 RS310 RS406 RS407 RS409 RS503 RS508 RS509 RS210
+  0.32  0.46  1.75  0.00  0.26  1.19  2.38 -0.65 -0.74  0.28  0.00 -1.05 -1.05  0.00
+\end{verbatim}
+\end{linenumbers}
+
+and should be obvious.

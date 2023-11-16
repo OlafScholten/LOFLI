@@ -1,0 +1,124 @@
+\section{Kalman filter}
+
+These notes build on the Master thesis of Alex Pel, in particular eqs. (4.37--42).
+
+Rewriting the equations, introducing the column state vector for antenna $a$ after $k$ iterations where this iteration includes the measured pulse arrival time for this antenna
+\beq
+x^a_k= (t^s_k+R_{k,a}/v , \vec{x}^s_k)^T  \;,
+\eeq
+where $t^s_k$ and $\vec{x}^s_k$ are the time and the position of the source emitting the pulse and $R_{k,a}=|\vec{a}-\vec{x}^s_k|$ where $\vec{a}$ denotes the position of the antenna. $v$ is the propagation velocity of radio waves. Iteration $(k-1)$ includes all data up to those of antenna $(a-1)$ and not that of antenna $a$.
+
+We thus have now
+\beq
+x^a_{k-1}= \left(t^s_{k-1}+R_{(k-1),a}/v , \vec{x}^s_{k-1}\right)^T
+\eeq
+as the prediction for the state vector for antenna {a} using only the measurements of antennas $1 \cdots a-1$.
+
+We need to introduce the covariance matrix $C$ (called $P$ by Alex Pel). The predicted covariance matrix $C^a_{k-1}$ for the state vector $x^a_{k-1}$ is related to the covariance matrix $C^{a-1}_{k-1}$ as
+\beq
+C^a_{k-1} = J_{k-1} \, C^{a-1}_{k-1} \, (J_{k-1})^T
+\eeq
+where
+\beq
+J_{k-1}=\begin{bmatrix} 1&\vec{d}_{k-1}\\0& \mathbb{1} \end{bmatrix} \eqlab{jac}
+\eeq
+is the propagator for the error matrix from $(a-1)$ to $a$ with
+\beq
+\vec{d}_{k-1}=(1/v){\partial (R_{k-1,a}-R_{k-1,a-1}) \over \partial \vec{x}^s_{k-1}} \;.
+\eeq
+It is useful to introduce the time-projection operator
+\beq
+H=(1,0,0,0) \;.
+\eeq
+
+Denoting the measured pulse arrival time in antenna $a$ as $t^a_m$ with error $\sigma$, the equations for the Kalman filter can be written as
+\bea
+x^a_k &=& x^a_{k-1} + K^a\left(t^a_m - H \, x^a_{k-1}\right)  \\
+K^a &=& C^a_{k-1} \, H^T \left( H\, C^a_{k-1}\, H^T + \sigma^2 \right) \\
+C^a_k &=& \left( I- K^a H\right) C^a_{k-1} \;.
+\eea
+
+In the program we use for the calculation for antenna $a$, iteration $k$ using the jacobian \eqref{jac} with
+\bea
+{\rm Der}(i) &=& (1/v) {\vec{x}_{k-1}-\vec{a} \over D_{k-1,a}}-{\vec{x}_{k-1}-\vec{(a-1)} \over D_{k-1,a-1}} \\
+{\rm Cov}'(i,j,k) &=& {\rm Jac}(i,m) \, {\rm Cov}(m,n,k-1) \, {\rm Jac}(j,n) \\
+{\rm Kal}(i,k)   &=& {\rm Cov}'(i,0,k) \left( {\rm Cov}'(0,0,k)+ 1/\sigma \right)^{-1} \\
+{\rm Cov}(i,j,k) &=& {\rm Cov}'(i,j,k) - {\rm Kal}(i,k) \, {\rm Cov}'(0,j,k) \\
+x(0,k) = t^s(k) +R_{k,a}/v &=& (1-{\rm Kal}(0,k))\, (t^s(k-1) + R_{k-1,a}/v) + {\rm Kal}(0,k) \, t^a_m \\
+\vec{x}(k) = \vec{x}^s(k) &=& x^s(i,k-1) + {\rm Kal}(i,k) \, ( t^a_m - (t^s(k-1) + R_{k-1,a}/v) ) \;,
+\eea
+where $R$ is the difference in distance from the source to the antenna (=$D$) and from the source to the core. $t_s$ is thus the arrival time of the pulse at the core.
+The equation for the source time can be rewritten to
+\beq
+t^s(k) %= (1-Kal(0,k))\, (t^s(k-1} + R_{k-1,a}/v) - R_{k,a}/v  + Kal(0,k) \, t^a_m
+= t^s(k-1) + (R_{k-1,a} - R_{k,a})/v  + {\rm Kal(0,k)} \left[ t^a_m - (t^s(k-1) + R_{k-1,a}/v) \right] \;.
+\eeq
+Note, the way the correlation spectrum is calculated, the peak position is already the shift from the expected value, i.e.\ the quantity in square brackets.
+
+\subsection{For sources}
+
+\subsubsection{Notation}
+
+We will denote the source vector after iteration $k$ as
+\beq
+\vec{S}_k= [t^c_k , \vec{x}^s_k]^T  \;,
+\eeq
+where $t^c$ is the arrival time of the pulse at the core (=reference antenna) located at $\vec{c}$. Iteration $(k-1)$ includes all data up to those of antenna $(a-1)$ and not that of antenna $a$.
+
+\subsubsection{Linear}
+
+Assume the observation, $z$, is a linear function of the state vector $\vec{S}_k$ then the prediction based on previous measurements is
+\beq
+z^a_{k-1}= \textbf{F}^T_a \vec{S}_{k-1}
+\eeq
+while the measurement gives $z^a_m$ which deviates from the true value is $z^a_t$ statistically where the true value is derived from the true state vector $\vec{S}_t$. The new state vector is now written as
+\beq
+\vec{S}_k= \textbf{A}_k \vec{S}_{k-1} + \textbf{K}_k \,z^a_m \;,
+\eeq
+introducing the Kalman gain $\textbf{K}$. By imposing that the expectation value of the new and predicted state vector, $E(\vec{S}_k-\vec{S}_t)$, vanishes (see Alex chapter 4) we derive that
+\beq
+\textbf{A}_k=\mathbb{1} - \textbf{K}_k \textbf{F}^T_{a} \;.
+\eeq
+Requiring in addition that the optimum value is obtained for the covariance $\textbf{C}_k=E((\vec{S}_k-\vec{S}_t)(\vec{S}_k-\vec{S}_t)^T$ by setting the derivative of the diagonal to the Kalman gain to zero, we get
+\beq
+\textbf{K}_k = \textbf{C}_{k-1} \textbf{F}_{a} \left( \textbf{F}^T_{a} \textbf{C}_{k-1} \textbf{F}_{a} + \sigma_m^2\right) \;.
+\eeq
+In addition we have
+\beq
+\textbf{C}_k =\left( \mathbb{1} - \textbf{K}_k \textbf{F}^T_{a}\right) \textbf{C}_{k-1} \;.
+\eeq
+
+\subsubsection{Realistic, non linear}
+
+The arrival time of the pulse in antenna at position $\vec{a}$ is
+\beq
+t^a_k= Rd_{k,a}/v -t^c_k =f(\vec{S}_k) \;,
+\eeq
+where $Rd_{k,a}=|\vec{a}-\vec{x}^s_k|-|\vec{c}-\vec{x}^s_k|$ where $\vec{a}$ denotes the position of the antenna and $\vec{c}$ that of the reference antenna. We need to linearize the prediction for the pulse arrival in antenna $a$ given all previous $(k-1)$ measurements.
+The true source position is $\vec{S}_t$ and the error in iteration ${k-1}$ is $\vec{\epsilon}_{k-1}=\vec{S}_t\vec{S}_{k-1}$. Keeping linearity in this error we write
+\beq
+t^a_{k-1}= f^a_{k-1}(\vec{S}_{k-1}) + \textbf{F}^T_{k-1,a}  \vec{\epsilon}_{k-1} \;.
+\eeq
+with the Jacobian
+\beq
+\textbf{F}^T_{k-1,a}=\left[-1,(1/v) {\partial Rd_{k-1,a} \over \partial \vec{x}^s_{k-1}}\right] \;. \eqlab{RealKalmanJacobian}
+\eeq
+
+The Kalman filter now reads
+\bea
+\sigma_{k-1}^2 &=& \textbf{F}^T_{k-1,a} \textbf{C}_{k-1} \textbf{F}_{k-1,a}\eqlab{RealKalmanEstimateError} \\
+\textbf{K}_k &=& \textbf{C}_{k-1} \textbf{F}_{k-1,a} \left( \sigma_{k-1}^2 + \sigma_m^2 \right)^{-1}\eqlab{RealKalmanWeight}\\
+\vec{S}_k &=& \vec{S}_{k-1}  + \textbf{K}_k \left( t^a_m - f^a_{k-1}(\vec{S}_{k-1}) \right) \\
+\textbf{C}_k &=& \left( \mathbb{1} - \textbf{K}_k \textbf{F}^T_{k-1,a} \right) \textbf{C}_{k-1} \;,
+\eea
+with $\sigma_{k-1}^2$ the estimated error in the arrival time of the pulse in antenna $a$ based on previous data while the measurement is denoted with subscript $m$.
+Redefine the Kalman weight to obtain
+\bea
+\textbf{K}_k &=& \textbf{C}_{k-1} \textbf{F}_{k-1,a} \\
+\sigma_k^2 &=& \textbf{F}^T_{k-1,a} \textbf{K}_k + \sigma_m^2\\
+\vec{S}_k &=& \vec{S}_{k-1}  + \textbf{K}_k \left( t^a_m - f^a_{k-1}(\vec{S}_{k-1}) \right)/\sigma_k^2 \\
+\textbf{C}_k &=& \textbf{C}_{k-1} - \textbf{K}_k \textbf{K}^T_k/\sigma_k^2   \;.
+\eea
+
+
+

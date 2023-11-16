@@ -1,0 +1,278 @@
+\documentclass[fleqn,11pt]{book}
+%\documentclass[fleqn,11pt]{article}
+%\documentstyle[olaf,11pt,fleqn]{article}
+\usepackage{hyperref} % \href{}{}
+\usepackage{verbatim}  % \verb;  ;
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{bbold}
+\usepackage{graphicx}
+\usepackage[pdftex,dvipsnames,usenames]{color}		% for pdf latex
+%\usepackage{fancyheadings}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+%\input C:/OlafsUtil/LocalTex/lecture-w.sty
+\usepackage{C:/OlafsUtil/LocalTex/olaf2}
+\usepackage{filedate}
+\usepackage{lineno}
+\usepackage{subfig}
+%\usepackage{titlesec}  % for paragraph sections
+%\usepackage[utf8]{inputenc}
+
+
+\bibliographystyle{apalike}
+%\usepackage{biblatex}
+%\addbibresource{C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs.bib}
+%\addbibresource{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+%\let\tempone\itemize
+%\let\temptwo\enditemize
+%\renewenvironment{itemize}{\tempone\addtolength{\itemsep}{0.5\baselineskip}}{\temptwo}
+\newenvironment{itemize*}%
+  {\begin{itemize}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{itemize}}
+\newenvironment{enumerate*}%
+  {\begin{enumerate}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{enumerate}}
+
+\def\beq{\begin{equation}}
+\def\eeq{\end{equation}}
+\def\bea{\begin{eqnarray}}
+\def\eea{\end{eqnarray}}
+\def\eqref#1{Eq.~(\ref{eq:#1})}
+\def\eqlab#1{\label{eq:#1}}
+\def\pdif#1#2{\frac{\partial #1}{\partial #2}}
+\def\ddt{\frac{d}{dt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Use color for marking
+\newcommand{\RED}{\color[named]{Red}}
+\newcommand{\blue}{\color[named]{Blue}}
+\newcommand{\red}{\marginpar{\RED\textbullet}\RED}
+\newcommand{\m}[1]{{\marginpar{\RED\textbullet}\RED #1}}
+\newcommand{\ToDo}[1]{{\marginpar{\RED\textbullet}{\bf \RED ToDO:} {\bf \blue #1}}}
+\newcommand{\note}[1]{{\RED $\bullet$\ \bf #1 $\bullet$}}
+
+%\newcommand{\thalf}{\mbox{\small{$\frac{3}{2}$}} }
+\def\half{\mbox{\small{$\frac{1}{2}$}}}
+\def\quarter{\mbox{\small{$\frac{1}{4}$}}}
+\def\vslash#1{\mbox{/\llap #1}}    % p-slash
+\def\ns#1{&\hspace*{-.35cm}#1&\hspace*{-.35cm}}
+\def\newsub{\vspace*{0.1cm}
+-------------------------------------------------------------------------------%
+-------------------\\}
+%\def\Var#1{{\textbf{#1}}}
+\def\Subr#1#2{{\subsubsection{\tt{Subroutine #1}}\sublab{#2}}}
+\def\subref#1{Subr.~\ref{sub:#1}}
+\def\sublab#1{\label{sub:#1}}
+
+
+\newcommand*{\FileDate}[1]{\expandafter\filedateX\pdffilemoddate{#1}\relax}
+\def\filedateX#1#2#3#4#5#6#7#8{%X: |#1| |#8| \\
+\filedateXX{#3#4#5#6}{#7#8}}
+\def\filedateXX#1#2#3#4#5#6#7#8{%XX: [#1] [#8] \\
+\filedateXXX{#1}{#2}{#3#4}{#5#6}{#7#8}}
+\def\filedateXXX#1#2#3#4#5#6#7#8\relax{\formatdate{#1}{#2}{#3}{#4}{#5}{#6#7}}
+
+\newcommand*{\formatdate}[6]{#1-#2-#3\ #4:#5:#6}
+
+\def\ListInput#1\relax{
+Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
+%\input{#1}
+}
+%--------------------------------------------
+
+%\pagestyle{fancy}
+%\pagestyle{myheadings}
+\pagestyle{headings}
+\renewcommand{\sectionmark}[1]{\def\naam{ #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\thesubsection.{\rm \naam}; {\sl #1} \hfill\today\hspace{1cm}}}
+%\markright{\today \hfill
+%     {\it \thesection , \arabic{section} \roman{subsection}
+%      \hspace{1cm}}}
+
+%\setcounter{secnumdepth}{4}
+%\titleformat{\paragraph} {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+%\titlespacing*{\paragraph} {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+            {-2.5ex\@plus -1ex \@minus -.25ex}%
+            {1.25ex \@plus .25ex}%
+            {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4} % how many sectioning levels to assign numbers to
+\setcounter{tocdepth}{4}    % how many sectioning levels to show in ToC
+
+
+%---------
+\voffset-1.0cm
+\textheight 23cm
+\oddsidemargin -.1cm
+%\evensidemargin .5cm
+\textwidth 17cm
+\begin{document}
+
+\centerline{\LARGE \bf LOFLI}\vspace{2ex}
+\centerline{\Large \bf LOFAR Lightning Imaging}\vspace{2ex}
+\centerline{\Large Notes \& software description}\vspace{2ex}
+\centerline{Olaf Scholten}\vspace{2ex}
+\centerline{Kapteyn Institute \& KVI, University of Groningen, The Netherlands}\vspace{2ex}
+\centerline{O.Scholten@rug.nl}\vspace{2ex}
+\centerline{Source: \texttt{\jobname}; \hspace{3ex}
+%Last Modified: \pdffilemoddate{\jobname.tex}\\
+%\thepdfmoddateof{\jobname.tex}\\
+Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
+\centerline{\Large  Guide to the LOFLI program suite, V21}
+
+
+\newpage
+
+\vspace{2ex}
+This guide is structured according to the chronological order of the main steps that are usually followed in converting LOFAR TBB data to an image of a lightning flash and to each a chapter is devoted. An outline of the basic imaging method can be found in \cite{Scholten:2021-init}.
+Edition v21 contains also the routines for full interferometry. At this time the paper is still being written.
+
+In each chapter contains a description of the essential ingredients of the code, examples of input lines, examples of generated output, as well as examples of shell commands for running the code in Linux.
+
+
+\begin{table}[!ht]
+\caption{Naming conventions. \tablab{Naming}}
+\begin{tabular}{|l p{14cm}|}
+\hline
+MainDir & The main working folder containing the various FlashFolders, the ``/Utilities", and the ``/program" folders.
+\\FlashFolder & one for each flash, named with the tag of the flash as for example in:
+\\&  {\small \verb!FlashFolder=``/MainDir/18D-1"! }
+\\ArchiveDir & The path to the archive containing the .h5 time traces from all antennas for a flash. If these reside on a remote site it is advised to use a SSHFS link through a local directory, as for example:
+\\ &  {\small \verb!ArchiveDir=``/home/olaf/kaptdata/lightning_data/2017/D20170929T202255.000Z"! }
+\\ProgramDir & The folder containing the sources and executables of the programs.
+\\&  {\small \verb!FlashFolder=``/MainDir/program"! }
+\\UtilDir & Folder containing useful scripts
+\\&  {\small \verb!UtilDir=``/MainDir/Utilities"!}
+\\\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+\caption{Required packages. Make sure that the script ``compile.sh" (in ``FlashFolder") contains the right links to the FFTPACK library. \tablab{Required}}
+\begin{tabular}{|l p{14cm}|}
+\hline
+GLE & Principle plotting utility \cite{GLE}.\\
+& Download from: \href{https://glx.sourceforge.io/index.html}{sourceforge}
+\\fftpack & Basic FFT routines \cite{FFTPACK}\\
+& Download from: \href{http://www.netlib.org/fftpack/}{netlib}; the double precision version is used.
+\\hdf5-fortran & Allows random access to compressed data files with \href{https://portal.hdfgroup.org/display/support}{.h5} extension.\\
+& Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
+\\\hline
+\end{tabular}
+\end{table}
+
+
+\newpage
+
+\tableofcontents
+
+%\newpage
+
+\hfill \today
+
+\chapter{General Introduction}
+
+\section{Installation cookbook}
+\begin{itemize}
+\item Unpack the zip file, keeping the directory structure. This should give something looking like \tabref{DirStruc}.
+\item Install GLE from \href{https://glx.sourceforge.io/index.html}{sourceforge}, follow the instructions \cite{GLE}. The shortcut ``gle" should start running the gle program. % In some Linux installations this may have been defined already.
+\item Install hdf5-fortran see \href{https://portal.hdfgroup.org/display/support}{.h5 extension}.  Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
+\item Install ``FFTPACK", most probably in the directory with the same name. Source code is included in this distribution.
+\item Edit the file ``ShortCuts.sh" to make sure that especially ``LIBRARY" points to the binary, compiled, version of the FFTPACK library. You may use an absolute path, or a relative path. Note that all relative paths should start from the ``FlashFolder" sub-folder of the ``MainDir".
+\item Edit the files ``Utilities/compile.sh" to make sure that especially ``prefix" and ``H5TOOL\_BIN" are correct for your implementation of the h5-tools. Note that all relative paths should start from the ``FlashFolder" sub-folder of the ``MainDir".
+\item Edit the files ``Utilities/FlashID.sh" to make sure that especially ``ArchiveDir" points to the data archive following your convention for the flashes. Possibly also modify ``Utilities/list.ssv" to make the proper link between the archive file-naming convention of a flash and your local convention.
+\end{itemize}
+
+\begin{table}[!ht]
+\caption{Directory structure after complete installation should be like this. \tablab{DirStruc}}
+\begin{tabular}{|l l | p{10cm}|}
+\hline
+{MainDir} & &\multicolumn{1}{|l||}{Likely named ``LOFLI-v21"} \\
+\hline
+   & Utilities & containing general utilities scripts, in particular used for making images. \\
+   & program &  containing source codes and executables. \\
+   & copysetup & containing templates for installing the Flash-directories by running ``NewFlash.sh". \\
+   & Antennafields & containing information on antenna positions and such. \\
+   & FFTPACK & containing the Fast Fourier transform library. \\
+\hline
+\end{tabular}
+\end{table}
+
+%\newpage
+\chapter{Setup \& RFI mitigation}
+%The LOFAR data files are written in \href{https://portal.hdfgroup.org/display/support}{HDF5} format and require the installation of \href{https://portal.hdfgroup.org/display/HDF5/HDF5+Fortran+Library}{HDF5 for Fortran}, see the \href{https://www.hdfgroup.org/downloads/hdf5/}{download page}. There is also a \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows installation} possible.
+
+Running the LOFLI package assumes a particular sub-directory structure aa well as some particular files. The script \verb!"NewFlash.sh"! creates the correct directory structure, copies the necessary files from the \verb!"copysetup"! directory to the required new ``FlashFolder" (requires some editing of the shell code), starts to run the RFI-Mitigation code in batch-mode, and starts an exploratory imaging run, see \secref{Explore}, of the data after the RFI-mitigation has finished.
+When setup correctly ``FlashFolder"  has two subfolders named \verb!"Book! and \verb!"files!. The first will store the calibration files which are essential for imaging and the latter files needed for intermediate checking and it may be considered as a scratch directory. These directories as well as necessary script files are copied to their appropriate location by running the script \verb!"NewFlash.sh"! in the MainDir.
+
+Best practise is to name the FlashFolder (as set in script \verb!"NewFlash.sh"!) with the tag of the flash, say \verb!"18D-1"!.
+The translation from the shorter internal flash label used in the lightning group to the UTC-label used by LOFAR is generated by the script \verb!"FlashID.sh"! that resides in the Utilities directory. This script reads the file \verb!"list.ssv"! and make sure this is updated for your system, where the first entry is the short-hand notation used for the FlashFolder name and the third entry refers to the flash identifier used in the (LOFAR) archive.
+
+
+
+In the script \verb!"FlashID.sh"! also \verb!ArchiveDir=/home/olaf/kaptdata/lightning_data/"! needs to be set to the proper place where the raw LOFAR-data reside. Note that there are no spaces allowed around the equal signs. The ArchiveDir should point to the directory that contains the TBB data from LOFAR as .H5 files. It is very handy to make a sshfs logical connection between the remote computer containing the archive and a local folder if the archive is not on your local system already.
+
+\input{Nt_RFImitigt}
+\clearpage
+\chapter{The LOFAR Imagers}\seclab{Image}
+\input{Nt_LOFAR-Imag}
+\input{Nt_Explore}
+\input{Nt_TimCalibr}
+\input{Nt_PulsSelct}
+\input{Nt_Interferometry}
+\input{Nt_SimulateData}
+\chapter{Supplementary scripts}\seclab{supp}
+\input{Nt_CompareCal}
+\input{Nt_InterfSrcSell}
+\input{Nt_Simulate}
+\chapter{Some not well assorted formulas (theory)}\seclab{theory}
+\input{Nt_EInterferometry}
+%\input{Nt_SourceQ}
+\input{Nt_3DAverage}
+
+\input{Nt_Kalman}
+
+\chapter{Program details}
+\input{Nt_Auxill}
+
+\input{Nt_Table}
+
+\Omit{ ------------------------------------------------------
+%\section{taken out of the publication}
+
+%\input{C:/Users/Olaf/Documents/AstroPhys/GeoMagn/notes/Nt_GM-Refs}
+------------------------------------------------------------------ }
+
+%\printbibliography
+\bibliography{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+\end{document}
+
+\bibliography{\protect{"C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs"}}
+
+\begin{thebibliography}{100}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  \small
+
+
+%\bibitem{Tri15} G. Trinh, O. Scholten, \etal, \Ttl{Influence of Atmospheric Electric Fields on the Radio Emission from Extensive Air Showers} \PRD{93}{2016}{023003}, \arXiv{1511.03045}.
+
+\bibitem{GLE} \href{https://en.wikipedia.org/wiki/Graphics_Layout_Engine}{Plotting package GLE}
+
+\bibitem{Hare:2019} Brian Hare, O. Scholten, \etal, \Ttl{Needle-like structures discovered on positively charged lightning branches} \Nat[10.1038/s41586-019-1086-6]{568}{2019}{360}.
+
+\bibitem{Scholten:2020?} Olaf Scholten, Brian Hare, \etal, \Ttl{xxx} \JGRA[?]{V}{2020}{p}.
+
+\bibitem{nl2sol} John Dennis, David Gay, Roy Welsch, \Ttl{Algorithm 573: An Adaptive Nonlinear Least-Squares Algorithm} ACM Transactions on Mathematical Software, \VYP{7.3}{1981}{367-383}.
+
+\end{thebibliography}
+

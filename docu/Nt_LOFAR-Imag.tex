@@ -1,0 +1,54 @@
+The main imaging 'work horse' is the code ``LOFAR-Imag". It can be run with several different flavors that are described in \secref{Explore} till \secref{E_Intf}. The general structure of the  input is (as specified in a plain text file with extension .in)
+\begin{linenumbers}
+\resetlinenumber
+\begin{verbatim}
+&Parameters
+p=v
+p=v
+&end
+- - - - -- - - -- -
+specific input lines
+\end{verbatim}
+\end{linenumbers}
+
+where  \verb!p=v! stands for a list of parameters that are assigned a value (the so-called "namelist" input part). A list of the possible parameters with the first section where they are described is given in \tabref{LOFLI-namelist}. Some of these parameters apply to (practically) all run-options and are described here, many others are more specific and will be described in the appropriate section.
+
+The namelist parameters that are general are the following,
+
+\begin{linenumbers}
+\resetlinenumber
+\begin{verbatim}
+ &Parameters  RunOption= "xxxxx"
+ OutFileLabel= "xx"
+ AntennaRange= 100.  ! Maximum distance (from the core) for the range of the antennas (in [km]).
+ SaturatedSamplesMax= 5     ! Maximum number of saturates time-samples per chunk of data
+ Calibrations= "Calibrations202202071319.dat"     ! The antenna time calibration file. Not used when running on simulated data!
+ SignFlp_SAI= 142092, 142093     ! Station-Antenna Identifiers for those where the sign of the signal should be reversed.
+! PolFlp_SAI=  0     ! Station-Antenna Identifiers for those where the even-odd signals should be interchanged.
+ BadAnt_SAI= 5095, 7093, 11089, 13088, 13089, 17084, 17085, 17094, 17095, 101085
+  141083, 141086, 141087, 167094, 169082, 169090, 169094     ! Station-Antenna Identifiers for those that are malfunctioning.
+ ExcludedStat= "RS305"     ! Mnemonics of the stations that should be excluded.
+&end
+\end{verbatim}
+\end{linenumbers}
+where more parameters from \tabref{LOFLI-namelist} may be added. All text on a line after an exclamation mark is considered comment and not used. The following lines are obtained from experience with other flashes, where:
+\\\verb!RunOption="xxxxx"! specifies the particular flavor of the program that should be used, where "xxxxx" can be any of the following:
+\begin{itemize}
+\item \verb!RunOption="Explore"! for first exploration of this flash in order to get some idea of the layout and timing, see \secref{Explore}.
+\item \verb!RunOption="Calibrate"! for performing time calibration using the Hilbert envelopes of the cross correlations, see \secref{Calibration}.
+\item \verb!RunOption="ImpulsiveImager"! for running the impulsive Imager, see \secref{Imag}.
+\item \verb!RunOption="FieldCalibrate"! Field Calibration for the TRI-D interferometric imager, see \secref{Intf?}.
+\item \verb!RunOption="TRI-D"! for the TRI-D imager with polarization observables, accounting for antenna function, see \secref{Intf}.
+\item \verb!RunOption="SelectData"! to select real data, possibly for setup of simulation runs using program "SimulateData", see \secref{SelDat}.
+\end{itemize}
+\verb!OutFileLabel= "xx"! specifies an identifier for this particular run. It will be included in the name of the text-output file (with extension .out), as well as any figures (.pdf) and data files (.csv or .dat).
+\\\verb!AntennaRange= 100.! Maximum distance (from the core, in [km]) for  antennas to be included in the calculations. Only in the "Explore" runoption this variable is not used.
+\\\verb!SaturatedSamplesMax= 5! specifies the maximum number of time-samples in a data chunk (block of time trace) where the LOFAR digitizer has saturated.
+\\\verb!Calibrations= "......"! points to a calibration file in the sub-folder \verb!Book! that was produces in an earlier calibration run, see \secref{Calibration} and/or  \secref{Intf}.
+\\\verb!SignFlp_SAI=! list the antenna IDs where the signal is reversed.
+\\\verb!PolFlp_SAI=! list the antenna IDs where the polarization is reversed.
+\\\verb!BadAnt_SAI=! list the antenna IDs where the signal is bad.This line may be copied from the output of the RFI mitigation run, see \secref{RFI-out}.
+\\\verb!ExcludedStat=! lists the stations that should be excluded from the calculations.
+\\ Note that none of these lines in the namelist have a comma at the end, for the other input lines this is optional. Several keywords may appear on a single line if separated by a comma. Anything after an exclamation mark (within the namelist) is treated as a comment. A complete list of namelist keywords is given in \tabref{LOFLI-namelist}.
+
+

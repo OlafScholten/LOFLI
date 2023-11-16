@@ -1,0 +1,396 @@
+\section{E-field Interferometric imaging}\seclab{E_Intf}
+
+This chapter is a rather random put together of various more background material that certainly could use a better organization.
+
+\subsection{Method of Time Resolved Interferometric 3D Imaging}\seclab{TRID}
+
+This section is adapted from the draft of the manuscript ``Time resolved 3Dinterferometric imaging of a section of a negative leader with LOFAR"
+
+The basic implementation of beam-forming imaging is relatively straightforward. The part of the atmosphere where the lightning is to be imaged is divided up in voxels. For each voxel the time traces of the antennas are summed while accounting for the difference in travel time from this voxel to each antenna. This yields for each voxel a time trace which is the coherent sum of all antennas, as discussed in \secref{Vox}. Adding the traces for the different voxels is always performed for a fixed time span in one particular `reference' antenna, usually one from the core of LOFAR. Thus we can find the source location of a particular structure seen in the trace of the reference antenna.
+
+The time trace of each voxel is cut in slices of a fixed duration. The intensity is determined for all slices resulting in many voxelated intensity profile, one such profile for each time slice corresponding to a fixed time slice in the reference antenna, much like what is shown in \figref{B-NLa-166} but for much shorter time spans.
+The length of the time slices determines our final time resolution since any detail within a slice is summed over.
+For each time slice the maximum of this voxelated intensity profile is determined and used as the source location, as discussed in more detail in \secref{Max}. Plotting the position of all sources will result in the beam-formed (or interferometric) image of a segment of the flash in space and time. In the following the different steps involved in this procedure are discussed in more detail.
+
+The main selling points of LOFAR are that we  can reach 1) a time resolution of 100~ns, the pulse response width as determined by the band width (30-80~MHz) 2) a spatial resolution of the order of 1~m, determined by the time calibration (order 1~ns) and the antenna baselines (up to 100~km), 3) a sensitivity of two orders of magnitude below the noise level of a single antenna, determined by the number of antennas that are summed (or the order of 100 -- 200). In addition we make true three dimensional images.
+
+\subsection{Space \& time grids and summing time traces}\seclab{Vox}
+
+The part of the atmosphere that is of interest is divided up into voxels on a regular grid. We have found that this is most conveniently done in polar coordinates with the center at the reference antenna in the dense LOFAR-core. In this way we can more easily account for the fact that our resolution in the radial direction is much worse than in the two transverse directions. The optimal grid-spacing is dependent on the areal spread of the antenna locations. For the example discussed in this work we include antennas within 50~km distance from the core where the antennas are distributed on an irregular logarithmic grid with a dense core that is designed to be optimal for astrophysical applications, see \cite{Haarlem:2013}. The voxel grid is chosen such that the maximal time shift for any antenna for two bordering voxes is about 1~ns, our time calibration accuracy. A typical grid spacing of 0.003$^\circ$ in the azimuth ($\hat\phi$) angle, 0.01$^\circ$ in elevation ($\hat\theta_e$) angle, and 10~m in the radial ($\hat{R}$) direction is reasonable. For a source at 50~km distance this implies a grid of about 1~m transverse to the line of sight (from the reference antenna) and 10~m along the line of sight. A typical grid spans over $(60 \times 30 \times 20)$ voxels in $(\hat\phi,\,\hat\theta_e,\,\hat{R})$.
+
+%Source at 5 km height, at distance of 50 km; wavelength of 5 m and take D=50 km (half true diameter).
+%Based on an angular resolution of $\lambda/D$ one would expect $d\phi=5/50,000 \times 57=0.006^\circ$ and
+%$d\theta=d\phi/\cos{(\arctan{ 5/50.})}\approx d\phi \times (50/5)=0.06^\circ$ which is in good agreement.
+
+%One antenna in the dense LOFAR core is selected at the reference antenna.
+A section of the time trace in the reference antenna is selected with typically a length of 0.3~ms. For each voxel the relative time shifts of the antennas are calculated with respect to that of the reference antenna to account for the travel time differences of a signal from the voxel. These time-shifted traces are summed to yield the coherent (or beam formed) time trace for that voxel. All coherent voxel time traces are thus evaluated at identical times for the reference antenna.
+
+The actual time shifting and adding of the time traces is done in Fourier space by applying frequency-dependent phase shifting to each antenna trace before summing them. After summation, the traces are transformed back to the time domain. The antenna time traces used are taken longer than the required 0.3~ms for the final analysis to account for the maximal relative time shift over the full voxelated volume.
+We thus obtain for each voxel a coherently summed time trace of 0.3~ms length where only in the trailing times there will be partial coherence.
+
+The intensity may be integrated over the full time trace of 0.3~ms which washes out all time dependence over the integration range. To image the dynamics in the flash we want to use a much better time resolution. The smallest time step where subsequent time-frames can be considered to be independent is the dictated by the width of the impulse response function. The impulse-response time equals the full width at half maximum of the narrow peaks in the spectrum, about 100~ns. We thus cut the time trace in slices of 100~ns and the voxelated intensity profile is determined for each slice. The 100~ns can also be regarded as a compromise, taking it shorter would make the imaging more sensitive to noise fluctuations, taking is longer would increase the chance that multiple sources appear simultaneously and are confused. Since 100~ns is close to the impulse-response time of the system we name this Time-Resolved Interferometric 3D (TRID) imaging.
+
+
+\subsubsection{Antenna weighting}\seclab{AntWeight}
+
+Since the array of antennas has a large extent compared to the distance of the source region, the received signal strength varies greatly over the array. If this is not taken into account one would effectively use the antennas that are near the source region only and thus not use the full imaging power of the array. To improve the performance we thus include weighting factors for the antennas. In Interferometry applications for astronomy there is a considerable amount of experience with the pro's and con's of different weighting schemes, see\cite{Briggs:1999, Yatawatta:2014} for some comprehensive reviews.
+
+For this work we have chosen for a weighting scheme that compensates the signal strength due to distance to the source in lowest order, caps the weight for antennas far from the source where the signal to noise ratio becomes unfavorable, and takes into account the fact that the largest density of antennas is at the core.
+
+The amplitude of an emitted signal drops inversely proportional to distance, $R_{as}=\sqrt{D_{as}^2+h_s^2}$ where $D_{as}$ is the distance from a certain antenna to the source in the horizontal plane and $h_s$ denotes the altitude of the source. It should be noted that the Dutch LOFAR antennas are all (to a very good approximation) in a horizontal plane as that part of The Netherlands is rather flat. The measured signal strength is also dependent on the antenna gain which depends on the azimuth, $\phi$, and elevation, $\theta_e$, angles of the source with respect to the antenna. The antenna gain vanishes for sources at the horizon and thus (since it is an analytic function of the angles) depends on $\theta_e$ as $\sin{(\theta_e)}$. For almost all cases of interest the sources are at small elevation angles for which we can assume $\sin{(\theta_e)}\approx h_s/R_{as}$ where the antenna position enters in $R_{as}$ only.
+
+The antenna gain depends also on $\phi$ as well as on the polarization angle of the signal. Since an analysis of the polarization of the radiation falls outside the scope of this work as it would make the analysis considerably more complicated, we have ignored this dependence. This could be done since the antennas are mostly in a relatively narrow cone (full opening angle less than 60$^\circ$) from the source.  We have performed some checks of the phase stability of the signal from selected isolated and strong  sources that resemble point sources that indicates that ignoring the $\phi$ dependence appears not to be a safe assumption.
+
+Combining the $1/R_{as}$ drop of signal strength with the antenna gain proportionality to $\sin{(\theta_e)}$, we obtain an antenna weighting factor
+\begin{equation}
+W_a=\left\{
+  \begin{array}{lr}
+    R_{as}^2/R_{rs}^2 & \rm{if} \quad R_{as}^2/R_{rs}^2 < 1.2\\
+    1.2 & \rm{if} \quad  R_{as}^2/R_{rs}^2 \ge 1.2
+  \end{array} \;. \eqlab{W}
+\right.
+\end{equation}
+where the weight is normalized to unity for the reference antenna at a distance of $R_{rs}$. In addition the weight is capped to a maximum of 1.2 for distant stations where the signal to noise ratio is getting worse.
+
+\subsubsection{Antenna calibration}\seclab{Cal}
+
+The antenna timings are calibrated for each flash following the procedure outlined in \cite{Scholten:2021-init}. Per flash 20  -- 30 bright stand-alone pulses are selected from the whole flash where care is taken that their source locations roughly cover the extent of the flash. For all these sources their location as well as the antenna timings are searched in a simultaneous fit using the source location search algorithm discussed in \cite{Scholten:2021-init}.
+
+Since for interferometry the stability of the phase of the signal over all antennas is important, we perform sometimes an additional check of this phase for a single distinct pulse in the spectrum selected for TRID imaging. If this phase is off by more than 90$^\circ$ the antenna will not be used. Usually this eliminates less than 1\% of all antennas. This may also result in eliminating a whole station from the analysis for a particular flash.
+
+The gains of the antennas are calibrated by normalizing the noise level to unity. We select for this normalization only the parts of the recorded trace for which there is no lightning activity detected.  Since this noise level is largely due to extra terrestrial sources, i.e.\ radiation produced by the Milky Way, we name this the Galactic Background [GB] level.
+
+\subsubsection{Determining the position of maximal intensity}\seclab{Max}
+
+The voxelated coherent intensity is determined for subsequent time slices of 100~ns where it is straightforward to determine the voxel with maximal intensity. Tho reach an inter-voxel accuracy we have implemented two interpolation procedures, quadratic and barycentric interpolation.
+
+\begin{description}
+\item[Quadratic] The intensity of the voxels around the voxel with the maximum intensity are fitted by a paraboloid,
+    \begin{equation}
+    I_p(\vec{x})=I_0 + \sum_i\left[\frac{1}{2} A_i x_i^2 + B_i x_i\right] + \sum_{i,j} R_{i,j} x_i x_j \;,
+    \end{equation}
+    where $x_i$ is the $i^{th}$ grid coordinate, $i=1,2,3$. The coefficients $I_0$, $A_i$, and $R_{i,j}$ are fitted to the grid points bordering the maximum. The inter-voxel maximum $\vec{x_p}$ is taken at the point where the paraboloid reaches its maximum.
+\item[Barycentric] The barycentric maximum is calculated as
+    \begin{equation}
+    \vec{x}_b= \sum_{\vec{x}} \left[(I(\vec{x})-I_{th})\, \vec{x} \right] /  \sum_{\vec{x}} \left[(I(\vec{x})-I_{th}) \right] \;,
+    \end{equation}
+    where the sum runs over all voxels with an intensity exceeding the threshold value $I_{th}$. This threshold is taken as $I_0/1.2$ where $I_0$ is the maximum intensity of voxels in the grid or the largest value of a voxel on the outer surface of the grid, whichever is larger.
+\end{description}
+
+Each of the two interpolation procedures has advantages and disadvantages.
+When the atmosphere is noisy, with many active sources in a small area, the barycentric interpolation will yield some weighted average position, while the quadratic interpolation yields the position of the strongest source.
+It is, however, observed that the details of intensity surface are complicated with small ripples (order 10\% in intensity of distances of 20~m) probably remnants of side beams. For a course grid the quadratic interpolation will thus be unstable, but never give a result that if off by more than the grid spacing. Using barycentric interpolation these ripples are efficiently averaged yielding a properly interpolated maximum. The physics case shown in \secref{NegLead} uses a fine grid and for this reason the quadratic interpolation is used.
+
+
+\subsubsection{Source intensity and polarization}
+
+The coherent or interferometric intensity is calculated as the intensity of the signal from the source as received by the reference antenna and is expressed in units of [GB] (see \secref{Cal}). It has thus tacitly assumed that the azimuth-angle dependence of the antenna gains is limited and is effectively averaged-out. The elevation-angle dependence is to a large extent accounted for by the weighting factors (see \secref{AntWeight}) when calculating the coherent intensity.
+
+All LOFAR antennas used in this work are inverted v-shape dipoles where X- (Y-) dipoles corresponding to odd (even) numbered antennas are oriented in the NE-SW (NW-SE) plane. Our analysis is performed separately for X- and Y-dipoles since they differ significantly in their sensitivity to polarized radiation. The antenna function (the Jones matrix, specifying for each dipole and polarization the gain depending on angle and frequency) has to be used \cite{Haarlem:2013} to convert the measured intensity to the absolute intensity of the source. The absolute calibration of the LOFAR antennas is performed in \cite{Mulrey:2019}.
+This complicated task simplifies considerably if it is assumed that the source is point-like (flat frequency spectrum over our frequency range) and linearly polarized, however this falls outside the scope of the present work.
+
+
+%The columns are (zenithal field, Azimuthal field)
+%the rows are: (X-dipole, Y-dipole)^T  ; even=Y-dipole=NW-SE
+%for (N,E)=(-44,7)  the Jones matrix is:
+%[[1.58 2.63]
+%  [2.13 1.87]]
+%I.E. an azimuthal electric field has a response of 2.63 on the X dipole
+%for (N,E)=(9.-18) the Jones matrix is:
+%[[0.88 3.14]
+%  [2.44 0.97]]
+%OS: For source in NW corner: Vert pol is seen in even antenna, Horiz pol in odd antenna; exclusively
+%Brian: zenith=75 degrees, azimuth=45 degrees is: [1.14539086 0.01602638] ,  [0.01043129 1.61170458] Note: this is the gain for the amplitude.
+
+We observe that the received coherent power averaged over 0.3~ms for a flash located at the NE of the array is about twice as large in the Y-dipoles as in X where for a flash at the SE side of the core it is the other way around. This is due to the azimuth-angle dependence of the antenna gain. For sources in the NE horizontally polarized radiation is recorded almost exclusively in the Y-dipoles with a gain (in power) that is about a factor two larger than that for vertical polarization recorded exclusively by the X-dipoles in this configuration.
+In this section the measured signal in the X- and Y- dipoles is converted to the radiation electric field at the antenna and to be used for interferometry. For future reference this will be named E-field Interferometry (EI).
+
+\section{Basics of interferometry as used in TRI-D}
+
+To convert the measured signal the Jones matrix is used, $J$
+\beq
+\vec{E}_a(\hat{r}_{as}) = J^{-1}(\hat{r}_{as}) \vec{S}_a \;,
+\eeq
+where subscript $a$ refers to a particular antenna, $\vec{E}_a(\hat{r}_{as})$ is a 3 component vector giving the radiation electric field at the position of the antenna, $ \vec{S}_a(\hat{r}_{as})$ is a two component vector where the two components are the measured signals in the X- and Y-dipoles. The arrival direction is specified by $\hat{r}_{as}$ with $\vec{r}_{as}=\vec{r}_a-\vec{r}_s$ where $\vec{r}_a$ points to the antenna and likewise $\vec{r}_s$ to the source. The unit vector  $\hat{r}_{as}$ thus points from the source to the antenna. The radiation field obeys  $\vec{E}_a(\hat{r}_{as}) \cdot \hat{r}_{as}=0$. We also introduce the distance from the source to the antenna, $R_{as}=\sqrt{\vec{r}_{as} \cdot \vec{r}_{as}}$.
+
+The electric field at the antenna is written in terms of $\vec{I}$, the source current moment as
+\beq
+\vec{E}_{as} = \frac{\vec{I} - \left(\vec{I}\cdot \hat{r}_{as}\right) \hat{r}_{as}}{R_{as}} \;, \eqlab{E_as}
+\eeq
+which obeys, by construction, $\vec{E}_{as} \cdot \hat{r}_{as}=0$ and properly falls-off with distance to the source.
+
+To reconstruct $\vec{I}_s$ from the fields determined at the various antenna positions, $\vec{E}_a(\hat{r}_{as})$ we minimize,
+\bea
+\chi^2_E &=& \sum_a \left( \vec{E}_a(\hat{r}_{as}) - \vec{E}_{as} \right)^2 \,\vec{w}_a
+   =\sum_{a,i} \left( E_{a,i} - \frac{I_i - \left(\vec{I}\cdot \hat{r}_{as}\right) \hat{r}_{as,i}}{R_{as}} \right)^2 \,w_{a,i}\\
+   &=&\sum_{a,i} \left[ E_{a,i}^2 w_{a,i} - 2\, E_{a,i} I_i w_{a,i}  +2\,E_{a,i} E_{a,i} w_{a,i} \left(\vec{I}\cdot \hat{r}_{as}\right) + I_i w_{a,i} I_i  - \left(\vec{I}\cdot \hat{r}_{as}\right)^2  \hat{r}_{as,i}^2 w_{a,i} \right]  \;,
+\eea
+with respect to the components ${I}_i$, $i=1,2,3$. Note that a proper time translation is understood. Weights $w_{a,i}$ have been introduced here and should be taken equal to the inverse-square-error in $E_{a,i}$, but are taken equal to unity when searching for the maximum intensity location.  Taking $w_{a,i} \neq w_{a}$ i.e.\ not $i$-independent gives serious problems as $\sum_{i}  E_{a,i} \hat{r}_{as,i} w_{a,i} \neq 0$. Excluding $i$-dependent weights gives the simpler
+\beq
+\chi^2_E = \sum_{a} w_a \left[ \vec{E}_a \cdot \vec{E}_a - 2\, \vec{E}_a \cdot \vec{I}/R_{as} + \vec{I}\cdot \vec{I}/R_{as}^2 - \left(\vec{I}\cdot \hat{r}_{as}\right)^2/R_{as}^2  \right]  \;,
+\eeq
+Minimal $\chi^2_E $ gives us the three conditions,
+\beq
+0= \partial \chi^2_E / \partial I_i = 2 \sum_a \left[- E_{a,i}(\hat{r}_{as}) +I_i/R_{as} - \hat{r}_{as,i} \left(\vec{I}\cdot \hat{r}_{as}\right)/R_{as} \right] \,w_{a}/R_{as} \;.
+\eeq
+This equation we rewrite as,
+\beq
+A \vec{I}= \vec{F} \;,
+\eeq
+with
+\beq
+F_i=\sum_a  E_{a,i}(\hat{r}_{as}) \,w_{a}/R_{as} \;, \eqlab{F_as}
+\eeq
+the coherent sum of the fields over all antennas, and
+\beq
+A_{ij}= \sum_a \left(\delta_{i,j} - \hat{r}_{as,i} \hat{r}_{as,j}\right) \,w_{a}/R_{as}^2 \;,
+\eeq
+which is positive definite and but not symmetric because of the weighting factors. The matrix can easily be inverted.
+
+The current moment for a pixel can thus be written as
+\beq
+\vec{I}=A^{-1} \vec{F}=\sum_a A^{-1} \vec{E}_{a}(\hat{r}_{as}) \,w_a/R_{as} \;,
+\eeq
+which is probably more efficient from a calculational point.
+
+Minor issue: one eigenvalue of matrix $A$ (for the case the weighting factors do not depend on $i$) tends to be very small, i.e.\ the inverse blows-up!
+Best way to deal with this situation is to realize that the array does not have enough sensitivity to reconstruct the current-moment in the direction of the small eigenvalue.
+
+Thus we rewrite
+\beq
+A_{ij}= \sum_{i=1}^3 \vec{\varepsilon}_i \alpha_i \vec{\varepsilon}_i^T \;,
+\eeq
+resulting in
+\beq
+\vec{I}=A^{-1} \vec{F}=\sum_{i=1,2} \vec{\varepsilon}_i \alpha_i^{-1} \sum_a   \vec{\varepsilon}_i^T \vec{E}_{a}(\hat{r}_{as}) \,w_a/R_{as} \;,
+\eeq
+where only the large eigenvalues are kept.
+
+\subsubsection{Polarization dependent weights}
+
+To reconstruct the time-dependentcurrent $\vec{I}_s$ from the (time dependent) fields determined at the various antenna positions, $\vec{E}_a(\hat{r}_{as})$ we minimize (where $k$ runs over two orthogonal transverse polarizations $\hat{r}_{ak}$ that are antenna and direction dependent with $\hat{r}_{ak}\cdot \hat{r}_{as}=0$),
+\bea
+\chi^2_E &=& \sum_{a,k,t} \left( E_{ak} - \vec{E}_{as}\cdot \hat{r}_{ak}\right)^2 \,w_{ak}
+   =\sum_{a,k,t} \left( E_{ak} - \left(\vec{I}\cdot \hat{r}_{ak}\right) /R_{as} \right)^2 \,w_{ak}\\
+   &=&\sum_{a,k,t} w_{ak}\left[ E_{ak}^2 - 2\, E_{ak} \left(\vec{I}\cdot \hat{r}_{ak}\right) /R_{as}  + \left(\vec{I}\cdot \hat{r}_{ak}\right)^2 /R_{as}^2   \right]  \;, \eqlab{chi_k}
+\eea
+with respect to the components ${I}_i$, $i=1,2,3$ and where the model electric field is written as in \eqref{E_as}. It should be noted that $\vec{E}_{ak}=E_{ak} \hat{r}_{ak}$ as well as $\vec{E}_{as}$, or equivalently $\vec{I} $, are time dependent in  \eqref{chi_k} where a time translation, proportional to signal travel, time is understood. Transverse-polarization dependent weights $w_{ak}$ have been introduced and should be taken equal to the inverse-square-error in $E_{a,k}$, but are taken equal to unity when searching for the maximum intensity location.
+Minimizing $\chi^2_E $ gives us the three conditions,
+\beq
+0= \frac{\partial \chi^2_E}{\partial I_i}|_t = 2 \sum_{a,k} w_{ak}\left[- E_{ak}^*\,\hat{r}_{ak,i} + \hat{r}_{ak,i} \, \left(\vec{I}^*\cdot \hat{r}_{ak}\right)/R_{as} \right] /R_{as} \;.
+\eeq
+This equation we rewrite as,
+\beq
+A \vec{I}= \vec{F} \;,  \eqlab{AIF}
+\eeq
+with
+\beq
+F_i=\sum_{a,k}  E_{ak}\,\hat{r}_{ak,i} \,w_{ak}/R_{as} \;,
+\eeq
+the coherent sum of the fields over all antennas, and
+\beq
+A_{ij}= \sum_{a,k} \left(\hat{r}_{ak,i} \hat{r}_{ak,j}\right) \,w_{ak}/R_{as}^2 \;,
+\eeq
+which is positive definite and symmetric. While the currents and the electric fields are time-dependent, $A_{ij}$ is not. The matrix can easily be inverted.
+
+
+We need the Hessian matrix,
+\beq
+\frac{\partial^2 \chi^2_E}{\partial I_i\,\partial I_j}=2 A_{ij} \;,
+\eeq
+for estimating errors in the current moment. The variance in $\vec{I}$ is now given by the inverse of the Hessian. In particular we use $\sigma(I)_i=A^{-1}_{i,i} \times \chi^2/DoF$. It is not clear as yet what the proper expression is for the error in the Stokes parameters
+
+At the minimum of the chi-square where \eqref{AIF} applies the value is given by
+\bea
+\chi^2_E &=& \sum_{a,k} \left( E_{ak} - \vec{E}_{as}\cdot \hat{r}_{ak}\right)^2 \,w_{ak}\\
+   &=&\sum_{a,k} w_{ak}\left[ E_{ak}^2 - (E_{ak}^* \left(\vec{I}\cdot \hat{r}_{ak}\right) + E_{ak} \left(\vec{I}^*\cdot \hat{r}_{ak}\right)) /R_{as}  + \left(\vec{I}\cdot \hat{r}_{ak}\right)^2 /R_{as}^2 \right]\\
+   &\neq&\left[\sum_{a,k} w_{ak} E_{ak}^2  \right] - \Re{\left(\vec{F}\cdot \vec{I}^*\right)} \\
+   &=&\sum_{a,k} \left[ w_{ak} E_{ak}^2   - E_{ak} w_{ak} \left(\hat{r}_{ak}\cdot \vec{I}^*\right)/R_{as} \right] \\
+   &=&\sum_{a,k} \left[ \left(\sqrt{w_{ak}} E_{ak}\right)^2   - \left(\sqrt{w_{ak}} E_{ak}\right) \left(\hat{r}_{ak}\cdot \vec{I}^*\right)\sqrt{w_{ak}}/R_{as} \right] \\
+\chi^2_E &=&\sum_{a,k} \left[ \sqrt{w_{ak}} E_{ak}   -  \left(\hat{r}_{ak}\cdot \vec{I}\right)\sqrt{w_{ak}}/R_{as} \right]^2
+   \;, \eqlab{chi2_Value}
+\eea
+which should be positive. Note that $\left(\vec{F}\cdot \vec{I}^*\right)$ has a vanishing Imaginary part and that the expression includes an implicit summation over time.
+
+
+The correlation matrix (where the diagonal elements are the error) is the inverse of the Hessian. To obtain the error in the stokes parameters we still need to integrate over time. Not sure how to work in the complex part of the current moment or Stokes.
+
+\subsubsection{Relative X- \& Y-dipole timing calibration}
+
+The basic idea for the relative timing calibration of a dipole pair is that the circular polarization of a signal is determined by the relative time-offset of the signals in the two polarization directions (take these t=zenith- or p=azimuth-angle) of the signal from a source. When averaging over many sources one expect the circular polarization to average to zero unless there is a systematic timing offset. The sign of the time-offset depends however on the in- or out-of phase oscillation of the t- and p-polarizations. This relative phase is dependent on the angle of the net linear polarization, 45$^\circ$ is in phase, -45$^\circ$ is out of phase. Depending on this angle the pulse needs a sign-change to add coherently regarding the time shift.
+
+To implement this we calculate for a particular antenna pair the cross correlation for the t- and p-polarizations,
+\beq
+X_j(\tau)=U_j(\tau) + i\,V_j(\tau)=I_{j,t} \bigotimes I_{j,p}^*|_\tau \;,
+\eeq
+for all calibration pulses $j$ in this antenna where $U_j(\tau)$ and $V_j(\tau)$ are real, the asterisk denotes complex conjugation and $\bigotimes $ the convolution of two traces. $\tau=0$ corresponds to no additional delay and thus $U_j(0)$ and $V_j(0)$ are the usual $U$ and $V$ Stokes parameters measuring polarization at 45$^\circ$ and circular polarizations, respectively. Statistically one would expect $U$ and $V$ to have a random spread around zero for many pulses, even when there is a timing offset. As the next step we construct
+\beq
+X_s(\tau)=\sum_j X_j(\tau)\, Sng[U_j(0)] /I_j \;,
+\eeq
+where the sum runs over all calibration pulses, $Sng[]$ denotes the sign, and $I_j$ is the stokes $I$ or pulse intensity. Due to the sign function the stokes $U$ all add coherently. To avoid domination of one or two strong pulses, which would spoil the statistical average, the stokes parameters are normalized. Working with normalized stokes parameters has the additional advantage that pulses that are strongly (linearly) polarized in the t or p direction, and thus have no information on the relative time offset, give a negligible contribution. For a finite (relatively small) time offset, $ V_s(0) \neq 0$ where the sign depends on which of the two polarizations is delayed. The delay, $\tau_0$, is taken where $U_s(\tau_0)=max$ since this is numerically simplest and has been verified to be within 0.5~ns of a time where $U_s(\tau)=0$.
+
+Repeated application of this procedure shows convergence after the first step.
+
+\subsubsection{The Jones matrix}
+
+The angular dependence of the Jones matrix is parameterized as a sum over spherical harmonics to allow for a smooth and analytical interpolation at near-horizon angles,
+\beq
+J_{d,i}(\nu;\theta,\phi)=\sum_{j,m} A_{j,m}^(i)(\nu)\, Ch_m(\phi)\, Lgdr_j(\cos{\theta})
+\eeq
+where $d=(X,Y)$ denotes the dipole, $i=(t,p)$ the polarization of the electric field, $\nu$ the frequency, and $A_{j,m}^(i)(\nu)$ the functions that parameterize the Jones matrix. The sum runs over $j=(1,3,5,7)$ for the Legendre polynomials ($Lgdr$ and $m=(1,3,5)$ Chebyshev polynomials. The X- and Y- dipoles are assumed to be identical, only rotated over 90$^\circ$.
+The functions $A_{j,m}^(i)(\nu)$ are determined by (analytic) fitting tabulated values of the Jones matrix.
+
+\section{Interferometric space-time-point-sources peak fitting}
+
+The term point sources imply delta-function sources in space and time in this section. The aim is to fit the observed pulses with a distribution (in space and time) of polarized point sources.
+
+\subsection{several  point sources at fixed points}
+
+We use the same notation as has been used earlier\cite{Scholten:2022}, where to convert the measured signals $\vec{S}_a$ on each of the dual-polarized antennas to a measured electric field the Jones matrix ($J$, parameterizing the angle and frequency dependent gain and phase-shift of the antenna and the electronics) is used,
+\beq
+\vec{E}_a = J^{-1}(\hat{r}_{as}) \vec{S}_a \;, \eqlab{EJS}
+\eeq
+where subscript $a$ refers to a particular antenna, $\vec{E}_a(\hat{r}_{as})$ is a 3 component vector giving the radiation electric field at the position of the antenna. $\vec{S}_a$ is a two component vector where the two components are the measured signals in the two dipoles forming the crossed-dipole antenna (the X- and Y-dipoles) and where for  ease of notation all frequency and time dependencies are suppressed for now. The arrival direction of the signal is specified by $\hat{r}_{as}=\vec{r}_{as}/|\vec{r}_{as}|$ with $\vec{r}_{as}=\vec{r}_a-\vec{r}_s$ where $\vec{r}_a$ points to the antenna and likewise $\vec{r}_s$ to a particular location in the sky, taken as the source. The unit vector  $\hat{r}_{as}$ thus points from the source to the antenna. A radiation field obeys  $\vec{E}_a \cdot \hat{r}_{as}=0$. We also introduce the distance from the source to the antenna, $R_{as}=|\vec{r}_a-\vec{r}_s|=\sqrt{\vec{r}_{as} \cdot \vec{r}_{as}}$.
+
+Different from the earlier derivations we will account for the internal 3D structure of a complex source given by $\vec{x}$ w.r.t. the center of the source. We assume that the source size is small compared to the distance to the antenna and $\vec{r}_s$ points to the center of the complex source, however the source may be large compared to the wavelength. As the working hypothesis, the complex source is modeled as $M$ impulsive point sources at locations $\vec{x}_m$ firing at times $t_m$ with a current moment of $\vec{I}_m$. The source current-moment density (w.r.t.\ the center) can thus be written as
+\beq
+\vec{I}(t_s,\vec{x})=\sum_{m=1}^M \delta^3(\vec{x}-\vec{x}_m) \,\delta(t_s-t_m) \, \vec{I}_m \;. \eqlab{I_distr}
+\eeq
+
+The radiation electric field (in the so-called far-field approximation~\cite{Jackson:1975}) at the antenna is modeled in terms of $\vec{I}$, the source current moment density with the center at $\vec{r}_s$, as
+\beq
+\vec{E}_{as}(t_a) = \int d^3x \frac{\vec{I}(t_s,\vec{x}) - \left(\hat{r}_{as} \cdot \vec{I}(t_s,\vec{x}) \right) \hat{r}_{as}}{R_{as}} \;,
+\eeq  %\infty
+which obeys, by construction, $\vec{E}_{as} \cdot \hat{r}_{as}=0$, properly falls-off with distance to the source, and accounts for the RF travel time since
+\beq
+t_s=t_a-|\vec{r}_a-(\vec{r}_s+\vec{x})|/c\approx t_a-(R_{as}-\hat{r}_{as}\cdot \vec{x})/c \;, \eqlab{t_as}
+\eeq
+which can be rewritten by using the time at the center of the source, $t_c=t_s-\hat{r}_{as}\cdot \vec{x}/c$ as
+\beq
+t_a=t_s+(R_{as}-\hat{r}_{as}\cdot \vec{x})/c = t_c + R_{as}/c \;, \eqlab{t_c}
+\eeq
+where $c$ is corrected for the index of refraction. Important for the last step is that $R_{as}\gg |\vec{x}|$.
+
+Since in the numerical calculation we are limited in unfolding the antennas function, especially its frequency filtering, we replace the time dependence by the appropriate finite impulse response of the system for the reconstructed electric fields,
+\beq
+\delta(t-t_m) \Rightarrow  G(t-t_m) \;,
+\eeq
+where  $G(t')$ is the impulse response of the electric field due to am impulsive current at $t'=0$. This impulse response accounts for the applied frequency filter and general frequency-dependent gain function that may be applied in the numerical analysis.
+
+To reconstruct $\vec{I}$, as given in \eqref{I_distr}, from the measured, time dependent, fields at the various antennas, $\vec{E}_a=\sum_{k} E_{ak} \hat{r}_{ak}$ we unfold the antenna response for the two, antenna dependent, polarization directions ($k={\hat{\theta}}$ and $k={\hat{\phi}}$), see\cite{Scholten:2022}. To determine the optimal value for $\vec{I}$ we minimize,
+\bea
+\chi^2_E &=& \sum_{a,k,t_c} \left( E_{ak}(t_a) - \vec{E}_{as}(t_a)\cdot \hat{r}_{ak}\right)^2 \,w_{a} \nonumber \\
+   &=& \sum_{a,k,t_c} w_{a}\left[ E_{ak}^2(t_c + R_{as}/c)
+    - 2\, E_{ak}(t_c + R_{as}/c) \left[\sum_m \left(\hat{r}_{ak}\cdot \vec{I}_m \right) G(t_c+ \hat{r}_{as}\cdot\vec{x}_m/c -t_m) /R_{as}\right]^*  \right] \nonumber \\
+   && + \sum_{a,k,t_c} w_{a} \left[\sum_m  \left( \hat{r}_{ak}\cdot \vec{I}_m )\right) G(t_c+\hat{r}_{as}\cdot \vec{x}_m/c-t_m) /R_{as}  \right]^2    \;,
+   \eqlab{chi_distr}
+\eea
+with respect to the components ${I}_{i,m}$, $i=1,2,3$, $m=1,M$ as well as positions $\vec{x}_m$ and times $t_m$ while using \eqref{t_as} where the relation between $t_s$ and $t_a$ depends on $\vec{x}$. $\sum_a$ indicates a sum over all crossed-dipole antennas and $\sum_k$ implies a sum over the two orthogonal transverse polarizations $\hat{r}_{ak}$. These directions are antenna dependent where $\hat{r}_{ak}\cdot \hat{r}_{as}=0$.
+Antenna and polarization dependent weights $w_{a}$ have been introduced. These weights should  reflect the accuracy in determining $E_{ak}$ which depends on the signal-to-noise ratio.
+
+
+
+As a first step we analytically minimize $\chi^2_E $ w.r.t.\  ${I}_{i,m}$, giving us the conditions
+\bea
+0&=& \partial \chi^2_E / \partial I_{i,m} \nonumber \\
+   &=& - 2 \sum_{a,k,t_c} w_{a} \, \hat{r}_{ak,i} \, E_{ak}(t_c + R_{as}/c) \, G(t_c+ \hat{r}_{as}\cdot\vec{x}_m/c -t_m)^* /R_{as}  \\
+   && +2 \sum_{a,k,t_c} w_{a}\, \hat{r}_{ak,i} \left[\sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) G(t_c+\hat{r}_{as}\cdot \vec{x}_n/c-t_n) \right] G(t_c+\hat{r}_{as}\cdot \vec{x}_m/c-t_m)^* /R_{as}^2   \;,  \nonumber
+% \quad \rm{for}\; i=1,2,3
+\eea
+for $i=1,2,3$, $m=1,M$.
+
+This can be written more compactly as,
+\beq
+A_{im,jn} \vec{I}_{jn}= \vec{F}_{im} \;, \eqlab{A=IF_dist}
+\eeq
+where an implicit sum over repeated indices is understood, with
+\beq
+\vec{F}_{im}= \sum_{a}  w_{a} \left[\sum_{t_c} \sum_{k} \hat{r}_{ak} E_{ak}(t_c + R_{as}/c) \, \frac{G(t_c+ \hat{r}_{as}\cdot\vec{x}_m/c -t_m)^*}{R_{as}} \right]_i  \;, \eqlab{F_dist}
+\eeq
+which is the coherent sum over all antennas of the fields folded with the point response functions, and
+\beq
+A_{im,jn}= \left[\sum_{k} \hat{r}_{ak,i} \, \hat{r}_{ak,j}\right] \bigotimes \left[\sum_{t_c} \frac{G(t_c+\hat{r}_{as}\cdot \vec{x}_n/c-t_n)}{R_{as}}  \frac{G(t_c+\hat{r}_{as}\cdot \vec{x}_m/c-t_m)^*}{R_{as}} \right]  \;,  \eqlab{A_dist}
+\eeq
+where $\bigotimes$ implies $\sum_{a}  w_{a}$. $A$ is symmetric and might be positive definite. The space component of the matrix can easily be inverted but for the source component this will depend on their spatio-temporal separation.
+
+When $\vec{I}_{jn}$ is real the equations reduce to
+\beq
+\Re{A_{im,jn}} \vec{I}_{jn}= \Re{\vec{F}_{im}} \;, \eqlab{A=IF_dist-Real}
+\eeq
+since $2\Re{A_{im,jn}}={A_{im,jn}}+ {A_{im,jn}}^*$.
+
+When $\vec{I}_{jn} e^{i\phi_n}$ with real $\vec{I}_{jn}$, using the short-hand notation $G_m =G(t_c+ \hat{r}_{as}\cdot\vec{x}_m/c -t_m) $ the equations reduce to
+\bea
+0&=& \partial \chi^2_E / \partial I_{i,m} \nonumber \\
+   &=& - \sum_{a,k,t_c} w_{a} \, \hat{r}_{ak,i} \, E_{ak}(t_c + R_{as}/c) \, e^{-i\phi_m} G^*_m /R_{as}  \nonumber \\
+   &&- \sum_{a,k,t_c} w_{a} \, \hat{r}_{ak,i} \, E_{ak}^*(t_c + R_{as}/c) \, e^{i\phi_m} G_m /R_{as}  \\
+   && + \sum_{a,k,t_c} w_{a}\, \hat{r}_{ak,i} \left[\sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) e^{i\phi_n} G_n \right] e^{-i\phi_m} G^*_m /R_{as}^2 \nonumber \\
+   && + \sum_{a,k,t_c} w_{a}\, \hat{r}_{ak,i} \left[\sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) e^{-i\phi_n} G^*_n \right] e^{i\phi_m} G_m /R_{as}^2   \;,  \nonumber \\
+   &=& - 2 \sum_{a,k,t_c} w_{a} \, \hat{r}_{ak,i} \,\Re\left\{ E_{ak}(t_c + R_{as}/c) \, e^{-i\phi_m} G^*_m\right\} /R_{as}  \nonumber \\
+   && + 2\sum_{a,k,t_c} w_{a}\, \hat{r}_{ak,i} \sum_{n=1}^M \left( \hat{r}_{ak}\cdot \vec{I}_n \right) \Re\left\{ e^{i(\phi_n-\phi_m)} G_n  G^*_m \right\}/R_{as}^2 \nonumber \\
+0&=& \partial \chi^2_E / \partial \phi_{m} \nonumber \\
+   &=& +i \sum_{a,k,t_c} w_{a} \, E_{ak}(t_c + R_{as}/c) \, \left( \hat{r}_{ak}\cdot \vec{I}_m \right)  e^{-i\phi_m} G^*_m /R_{as}  \nonumber \\
+   &&-i \sum_{a,k,t_c} w_{a} \, E_{ak}^*(t_c + R_{as}/c) \, \left( \hat{r}_{ak}\cdot \vec{I}_m \right) e^{+i\phi_m} G_m /R_{as}  \\
+   && -i \sum_{a,k,t_c} w_{a} \left[\sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) e^{i\phi_n} G_n \right] \left( \hat{r}_{ak}\cdot \vec{I}_m \right) e^{-i\phi_m} G^*_m /R_{as}^2 \nonumber \\
+   && + i \sum_{a,k,t_c} w_{a} \left[\sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) e^{-i\phi_n} G^*_n \right] \left( \hat{r}_{ak}\cdot \vec{I}_m \right) e^{i\phi_m} G_m /R_{as}^2   \;,  \nonumber \\
+   &=& -2 \sum_{a,k,t_c} w_{a} \, \left( \hat{r}_{ak}\cdot \vec{I}_m \right) \Im\left\{ E_{ak}(t_c + R_{as}/c)  e^{-i\phi_m} G^*_m \right\}/R_{as}  \nonumber \\
+   && +2 \sum_{a,k,t_c} w_{a} \left( \hat{r}_{ak}\cdot \vec{I}_m \right) \sum_{n=1}^M  \left( \hat{r}_{ak}\cdot \vec{I}_n \right) \Im\left\{ e^{i(\phi_n-\phi_m)} G_n  G^*_m \right\}/R_{as}^2 \nonumber
+% \quad \rm{for}\; i=1,2,3
+\eea
+gives a mess.
+\beq
+\Re{A_{im,jn}} \vec{I}_{jn}= \Re{\vec{F}_{im}} \;, \eqlab{A=IF_dist-Real}
+\eeq
+since $2\Re{A_{im,jn}}={A_{im,jn}}+ {A_{im,jn}}^*$.
+
+The optimal point currents for a particular distribution can thus be written as
+\beq
+\vec{I}=A^{-1} \vec{F} \;, \eqlab{I=AiF}
+\eeq
+which should be used in \eqref{chi_distr} to optimize the point-source distribution determined by $\vec{x}_m$ \& $t_m$.
+
+\subsection{several  point sources at fixed points, initial grid}
+
+We calculate an `optimal' grid for placing test sources to obtain a first estimate for the MDD approach. The grid vectors, $Gr_n=[t_n,\vec{x}_n]$ where $n=0\cdots 3$ are taken such that the mean time-shift that enters in the Greens function in \eqref{chi_distr}, $\Delta_n(a)=t_n + \hat{r}_{as}\cdot \vec{x}_n/c $, (note the change in the sign of the time component, to make this consistent with the program) or its RMS value, equals $\Gamma$, the full width at half maximum of the impulse response function,
+\beq
+\Gamma\,\delta_{n,0}=\frac{1}{N_{ant}} \sum_a \Delta_n(a)= \frac{1}{N_{ant}} \sum_a \left[ \hat{r}_{as}\cdot \vec{x}_n/c + t_n \right]\;, \eqlab{n=0}
+\eeq
+and for $n=1,2,3$,
+\beq
+\Gamma^2=\frac{1}{N_{ant}} \sum_a (\Delta_n(a))^2= \frac{1}{N_{ant}} \sum_a  \left[ \hat{r}_{as}\cdot \vec{x}_n/c + t_n \right]^2\;.  \eqlab{n=i}
+\eeq
+Note that the grid directions are chosen orthogonal with the dot product $Gr_n \cdot Gr_m= \vec{x}_n \cdot \vec{x}_m - c^2 t_n t_m$.
+
+First solve
+\beq
+B \delta_{i,1}=\frac{1}{N_{ant}} \sum_a  \hat{r}_{as}\cdot \hat{x}_i\;, i=1,2,3
+\eeq
+giving $\hat{x}_0\equiv\hat{x}_1=\sum_a \hat{r}_{as}/{\cal N}$ and $\hat{x}_{2,3}$ perpendicular, all normalized to unity.
+In addition we define the square of the RMS as
+\beq
+\sigma_i^2=  \left( \frac{1}{N_{ant}} \sum_a  \left[ \hat{r}_{as}\cdot \hat{x}_i \right]^2 - B^2 \delta_{i,1}\right)\;.
+\eeq
+
+From \eqref{n=0} we obtain for $n=0$ with $Gr_0=[t_0,\beta_0 \hat{x}_1]$
+\beq
+\Gamma=\frac{1}{N_{ant}} \sum_a \left[\beta_0 \hat{r}_{as}\cdot \hat{x}_1/c + t_0 \right]= \beta_0 B / c + t_0
+\eeq
+From \eqref{n=0} we obtain for $n=1$ with $Gr_1=[t_1,\beta_1 \hat{x}_1]$ with $t_1\,t_0\,c^2-\beta_0\,\beta_1=0$ to make it orthogonal to $Gr_0$ (using time-square -space-square),
+\beq
+0=\frac{1}{N_{ant}} \sum_a \left[\beta_1 \hat{r}_{as}\cdot \hat{x}_1/c + t_1 \right]= \beta_1 B / c + t_1
+\eeq
+giving $t_1=-\beta_1 B/c$ and $B t_0 c=-\beta_0$ and thus $\Gamma=t_0(-B^2+1)$.
+\eqref{n=i} gives for $i=1$
+\beq
+\Gamma^2=  \frac{1}{N_{ant}} \sum_a  \left[ \beta \hat{r}_{as}\cdot \hat{x}_1/c + t_1 \right]^2=
+\beta_1^2/c^2 \frac{1}{N_{ant}} \sum_a  \left[ \hat{r}_{as}\cdot \hat{x}_1 \right]^2 + 2 t_1\beta_1 B/c +t_1^2=
+\beta_1^2/c^2 \sigma_1^2 \;.
+\eeq
+Thus we have obtained $t_0=\Gamma/(1-B^2)$, $\beta_0=-Bc\Gamma/(1-B^2)$, $t_1=-\beta_1 B/c$, $\beta_1=\Gamma c/\sigma_1$.
+For n=2,3 we take $[0,\beta_{2,3} \hat{x}_{2,3}]$ giving
+\beq
+\Gamma^2=  \sigma_{2,3}^2 \beta_{2,3}^2/c^2  \;,
+\eeq
+or the choice for eigenvector is, taking out an over-all scaling factor $\Gamma$: \\$Gr_0=[-1,\;c\,B \hat{x}_1] /(1-B^2)$,
+\\$Gr_1=[-B ,\;c \hat{x}_1]/\sigma_1$, \\$Gr_{2,3}=[0 ,\;c \hat{x}_{2,3}]/\sigma_{2,3}$.
+\\Dimensionless: $B$, $\sigma_{2,3}$; time: $\Gamma$; length: $\beta_n$.
