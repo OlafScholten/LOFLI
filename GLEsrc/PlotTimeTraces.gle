@@ -1,0 +1,64 @@
+size 63 50
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+!  "files/DLtst39Trace_01.dat"
+slice$='01'
+labl$="files/CalSrc"
+if(nargs() > 1 ) then 
+    labl$=arg$(1)
+   slice$=arg$(2)
+end if
+DataFile$=labl$+"Trace_"+slice$+".dat"    ! DLsIntfSpecPolrz_d.dat
+   fopen DataFile$ inchanw read
+   freadln inchanw s_min   s_max
+PolDataFile$=labl$+"IntfSpecPolrz_d.dat"    ! DLsIntfSpecPolrz_d.dat
+
+set lwidth 0.1
+curveW=0.1
+scl = 1
+
+
+amove 4  4.00
+begin graph
+  size 55 20
+  vscale 1
+  hscale 1
+   xaxis min s_min max s_max
+   yaxis  !min -scl max scl
+     data DataFile$ d1=c1,c2 d2=c1,c3 ignore 1
+     d1 line lwidth curveW color red
+     d2 line lwidth curveW color blue
+end graph
+begin key
+   position tl
+   line lwidth curveW color red text even
+   line lwidth curveW color blue text odd
+end key
+amove 4  26
+begin graph
+  size 55 20
+  vscale 1
+  hscale 1
+   xaxis min s_min max s_max
+   yaxis  !
+     data DataFile$ d1=c1,c4 d2=c1,c5 ignore 1
+     d1 line lwidth curveW color magenta
+     d2 line lwidth curveW color green
+end graph
+begin key
+   position tl
+   line lwidth curveW color magenta text \phi
+   line lwidth curveW color green text \theta
+end key
+amove 4  26
+begin graph
+  size 55 20
+  vscale 1
+  hscale 1
+   xaxis min s_min max s_max
+   yaxis  !
+   y1axis off
+   y2axis on
+   data PolDataFile$ d13=c1,c3   ignore 2 !
+   d13 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
+end graph
+

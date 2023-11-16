@@ -1,0 +1,104 @@
+size 22 24
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+fontSz=0.8
+
+verSz=5
+horSz=19
+space=2
+set lwidth 0.04
+set font pstr
+set hei .6
+set hei 0.7
+MarkSz = 0.1
+
+scl_th=0.5
+scl_ph=0.05
+
+!labl$='../19A-1/files/DLtst'
+labl$='../19A-5/files/NLtst'
+slice$='28'
+if(nargs() > 1 ) then 
+    labl$=arg$(1)
+   slice$=arg$(2)
+end if
+DataFile$=labl$+"IntfSpecChi2_"+slice$+".dat"    ! DLsIntfSpecPolrz_d.dat
+   fopen DataFile$ inchanw read
+   freadln inchanw i_slice Nr_IntFer ChiSq StI12 StI Sampl
+
+amove 2+0.5*HorSz  2.+3*(verSz+space)
+write labl$ ", i\_slice=" i_slice 
+amove 2+0.5*HorSz  2.+3*(verSz+space)-1.1
+write "ChiSq=" ChiSq ", StI12=" StI12 ", StI=" StI ", Sampl=" Sampl
+
+MarkSz = 0.1
+amove 2.  2
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max Nr_IntFer hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis min 0  ! log ! min scl_min max scl log
+   data DataFile$ d1=c1,c7 d2=c1,c8 d3=c1,c9 d4=c1,c10  ignore 1 !
+   d1 marker circle  msize MarkSz  color blue
+   d2 marker circle  msize MarkSz  color red
+   d3 marker dot  msize MarkSz/2  color green
+   d4 marker dot  msize MarkSz/2  color magenta
+end graph
+!set just TR
+!amove xg(Nr_IntFer)-0.3 yg(1)-0.3
+!write 'chi^2/DoF=' ChiSq
+begin key
+   position tl
+   marker circle msize MarkSz color blue text \phi
+   marker circle msize MarkSz color red text \theta
+end key
+
+!MarkSz = 0.1
+
+amove 2.  2.+verSz+space
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max 100 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xtitle "Distance [km]"
+   yaxis min 0  ! log ! min scl_min max scl log
+   data DataFile$ d1=c5,c7 d2=c5,c8 d3=c5,c9 d4=c5,c10  ignore 1 !
+   d1 marker circle  msize MarkSz  color blue
+   d2 marker circle  msize MarkSz  color red
+   d3 marker dot  msize MarkSz/2  color green
+   d4 marker dot  msize MarkSz/2  color magenta
+end graph
+amove 2+0.5*HorSz  2.+verSz+space-0.9
+set just Tc
+write "Distance [km]"
+
+amove 2.  2.+2*(verSz+space)
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min -200 max 200 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xtitle "Azimuth angle ^{\circ}"
+   yaxis min 0  ! log ! min scl_min max scl log
+   data DataFile$ d1=c6,c7 d2=c6,c8 d3=c6,c9 d4=c6,c10  ignore 1 !
+   d1 marker circle  msize MarkSz  color blue
+   d2 marker circle  msize MarkSz  color red
+   d3 marker dot  msize MarkSz/2  color green
+   d4 marker dot  msize MarkSz/2  color magenta
+end graph
+begin key
+   position tl
+   marker dot  msize MarkSz/2  color green text W_{\phi}
+   marker dot  msize MarkSz/2  color magenta text W_{\theta}
+end key
+amove 2+0.5*HorSz  2.+2*(verSz+space)-0.9
+set just Tc
+write "Azimuth angle [degree]"
+
+
+set hei .7
+amove 2+0.5*HorSz  0.9
+set just Tc
+write 'time slice' i_slice '; chi^2/DoF=' ChiSq
+

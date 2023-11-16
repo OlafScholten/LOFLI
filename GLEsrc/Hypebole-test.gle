@@ -1,0 +1,197 @@
+!size   23 38
+fontSz=0.5
+!fontSz=1.0
+!fontSz=0.8
+!bsh=2.5*fontSz    ! 1.5
+hmove=1.5 !+bsh
+vmove=2.0 !+bsh
+hOS=25.
+!BaseDir$='C:/Users/"Olaf Scholten"/Documents/AstroPhys/Lightning/Lght_papers/Olaf/' ! does not work
+BaseDir$='../../Lght_papers/Olaf/'
+Scl=190 ! for the full width of the plot (size in km)
+!postscript OpenStrMap25sq.eps hOS hOS  ! scale 885000
+
+SupTN=hOS*0.439+vmove
+SupTE=hOS*0.463+hmove
+B=hOS*70./Scl  ! 70 km on the plot
+size SupTE+B+3*fontSz  SupTN+B+3*fontSz
+!
+amove hmove vmove    ! Background map
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove SupTE-B-3*fontSz SupTN-B-3*fontSz
+      Box 2*B+6*fontSz  2*B+6*fontSz
+   End Path
+   postscript BaseDir$+'OpenStrMap25sq.eps' hOS hOS  ! scale 885000
+End Clip ! -----------------
+set hei fontSz/2
+set just br
+set color darkmagenta
+amove SupTE+B+2.5*fontSz SupTN-B-2.5*fontSz ! ---------------------------------------------------
+begin box fill lightyellow add 0.1 round .3
+   text https://www.openstreetmap.org/copyright
+end box
+
+set hei fontSz
+set just cc
+set color black
+
+!file$='../../StationPositions'
+file$=BaseDir$+'StationPositions'
+if(nargs() > 0 ) then 
+    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+end if
+filedat$=file$+'.dat'
+!filedat$='../files/'+file$+'.dat'
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+set just cc
+
+sub Flash xFl yFl label$
+begin translate xg(xFl) yg(yFl)
+   alph=pi/5.
+   begin path stroke fill yellow
+      amove 0 a
+      aline b*sin(alph) b*cos(alph)
+      aline a*sin(2*alph) a*cos(2*alph)
+      aline b*sin(3*alph) b*cos(3*alph)
+      aline a*sin(4*alph) a*cos(4*alph)
+      aline b*sin(5*alph) b*cos(5*alph)
+      aline a*sin(6*alph) a*cos(6*alph)
+      aline b*sin(7*alph) b*cos(7*alph)
+      aline a*sin(8*alph) a*cos(8*alph)
+      aline b*sin(9*alph) b*cos(9*alph)
+      aline a*sin(10*alph) a*cos(10*alph)
+      !aline 0 0
+      closepath
+   end path
+   amove 0 0
+   write label$ 
+end translate
+End sub
+
+Sub Source xsrc ysrc Label$
+   amove xg(xsrc) yg(ysrc)
+   begin box fill cyan add 0.02 round .3
+      write Label$
+   end box
+End Sub
+
+Sub Source_m Nsrc Esrc 
+   amove xg(Esrc/1000.) yg(Nsrc/1000.)
+   begin box fill cyan add 0.02 round .3
+      write 'o'
+   end box
+End Sub
+
+amove SupTE-B SupTN-B   ! Draw coordinates
+begin graph
+   size 2*B 2*B
+   vscale 1
+   hscale 1
+   xaxis min -70 max 70 hei fontSz*2 dticks  50 ! dsubticks .2  ! length=7
+   yaxis min -70 max 70 hei fontSz*2 dticks  50 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   data filedat$ d1=c1,c3 
+   !y1labels off
+   y2labels on
+   x2labels on
+   ! d4 marker cross msize 0.2 color blue
+end graph
+set hei fontSz*2
+amove SupTE-B-fontSz SupTN+B+fontSz
+write "[km]"
+amove SupTE+B SupTN-B-1*fontSz
+text [km]
+!
+fopen filedat$ inchana read
+set hei fontSz
+set just cc
+for i = 1 to ndata(d1)
+   freadln inchana icore Label$ Npos Epos
+   !If (icore=1) then
+   amove xg(Epos) yg(Npos)
+   begin box fill orange add 0.1 round .3
+      write Label$
+   end box
+   !End If
+next i
+set color yellow
+set hei fontSz*2
+amove SupTE SupTN    ! Mark the superterp
+text \bigoplus 
+set color red
+amove xg(15.1) yg(0.6)    ! Mark the Magnetic loop antenna (N,E)=(0.6,15.1)
+text \bigoplus 
+set color black
+!set hei fontSz
+
+a=1.2*fontSz
+b=2*a
+!Flash -30 -5 'A'  !(x,y)=(E,N)
+!Source -13.4 -4.8 '1'
+!Source -12.3 -5.2 '2'
+!Source -15. -1.41 '3'
+Source_m     -3258.31    -29337.42     
+Source_m       155.93    -29011.78     
+Source_m     -3302.58    -29435.04     
+Source_m       292.42    -28676.10     
+Source_m      -172.55    -28024.68     
+Source_m      -174.23    -28023.86     
+Source_m    -23677.71   -114878.92     
+Source_m    -23671.64   -114897.56     
+Source_m    -23517.90   -114955.18     
+Source_m    -22168.92   -113054.93     
+Source_m    -23447.17   -112726.97     
+Source_m    -23393.98   -112490.39     
+Source_m    -23394.41   -112488.96     
+Source_m    -14214.15    -13851.43     
+Source_m    -15034.00    -20888.05     
+Source_m    -15126.28    -21028.52     
+Source_m    -15100.95    -20999.66     
+Source_m     -1752.58    -28483.61     
+Source_m     -1677.17    -28521.18     
+Source_m       518.52    -28690.47     
+Source_m      -209.67    -27945.31     
+Source_m      -209.52    -27948.16     
+Source_m      -211.08    -27940.65     
+Source_m       518.18    -28690.21     
+Source_m     -3349.68    -29442.00     
+Source_m       225.07    -29067.22     
+Source_m     -3340.03    -29454.54     
+Source_m     -3339.34    -29451.03     
+Source_m       212.30    -29060.59     
+Source_m     -3342.79    -29449.67     
+Source_m    -14708.02    -15988.55     
+Source_m    -14716.57    -15992.60     
+Source_m    -14292.52    -13839.38     
+Source_m    -14297.22    -13838.19     
+Source_m    -14297.90    -13835.17     
+Source_m    -14449.22    -15843.43     
+Source_m    -14452.50    -15863.54     
+Source_m    -14455.67    -15846.52     
+Source_m    -14451.10    -15847.57     
+Source_m    -14455.36    -15847.11     
+Source_m    -14457.78    -15850.84     
+Source_m    -15090.60    -20913.21     
+Source_m    -15023.42    -21015.82     
+Source_m    -15128.89    -20879.87     
+Source_m    -15069.74    -20917.60     
+!Flash 43 -15 'C'
+!
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "EventsMap"+"-"+file$
+translate 0 2
+!end rotate
+
+
+
+
+
+
+
+

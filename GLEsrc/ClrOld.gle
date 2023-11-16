@@ -1,0 +1,29 @@
+sub Rd_ClrOld Cscale
+  !local Red = 0.5+0.5*cos(2*3.14*Cscale*3/4)
+  local Red = 0.5+0.5*cos(2*3.14*Cscale)
+  return Red
+end sub
+sub Grn_ClrOld Cscale
+  !local Green = 0.5+0.5*cos(2*3.14*(Cscale+0.25)*3/4)
+  local Green = 0.5+0.5*cos(2*3.14*(Cscale+0.25))
+  return Green
+end sub
+sub Bl_ClrOld Cscale
+  !local Blue = 0.5+0.5*cos(2*3.14*(Cscale+0.5)*3/4)
+  local Blue = 0.5+0.5*cos(2*3.14*(Cscale+0.5))
+  return Blue
+end sub
+sub ClrOld Cscale
+    local Cs=0.9+Cscale*0.9
+  local Red = Rd_ClrOld(Cs)
+  local Green = Grn_ClrOld(Cs)
+  local Blue = Bl_ClrOld(Cs)
+  set color rgb(Red,Green,Blue)
+end sub
+
+
+! see https://en.wikipedia.org/wiki/HSL_and_HSV
+! luminosity   Y = 0.2126 R + 0.7152 G + 0.0722 B 
+!compute hue from RGB. To place red at 0°, green at 120°, and blue at 240°,
+! {\displaystyle h_{rgb}=\mathrm {atan2} \left({\sqrt {3}}\cdot (G-B),2\cdot R-G-B\right).} 
+!\tan(h_{rgb})={\frac {{\sqrt {3}}\cdot (G-B)}{2\cdot R-G-B}}.

@@ -1,0 +1,114 @@
+size   18 16
+set font pstr
+set hei .6
+file$='YlOrRd.dat'
+!file$='RdYlBl.dat'
+!file$='Blues.dat'
+
+include "RdYlBl.gle"
+include "ClrOld.gle"
+
+
+sub Blues Cscale
+  local Red = (cos(pi*Cscale/2.))^2
+  local Green = cos(pi*Cscale/2.)
+  local Blue = (cos(pi*Cscale/2.))^0.5
+  set color rgb(Red,Green,Blue)
+end sub
+
+sub YlOrRd Cscale
+  local Red = (cos(pi*Cscale/2.))^0.3
+  local Green = cos(pi*Cscale/2.)^2
+    !  local Blue = 0.8*(cos(pi*Cscale/2.))^4
+  if(Cscale < 0.8) then
+    local Blue = 0.8-Cscale
+  else
+    local Blue = 0.
+  end if
+  set color rgb(Red,Green,Blue)
+end sub
+
+sub Blues Cscale
+  local Red = (cos(pi*Cscale/2.))^2
+  local Green = cos(pi*Cscale/2.)
+  local Blue = (cos(pi*Cscale/2.))^0.5
+  set color rgb(Red,Green,Blue)
+end sub
+
+sub Clr Cscale
+  local Red = (cos(pi*Cscale/2.))^2
+  local Green = cos(pi*Cscale/2.)
+  if(Cscale < 0.8) then
+    local Blue = 0.8-Cscale
+  else
+    local Blue = 0.
+  end if
+  !local Blue = (cos(pi*Cscale/2.))^0.5
+  set color rgb(Red,Green,Blue)
+end sub
+
+sub ClrPltt x0 y0 Leng dmin dmax
+    local NC = 20
+    local Del = Leng/NC
+    set color black
+    local x = x0+Del
+    local y = y0
+    amove x y
+    write dmin
+    for i = 0 to NC
+        x = x0
+        y = y0+i*Del
+        local Cscale = i*Del/Leng
+        ! YlOrRd(i*0.1)
+        !RdYlBl(Cscale)
+        ClrOld(Cscale)
+        amove x y
+        marker fsquare Del*2
+    next i
+    set color black
+    amove x0+del y0+Leng
+    write dmax
+end sub
+
+
+
+amove 3.0 4 ! 
+begin graph
+  size 10 10
+  vscale 1
+  hscale 1
+  xaxis min 0 max 10 hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis min 0 max 256 hei .7 dticks 50 ! dticks  1 dsubticks .2        ! length=9
+  data file$ d1=c1,c2 d2=c1,c3  d3=c1,c4 !    ignore 1
+  d1 marker fcircle msize 0.2 color red
+  d2 marker fcircle msize 0.2 color green
+  d3 marker fcircle msize 0.2 color blue
+  if(file$='Blues.dat') then
+      let d12 = 255*(cos(pi*x/20.))^2 from 0 to 10
+      let d22 = 255*cos(pi*x/20.) from 0 to 10
+      let d32 = 255*cos(pi*x/20.)^0.5 from 0 to 10
+  else if(file$='YlOrRd..dat') then
+      let d12 = 255*cos(pi*x/20.)^0.3 from 0 to 10
+      let d22 = 255*(cos(pi*x/20.))^2 from 0 to 10
+      let d32 = 225*cos(pi*x/20.)^4 from 0 to 10
+  else if(file$='RdYlBl.dat') then
+      let d12 = 255*Rd_RdYlBl(x/10.) 
+      let d22 = 255*Grn_RdYlBl(x/10.) 
+      let d32 = 255*Bl_RdYlBl(x/10.) 
+  else
+      let d12 = 255*Rd_ClrOld(x/10.) 
+      let d22 = 255*Grn_ClrOld(x/10.) 
+      let d32 = 255*Bl_ClrOld(x/10.) 
+  end if
+  d12 lstyle 0 lwidth 0.1 color red
+  d22 lstyle 0 lwidth 0.1 color green
+  d32 lstyle 0 lwidth 0.1 color blue
+end graph
+
+    x0 = 14
+    y0 = 4
+    Leng = 10
+    Dmin = 0
+    Dmax = 10
+    ClrPltt(x0,y0,Leng,Dmin,Dmax)
+

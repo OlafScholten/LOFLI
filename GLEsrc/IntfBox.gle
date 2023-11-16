@@ -1,0 +1,70 @@
+
+sub IntfBox_def NIgn
+   ! (x,y,z)=(E,N,h)
+   freadln inchan IC000E IC000N IC000h 
+   freadln inchan IC001E IC001N IC001h 
+   freadln inchan IC010E IC010N IC010h 
+   freadln inchan IC011E IC011N IC011h 
+   freadln inchan IC100E IC100N IC100h 
+   freadln inchan IC101E IC101N IC101h 
+   freadln inchan IC110E IC110N IC110h 
+   freadln inchan IC111E IC111N IC111h 
+   NIgn=NIgn+8
+end sub
+
+sub IntfBox_EN 
+   amove xg(IC000E) yg(IC000N)
+   aline xg(IC100E) yg(IC100N)
+   aline xg(IC110E) yg(IC110N)
+   aline xg(IC010E) yg(IC010N)
+   aline xg(IC000E) yg(IC000N)
+   aline xg(IC001E) yg(IC001N)
+   aline xg(IC101E) yg(IC101N)
+   aline xg(IC111E) yg(IC111N)
+   aline xg(IC011E) yg(IC011N)
+   aline xg(IC001E) yg(IC001N)
+   amove xg(IC100E) yg(IC100N)
+   aline xg(IC101E) yg(IC101N)
+   amove xg(IC110E) yg(IC110N)
+   aline xg(IC111E) yg(IC111N)
+   amove xg(IC010E) yg(IC010N)
+   aline xg(IC011E) yg(IC011N)
+end sub
+
+sub IntfBox_Eh 
+   amove xg(IC000E) yg(IC000h)
+   aline xg(IC100E) yg(IC100h)
+   aline xg(IC110E) yg(IC110h)
+   aline xg(IC010E) yg(IC010h)
+   aline xg(IC000E) yg(IC000h)
+   aline xg(IC001E) yg(IC001h)
+   aline xg(IC101E) yg(IC101h)
+   aline xg(IC111E) yg(IC111h)
+   aline xg(IC011E) yg(IC011h)
+   aline xg(IC001E) yg(IC001h)
+   amove xg(IC101E) yg(IC101h)
+   aline xg(IC100E) yg(IC100h)
+   amove xg(IC111E) yg(IC111h)
+   aline xg(IC110E) yg(IC110h)
+   amove xg(IC011E) yg(IC011h)
+   aline xg(IC010E) yg(IC010h)
+end sub
+
+sub IntfBox_hN 
+   amove xg(IC000h) yg(IC000N)
+   aline xg(IC100h) yg(IC100N)
+   aline xg(IC110h) yg(IC110N)
+   aline xg(IC010h) yg(IC010N)
+   aline xg(IC000h) yg(IC000N)
+   aline xg(IC001h) yg(IC001N)
+   aline xg(IC101h) yg(IC101N)
+   aline xg(IC111h) yg(IC111N)
+   aline xg(IC011h) yg(IC011N)
+   aline xg(IC001h) yg(IC001N)
+   amove xg(IC100h) yg(IC100N)
+   aline xg(IC101h) yg(IC101N)
+   amove xg(IC110h) yg(IC110N)
+   aline xg(IC111h) yg(IC111N)
+   amove xg(IC010h) yg(IC010N)
+   aline xg(IC011h) yg(IC011N)
+end sub

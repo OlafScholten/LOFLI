@@ -1,0 +1,103 @@
+size 22 18
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+
+verSz=5
+horSz=19
+set lwidth 0.04
+set font pstr
+set hei .6
+set hei 0.7
+
+scl_th=0.5
+scl_ph=0.05
+
+labl$='Ini'
+if(nargs() > 0 ) then 
+    labl$=arg$(1)
+end if
+DataFile0$=labl$+"IntfTrack_d.csv"
+   fopen DataFile0$ inchanw read
+   freadln inchanw SliceLen IntfLead posN posE posh posR posth posph
+
+amove 2.  2
+begin graph
+  size horSz verSz
+  vscale 1
+  hscale 1
+   NoBox
+   xaxis  !dticks 0.001
+!   xaxis off
+   yaxis log ! min scl_min max scl log
+!   yaxis off
+     data DataFile0$ d1=c1,c2 ignore 1 !
+     d1 line lwidth 0.06 color blue    
+     !d2 svg_smooth 3 line line lwidth 0.03 color black     ! switch.7-7.
+end graph
+
+amove 2.  2.+verSz
+begin graph
+  size horSz verSz
+  vscale 1
+  hscale 1
+   NoBox
+   xaxis  !dticks 0.001
+   xlabels off
+   yaxis min posth-scl_th max posth+scl_th
+     data DataFile0$ d1=c1,c7 d3=c1,c10  ignore 1
+     d1 line lwidth 0.05 color blue    
+     d3 line lwidth 0.05 color red    
+end graph
+set lwidth 0.02 color black
+amove 1.5 yg(posth)
+aline 2.5+horSz yg(posth) 
+set lwidth 0.04
+   begin key
+       nobox
+       position tr
+       set color black
+       line color blue lwidth 0.02 text "Max \theta"
+       line color red lwidth 0.02 text "Ave \theta"
+   end key
+
+amove 2.  2.+2*verSz
+begin graph
+  size horSz verSz
+  vscale 1
+  hscale 1
+   NoBox
+   xaxis  !dticks 0.001
+   x1labels off
+   x2labels on
+   yaxis min posph-scl_ph max posph+scl_ph
+     data DataFile0$ d1=c1,c8 d3=c1,c11  ignore 1
+     d1 line lwidth 0.05 color blue    
+     d3 line lwidth 0.05 color red    
+end graph
+set lwidth 0.02 color black
+amove 1.5 yg(posph)
+aline 2.5+horSz yg(posph) 
+   begin key
+       nobox
+       position tr
+       set color black
+       line color blue lwidth 0.02 text "Max \phi"
+       line color red lwidth 0.02 text "Ave \phi"
+   end key
+
+set hei .7
+set just LC            
+amove 3.5  2.+verSz-0.6      
+!set just RC           
+!amove 2.5+b1  2*h+3.7       
+text Peak Intensity
+set just CC
+!------
+
+set hei .7
+amove 2+0.5*HorSz  0.7
+text time slice
+
+!amove 1.5 0.5*h+2+h+1
+!begin rotate 90
+!text VHF power
+!end rotate
