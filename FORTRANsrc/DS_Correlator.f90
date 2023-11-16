@@ -14,9 +14,10 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    real*8, intent(IN) :: RA(4,*)  ! 1=t [ms]  2-4= E,N,h in [km]
    Integer, intent(in) :: Label(4,*)  ! (2,*) contains intensity
    Integer, intent(IN) :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
+   real*8, intent(IN) :: AWeight  ! Determine the extent of amplitude weighting
    real*8, intent(IN) :: dD  ! bin width for fine-distance
-   real*8, intent(IN) :: tauMax  ! Max range for t-grid for calculating \zeta (coarse t-grid)
    Integer, intent(IN) :: Dnr  ! number of fine-distance points
+   real*8, intent(IN) :: tauMax  ! Max range for t-grid for calculating \zeta (coarse t-grid)
    !Integer, intent(IN) :: Tnr  ! number of fine-time points range will be full range; not used, set equal to N_it
    Integer :: i, i_src, j_src, m_src, n_src
    real*8 :: TD_corr(0:Dnr), T2D_corr(0:Dnr), T4D_corr(0:Dnr), nD_dens(0:Dnr), TD_var(0:Dnr), T2D_var(0:Dnr), nrm, TD_dd
@@ -24,7 +25,7 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    Integer :: nD_corr(0:Dnr), T_trace(0:N_it,0:N_id), i_t, i_d,i_m
    Real*8 :: TDCC(0:N_it,0:N_id), t_trace_CC(0:N_it,0:N_id), W_d, Omg_d, Omg_t, W_t
    Integer :: n_corr_t(0:N_it), i_Ct
-   Real(dp) :: D_corr_t(0:N_it), n_dens_t(0:N_it), t_range_Ct, dt_Ct, GrandNorm
+   Real(dp) :: D_corr_t(0:N_it), n_dens_t(0:N_it), t_range_Ct, dt_Ct, GrandNorm, AmplWeight
    !
    t_range_Ct=5.  ! [ms]
    dt_Ct=t_range_Ct/N_it  ! [ms]

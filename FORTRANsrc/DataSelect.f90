@@ -23,7 +23,7 @@ PROGRAM DataSelect
    Use constants, only : dp, CI, pi, c_l
    Use TrackConstruct, only : PreDefTrackNr, PreDefTrackFile
    Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, NLongTracksMax, TrackLenMax
-   Use TrackConstruct, only : Wtr, MaxTrackDist, TimeWin, HeightFact, dt_MTL, Aweight, TrackENr, TrackE, TrackNrLim
+   Use TrackConstruct, only : Wtr, MaxTrackDist, TimeWin, HeightFact, dt_MTL, Aweight, TrackENr, TrackE, TrackNrLim, Aweight
    Use DS_Select, only : Image, BckgrFile, datafile, ZoomBox, RMS_ns
    Use DS_Select, only : RA, maxd, SourcTotNr, Label, t_offset, tCutl, tCutu, xyztBB
    Use DS_Select, only : DS_Mode, MaxAmplFitPercent, SMPowCut
