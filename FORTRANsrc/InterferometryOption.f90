@@ -49,25 +49,9 @@ Subroutine InterferometerRun
    !    .
    ! Get center voxel
    Call ReadSourceTimeLoc(StartTime_ms, CenLoc)  ! routine resides in "LOFLI_InputHandling.f90
-   !Call GetNonZeroLine(lname)
-   !Read(lname(2:lnameLen),*) StartTime_ms, CenLoc  ! Start time
-   !write(2,"(A)") 'Interferometry input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:lnameLen))// &
-   !   '" !  Source/Reference-| time, & position'
-   !flush(unit=2)
-   !Call Convert2m(CenLoc)
-   !StartTime_ms=StartTime_ms+TimeBase
-   !t_shft=sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
-   !j = iachar(lname(1:1))  ! convert to upper case if not already
-   !if (j>= iachar("a") .and. j<=iachar("z") ) then
-   !   lname(1:1) = achar(j-32)
-   !end if
-   !SELECT CASE (lname(1:1))
-   !   CASE("S")  ! time at Source (central voxel) is given
-   !      StartTime_ms=StartTime_ms+t_shft
-   !   CASE DEFAULT  ! time at reference antenna is given
-   !End SELECT
-   !write(2,"(A,F12.6,A,F12.6,A)") &
-   !   ' Ttrue start time trace, adding base, in ref antenna (at source)=', StartTime_ms, ' (',StartTime_ms-t_shft,') [ms]'
+   !  A predefined track name can be entered.
+   !  This may be a .dat file having the same format at image-source files, i.e. label, t, x y z
+   !        or a .trc file with format   t, N, E, h
    !
    ! Get grid:
    Call GetMarkedLine(Mark,lname)
@@ -253,7 +237,7 @@ Subroutine ChainRuns(NewCenLoc)
    character(len=5) :: txt
    character(Len=1) :: Mark
    Character(LEN=lnameLen) :: lname
-   Real(dp) :: t_shft, MidTime_ms, t_new
+   Real(dp) :: t_shft, MidTime_ms, t_new , StartTime_local
    character*100 :: shellin, IntfRun_file
    Character*5 :: RunOption='TRI-D' !, E_FieldsCalc
    Real(dp), external :: tShift_ms
@@ -295,7 +279,7 @@ Subroutine ChainRuns(NewCenLoc)
       txt='#+01'
    EndIf
    !
-
+   !
    If(NewCenLoc(1).ne.0.d0) then
       !write(2,*) 'txt1',txt,ChainRun
       j=LEN(TRIM(OutFileLabel))
@@ -317,6 +301,7 @@ Subroutine ChainRuns(NewCenLoc)
       IntfSmoothWin=N_smth
       write(10,NML = Parameters)
       !
+      StartTime_ms=StartTime_ms + t_shft - tShift_ms(NewCenLoc(:))  ! correct for local time shift, keeping same time in the core
       If(PreDefTrackFile.ne.'') Then
          Write(10,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
       Else
@@ -340,7 +325,7 @@ Subroutine ChainRuns(NewCenLoc)
          '#','#', &
          'source  ${LL_BaseDir}/ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
 !         'source ${UtilDir}/compile.sh',  &
-         'cp ${LL_bin}LOFAR-Imag ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when runnung 'ps' or 'top'
+         'cp ${LL_bin}/LOFAR-Imag ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when runnung 'ps' or 'top'
          './Imag-'//TRIM(OutFileLabel)//'.exe  ${FlashFolder} <'//TRIM(IntfRun_file)//'.in',  &
          'rm Imag-'//TRIM(OutFileLabel)//'.exe'
       Close(unit=10)

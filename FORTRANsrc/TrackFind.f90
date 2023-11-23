@@ -84,7 +84,7 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
          Dist=sqrt(dist)       ! distance of track-head(i) to the next (in time) source(j)
          !If(i.lt.2) Write(2,*) j,RA(1,j),Dist,i,TrackPos(3,i)
          If(dist .gt. MaxTrackDist) cycle
-         ! write(*,*) TrackNr,j,i,dist,TrackPos(1:3,i)
+         ! write(2,*) TrackNr,j,i,dist,TrackPos(1:3,i)
          ! Add to existing Track
          n_cls=n_cls+1
          Cls_track(n_cls)=i
@@ -94,6 +94,7 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
       enddo
       AmplWeight=(Label(2,j)*Aweight+1.)  ! Amplitude determined weight of the new source
       !write(2,*) 'Assign2Tracks: Source=',j,n_cls,dist,TrackNr, TrackNrLim
+      !
       If(n_cls.eq.0) then  ! no close-lying track, start a new one
          ! Open new track
          !write(2,*) 'n_cls=0',RA(2:4,j),dist
@@ -240,19 +241,27 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
             RadDev=RadDev/SQRT(HDist+ RA(4,j)*RA(4,j))
             HorDev=HorDev/SQRT(HDist)
             tw=sqrt(SUM( (LeaderPos(2:4,k,i)-RA(2:4,j))**2 ))  ! place holder for distance from tip
-            If(abs(LeaderPos(1,k,i)-LeaderPos(1,k-1,i)).lt. 1.D-7) Then
-               If((k.le.3) .or. (k.ge.TrackENr(i)-1)) Then
-                  Velocity=0.  ! units: 10^6 m/s
+            If(k.ge.2) then  ! otherwise LeaderPos(1,k-1,i) is not defined
+               If(abs(LeaderPos(1,k,i)-LeaderPos(1,k-1,i)).lt. 1.D-7) Then
+                  If((k.le.3) ) Then
+                     Velocity=0.  ! units: 10^6 m/s
+                  Else
+                     If((LeaderPos(1,k,i)-LeaderPos(1,k-2,i)).ne. 0.) Then
+                        Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-2,i))**2))/ &
+                              (LeaderPos(1,k,i)-LeaderPos(1,k-2,i))  ! units: 10^6 m/s
+                     EndIf
+                     !write(2,*) 'Mean Velocity',k, Velocity, SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-2,i))**2)), &
+                     !   (LeaderPos(1,k,i)-LeaderPos(1,k-2,i))
+                  EndIf
                Else
-                  Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k+1,i)-LeaderPos(2:4,k-2,i))**2))/ &
-                        (LeaderPos(1,k+1,i)-LeaderPos(1,k-2,i))  ! units: 10^6 m/s
+                  Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))  ! units: 10^6 m/s
+                  !write(2,*) 'Velocity',k, Velocity, SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2)), &
+                  !   (LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
                EndIf
-            Else
-               Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))  ! units: 10^6 m/s
+               write(29,"(1x,4(2x,g14.8),3x,3(2x,g14.8),3x,g14.8,3(2x,g14.8),3x,g12.3,1x,F8.2)") &
+                    LeaderPos(1:4,k,i), RA(2:4,j), LeaderPos(1,k,i)-LeaderPos(1,k-1,i) &
+                    ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, tw*1000.
             EndIf
-            write(29,"(1x,4(2x,g14.8),3x,3(2x,g14.8),3x,g14.8,3(2x,g14.8),3x,g12.3,1x,F8.2)") &
-                 LeaderPos(1:4,k,i), RA(2:4,j), LeaderPos(1,k,i)-LeaderPos(1,k-1,i) &
-                 ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, tw*1000.
             !write(29,"(1x,3i4,4(2x,g14.8),3x,f8.6)")  i,k,j, RA(1:4,j)
             !i_bin=(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))/Bin1size
             !if(i_bin.gt.bin_max) i_bin=bin_max
@@ -359,18 +368,18 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
       close(unit=27)
       Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//'_bin_'//trim(extension),' with ',i_MTL, ' data lines'
       if(i_LongTr.eq.1) Then  ! write track for the first, may be used for interferometric tracing
-         OPEN(unit=27,FILE=TRIM(PlotFile)//'_track.dat',FORM='FORMATTED',STATUS='unknown')
+         OPEN(unit=27,FILE=TRIM(PlotFile)//'.trc',FORM='FORMATTED',STATUS='unknown')
          Do k=1,i_MTL
-            If(TOrder.gt.0) Then  ! order in increasing time
-               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") k, &
-                     MeanTrackLoc(1:4,k)
+            If(TOrder.gt.0) Then  ! order in increasing time in tNEh notation
+               write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,k), &
+                  MeanTrackLoc(3,k), MeanTrackLoc(2,k), MeanTrackLoc(4,k)
             Else
-               write(27,"(I4,1x,4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") k, &
-                     MeanTrackLoc(1:4,i_MTL-k+1)
+               write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,i_MTL-k+1), &
+                  MeanTrackLoc(3,i_MTL-k+1),MeanTrackLoc(2,i_MTL-k+1),MeanTrackLoc(4,i_MTL-k+1)
             EndIf
          Enddo
          close(unit=27)
-      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//'_track.dat',' with ',i_MTL, ' data lines'
+      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//'.trc',' with ',i_MTL, ' data lines'
       EndIf
    enddo
     !

@@ -436,7 +436,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
          s=sqrt(MaxSmPowQ(i_slice)*MaxSmPowQ(i_slice)+MaxSmPowU(i_slice)*MaxSmPowU(i_slice))
          X=(ATAN2(MaxSmPowU(i_slice),MaxSmPowQ(i_slice))/2.+AngOff)*180./pi
          Y=t_ms-t_shft
-         write(29,"(i6,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
+         write(29,"(i6,',',4(f12.6,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
          PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowMx, &   ! MaxPowPix(:,i)
          MaxSmPowQ(i_slice), MaxSmPowU(i_slice), MaxSmPowV(i_slice), MaxSmPowI3(i_slice) ,s,X
       !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_Mx(:) !, BarySet
@@ -471,7 +471,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
             Endif
             !
             t_shft=tShift_ms(PixLoc(:)) ! sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
-            write(28,"(i6,',',4(f11.5,','),4g13.6,',',3g13.5)") i_slice, t_ms-t_shft, &
+            write(28,"(i6,',',4(f12.6,','),4(f11.5,','),4g13.6,',',3g13.5)") i_slice, t_ms-t_shft, &
                PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowBar, QualBar(1)
             !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_gr(:)
          Else

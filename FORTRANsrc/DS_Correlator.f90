@@ -22,7 +22,8 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    Integer :: i, i_src, j_src, m_src, n_src
    real*8 :: TD_corr(0:Dnr), T2D_corr(0:Dnr), T4D_corr(0:Dnr), nD_dens(0:Dnr), TD_var(0:Dnr), T2D_var(0:Dnr), nrm, TD_dd
    real*8 :: T_span, D_span, dT, t_ij, t_mn, d_ij, d_mn
-   Integer :: nD_corr(0:Dnr), T_trace(0:N_it,0:N_id), i_t, i_d,i_m
+   real*8 :: nD_corr(0:Dnr), T_trace(0:N_it,0:N_id)
+   Integer :: i_t, i_d,i_m
    Real*8 :: TDCC(0:N_it,0:N_id), t_trace_CC(0:N_it,0:N_id), W_d, Omg_d, Omg_t, W_t
    Integer :: n_corr_t(0:N_it), i_Ct
    Real(dp) :: D_corr_t(0:N_it), n_dens_t(0:N_it), t_range_Ct, dt_Ct, GrandNorm, AmplWeight
@@ -51,7 +52,7 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    GrandNorm=0.
    Do i_src=1,SourcTotNr-1
       Do j_src=i_src+1,SourcTotNr
-         AmplWeight=(Label(2,i_src)*Aweight+1.)*(Label(2,j_src)*Aweight+1.)  ! Amplitude determined weight of the new source
+         AmplWeight=sqrt((Label(2,i_src)*Aweight+1.)*(Label(2,j_src)*Aweight+1.) ) ! Amplitude determined weight of the new source
          GrandNorm=GrandNorm + AmplWeight   ! independent of later grid-cuts
          !
          ! Calculate <\tau^k>(d) for narrowly binned distances where \tau=t_ij
@@ -112,6 +113,7 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    !
    !Normalize
    !nT_corr(0:N_it)=sum(T_trace(0:N_it,:))
+   write(2,*) 'GrandNorm',GrandNorm, SourcTotNr*(SourcTotNr-1)/2., Aweight, AmplWeight
    D_corr_t(:)=D_corr_t(:)/(n_corr_t(:)+0.00001)
    n_dens_t(:)=n_corr_t(:)/(dt_Ct*GrandNorm)
    TD_corr(:)=TD_corr(:)/(nD_corr(:)+0.001)
@@ -166,7 +168,7 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
       !t_trace_CC(:,i_d)=(t_trace_CC(:,i_d)-2*W_t*W_t/(N_it+1.))/((dt*dD*(SourcTotNr-1)*SourcTotNr)**2)
       t_trace_CC(:,i_d)=t_trace_CC(:,i_d)*dD
       W_t = SUM(t_trace_CC(:,i_d))
-      write(2,*) 'SUM(t_trace_CC(:,i_d)):', W_t
+      write(2,*) 'SUM(t_trace_CC(:,i_d)),i_d=',i_d, W_t, t_trace_CC(0,i_d)
       !t_trace_CC(:,i_d)=t_trace_CC(:,i_d) - w_d
    EndDo
    !

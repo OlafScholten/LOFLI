@@ -42,10 +42,26 @@ PROGRAM DataSelect
    integer :: i,j,k, nxx, d_Ampl, Fini, SuccessImages  ! unit,
    integer :: kk, jk, wrunt, N_EffAnt !, Max_EffAnt
    Logical :: EndInput
+   ! For preprocessor options, see
+   !   http://ahamodel.uib.no/intel/GUID-F6619F6F-7D70-4B06-A266-6F39EF6D51B7.html
+   !  https://cyber.dabamos.de/programming/modernfortran/preprocessor.html
+   !  https://fortranwiki.org/fortran/show/Preprocessors
+   ! The FPP preprocessor:
+   !  https://www.cita.utoronto.ca/~merz/intel_f10b/main_for/mergedProjects/bldaps_for/common/bldaps_use_fpp.htm
+   !  https://www.smcm.iqfr.csic.es/docs/intel/compiler_f/main_for/bldaps_for/common/bldaps_use_ffpdir.htm
+   ! Info on make and cmake:
+   !  https://cyber.dabamos.de/programming/modernfortran/build-automation.html
+   ! Suggestions for source documentation:
+   !  https://cyber.dabamos.de/programming/modernfortran/source-code-documentation.html
+#if defined(WINDOWS)
+character(20), parameter :: ccOS = "cOS_WIN"
+#elif   ! defined(LINUX)
+character(20), parameter :: ccOS = "cOS_LINUX"
+#endif
    Real :: Qual
   !
   OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='DataSelect.out')
-  write(2,*) 'Program DataSelect'
+  write(2,*) 'Program DataSelectPreprocessor', ccOS
   !    ,', limited version with source statistics disabled because of FFT calls needing library.'
   Utility='Track&Qual.Control'
   release='v23'
