@@ -149,6 +149,49 @@ begin graph
   !d53 marker cross msize 0.2 color green
 end graph
 
+set hei fontSz
+amove HorOff+0.5*B  VerOff+2*dH+h+2.*fontsz
+text time [ms]
+amove HorOff+0.5*B  VerOff-1.5*fontsz
+text \delta [m]
+
+set color blue
+amove HorOff+2*fontsz VerOff+H-fontsz
+text East 
+amove HorOff+B+2.5*fontsz VerOff+H/2
+begin rotate -90
+text \delta E [m]
+end rotate
+amove HorOff+2*fontsz VerOff+dH+H-fontsz
+text North 
+amove HorOff+B+2.5*fontsz VerOff+dH+H/2
+begin rotate -90
+text \delta N [m]
+end rotate
+amove HorOff+2*fontsz VerOff+2*dH+H-fontsz
+text Height 
+amove HorOff+B+2.5*fontsz VerOff+2*dH+H/2
+begin rotate -90
+text \delta h [m]
+end rotate
+
+set dolor red
+amove HorOff-2.5*fontsz VerOff+H/2
+begin rotate 90
+text #/\delta E [m]
+end rotate
+amove HorOff-2.5*fontsz VerOff+dH+H/2
+begin rotate 90
+text #/\delta N [m]
+end rotate
+amove HorOff-2.5*fontsz VerOff+2*dH+H/2
+begin rotate 90
+text #/\delta h [m]
+end rotate
+
+!================================================
+set color black
+
 amove  HorOff VerOff+3*dH ! (time,velocity)
 begin graph
   size B H
@@ -156,11 +199,11 @@ begin graph
   hscale 1
   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
   !yaxis min 0 max 25 hei fontSz ! dticks  1 dsubticks .2        ! length=9
-  !yaxis min 0 max 1.6 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  ! yaxis min 0 ! max 1.6 hei fontSz ! dticks  1 dsubticks .2        ! length=9
   data file$+'1.dat' d1=c1,c12   ignore 1
   d1 svg_smooth 5 marker cross msize 0.1 color blue
   data file$+'_bin_1.dat' d2=c10,c9   ignore 1
-   d2 line lwidth 0.05 color red
+  d2 line lwidth 0.05 color red
 end graph
 begin key
     pos tc nobox
@@ -190,12 +233,15 @@ begin graph
   d9 line color yellow
 end graph
 begin key
-    pos tr nobox
-    line text "25dt" color red
-    line text "5dt" color magenta
-    line text "dt " color blue
-    line text "dt/5" color green
-    line text "dt/25" color yellow
+    pos tc  nobox
+    !justify tc
+    !absolute 0.1 0
+    offset B/2+1 0
+    line lwidth 0.1 text "25dt" color red
+    line lwidth 0.1 text "5dt" color magenta
+    line lwidth 0.1 text "dt " color blue
+    line lwidth 0.1 text "dt/5" color green
+    line lwidth 0.1 text "dt/25" color yellow
 end key
 set just TL
 amove HorOff+fontsz  VerOff+4*dH+H-0.5*fontsz
@@ -221,51 +267,12 @@ begin key
     text "Pulse Frequency" color red
 end key
 set just TC
-amove HorOff  VerOff+5*dH-1.5*fontsz
+amove HorOff+2*fontsz  VerOff+5*dH-1.5*fontsz
 text frequency [1/ms]
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-set hei fontSz
-amove HorOff+0.5*B  VerOff+2*dH+h+2.*fontsz
-text time [ms]
-
-amove HorOff+0.5*B  VerOff-1.5*fontsz
-text \delta [m]
-
-amove HorOff+2*fontsz VerOff+H-fontsz
-text East 
-amove HorOff+B+2.5*fontsz VerOff+H/2
-begin rotate -90
-text \delta E [m]
-end rotate
-amove HorOff-2.5*fontsz VerOff+H/2
-begin rotate 90
-text #/\delta E [m]
-end rotate
-
-amove HorOff+2*fontsz VerOff+dH+H-fontsz
-text North 
-amove HorOff+B+2.5*fontsz VerOff+dH+H/2
-begin rotate -90
-text \delta N [m]
-end rotate
-amove HorOff-2.5*fontsz VerOff+dH+H/2
-begin rotate 90
-text #/\delta N [m]
-end rotate
-
-amove HorOff+2*fontsz VerOff+2*dH+H-fontsz
-text Height 
-amove HorOff+B+2.5*fontsz VerOff+2*dH+H/2
-begin rotate -90
-text \delta h [m]
-end rotate
-amove HorOff-2.5*fontsz VerOff+2*dH+H/2
-begin rotate 90
-text #/\delta h [m]
-end rotate
 
 translate -0. -0.5
 ! include feyn.gle
