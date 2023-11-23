@@ -1,4 +1,4 @@
-\documentclass[fleqn,11pt]{book}
+\documentclass[fleqn,11pt, A4paper]{book}
 %\documentclass[fleqn,11pt]{article}
 %\documentstyle[olaf,11pt,fleqn]{article}
 \usepackage{hyperref} % \href{}{}
@@ -87,7 +87,7 @@ Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
 
 %\pagestyle{fancy}
 %\pagestyle{myheadings}
-\pagestyle{headings}
+%\pagestyle{headings}
 \renewcommand{\sectionmark}[1]{\def\naam{ #1}}
 \renewcommand{\subsectionmark}[1]{\markright{\thesubsection.{\rm \naam}; {\sl #1} \hfill\today\hspace{1cm}}}
 %\markright{\today \hfill
@@ -109,7 +109,7 @@ Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
 
 %---------
 \voffset-1.0cm
-\textheight 23cm
+\textheight 22cm
 \oddsidemargin -.1cm
 %\evensidemargin .5cm
 \textwidth 17cm
@@ -125,49 +125,18 @@ Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
 %Last Modified: \pdffilemoddate{\jobname.tex}\\
 %\thepdfmoddateof{\jobname.tex}\\
 Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
-\centerline{\Large  Guide to the LOFLI program suite, V21}
+\centerline{\Large  Guide to the LOFLI 2.0 program suite, V23}
 
 
 \newpage
 
 \vspace{2ex}
-This guide is structured according to the chronological order of the main steps that are usually followed in converting LOFAR TBB data to an image of a lightning flash and to each a chapter is devoted. An outline of the basic imaging method can be found in \cite{Scholten:2021-init}.
-Edition v21 contains also the routines for full interferometry. At this time the paper is still being written.
+This guide is structured according to the chronological order of the main steps that are usually followed in converting LOFAR TBB data to an image of a lightning flash, with a chapter devoted to each subject. An outline of the basic imaging method can be found in \cite{Scholten:2021-init}.
+Edition later than v21 contains also the routines for full interferometry (TRI-D imager).
 
 In each chapter contains a description of the essential ingredients of the code, examples of input lines, examples of generated output, as well as examples of shell commands for running the code in Linux.
 
-
-\begin{table}[!ht]
-\caption{Naming conventions. \tablab{Naming}}
-\begin{tabular}{|l p{14cm}|}
-\hline
-MainDir & The main working folder containing the various FlashFolders, the ``/Utilities", and the ``/program" folders.
-\\FlashFolder & one for each flash, named with the tag of the flash as for example in:
-\\&  {\small \verb!FlashFolder=``/MainDir/18D-1"! }
-\\ArchiveDir & The path to the archive containing the .h5 time traces from all antennas for a flash. If these reside on a remote site it is advised to use a SSHFS link through a local directory, as for example:
-\\ &  {\small \verb!ArchiveDir=``/home/olaf/kaptdata/lightning_data/2017/D20170929T202255.000Z"! }
-\\ProgramDir & The folder containing the sources and executables of the programs.
-\\&  {\small \verb!FlashFolder=``/MainDir/program"! }
-\\UtilDir & Folder containing useful scripts
-\\&  {\small \verb!UtilDir=``/MainDir/Utilities"!}
-\\\hline
-\end{tabular}
-\end{table}
-
-\begin{table}[!ht]
-\caption{Required packages. Make sure that the script ``compile.sh" (in ``FlashFolder") contains the right links to the FFTPACK library. \tablab{Required}}
-\begin{tabular}{|l p{14cm}|}
-\hline
-GLE & Principle plotting utility \cite{GLE}.\\
-& Download from: \href{https://glx.sourceforge.io/index.html}{sourceforge}
-\\fftpack & Basic FFT routines \cite{FFTPACK}\\
-& Download from: \href{http://www.netlib.org/fftpack/}{netlib}; the double precision version is used.
-\\hdf5-fortran & Allows random access to compressed data files with \href{https://portal.hdfgroup.org/display/support}{.h5} extension.\\
-& Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
-\\\hline
-\end{tabular}
-\end{table}
-
+The code is free to be used, however it is requested to cite the publication where the features of the code are introduced and/or cite the software archive from where the code can be downloaded, \href{https://zenodo.org/records/7393903}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository}.
 
 \newpage
 
@@ -179,45 +148,7 @@ GLE & Principle plotting utility \cite{GLE}.\\
 
 \chapter{General Introduction}
 
-\section{Installation cookbook}
-\begin{itemize}
-\item Unpack the zip file, keeping the directory structure. This should give something looking like \tabref{DirStruc}.
-\item Install GLE from \href{https://glx.sourceforge.io/index.html}{sourceforge}, follow the instructions \cite{GLE}. The shortcut ``gle" should start running the gle program. % In some Linux installations this may have been defined already.
-\item Install hdf5-fortran see \href{https://portal.hdfgroup.org/display/support}{.h5 extension}.  Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
-\item Install ``FFTPACK", most probably in the directory with the same name. Source code is included in this distribution.
-\item Edit the file ``ShortCuts.sh" to make sure that especially ``LIBRARY" points to the binary, compiled, version of the FFTPACK library. You may use an absolute path, or a relative path. Note that all relative paths should start from the ``FlashFolder" sub-folder of the ``MainDir".
-\item Edit the files ``Utilities/compile.sh" to make sure that especially ``prefix" and ``H5TOOL\_BIN" are correct for your implementation of the h5-tools. Note that all relative paths should start from the ``FlashFolder" sub-folder of the ``MainDir".
-\item Edit the files ``Utilities/FlashID.sh" to make sure that especially ``ArchiveDir" points to the data archive following your convention for the flashes. Possibly also modify ``Utilities/list.ssv" to make the proper link between the archive file-naming convention of a flash and your local convention.
-\end{itemize}
-
-\begin{table}[!ht]
-\caption{Directory structure after complete installation should be like this. \tablab{DirStruc}}
-\begin{tabular}{|l l | p{10cm}|}
-\hline
-{MainDir} & &\multicolumn{1}{|l||}{Likely named ``LOFLI-v21"} \\
-\hline
-   & Utilities & containing general utilities scripts, in particular used for making images. \\
-   & program &  containing source codes and executables. \\
-   & copysetup & containing templates for installing the Flash-directories by running ``NewFlash.sh". \\
-   & Antennafields & containing information on antenna positions and such. \\
-   & FFTPACK & containing the Fast Fourier transform library. \\
-\hline
-\end{tabular}
-\end{table}
-
-%\newpage
-\chapter{Setup \& RFI mitigation}
-%The LOFAR data files are written in \href{https://portal.hdfgroup.org/display/support}{HDF5} format and require the installation of \href{https://portal.hdfgroup.org/display/HDF5/HDF5+Fortran+Library}{HDF5 for Fortran}, see the \href{https://www.hdfgroup.org/downloads/hdf5/}{download page}. There is also a \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows installation} possible.
-
-Running the LOFLI package assumes a particular sub-directory structure aa well as some particular files. The script \verb!"NewFlash.sh"! creates the correct directory structure, copies the necessary files from the \verb!"copysetup"! directory to the required new ``FlashFolder" (requires some editing of the shell code), starts to run the RFI-Mitigation code in batch-mode, and starts an exploratory imaging run, see \secref{Explore}, of the data after the RFI-mitigation has finished.
-When setup correctly ``FlashFolder"  has two subfolders named \verb!"Book! and \verb!"files!. The first will store the calibration files which are essential for imaging and the latter files needed for intermediate checking and it may be considered as a scratch directory. These directories as well as necessary script files are copied to their appropriate location by running the script \verb!"NewFlash.sh"! in the MainDir.
-
-Best practise is to name the FlashFolder (as set in script \verb!"NewFlash.sh"!) with the tag of the flash, say \verb!"18D-1"!.
-The translation from the shorter internal flash label used in the lightning group to the UTC-label used by LOFAR is generated by the script \verb!"FlashID.sh"! that resides in the Utilities directory. This script reads the file \verb!"list.ssv"! and make sure this is updated for your system, where the first entry is the short-hand notation used for the FlashFolder name and the third entry refers to the flash identifier used in the (LOFAR) archive.
-
-
-
-In the script \verb!"FlashID.sh"! also \verb!ArchiveDir=/home/olaf/kaptdata/lightning_data/"! needs to be set to the proper place where the raw LOFAR-data reside. Note that there are no spaces allowed around the equal signs. The ArchiveDir should point to the directory that contains the TBB data from LOFAR as .H5 files. It is very handy to make a sshfs logical connection between the remote computer containing the archive and a local folder if the archive is not on your local system already.
+\input{Nt_LOFLI2Installation}
 
 \input{Nt_RFImitigt}
 \clearpage
@@ -251,7 +182,7 @@ In the script \verb!"FlashID.sh"! also \verb!ArchiveDir=/home/olaf/kaptdata/ligh
 ------------------------------------------------------------------ }
 
 %\printbibliography
-\bibliography{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+\bibliography{../../Lght_papers/Olaf/LightningImagingRefs.bib}
 
 \end{document}
 
