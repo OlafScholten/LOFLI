@@ -5,9 +5,9 @@ FC = gfortran
 #FCFLAGS =
 
 
-${LL_bin}/GenerateDepd.exe : GenerateDepd.o
-	$(FC) -o ${LL_bin}/GenerateDepd.exe GenerateDepd.o
+${LL_bin}/GenerateDepd : GenerateDepd.o
+	$(FC) -o ${LL_bin}/GenerateDepd GenerateDepd.o
 
-GenerateDepd.o : ${LL_src}GenerateDepd.f90
-	$(FC)  -c ${LL_src}GenerateDepd.f90
+GenerateDepd.o : ${LL_src}/GenerateDepd.f90
+	$(FC)  -c ${LL_src}/GenerateDepd.f90
 

@@ -10,7 +10,7 @@ FlaLine="$(grep ${FlaID} ${LL_scripts}list.ssv)"
 FlaArray=($FlaLine)
 FlaUTC=${FlaArray[2]}
 FlaYear=${FlaArray[1]}
-export ArchiveDir=${ArchiveBase}${FlaYear}/${FlaUTC}
+export ArchiveDir=${ArchiveBase}/${FlaYear}/${FlaUTC}
 #
 echo "Flash: "${FlaID}":"
 echo " Year: "$FlaYear

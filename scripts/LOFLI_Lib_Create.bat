@@ -5,7 +5,7 @@ setlocal enableDelayedExpansion
 :: call %LL_BaseDir%ShortCuts.bat
 
 echo fortransrc %LL_src%
-cd %LL_BaseDir%
+cd %LL_Base%
 if exist bin\f90split.exe (
   echo Yes, %LL_bin%\f90split.exe exists
 ) else (

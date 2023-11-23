@@ -1,9 +1,10 @@
 #!/bin/bash
 # 
 # 
+ source  ${LL_Base}/ShortCuts.sh
 # Create a new flash-bub folder inside the present directory
 
-ParentDir=${LL_BaseDir}flash/
+ParentDir=${LL_Base}/flash/
 #FlashFolder='18F-1'
 #FlashFolder='18D-1'
 #FlashFolder='20B-10'
@@ -40,9 +41,9 @@ cd ${NewFlashFolder}
 mkdir files
 mkdir Book
 
-cp ${ParentDir}Book/{StationCalibrations.dat,Calibrations*.dat,*.cal} ${MainDir}/${NewFlashFolder}/Book
-cp ${ParentDir}{*.sh,*.in,*.bat} ${MainDir}/${NewFlashFolder}
-# cd ${NewFlashFolder}
+cp ${ParentDir}/Book/{StationCalibrations.dat,Calibrations*.dat,*.cal} ${MainDir}/${NewFlashFolder}/Book
+cp ${ParentDir}/{*.sh,*.in,*.bat} ${MainDir}/${NewFlashFolder}
+ cd ${NewFlashFolder}
 chmod 764 *.sh
 ls -l
 # copying is finished now, time to become productive

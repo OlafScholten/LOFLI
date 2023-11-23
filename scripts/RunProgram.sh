@@ -1,19 +1,23 @@
 #!/bin/bash
 # 
 # 
-echo "program run is:" ${Prog} with argument "$1" 
+source  ${LL_Base}/ShortCuts.sh
+export Prog=$1
+export input=$2
+
+echo "program run is: ${Prog} with argument ${input}" 
 
 if ! test -f ${LL_bin}/${Prog}; then
    echo ${Prog} "does not exist and will be generated."
-   source ${LL_scripts}compileHDF5program.sh
+   source ${LL_scripts}/compileHDF5program.sh
 fi
 
-if test -f $1; then
-   echo "File $1 exists"
-   echo "executing command: ${LL_bin}/${Prog}  <$1 "
-   ${Prog}  <$1
+if test -f ${input}; then
+   echo "File ${input} exists"
+   echo "executing command: ${LL_bin}/${Prog}  <${input} "
+   ${Prog}  <${input}
 else
-   echo "arguments $1 is not an existing file"
-   echo "executing command: ${LL_bin}/${Prog}  $1 "
-   ${Prog}  $1
+   echo "arguments ${input} is not an existing file"
+   echo "executing command: ${LL_bin}/${Prog}  ${input} "
+   ${Prog}  ${input}
 fi
