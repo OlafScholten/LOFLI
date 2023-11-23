@@ -1,12 +1,10 @@
 #!/bin/bash
 # 
 # 
-# Create a new flash-bub folder inside the present directory
-source  /home/olaf/LOFLI/ShortCuts.sh
+# Create a new flash-sub folder inside the present directory
 
-source ${LL_scripts}RunNewFlash.sh "21E-7"
+source ${LL_Base}/scripts/RunNewFlash.sh "21E-7"
 
-exit
 
  exit
 #read -rsp $'Press enter to continue...\n'

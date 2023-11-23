@@ -8,21 +8,20 @@ else
    # or using a short-hand version    [[ -z "${DEPLOY_ENV}" ]] && MyVar='default' || MyVar="${DEPLOY_ENV}"
    echo Define LOFLI system variables and PATH extensions
   
-   ###### User installation dependent settings ###############################
    # Main directory of the LOFLI installation
-   export LL_BaseDir="/home/olaf/LOFLI"   
+   export LL_BaseDir="LL_Base"   
    
-   # Directory containing the antenna function as a table
-   export AntennaFun="/home/olaf/Lightning/LMA/LMA2019/AntenFunct/v2-"
-   #export AntennaFun="/home/olaf/Lightning/LMA/LMA2019/AntenFunct/"
+   ###### User installation dependent settings ###############################
+   # Preambule for the files "LBA_Vout_theta.txt" and "LBA_Vout_phi.txt" containing the antenna function as a table
+   export AntennaFun="${LL_Base}/AntenFunct/v2-"
    
    # Directory with the coordinates of the LOFAR antennas (needed by the RFI-Mitigation program)
-   export AntennaFieldsDir="/home/olaf/Lightning/LMA/LMA2019/AntennaFields/"
+   export AntennaFieldsDir="${LL_Base}/AntennaFields"
    
-   # Base directory where the raw data are stored, needed when running "NewFlash" 
-   export ArchiveBase="/home/olaf/kaptdata/lightning_data/"
+   # Base directory from where the raw data are retrieved, needed when running "NewFlash" 
+   export ArchiveBase="/home/olaf/kaptdata/lightning_data"
    
-   # should point to the "fftpack5.1d" library, contains FFT routines
+   # should point to the "fftpack5.1d" library, containing FFT routines
    FFTLIB="-lm /home/olaf/NumLib/bin/libfftpack5.1d.a"  # FFT library, double precision
    
    # Link to "lapack" linear algebra library; to find, use command     find / -xdev -name *lapack*
@@ -38,11 +37,11 @@ else
    # Rest are LOFLI system definitions and should not be touched
    export  LL_WrkDir=$(pwd)
 
-   export LL_bin=${LL_BaseDir}/bin
-   export LL_src=${LL_BaseDir}/FORTRANsrc/
-   export LL_mod=${LL_src}modules/
-   export LL_scripts=${LL_BaseDir}/scripts/
-   export LL_Utilities=${LL_BaseDir}/GLEsrc/
+   export LL_bin=${LL_Base}/bin
+   export LL_src=${LL_Base}/FORTRANsrc
+   export LL_mod=${LL_src}/modules
+   export LL_scripts=${LL_Base}/scripts
+   export LL_utilities=${LL_Base}/GLEsrc
    export PATH=${PATH}:${LL_bin}  
    #echo "path:" ${PATH}
    
@@ -62,7 +61,7 @@ else
    
    #REM  Old definitions
    export ProgramDir="${LL_bin}/"
-   export UtilDir="${LL_Utilities}"
+   export UtilDir="${LL_Utilities}/"
    #:: echo %Path%
    Vrsn=""  # version number
    #  It is essential not to have spaces around the = sign in the previous commands

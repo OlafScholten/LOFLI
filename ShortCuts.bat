@@ -9,43 +9,47 @@ If NOT [%LL_mod%]==[]  (
 )
 
 echo Define LOFLI system variables and PATH extensions
-rem ##### User installation dependent settings ###############################
-rem Main directory of the LOFLI installation
-Set LL_BaseDir="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"\
+:: ##### User installation dependent settings #################################
+::	lines starting with :: are just comment lines
+:: Main directory of the LOFLI installation
+:: Enter in the windows 'environement variables' the following:
+::  variable           LL_Base
+::  pointing to        "C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"
+::  The quotes are needed is the base path contains spaces
+:: Set LL_BaseDir="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"\
+Set LL_BaseDir=%LL_Base%\
 
-rem Directory containing the antenna function as a table
+:: Directory containing the antenna function as a table
 :: Apparently in windows  \"  unfolds to only "  while "\ stays
 set AntenFun="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\Imaging\LMA\LMA2019\AntenFunct"
 
-rem Directory with the coordinates of the LOFAR antennas (needed by the RFI-Mitigation program)
-:: set AntennaFieldsDir="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\Imaging\LMA\LMA2019\AntennaFields"
-set AntennaFieldsDir=%LL_BaseDir%AntennaFields
+:: Directory with the coordinates of the LOFAR antennas (needed by the RFI-Mitigation program)
+set AntennaFieldsDir=%LL_Base%\AntennaFields
 
-rem Base directory where the raw data are stored, needed when running "NewFlash"
-:: set ArchiveBase="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\kaptdata\lightning_data"
-set ArchiveBase=%LL_BaseDir%ightning_data
+:: Base directory where the raw data are stored, needed when running "NewFlash"
+set ArchiveBase=%LL_Base%\lightning_data
 
-rem should point to the "fftpack5.1d" library, contains FFT routines, double precision
-set LL_generalLib=C:\OlafsUtil\NumLib\bin\
-set FFTLIB=%LL_generalLib%libFFTPack-d.a
+:: should point to the "fftpack5.1d" library, contains FFT routines, double precision
+set LL_generalLib=C:\OlafsUtil\NumLib\bin
+set FFTLIB=%LL_generalLib%\libFFTPack-d.a
 
-rem Link to "lapack" linear algebra library; to find, use command     find / -xdev -name *lapack*
-set LAPACKlib=%LL_generalLib%liblapack.a
+:: Link to "lapack" linear algebra library; to find, use command     find / -xdev -name *lapack*
+set LAPACKlib=%LL_generalLib%\liblapack.a
 
-rem Link to "blas" library for basic algebra functions
-set BLASlib=%LL_generalLib%libblas.a
+:: Link to "blas" library for basic algebra functions
+set BLASlib=%LL_generalLib%\libblas.a
 
-rem point to directory where HDF5 utilities are stored (not used in implemented windows version)
+:: point to directory where HDF5 utilities are stored (not used in implemented windows version)
 set HDF5lib="C:\Program Files\HDF_Group\HDF5\1.10.5\lib"
 
-rem ############################################################################
-rem Rest are LOFLI system definitions and should not be touched
+:: ############################################################################
+:: Rest are LOFLI system definitions and should not be touched
 
-set LL_bin=%LL_BaseDir%bin\
-set LL_src=%LL_BaseDir%FORTRANsrc\
-set LL_mod=%LL_src%modules\
-set LL_scripts=%LL_BaseDir%scripts\
-set LL_Utilities=%LL_BaseDir%GLEsrc\
+set LL_bin=%LL_Base%\bin
+set LL_src=%LL_Base%\FORTRANsrc
+set LL_mod=%LL_src%\modules
+set LL_scripts=%LL_Base%\scripts
+set LL_utilities=%LL_Base%\GLEsrc
 set PATH=%PATH%;%LL_bin%
 
 REM  Not implemented in windows version
@@ -53,12 +57,12 @@ set HDF5Compile="-g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1
 set HDF5Link="-L${HDF5lib} ${HDF5lib}/libhdf5hl_fortran.a ${HDF5lib}/libhdf5_hl.a ${HDF5lib}/libhdf5_fortran.a ${HDF5lib}/libhdf5.a -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,${HDF5lib}"
 
 set LOFLIinc=-I%LL_mod%
-set LOFLIlib=-lm %LL_bin%libLOFLI.a %FFTLIB% %LAPACKlib% %BLASlib%
+set LOFLIlib=-lm %LL_bin%\libLOFLI.a %FFTLIB% %LAPACKlib% %BLASlib%
 set FCFLAGS="-fcheck=bounds"
 
 REM  Old definitions
-set ProgramDir=%LL_src%
-set UtilDir=%LL_Utilities%
+set ProgramDir=%LL_src%\
+set UtilDir=%LL_Utilities%\
 set "Vrsn=-v21"
 :: echo %Path%
 
