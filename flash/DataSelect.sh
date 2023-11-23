@@ -1,12 +1,15 @@
 #!/bin/bash
 # 
 # 
-source  ${LL_BaseDir}/ShortCuts.sh
-Prog="DataSelect"
 # to run   ./DataSelect.sh
 
-source ${LL_scripts}RunProgram.sh "DataSelect.in"
+rm  ${LL_Base}/bin/DataSelect
+source  ${LL_Base}/scripts/RunProgram.sh DataSelect  DataSelect.in
 
+#  also possible:
+#source  ${LL_Base}/scripts/RunProgram.sh "DataSelect" "DataSelect.in"
+
+exit
 
 
 

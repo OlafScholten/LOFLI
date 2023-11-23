@@ -1,11 +1,8 @@
 #!/bin/bash
 # 
 # 
-source  /home/olaf/LOFLI/ShortCuts.sh
-Prog="LOFAR-Imag"
 
-# start Imaging run
-source ${LL_scripts}RunProgram.sh "PkIntf.in"
+source  ${LL_Base}/scripts/RunProgram.sh LOFAR-Imag  PkIntf.in
 exit
 
 #sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata

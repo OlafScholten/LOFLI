@@ -1,10 +1,8 @@
 #!/bin/bash
 # 
 # 
-source  /home/olaf/LOFLI/ShortCuts.sh
-Prog="PowerTrace"
 
-source ${LL_scripts}RunProgram.sh "PwT.in"
+source  ${LL_Base}/scripts/RunProgram.sh PowerTrace  PwT.in
 exit
 
 # read -rsp $'Press enter to continue...\n'
