@@ -1,0 +1,192 @@
+!size   23 38
+fontSz=0.8
+bsh=2.5*fontSz    ! 1.5
+HorOff=1.5+bsh
+VerOff=2.0+bsh
+B=14
+H=14
+size   3*(HorOff+B)+bsh 2*(VerOff+H)+bsh ! ----------------------------
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+MaxMSze=3.3
+MSymb$='spade'
+MSymb$='plane'
+!
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+!include "IntfBox.gle"
+
+file$='../MDD-test/pMDD1aMDDsrc'
+if(nargs() > 0 ) then 
+   file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+   if(nargs() > 1 ) then 
+      UnderFileDatA$=arg$(2)  ! Should include the appropriate path to make this script machine independent
+      NBckgr=1
+      !UnderFileDatA$='files/19A1-Rx.dat'
+   end if
+end if
+filedat$=file$+'.dat'
+!filedat$='../files/'+file$+'.dat'
+fopen filedat$ inchan read
+freadln inchan NTestAnt St0$ St1$ St2$ St3$ St4$ PlotLabel$  ! there needs to be a trailing space
+amove HorOff VerOff !  ---------------------------------------------------
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min -70 max 70 hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis min -70 max 70 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+end graph
+for i=1 to NTestAnt
+   freadln inchan StName$ StN StE Sth SrcN SrcE   ! there needs to be a trailing space
+   amove xg(StE) yg(StN)
+   marker fcircle
+   write StName$
+next i
+amove xg(SrcE) yg(SrcN)
+marker Star
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+sub 2Dtime dt$ dloc$ dDD$ ! loc=(x,y) position  ; DD=(I,angle)
+   local MaxInt = dmaxX(dDD$)
+   local i
+   for i = 1 to ndata(dt$)
+      amove xg(dataxvalue(dloc$,i)) yg(datayvalue(dloc$,i))
+      
+      local Cscale = (datayvalue(dt$,i)-tmin)/t_diff
+      Clr(Cscale)
+      
+      !local Int = dataxvalue(dDD$,i)
+      local ang = datayvalue(dDD$,i)
+      !MSzeI=MSze*(1.+log10(datayvalue(dI$,i)*FactAmp+ConstAmp))
+      !MSzeI=MSze*sqrt(datayvalue(dI$,i)*FactAmp+ConstAmp) 
+      !MSzeI=MSze*(1.+log(datayvalue(dI$,i)/dMinInt))*FactAmp ! dMinInt
+      !MSzeI=MSze*sqrt(datayvalue(dI$,i)-IntCslOff)*FactAmp ! dMinInt
+      !MSzeI=MSze*sqrt(datayvalue(dI$,i)+10.*dMinInt)*FactAmp ! dMinInt
+      !MSzeI=MSze*sqrt(datayvalue(dI$,i)/dMinInt)*FactAmp ! dMinInt
+      MSzeI=sqrt(dataxvalue(dDD$,i)/MaxInt)*MaxMSze
+      !
+      begin rotate ang
+            marker MSymb$ MSzeI  ! 
+      end rotate
+   next i
+   set color black
+   amove xg(xmin)+fontSz yg(ymin)+fontSz
+   marker MSymb$ MaxMSze  
+   rmove 0.4*MaxMSze -0.5*fontSz
+   write MaxInt
+end sub
+
+sub Subfigure Xpos Ypos i Station$
+   begin graph
+      size B H
+      vscale 1
+      hscale 1
+      !xaxis 
+      !yaxis 
+      xaxis off
+      yaxis off
+      data filedat$ d1=c1,c[2+i] d2=c1,c[3+i] d3=c1,c[4+i]    ignore 6
+   end graph
+   xmax = dmaxy(d2)
+   xmin = dminy(d2)
+   ymax = dmaxy(d3)
+   ymin = dminy(d3)
+   tmax = dmaxy(d1)
+   tmin = dminy(d1)
+   t_diff=tmax-tmin
+   !
+   rat=(yMax-yMin)/(xMax-xMin)
+   If (rat > 1) then
+      D=yMax-yMin
+   else
+      D=xMax-xMin
+   end if
+   D=D*0.6
+   Xmin=-D+(xMax+xMin)/2.
+   Xmax= D+(xMax+xMin)/2.
+   ymin=-D+(yMax+yMin)/2.
+   ymax= D+(yMax+yMin)/2.
+   !
+   amove Xpos Ypos !  ---------------------------------------------------
+   begin graph
+      size B H
+      vscale 1
+      hscale 1
+      xaxis min xMin max xMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+      yaxis min yMin max yMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
+      data filedat$ d1=c1,c[2+i] d2=c[3+i],c[4+i]  d3=c[5+i],c[6+i]    ignore 6
+   end graph
+   2Dtime(d1,d2,d3)
+   !amove Xpos+fontSz Ypos+fontSz !  ---------------------------------------------------
+   !marker MSymb$ MaxMSze  
+   ! 
+   ! plot colorpalette
+   Leng = VerOff
+   x0 = Xpos+1.*fontSz
+   y0 = Ypos+H-1.*fontSz-Leng
+   ClrPltt(x0,y0,Leng,tmin,tmax)
+   !
+   amove Xpos+B-3*fontSz Ypos+H-fontSz !  ---------------------------------------------------
+   write Station$
+end sub
+
+! Start plotting
+for k = 1 to NTestAnt
+   if (k=1) then
+      StName$=st0$
+      Xpos=HorOff
+      ypos=VerOff+H+bsh
+   else if (k=2) then
+      StName$=st1$
+      Xpos=HorOff+B+bsh
+      ypos=VerOff
+   else if (k=3) then
+      StName$=st2$
+      Xpos=HorOff+B+bsh
+      ypos=VerOff+H+bsh
+      amove xpos ypos+B+bsh
+      write PlotLabel$
+   else if (k=4) then
+      StName$=st3$
+      Xpos=HorOff+2*(B+bsh)
+      ypos=VerOff
+   else if (k=5) then
+      StName$=st4$
+      Xpos=HorOff+2*(B+bsh)
+      ypos=VerOff+H+bsh
+   End If
+!   amove HorOff+H VerOff+i !  ---------------------------------------------------
+!   write StName$ Xpos  Ypos k
+   dst=(k-1)*5
+   subfigure(Xpos, Ypos, dst, StName$)
+!   amove HorOff+H+3 VerOff+k+3 !  ---------------------------------------------------
+!   write StName$ Xpos  Ypos k
+next k
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set hei fontSz
+set just CC 
+amove HorOff+1.5*b+bsh  VerOff-1.7*fontSz
+text Azimuth [m]
+
+amove 1.5 VerOff+1.5*h+bsh
+begin rotate 90
+   text Zenith [m]
+end rotate
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "SrcImg"   ! +"-"+file$
+translate 0 2
+!end rotate

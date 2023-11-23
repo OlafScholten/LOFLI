@@ -1,0 +1,631 @@
+Delivered-To: o.scholten@rug.nl
+Received: by 2002:a05:7208:2096:b0:61:1b7d:3191 with SMTP id y22csp3037796rby;
+        Mon, 30 Jan 2023 05:19:39 -0800 (PST)
+X-Google-Smtp-Source: AK7set8aGG9yySpGZCrpQ8/HpwEjklX3Pe+Jelll16e8JZTBiHOjWD2CREc7a0POJI/IEvk3zt4c
+X-Received: by 2002:aa7:d387:0:b0:4a1:9fb0:8760 with SMTP id x7-20020aa7d387000000b004a19fb08760mr14466584edq.36.1675084779461;
+        Mon, 30 Jan 2023 05:19:39 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1675084779; cv=pass;
+        d=google.com; s=arc-20160816;
+        b=mPrewKU0aPArT18MvsqjDlr4/zbzC+AQfabl1rWWhNX+FkOmCzjuDOj/stk22gyITM
+         N2z2Ra2F9jv9kYtFhwEHEKe9h3ApIxlkGSFHf83E5niXs9Tj+XEpqDTG+FY/ZNp8TUOa
+         hkmv5TkSSw2FxvsgrkjaRZF0TYSVLRYc93vphAdlYn6k5CyDvfX3xicQco5B7Tv4As2m
+         Gl6EtNGhMTy587rDa+8USeisH637b6MfhyTalJ8Ul9cAS7cVFUBP3zg5KOxO3PRtxMcX
+         mgch0zIT1V7eadLy2jnuJNax0Myc1LErlEt4CJx4Z3PwttzLVozA/F17+Vc3LwRmBOuM
+         JwSQ==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=mime-version:msip_labels:content-language:accept-language
+         :in-reply-to:references:message-id:date:thread-index:thread-topic
+         :subject:to:from:dkim-signature:dkim-signature;
+        bh=bewicguqUmFzPWN45EUZ9zjL8s3tRp5mUlLkwLG2Zno=;
+        b=p2GPPD7Gxhkawut6cq5skfh6wX497hINmVs5ZaCs+9TYO/zEQh2kpM554V+hkV6JTA
+         Ga4p7HptJxBIW6gL0PAb195GzNjuDxwjDtKn4dFITuIA1o5X9g4BCrIsf0r5QauJbyNA
+         xCGxgKmjv/Doy12vy2xtUPE/d9r4fVGKUF/nQilMyAmWdc+WO2sxikV03MOEoXwI2zVT
+         OHfv3z1ix3VNiFODRAmp9Qrl1P1RQfnS2lC0/ha/xLP2m31gvkEg9SQkyGRhGuycKVEu
+         f7G+ReM6dJNVyFwfmkM0qCM0YQ7r8L6iwCTIHath81o7p3wjXeO2jqV2OKkqpEvaSsCL
+         C/CQ==
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@ru.nl header.s=pp2021 header.b=OFrgMf2Q;
+       dkim=pass header.i=@ru.nl header.s=selector1 header.b=YqHDawdR;
+       arc=pass (i=1 spf=pass spfdomain=ru.nl dkim=pass dkdomain=ru.nl dmarc=pass fromdomain=ru.nl);
+       spf=pass (google.com: domain of katharine.mulrey@ru.nl designates 185.132.183.113 as permitted sender) smtp.mailfrom=katharine.mulrey@ru.nl
+Return-Path: <katharine.mulrey@ru.nl>
+Received: from smtp3.rug.nl (smtp.rug.nl. [129.125.2.96])
+        by mx.google.com with ESMTPS id c2-20020a0564021f8200b00485fa68b06csi15397572edc.354.2023.01.30.05.19.39
+        for <o.scholten@rug.nl>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-AES128-GCM-SHA256 bits=128/128);
+        Mon, 30 Jan 2023 05:19:39 -0800 (PST)
+Received-SPF: pass (google.com: domain of katharine.mulrey@ru.nl designates 185.132.183.113 as permitted sender) client-ip=185.132.183.113;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@ru.nl header.s=pp2021 header.b=OFrgMf2Q;
+       dkim=pass header.i=@ru.nl header.s=selector1 header.b=YqHDawdR;
+       arc=pass (i=1 spf=pass spfdomain=ru.nl dkim=pass dkdomain=ru.nl dmarc=pass fromdomain=ru.nl);
+       spf=pass (google.com: domain of katharine.mulrey@ru.nl designates 185.132.183.113 as permitted sender) smtp.mailfrom=katharine.mulrey@ru.nl
+Received: from filter1-til.surfmailfilter.nl (filter1-til.surfmailfilter.nl [195.169.13.10])
+	by smtp3.rug.nl (8.17.1/8.15.2) with ESMTP id 30UDJdac027156
+	for <o.scholten@rug.nl>; Mon, 30 Jan 2023 14:19:39 +0100
+X-Halon-SA-Rules: DKIM_SIGNED:0.1,DKIM_VALID:-0.1,DKIM_VALID_AU:-0.1,DKIM_VALID_EF:-0.1,HTML_MESSAGE:0.001,HTTPS_HTTP_MISMATCH:0.1,PDS_RDNS_DYNAMIC_FP:0.001,RCVD_IN_DNSWL_LOW:-0.7,RDNS_DYNAMIC:0.363,SPF_HELO_NONE:0.001,SPF_PASS:-0.001,URIBL_BLOCKED:0.001
+X-Halon-SA-Score: -0.4
+X-Halon-RPD-Refid: str=0001.0A782F25.63D7C3E9.006B:SCFSTAT96359431,ss=1,re=-4.000,recu=0.000,reip=0.000,cl=1,cld=1,fgs=0
+X-Halon-RPD-Score: 0
+Authentication-Results: filter1-til.surfmailfilter.nl;
+	spf=pass smtp.mailfrom=ru.nl smtp.remote-ip=185.132.183.113;
+	dkim=pass header.d=ru.nl header.s=selector1 header.a=rsa-sha256 header.b=YqHDawdR;
+	dmarc=pass header.from=ru.nl;
+X-Halon-ID: bed7f341-a0a0-11ed-b6ad-005056a48e6b
+Received: from mx07-005e0f01.pphosted.com (mx07-005e0f01.pphosted.com [185.132.183.113])
+	by filter1-til.surfmailfilter.nl (Halon) with ESMTPS
+	id bed7f341-a0a0-11ed-b6ad-005056a48e6b;
+	Mon, 30 Jan 2023 14:19:37 +0100 (CET)
+Received: from pps.filterd (m0234148.ppops.net [127.0.0.1])
+	by mx08-005e0f01.pphosted.com (8.17.1.19/8.17.1.19) with ESMTP id 30UAhitQ015912
+	for <o.scholten@rug.nl>; Mon, 30 Jan 2023 13:19:37 GMT
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ru.nl; h=from : to : subject : date
+ : message-id : references : in-reply-to : content-type : mime-version;
+ s=pp2021; bh=bewicguqUmFzPWN45EUZ9zjL8s3tRp5mUlLkwLG2Zno=;
+ b=OFrgMf2QKptSclPIJ3uBZ5PYHekL3kVe2FFXgFWsx+XNVeif2j8vhvjOLVwh9KHp+1nB
+ RTVJRqR8Dt+SNimuGdG6g5l12mBIrwESoZDyG9vQErlMuXDBuWAKut1OJFQuEGlgBYKm
+ Hv1udsJ11bRJkdpqaqigchnRkBO4c6yGLbv9Yhoyh7216Dh/yvj994rDtSLvGFmScEFE
+ bLrcL6UnH20DBOBK/TnzFjBG2lXsqbVQ0DTdkA1j2vNaJUgLfc89Pcgpge4yFevDH/XA
+ y1PqfOKmLq0LmpUnDpwPwAA4fPzutjkqFwZKsNJVhSDDBnLylIhVSJ7lYHRfs4HZ0+ie Wg== 
+Received: from eur04-db3-obe.outbound.protection.outlook.com (mail-db3eur04lp2056.outbound.protection.outlook.com [104.47.12.56])
+	by mx08-005e0f01.pphosted.com (PPS) with ESMTPS id 3ncudhk5r1-1
+	(version=TLSv1.2 cipher=ECDHE-RSA-AES256-GCM-SHA384 bits=256 verify=NOT)
+	for <o.scholten@rug.nl>; Mon, 30 Jan 2023 13:19:37 +0000
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=TJOzWFrbM1M/NVr/Npj+5N4rM5IwIaxecxfromM0OR2WMJYxP0wbjCpfVnQCNx4z/nANhNu9B8UtuxGUxVIaySquR/AbvhMrpMJVCnIMbUytSK/97IKuE0/RM6LT5+O3YH0rmTWP27uOb0BgDBHuwT74pN63qozEzT1X7rDmeoMfOUSrPhn98WdHfl1YJvM7ugFe+JvGryVspX0fh31wk1VuoaDlOVKMaY2hhjOS8tonjprbb6j51fZR5n2J/TYprvdHcmaw/v220brfiOtpWic1Z46964y+/oNYP6IAPTGvRB4eutVVVut+5tmt098Sp4ufQqUsB0cF/WoPx1mNZA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=bewicguqUmFzPWN45EUZ9zjL8s3tRp5mUlLkwLG2Zno=;
+ b=C5QKxlK/Zi5gycMClGghX1Ofy5l+gDNLzBXeNp2vuyGQHmXoMCy1+3llJH10i+InZkEcGTrXcfUGNWrzo2jOAvXh2HB4ScjHNOzYmkoQv4QSnKnItmi6VJBJ/F3u8CtqvFnQTFe8rQ5Dk6tXML1EXy9N9+FV/HNqyFKYOjBmqlT/kIVKSfiH9GiNGx4rnTPLRMK0xgcnZMv1TpHQpdA3fdYmW/vyTHu9Up10dUrvvCCFWVN/+jAdEchE3sXvw0Cxx8G82QAi+pbYDQ4m4tGLaZmferDYkbNsFbfaazlC75bTIDra4AXYdNe/irGtm/VXakg7ryiYVjthy8EmDju08Q==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=ru.nl; dmarc=pass action=none header.from=ru.nl; dkim=pass
+ header.d=ru.nl; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=ru.nl; s=selector1;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=bewicguqUmFzPWN45EUZ9zjL8s3tRp5mUlLkwLG2Zno=;
+ b=YqHDawdRIv+cW2LJorcoGTWfAruC0OFlP4V3oh8kDkGMSEwtJEFQGqtLdsIdnDFbwZpFtC2LxD4P0Fu4HMxob9o6mYrB4x23rY8tYnQj5e1ziqp2haF25JMtoEFS7crkNpPIHoE19BaGShUrq4ysjF3CINNAGo+8SUJ3ePbxjrI=
+Received: from DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM (2603:10a6:5:6::14) by
+ DB9PR10MB5978.EURPRD10.PROD.OUTLOOK.COM (2603:10a6:10:39d::20) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.6043.36; Mon, 30 Jan 2023 13:19:35 +0000
+Received: from DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM
+ ([fe80::7e7:d380:3ae5:d611]) by DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM
+ ([fe80::7e7:d380:3ae5:d611%6]) with mapi id 15.20.6043.033; Mon, 30 Jan 2023
+ 13:19:35 +0000
+From: "Mulrey, K.B. (Katharine)" <katharine.mulrey@ru.nl>
+To: Olaf Scholten <o.scholten@rug.nl>
+Subject: Re: Power normalization
+Thread-Topic: Power normalization
+Thread-Index: AQHZK25h9tCW8RUqrk2mmNqBR79vNK6l//I/gAAKpICAEL6dGoAAFqeAgAAhO7c=
+Date: Mon, 30 Jan 2023 13:19:35 +0000
+Message-ID: 
+ <DB7PR10MB188450F3EC8B552691D3475782D39@DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM>
+References: <684cfe37-cdb5-13e6-df12-4afcbe2b3ee2@rug.nl>
+ <DB7PR10MB18842063E902B74AEE7E324682C49@DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM>
+ <80fd10ab-816c-5b93-f9cb-66d089c4c1ad@rug.nl>
+ <DB7PR10MB188495A867EB18FC9DEC25EA82D39@DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM>
+ <7a889f00-e836-9bdb-e82e-f4420fdc8865@rug.nl>
+In-Reply-To: <7a889f00-e836-9bdb-e82e-f4420fdc8865@rug.nl>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach: 
+X-MS-TNEF-Correlator: 
+msip_labels: 
+x-ms-publictraffictype: Email
+x-ms-traffictypediagnostic: DB7PR10MB1884:EE_|DB9PR10MB5978:EE_
+x-ms-office365-filtering-correlation-id: 2e755fd5-b626-4d35-cb3b-08db02c4a1bd
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;
+x-microsoft-antispam-message-info: 
+ 4hhCtLHGA2+zW+wvQCIIF9X57mRIz4UhGOn7vprID4YylzPcnJgLS466kj1FYNIIWDg37+GtWGpQRDYT4BtxbgnQ/UmZBXp0+llxn6qtj8/eVvYu9C4QPnCqvxz/Sz0bgEOT28VFsb1CNm2QJ5C0dflOEEXeYJ0mot1Ss81H0ZW0JWRD55zd8uIrF3HvptoByB7o94om+7M+TVZ7ew1T0pB0nlGJsez096u1rMThv0SgM6xcPX7O9+l0rctYE2MhbJZqQA3aN7v5lDVPjSAMXhPaduKqbBsDiM114cp9cu5zXNy9L3+i+K3ZovaN2bynowp4QGphpmnp+k2k+ezw0iEFJGxFddjhh04ULB1XwzpGLn5Fv/0kp0oZYI4h4ybBAJKav43pewjwbpi5xO2eDwBYsC6XbJ5/q/E0Nr0SvoufqPC3J4/jT8YhIte8+eYieoLRzV6+jWkkWoSTK+VDVqr7DyX1hOB6w8mWr6DwDEjREC4WEyyBR26sgwHrLMesNITqbNuFaxtYA2awja9Gvl1UoAfIhZ5/tZy1u7Q3+WwwJWEKcLvxHQZgBvfIftaqBOYYFBHV0Aqf79Z4chx0DMnlWdeJSJcpGsACyilqkmVRdkooFCwPUUYw0PvUsiDORSkKXDZDxb0cswvX03kXQgHu2b7VqyFxsL41P5+WDP+lI1xqtof1FTEKycWyXABuunt3fHAFR4XImxu4fD7c1g2/RS2eMXjAtnz2LoICZQs=
+x-forefront-antispam-report: 
+ CIP:255.255.255.255;CTRY:;LANG:en;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM;PTR:;CAT:NONE;SFS:(13230025)(4636009)(39860400002)(366004)(396003)(376002)(136003)(346002)(451199018)(19627405001)(2906002)(33656002)(7116003)(52536014)(55016003)(83380400001)(66556008)(66446008)(5660300002)(3480700007)(41300700001)(8936002)(26005)(9686003)(6506007)(966005)(53546011)(186003)(38070700005)(166002)(122000001)(86362001)(38100700002)(66946007)(66476007)(76116006)(91956017)(316002)(41320700001)(478600001)(8676002)(786003)(64756008)(7696005)(71200400001)(6916009);DIR:OUT;SFP:1102;
+x-ms-exchange-antispam-messagedata-chunkcount: 1
+x-ms-exchange-antispam-messagedata-0: 
+ =?us-ascii?Q?QSqyCcr0LAhPBpxNXTYPvKEQHc1IJ/zdnj0suAD7RqejNXmlO/WdPlZU8ZU0?=
+ =?us-ascii?Q?bCzjbY5r4OSO7yUYLdBGG4Aq51OH87OvvG6DuLHrGqrO7C8j5D+4w62q5t4T?=
+ =?us-ascii?Q?IJTB+oGfe8m0jn0LK6Y04ugv5+gN51KG1947CqadugK2O91dm1uP88N84lng?=
+ =?us-ascii?Q?miOpabPqFSBhC4tGNP7Tq3PFA9ENYaUGGwY2M22dNKj5rlMKx/WLzbUG/GCb?=
+ =?us-ascii?Q?uzTbWliK9+LERoOvwsYiYFeID4mxKnhz75mLIKeMrAUM8cfw4YVxQ7lb0c9P?=
+ =?us-ascii?Q?QhF8F79a2vwcf7ZtR4jZv6uJE4BAdms4NMcArGDBN7I60yhkpVQ7nxl5ZWzN?=
+ =?us-ascii?Q?h/OlHI1IEAIHT0PHGyTIE1T5YLzOzJPp729mGHLFHFvbJQ+qEiNu/XDkDJoV?=
+ =?us-ascii?Q?jyf/kvxCbqBsdsUALfNVuWVXMl297JSENKYYixnrCOgpGeggSSMiY+g7smft?=
+ =?us-ascii?Q?QKQkgFxWZlPpeSM/YLfDIrycgqbMiEBvEtVrqG4pFlV1spJM/kkxyrJ0xe+S?=
+ =?us-ascii?Q?EQtlCvZGlsw+nqLvKOnq1nhObpXDxonDcWeq0pqfFkwn/BAMrzVoPHgnA7xZ?=
+ =?us-ascii?Q?CyJulm/PgfiO3hy2DpAcOONdaFTxLmYDn44PF1rrygjoTjEqq3PsEXWAVdYU?=
+ =?us-ascii?Q?1HZBZUtyq7fjvFSmyiQgL98Y6NxWyZVTh+swU5OFVxUYHqoU73wkZVN5qbRB?=
+ =?us-ascii?Q?Etj9LHmIS2UHj+KOLk4/9mYBx/3rENqYNWT5MCVJsy1qvgWCKLhXSTBohsZK?=
+ =?us-ascii?Q?PPWoXhvl3O2hGxT9D5ujK18lb1bw73mvv65ZTiEWlndTApf1V7KpyMgP8pBS?=
+ =?us-ascii?Q?A40nSuUqMYDRvDMzIJQiV/e0AsNtkNwrVFiaA0Wdn5qF4vKvsw65xgFp9Ob4?=
+ =?us-ascii?Q?LOy8L5O2qxtHBCEuK+tUS8rzXCJ0NfGu5osxnxE1VpxP1L66IH78hfmKuUTn?=
+ =?us-ascii?Q?C0wY3ExEvi7P9nur3t5Vfa8+6ZLjB0YQl+3W6IKe1qO/AklWhvDrIVU8GIcq?=
+ =?us-ascii?Q?iPSJlbJOV6VH0x84P43H0erLEeMgQfMTUrEKCEWJOYmK0QYQNXW7TDw9HoV8?=
+ =?us-ascii?Q?Jq6ZZwXEBF3BoycRsfu1SDN/eOt6ppHNewqPyIt50835438+js+3icEWAFN2?=
+ =?us-ascii?Q?FPl4ynK4PIg7aOpQHA2zr9lDg0exgKt6A86BVrdR9lTR2WkmK0dJ1c2JgBVv?=
+ =?us-ascii?Q?xzVLj9qh22H8PwYj2e5dpRUpSdfgSULdQwjDxeSS0JsGM4vrp2bn9IA3yp9T?=
+ =?us-ascii?Q?K6TYYvIyo0tQMcY7ZDE+PgKLCb7YD+DxA1iUy+PwzZw9cde4yVbMYMK8N40l?=
+ =?us-ascii?Q?u7XUhi5NBIx3L4xWYyqPpbjIWcMSYG4NkEX1suaA3JKU9RZkh31Q9myCfGjR?=
+ =?us-ascii?Q?cIqdyG9Ly3bneKy1B3JPTGzj87lweGyIjdP9QcjULuu9j5rMb18zkogM8mNq?=
+ =?us-ascii?Q?j5tm34QsrMuEbxqy6hbqAHSlZsaUyjVfyfX+xzgQWBMn3sXZWeAoIlPLDWPA?=
+ =?us-ascii?Q?1FtHKhiBbd1tFflmTp44egs0fBAcoQWgnK12C246Z+4bjG5Pms72Xb5Zp5od?=
+ =?us-ascii?Q?W2noNanU+i69DPg4uGuthJXmP2fVzabdoRlWsoTe?=
+Content-Type: multipart/alternative;
+	boundary="_000_DB7PR10MB188450F3EC8B552691D3475782D39DB7PR10MB1884EURP_"
+MIME-Version: 1.0
+X-OriginatorOrg: ru.nl
+X-MS-Exchange-CrossTenant-AuthAs: Internal
+X-MS-Exchange-CrossTenant-AuthSource: DB7PR10MB1884.EURPRD10.PROD.OUTLOOK.COM
+X-MS-Exchange-CrossTenant-Network-Message-Id: 2e755fd5-b626-4d35-cb3b-08db02c4a1bd
+X-MS-Exchange-CrossTenant-originalarrivaltime: 30 Jan 2023 13:19:35.2847
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Hosted
+X-MS-Exchange-CrossTenant-id: 084578d9-400d-4a5a-a7c7-e76ca47af400
+X-MS-Exchange-CrossTenant-mailboxtype: HOSTED
+X-MS-Exchange-CrossTenant-userprincipalname: EGf6uU3CRpIYGxCZfoFByT3sMmnptNqjDXjL9TPnM6gUtbTqpwzLf5ATqSKsAEi4kbkx6Uy2GIG2/I1KQRZU6w==
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: DB9PR10MB5978
+X-Proofpoint-GUID: sQbYEe-4-AVGDDqOgNVvjcgEARSHiY6k
+X-Proofpoint-ORIG-GUID: sQbYEe-4-AVGDDqOgNVvjcgEARSHiY6k
+X-Virus-Scanned: clamav-milter 0.101.1 at smtp3
+X-Virus-Status: Clean
+
+--_000_DB7PR10MB188450F3EC8B552691D3475782D39DB7PR10MB1884EURP_
+Content-Type: text/plain; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+Dear Olaf,
+
+Yes, the blue line is sky brightness, integrated over all angles and weight=
+ed with the directional part of the antenna function.
+
+In order to do this the frequency dependent LNA gain had to be somewhat art=
+ificially removed from the full LOFAR antenna model.  The LNA gain does ind=
+eed look like the inverse of the N_ADC line in the plot.  This is one of th=
+e biggest problems with how the calibration is done now in my opinion.  We =
+really need the directional antenna model separate from the LNA gain, eithe=
+r from simulations or measurements.  In practice, I don't think it changes =
+the final calibration much, but it is definitely not the cleanest way to do=
+ it.
+
+I have been in contact with Brian about this. As Tim mentioned in the call =
+today, we are also trying to put together a universal way to generate radio=
+ noise (electric field and voltage), which requires us to revisit each step=
+ of the background power generation process.  I hope this process will conv=
+erge on a nice piece of code that can produce all these noise levels at var=
+ious stages of the signal chain.
+
+Cheers,
+Katie
+________________________________
+From: Olaf Scholten <o.scholten@rug.nl>
+Sent: Monday, January 30, 2023 12:09 PM
+To: Mulrey, K.B. (Katharine) <katharine.mulrey@ru.nl>
+Subject: Re: Power normalization
+
+Dear Katie,
+
+Thanks for the plot, the ratio noise/signal is what I kind of remembered.
+
+How did you get the blue line in your plot? This is the sky brightness, int=
+egrated over all angles, but probably weighted with the LOFAR angular anten=
+na function, not including its frequency-dependent gain?
+Is the inverse of the frequency dependent gain kind-of equal to N_RCU or N_=
+ADC, looks like it?
+
+By the way, Brian is now trying to repeat these calculations, I think the t=
+wo of you have been in contact about this.
+
+Regards,  Olaf
+
+On 30/01/2023 11:04, Mulrey, K.B. (Katharine) wrote:
+Dear Olaf,
+
+Sorry for the late reply.  These numbers seem pretty close to me.  I am wor=
+king off of the attached plot (fig 5 from the calibration paper).   This sh=
+ows the relative noise levels referenced to the beginning of the signal cha=
+in, so just after the antenna (with no LNA).  If I look at sky noise, the b=
+lue line, it is at at little over 10^-14 W/m^2/MHz.  This is the dominant n=
+oise at 60 MHz.  Including the fit instrumental noise the total noise is sl=
+ightly increased.  For this analysis, we took the LNA response out of the a=
+ntenna model more or less by brute force, since it is directly integrated i=
+n the antenna model we use.  If the LNA gain is included, which should most=
+ly change the contribution by the sky noise, at 60 MHz you have to include =
+another factor of about 1000x, which brings the background contribution to =
+about 10^-11 W/m^2/MHz.
+
+Cheers,
+Katie
+________________________________
+From: Olaf Scholten <o.scholten@rug.nl><mailto:o.scholten@rug.nl>
+Sent: Thursday, January 19, 2023 7:06 PM
+To: Mulrey, K.B. (Katharine) <katharine.mulrey@ru.nl><mailto:katharine.mulr=
+ey@ru.nl>
+Subject: Re: Power normalization
+
+Give my regards to Dave Besson, and have fun in Kansas.
+We should discuss when you are back.
+
+Regards,  Olaf
+
+On 19/01/2023 18:29, Mulrey, K.B. (Katharine) wrote:
+Dear Olaf,
+I am also thinking about background powers again so this discussion is time=
+ly.  This week I am out in the field in Kansas preparing electronics for RE=
+T so my brain is 100% in lab mode, but I will have time to think about this=
+ in a day or two and get back to you.
+
+Cheers,
+Katie
+________________________________
+From: Olaf Scholten <o.scholten@rug.nl><mailto:o.scholten@rug.nl>
+Sent: Wednesday, January 18, 2023 7:55 PM
+To: Katie Mulrey <K.Mulrey@astro.ru.nl><mailto:K.Mulrey@astro.ru.nl>
+Subject: Power normalization
+
+Dear Katie,
+
+I am trying to get some absolute calibration for the LOFAR antennas based o=
+n the level of the background, noise, spectrum. This closely follows what y=
+ou have done and for that reason I want to have your expert opinion on the =
+numbers I use.
+
+From  A.H.\ Bridle, J.E.\ Baldwin: ( https://doi.org/10.1093/mnras/136.2.21=
+9<https://urldefense.com/v3/__https://doi.org/10.1093/mnras/136.2.219__;!!H=
+JOPV4FYYWzcc1jazlU!67rGM3OtFAZ1sK9MquLgTM6JrzZq6yByjID_CKdfOE79VZ-eDqJ44vs7=
+wsoEohmmkyV8tcs084chQ6Abn-i9F-M$> ) I read that:
+Brightness $ @60MHz=3D2.7\times 10^{-21}$~W/m$^2$/Hz/Sr (radiation coming f=
+rom the North pole)
+
+For a LOFAR antenna the integrated solid angle, modified by the antenna fun=
+ction is about  2 Sr  (my rough estimate but is this getting close you thin=
+k???)
+
+This gives for the received intensity @60MHz   I_gb=3D 2 \times 2.7\times 1=
+0^{-21}$~W/m$^2$/Hz =3D 5 \times 10^{-21}$~W/m$^2$/Hz
+
+In the background, about half the output voltage is due to instrumental noi=
+se and half to galactic background (as I remember from your analysis, corre=
+ct??)
+
+If an external source, during a certain time period, gives rise to an addit=
+ional voltage output that is equal to that of the background it thus must h=
+ave deposited a power of ( 2 \times 5 \times 10^{-21}$~W/m$^2$/Hz =3D 10^{-=
+20}$~W/m$^2$/Hz =3D 10^{-11}$~W/m$^2$/MHz)
+
+I hope it is possible to follow this -non conventional- argumentation. In p=
+articular I want to know if my ?? are correct in the bulk part (within 50% =
+or so). I do not worry about 20% differences.
+
+Regards,  Olaf
+
+--
+Emeritus Prof. Olaf Scholten
+Kapteyn Institute, University of Groningen
+old Office(KVI): +31 50 363 3552
+Office(Kapteyn): +31 50 363 4088
+Home: +31 50 503 4039
+Home-page: https://www.astro.rug.nl/~scholten/<https://urldefense.com/v3/__=
+https://www.astro.rug.nl/*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!67rGM3OtFAZ=
+1sK9MquLgTM6JrzZq6yByjID_CKdfOE79VZ-eDqJ44vs7wsoEohmmkyV8tcs084chQ6AbHCRU2P=
+c$>
+
+--
+Emeritus Prof. Olaf Scholten
+Kapteyn Institute, University of Groningen
+old Office(KVI): +31 50 363 3552
+Office(Kapteyn): +31 50 363 4088
+Home: +31 50 503 4039
+Home-page: https://www.astro.rug.nl/~scholten/<https://urldefense.com/v3/__=
+https://www.astro.rug.nl/*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!5h4TSuON1en=
+jYdzVbEzTVZI1IDv8-C_CpGlb3nTAQQqTp-pgMquwpgbE-YF8r6F_jS7Nb-TVCWVaPu2IzGGzpD=
+o$>
+
+--
+Emeritus Prof. Olaf Scholten
+Kapteyn Institute, University of Groningen
+old Office(KVI): +31 50 363 3552
+Office(Kapteyn): +31 50 363 4088
+Home: +31 50 503 4039
+Home-page: https://www.astro.rug.nl/~scholten/<https://urldefense.com/v3/__=
+https://www.astro.rug.nl/*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!6s6oyvZu0ry=
+a4mThiULYdkEMnt1qMDV4oFxKJJ1yJIn9dBI0LnEX45WsDV0cEl4VIzavIovn4ThbPavMLx4A6c=
+w$>
+
+--_000_DB7PR10MB188450F3EC8B552691D3475782D39DB7PR10MB1884EURP_
+Content-Type: text/html; charset="us-ascii"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dus-ascii"=
+>
+<style type=3D"text/css" style=3D"display:none;"> P {margin-top:0;margin-bo=
+ttom:0;} </style>
+</head>
+<body dir=3D"ltr">
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+Dear Olaf,</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+Yes, the blue line is sky brightness, integrated over all angles and weight=
+ed with the directional part of the antenna function.&nbsp;&nbsp;</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+In order to do this the frequency dependent LNA gain had to be somewhat art=
+ificially removed from the full LOFAR antenna model.&nbsp; The LNA gain doe=
+s indeed look like the inverse of the N_ADC line in the plot.&nbsp; This is=
+ one of the biggest problems with how the
+ calibration is done now in my opinion.&nbsp; We really need the directiona=
+l antenna model separate from the LNA gain, either from simulations or meas=
+urements.&nbsp; In practice, I don't think it changes the final calibration=
+ much, but it is definitely not the cleanest
+ way to do it.</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+I have been in contact with Brian about this. As Tim mentioned in the call =
+today, we are also trying to put together a universal way to generate radio=
+ noise (electric field and voltage), which requires us to revisit each step=
+ of the background power generation
+ process.&nbsp; I hope this process will converge on a nice piece of code t=
+hat can produce all these noise levels at various stages of the signal chai=
+n.</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+Cheers,</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0); background-color: rgb(255, 255, 255);" class=
+=3D"elementToProof">
+Katie</div>
+<div id=3D"appendonsend"></div>
+<hr style=3D"display:inline-block;width:98%" tabindex=3D"-1">
+<div id=3D"divRplyFwdMsg" dir=3D"ltr"><font face=3D"Calibri, sans-serif" st=
+yle=3D"font-size:11pt" color=3D"#000000"><b>From:</b> Olaf Scholten &lt;o.s=
+cholten@rug.nl&gt;<br>
+<b>Sent:</b> Monday, January 30, 2023 12:09 PM<br>
+<b>To:</b> Mulrey, K.B. (Katharine) &lt;katharine.mulrey@ru.nl&gt;<br>
+<b>Subject:</b> Re: Power normalization</font>
+<div>&nbsp;</div>
+</div>
+<div>Dear Katie,<br>
+<br>
+Thanks for the plot, the ratio noise/signal is what I kind of remembered.<b=
+r>
+<br>
+How did you get the blue line in your plot? This is the sky brightness, int=
+egrated over all angles, but probably weighted with the LOFAR angular anten=
+na function, not including its frequency-dependent gain?<br>
+Is the inverse of the frequency dependent gain kind-of equal to N_RCU or N_=
+ADC, looks like it?
+<br>
+<br>
+By the way, Brian is now trying to repeat these calculations, I think the t=
+wo of you have been in contact about this.
+<br>
+<br>
+Regards,&nbsp; Olaf<br>
+<br>
+<div class=3D"x_moz-cite-prefix">On 30/01/2023 11:04, Mulrey, K.B. (Kathari=
+ne) wrote:<br>
+</div>
+<blockquote type=3D"cite"><style type=3D"text/css" style=3D"display:none">
+<!--
+p
+	{margin-top:0;
+	margin-bottom:0}
+-->
+</style>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+Dear Olaf,</div>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+<br>
+</div>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+Sorry for the late reply.&nbsp; These numbers seem pretty close to me.&nbsp=
+; I am working off of the attached plot (fig 5 from the calibration paper).=
+&nbsp; &nbsp;This shows the relative noise levels referenced to the beginni=
+ng of the signal chain, so just after the antenna (with
+ no LNA).&nbsp; If I look at sky noise, the blue line, it is at at little o=
+ver 10^-14 W/m^2/MHz.&nbsp; This is the dominant noise at 60 MHz.&nbsp; Inc=
+luding the fit instrumental noise the total noise is slightly increased.&nb=
+sp; For this analysis, we took the LNA response out
+ of the antenna model more or less by brute force, since it is directly int=
+egrated in the antenna model we use.&nbsp; If the LNA gain is included, whi=
+ch should mostly change the contribution by the sky noise, at 60 MHz you ha=
+ve to include another factor of about
+ 1000x, which brings the background contribution to about 10^-11 <span clas=
+s=3D"x_ContentPasted0" style=3D"background-color:rgb(255,255,255); display:=
+inline!important">
+W/m^2/MHz</span>.</div>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+<br>
+</div>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+Cheers,</div>
+<div class=3D"x_elementToProof" style=3D"font-family:Calibri,Arial,Helvetic=
+a,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,25=
+5,255)">
+Katie&nbsp;</div>
+<hr tabindex=3D"-1" style=3D"display:inline-block; width:98%">
+<div id=3D"x_divRplyFwdMsg" dir=3D"ltr"><font face=3D"Calibri, sans-serif" =
+color=3D"#000000" style=3D"font-size:11pt"><b>From:</b> Olaf Scholten
+<a class=3D"x_moz-txt-link-rfc2396E" href=3D"mailto:o.scholten@rug.nl">&lt;=
+o.scholten@rug.nl&gt;</a><br>
+<b>Sent:</b> Thursday, January 19, 2023 7:06 PM<br>
+<b>To:</b> Mulrey, K.B. (Katharine) <a class=3D"x_moz-txt-link-rfc2396E" hr=
+ef=3D"mailto:katharine.mulrey@ru.nl">
+&lt;katharine.mulrey@ru.nl&gt;</a><br>
+<b>Subject:</b> Re: Power normalization</font>
+<div>&nbsp;</div>
+</div>
+<div>Give my regards to Dave Besson, and have fun in Kansas.<br>
+We should discuss when you are back.<br>
+<br>
+Regards,&nbsp; Olaf<br>
+<br>
+<div class=3D"x_x_moz-cite-prefix">On 19/01/2023 18:29, Mulrey, K.B. (Katha=
+rine) wrote:<br>
+</div>
+<blockquote type=3D"cite"><style type=3D"text/css" style=3D"display:none">
+<!--
+p
+	{margin-top:0;
+	margin-bottom:0}
+-->
+</style>
+<div class=3D"x_x_elementToProof" style=3D"font-family:Calibri,Arial,Helvet=
+ica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,=
+255,255)">
+Dear Olaf,</div>
+<div class=3D"x_x_elementToProof" style=3D"font-family:Calibri,Arial,Helvet=
+ica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,=
+255,255)">
+I am also thinking about background powers again so this discussion is time=
+ly.&nbsp; This week I am out in the field in Kansas preparing electronics f=
+or RET so my brain is 100% in lab mode, but I will have time to think about=
+ this in a day or two and get back to
+ you.</div>
+<div class=3D"x_x_elementToProof" style=3D"font-family:Calibri,Arial,Helvet=
+ica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,=
+255,255)">
+<br>
+</div>
+<div class=3D"x_x_elementToProof" style=3D"font-family:Calibri,Arial,Helvet=
+ica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,=
+255,255)">
+Cheers,</div>
+<div class=3D"x_x_elementToProof" style=3D"font-family:Calibri,Arial,Helvet=
+ica,sans-serif; font-size:12pt; color:rgb(0,0,0); background-color:rgb(255,=
+255,255)">
+Katie</div>
+<hr tabindex=3D"-1" style=3D"display:inline-block; width:98%">
+<div id=3D"x_x_divRplyFwdMsg" dir=3D"ltr"><font face=3D"Calibri, sans-serif=
+" color=3D"#000000" style=3D"font-size:11pt"><b>From:</b> Olaf Scholten
+<a class=3D"x_x_moz-txt-link-rfc2396E" href=3D"mailto:o.scholten@rug.nl">&l=
+t;o.scholten@rug.nl&gt;</a><br>
+<b>Sent:</b> Wednesday, January 18, 2023 7:55 PM<br>
+<b>To:</b> Katie Mulrey <a class=3D"x_x_moz-txt-link-rfc2396E" href=3D"mail=
+to:K.Mulrey@astro.ru.nl">
+&lt;K.Mulrey@astro.ru.nl&gt;</a><br>
+<b>Subject:</b> Power normalization</font>
+<div>&nbsp;</div>
+</div>
+<div>Dear Katie,<br>
+<br>
+I am trying to get some absolute calibration for the LOFAR antennas based o=
+n the level of the background, noise, spectrum. This closely follows what y=
+ou have done and for that reason I want to have your expert opinion on the =
+numbers I use.<br>
+<br>
+From&nbsp; A.H.\ Bridle, J.E.\ Baldwin: ( <a class=3D"x_x_x_moz-txt-link-fr=
+eetext" href=3D"https://urldefense.com/v3/__https://doi.org/10.1093/mnras/1=
+36.2.219__;!!HJOPV4FYYWzcc1jazlU!67rGM3OtFAZ1sK9MquLgTM6JrzZq6yByjID_CKdfOE=
+79VZ-eDqJ44vs7wsoEohmmkyV8tcs084chQ6Abn-i9F-M$">
+https://doi.org/10.1093/mnras/136.2.219</a> ) I read that:<br>
+Brightness $ @60MHz=3D2.7\times 10^{-21}$~W/m$^2$/Hz/Sr (radiation coming f=
+rom the North pole)
+<br>
+<br>
+For a LOFAR antenna the integrated solid angle, modified by the antenna fun=
+ction is about&nbsp; 2 Sr&nbsp; (my rough estimate but is this getting clos=
+e you think???)<br>
+<br>
+This gives for the received intensity @60MHz&nbsp;&nbsp; I_gb=3D 2 \times 2=
+.7\times 10^{-21}$~W/m$^2$/Hz =3D 5 \times 10^{-21}$~W/m$^2$/Hz
+<br>
+<br>
+In the background, about half the output voltage is due to instrumental noi=
+se and half to galactic background (as I remember from your analysis, corre=
+ct??)<br>
+<br>
+If an external source, during a certain time period, gives rise to an addit=
+ional voltage output that is equal to that of the background it thus must h=
+ave deposited a power of ( 2 \times 5 \times 10^{-21}$~W/m$^2$/Hz =3D 10^{-=
+20}$~W/m$^2$/Hz =3D 10^{-11}$~W/m$^2$/MHz)<br>
+<br>
+I hope it is possible to follow this -non conventional- argumentation. In p=
+articular I want to know if my ?? are correct in the bulk part (within 50% =
+or so). I do not worry about 20% differences.<br>
+<br>
+Regards,&nbsp; Olaf<br>
+<br>
+<div class=3D"x_x_x_moz-signature">-- <br>
+Emeritus Prof. Olaf Scholten<br>
+Kapteyn Institute, University of Groningen<br>
+old Office(KVI): +31 50 363 3552<br>
+Office(Kapteyn): +31 50 363 4088<br>
+Home: +31 50 503 4039<br>
+Home-page: <a href=3D"https://urldefense.com/v3/__https://www.astro.rug.nl/=
+*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!67rGM3OtFAZ1sK9MquLgTM6JrzZq6yByjID_=
+CKdfOE79VZ-eDqJ44vs7wsoEohmmkyV8tcs084chQ6AbHCRU2Pc$">
+https://www.astro.rug.nl/~scholten/</a><br>
+</div>
+</div>
+</blockquote>
+<br>
+<div class=3D"x_x_moz-signature">-- <br>
+Emeritus Prof. Olaf Scholten<br>
+Kapteyn Institute, University of Groningen<br>
+old Office(KVI): +31 50 363 3552<br>
+Office(Kapteyn): +31 50 363 4088<br>
+Home: +31 50 503 4039<br>
+Home-page: <a href=3D"https://urldefense.com/v3/__https://www.astro.rug.nl/=
+*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!5h4TSuON1enjYdzVbEzTVZI1IDv8-C_CpGlb=
+3nTAQQqTp-pgMquwpgbE-YF8r6F_jS7Nb-TVCWVaPu2IzGGzpDo$">
+https://www.astro.rug.nl/~scholten/</a><br>
+</div>
+</div>
+</blockquote>
+<br>
+<div class=3D"x_moz-signature">-- <br>
+Emeritus Prof. Olaf Scholten<br>
+Kapteyn Institute, University of Groningen<br>
+old Office(KVI): +31 50 363 3552<br>
+Office(Kapteyn): +31 50 363 4088<br>
+Home: +31 50 503 4039<br>
+Home-page: <a href=3D"https://urldefense.com/v3/__https://www.astro.rug.nl/=
+*7Escholten/__;JQ!!HJOPV4FYYWzcc1jazlU!6s6oyvZu0rya4mThiULYdkEMnt1qMDV4oFxK=
+JJ1yJIn9dBI0LnEX45WsDV0cEl4VIzavIovn4ThbPavMLx4A6cw$">
+https://www.astro.rug.nl/~scholten/</a><br>
+</div>
+</div>
+</body>
+</html>
+
+--_000_DB7PR10MB188450F3EC8B552691D3475782D39DB7PR10MB1884EURP_--

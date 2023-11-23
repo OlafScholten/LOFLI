@@ -1,0 +1,140 @@
+%\section{Auxiliary}
+\section{Details of the LOFLI code}
+
+The code used for source finding and antenna calibration.
+
+\subsection{Data reading}
+
+Data read requires that the files have been pre-processed to determine the RFI-mitigation parameters for each antenna using \verb!"program RFI_mitigation"!. In this process of RFI mitigation the files \verb!"RFI_Filters.uft"! and \verb!"LOFAR_H5files_Structure.dat"! are produced which are required here as input.
+
+\Subr{AntennaRead}{AR}
+
+All data files in \verb!"directory.out"! are looped-over.
+Info on the structure of the data files and concerning RFI-mitigation parameters is is read from the auxiliary files. Information on pole-flip and bad antennas is supplied. Files that contain data from antennas that have already been read are skipped. Antenna and station calibration in the data-files are combined with calibration tables that have been generated in earlier calibration runs (see \secref{Calibr}). The calibrations delays are combined with the delay calculated from \verb!"SourceGuess"!, a guessed source position that ideally should correspond to the center of the lightning flash. This should guarantee that pulses are roughly lined-up. The appropriate chunk of data is read-in. The Chunk-length equals \verb!"Time_dim"!. If the number of zeros in this chunk is disproportionably large, (number-of-2/number-of-0 $<$ 0.66) this Chunk is skipped. Otherwise the data are multiplied by a Hann window (\verb!"HW_size"!=32) and the trace is fourier transformed, RFI-filtered, phase-shifted according to the expected delay (w.r.t.\ the LOFAR-core), and transformed back to the time domain. Spectra are stored in one big array for all antennas and the various time-periods (data chunks).
+
+The spectra are normalized by dividing by the $\sqrt(power)$ determined are the preparatory-stage, see \secref{RFIm}.
+
+\subsection{Candidate pulse selection}
+
+
+Candidate pulses are selected in subroutine DualPeakFind. First pulses are selected separately for the even and odd polarized antennas. In the following phase the pulses that are close to each other will be labeled 'dual'.
+
+In the \verb!Dual! mode the first even/odd antenna pair at the same location are chosen as reference antennas.
+
+\Subr{DualPeakFind}{DPF}
+The Hilbert-envelope of the spectrum of the reference dipole for the even or the odd numbered antennas is searched for the highest value. This search is done for the samples more than \verb!"EdgeOffset"! samples away from either beginning or the end of the chunk. The length of a chunk is equal to \verb!"Time_dim"=32768!. \verb!"EdgeOffset"!=7000 is chosen such that two sources that are separated by 5km  will have their pulses not further than \verb!"EdgeOffset"! samples apart,
+\beq
+\texttt{EdgeOffset} =5\ \rm{[km/c /sample]}=5\, 10^3 /(3\, 10^8 \times 5\, 10^{-9})=5\, 10^3/1.5=7000\; \rm{[samples]} \;.
+\eeq
+
+Once the peak is found it is checked where the closest local minimum is to the left (\verb!"Wl"!) and right (\verb!"Wu"!) of the peak. In addition the condition is imposed that this minimum is below a fraction (1/2) of the peak value. If within a distance of \verb!"W_low"!=6 samples from the peak the spectrum has been zeroed (because previously a peak has been found) the part of the spectrum between \verb!"Wl"! and \verb!"Wu"! is zeroed and the peak-position is not stored. Otherwise the peak is considered genuine and is stored and the region of the spectrum from \verb!"Separation"! below till \verb!"Separation"! above the found peak-position is zeroed. This process is repeated till \verb!"PeakS_dim"! peaks have been found. \verb!"Separation"!=20 is used as zero padding in the calculation of the cross correlations.
+
+Peaks are kept in order of their peak-value in the reference antenna, separately for even and odd numbered antennas.
+
+In \verb!Dual! mode, the obtained peaks are searched for those that occur in odd as well as even antennas. First even and odd peaks are sorted according to sample number and two peaks are considered to come from the same source when their distance (in samples) is less than the minimum of \verb!"Wl"! and \verb!"Wu"! where \verb!"Wu"! of the earlier peak and \verb!"Wl"! of the later peaks are used.
+
+After scanning through the all pulses the pulses are ordered according to pulse strength.
+
+\note{
+In peak-finding it turns out that too often the peaks with the largest amplitude do not pass the quality selection criteria.}
+
+\subsection{Cross correlation}
+
+The calculation of cross correlation is central to imaging.
+
+\Subr{BuildCC}{BCC}
+For all antennas and all active (=open) data-chunks the cross correlations are calculated in \subref{GCSA} for all active sources. When calibrating, the number of active data-chunks and the of active sources can be any. When performing source-finding there is only a single active data-chunk and only one or two active sources (two for the case of double polarity fits). The building of the cross-correlation spectra is done first for the even antennas followed by the odd numbered ones in the next cycle. There is an option to write the phases of the cross correlations to file, set by \verb!"PlotCCPhase"!.
+
+\Subr{GetCorrSingAnt}{GCSA}
+The cross-correlation spectra are calculated for all peaks for one particular antenna and one data-chunk. Note that each peak is assigned to either odd or even antenna numbers. (I know, $\cdots$ this is a bit clumsy and wastes resources.) For this antenna the re-calibration corrections are retrieved as resulted from a previous calculation. The main calibration results (station and antenna delays) have already been included at the stage of reading-in the data, see \subref{AR}. For each antenna the arrival-time difference is calculated for the signal from the actual source location and the 'raw-source'-location. The latter has been used in \subref{AR} to  obtain a rough outline of the traces and this should roughly correspond to the center of the imaged area. In the first call of a cycle (separate cycles for even and odd antennas) the reference spectrum is stored of length \verb!"Tref_dim"!~[samples] symmetrically around the specified peak position in \verb!"PeakPos(i_Peak)"! taking into account the reference-antenna-shift parameter for this peak.
+
+This routine is also used for calculating relative timing between pulses in antennas from a single station which may be remote. In that case the pulse position on the first antenna may be rather different from that of the original reference antenna. In this case the logical \verb!"PulsPosCore"! and the time-shift between the core-center and the first antenna is corrected for, i.e.\ it is considered that the peak position is given for an antenna at the core.
+
+For a non-reference antenna a section of length \verb!"T2_dim"!=\verb!"Tref_dim"!+2\,\verb!"Safety"!~[samples] is taken, symmetrically around the calculated peak position, based on the given source location.
+
+The cross correlation is calculated with the reference spectrum (padded with zeros), see \subref{CC}, such that the zero in the cross correlation time (difference) spectrum corresponds to the expected time delay with the reference antenna for the present source position. The peak position in the cross correlation spectrum is obtained in \subref{RIAM}, which is later minimized in the chi-square fitting routine by optimizing the source location. During fitting the cross correlation spectra are not recalculated. Depending on the logical \verb!"RealCorrelation"! the real part or the Hilbert-envelope of the cross correlation is used.
+
+\Subr{CrossCorr}{CC}
+The cross correlation between two spectra is calculated by multiplying the Complex conjugate of the fourier transfom (FFT) of the reference with the FFT of the other while applying a frequency-dependent phase-shift corresponding to the specified time-off-set between the two. Before the FFT a Hann-window with a fall-off width of \verb!"HW_size"!=5 is applied to both time-spectra.
+
+\Subr{ReImAtMax}{RIAM}
+The Hilbert transform of the cross correlation is multiplied by a parabola normalized to unity at the location where maximum in the correlation is expected, based on the previously determined source location. The zero crossings of the parabola are set \verb!SearchRange*SearchRangeFallOff! samples out from the maximum. Default is \verb!SearchRangeFallOff=4! but is an input parameter. \verb!SearchRange! is calculated in subroutine 'SearchWin' as the quadratic sum of the expected timing error based on the covariance matrix and a fixed error \verb!Sigma_AntT=2! samples, which is an input parameter.
+
+The time of the maximum in the correlation function is calculated using a spline interpolation. This is done for the Hilbert envelope as well as for the real and imaginary parts of the cross correlation. In addition the real \& imaginary value of the cross correlation is returned.  Only the part of the cross correlation between $\pm$\verb!"Safety"! from zero is searched.
+
+The default value for the error-bar is taken to be \verb!"error"!=1~[ns]=0.2~[samples]=1~[ns] (=$e_j$ in \eqref{chisq}). If the max is at either end of the searched time-range, \verb!"error"!=200~[samples], if further than \verb!"Safety"!/4 from zero, \verb!"error"!=20~[samples]. The error is like-wise increased when the maximum is more than twice the 'SearchWin' removed from the expected position. Large error implies small weight in the fit and in this case the antenna is counted as 'excluded'.
+
+If the 'shape' of the cross correlation, defined as the ratio of the peak height with the integral (over the calculated range, differs more than a factor \verb!"CCShapeCut"! from the same quantity for the self-correlation, the weight is decreased and the antenna is also counting as excluded.
+
+\subsection{Fitting}\seclab{Fit}
+
+The fitting is performed using the routine \verb!"NL2SOL"!\cite{nl2sol} that uses a Levenberg--Marquardt algorithm optimizing the value of $\chi^2$ as defined in \eqref{chisq}. Fit-parameters can be some or all coordinates of the peaks, possibly in combination with either antenna timings of selected stations or station timings of selected stations. An analytic expression for the Jacobian matrix is programmed. If \verb!"Doble"! is set, identical source location are used for sources with the same \verb!"PeakPos"! for even and odd antenna numbers. If the logical \verb!"CalcHessian"! is set (done only for source finding) the covariance matrix is calculated for converged fits, defined as
+\beq
+{\rm Cov}=\chi^2/ndf \times H^{-1} \;,\eqlab{Cov}
+\eeq
+where $nfd$=number of degrees of freedom corrected for the number of free parameters, and $H$ is the Hessian, the second derivative of the $\chi^2$ w.r.t. the parameters. The square roots of the diagonal matrix elements as kept as $\sigma(i)$.
+
+\subsection{Source search}
+
+A search for source locations (for the candidate pulses found earlier) starts with a grid search involving the stations at or near the Superterp, followed by a chi-square search.
+
+\Subr{SourceTryal}{ST}
+
+First RMS values are calculated for a 16 sources distributed a circle with diameter of 50~km. For the direction where the RMS has a minimum a finer grid is searched. For each search only those antennas are included in the calculation of the RMS where for the complete grid the calculated position of the pulse falls within the window for which the cross correlation is calculated. For this reason \verb!FitRange_Samples! should be at least equal to 70.
+
+Once an approximate location is found, this is fed into the chi-square fitting machine, starting with the small circle antennas around the Superterp.
+
+\Subr{SourceFind}{SF}
+
+The source finding can be done using pulses in either even or odd numbered antennas. There is also an option to find sources that produce pulses on all antennas. The different options are selected through the range of the loop over \verb!"i_eo"!. Note that imaging for even and odd independently can be done simultaneously. Because of the zero-ing of the pulses these options are not compatible with finding sources for all antennas.
+
+The search for the source position proceeds in steps of increasing distance to the reference station, starting using all antennas in a station. The searches are performed in distance steps of 0.5, 1.05, 2.5, 5, 10, 20, 30, and 50~[km] where the last distance includes all Dutch stations, using \subref{SFC}.
+
+During the chi-square fitting the co-variance matrix is calculated. For a following fitting round this is needed to calculate the guess for the arrival window. After the last run the found source location will be written to file when the source obeys certain rather lose quality conditions. In that case the peaks are zero-ed in all antennas, using \subref{CP}.
+
+At this stage the quality conditions are:
+1) distance to the core is less than \verb!Dist_Lim!=100~km, and
+2) the fraction of included antennas is greater than \verb!EffAntNr_lim=0.8!, and
+3) $\sigma(h)$ is less than 990 (with an even larger value for lower heights than 1 km, and
+4) RMS$^2$ is less than \verb!ChiSq_lim!, an input parameter.
+
+
+\Subr{SourceFitCycle}{SFC}
+The initial start search location is specified by \verb!"SourceGuess"!. For each following search the previously found location is used as first guess. For distance \textless 0.5~[km] only x is fitted \note{should be changed to azimuth angle}, for \textless 1.0~[km] only x \& y, for \textless 5~[km] (x, y, z), and otherwise all, including a timing offset. For the largest distance also the Hessian is calculated.
+The source location is obtained by minimizing
+\beq
+\chi^2 = \sum_{j} \left( {\delta t_j^o -\delta t_j^s \over e_j}\right)^2 \;,\eqlab{chisq}
+\eeq
+where $t_j^o$ is the pulse-arrival-time difference as determined from the cross correlation (see \subref{BCC}), $t_j^s$ is the pulse-arrival-time difference as calculated from the source location (see \subref{DPF}), and $e_j$ is the assumed error in the pulse-arrival-time difference with a nominal value of 1~[ns] (see \subref{GCSA}). The minimization routine (nl2sol) uses the Levenberg--Marquardt algorithm (see \secref{Fit}).
+
+\Subr{CleanPeak}{CP}
+In all spectra a section of length \verb!"Tref_dim"! [samples], which is considered as the pulse-length, is set to zero, using a Hann-window with a fall-off width of \verb!"HW_size"!=5 [samples]. The window is centered at the peak-position calculated from the (just found) source location.
+
+
+
+
+\Subr{FindStatCall}{FSC}
+
+Station and antenna calibration-data are distinguished. It is verified that the mean delay of all antennas in a station equals zero. Two types of station calibrations are used, main ones specified file=\verb!"StationCalibrations.dat"! in the main directory containing station-delays as given by ASTRON, generated using \verb!"CalibrationTablesGenerator.f90"!. Secondary station and antenna calibrations are created by previous runs of \subref{FSC} and stored in a file that is quoted in the output and can be specified in the input with the parameter \verb!"Calibrations"!.
+
+It is recommended to zero the individual antenna delays in the Calibrations data file. This is the case for the calibration file with name ending in "\_ZERO"
+
+The relation between station numbers and station names is:
+
+\begin{linenumbers}
+\begin{verbatim}
+!      2     3     4     5     6     7    11    13    17    21    26    30    32
+!   CS002 CS003 CS004 CS005 CS006 CS007 CS011 CS013 CS017 CS021 CS026 CS030 CS032
+!     101   103   106   121   125   128   141
+!    CS101 CS103 RS106 CS201 RS205 RS208 CS301
+!      142   145   146   147   150   161   166   167   169   181   183   188   189
+!     CS302 RS305 RS306 RS307 RS310 CS401 RS406 RS407 RS409 CS501 RS503 RS508 RS509
+\end{verbatim}
+\end{linenumbers}
+
+The calculated station delays are written as a table in the output file and also to file where the filename is given.
+
+
+
+
+

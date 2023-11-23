@@ -1,11 +1,10 @@
 #!/bin/bash
 # 
 # 
-source  /home/olaf/LOFLI/ShortCuts.sh
-Prog="LOFAR-Imag"
-
 # start Calibration run
-source ${LL_scripts}RunProgram.sh "Calibrate.in"
+
+source  ${LL_Base}/scripts/RunProgram.sh LOFAR-Imag  Calibrate.in
+
 exit
 #exit
 # read -rsp $'Pausing. Press enter to continue...\n'

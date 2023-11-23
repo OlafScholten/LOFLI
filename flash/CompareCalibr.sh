@@ -1,10 +1,8 @@
 #!/bin/bash
 # 
 # 
-source  /home/olaf/LOFLI/ShortCuts.sh
 ## start Compare Calibrations run
-Prog="CompareCalibrations."
 
-source ${LL_scripts}RunProgram.sh "CompareCalibr.in"
+source  ${LL_Base}/scripts/RunProgram.sh CompareCalibrations  CompareCalibr.in
 #
 exit

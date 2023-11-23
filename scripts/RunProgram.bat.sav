@@ -1,0 +1,33 @@
+@echo on
+Set LL_BaseDir="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"
+call %LL_BaseDir%\ShortCuts.bat
+set input=%1
+echo program run is: %Prog% with argument %input%
+pause
+if NOT exist %LL_bin%libLOFLI.a (
+  echo Create %LL_bin%libLOFLI.a
+  call %LL_scripts%LOFLI_Lib_Create.bat
+  cd %LL_bin%
+  del %Prog%.exe%
+)
+echo %LL_bin%%Prog%.exe
+pause
+if NOT exist %LL_bin%%Prog%.exe (
+  echo Create %Prog%.exe
+  cd %LL_bin%
+  pause
+  set R_src=..\FORTRANsrc
+  echo %R_src%
+   set Rinc=-I%R_src%modules
+   pause
+  gfortran  %FCFLAGS% -o %Prog%.exe %R_src%%Prog%.f90 %Rinc%  %LOFLIlib%
+::  gfortran  %FCFLAGS% -o DataSelect.exe %LL_src%\DataSelect.f90 %LOFLIinc%  %LOFLIlib%
+)
+
+echo working directory1: %cd%
+pause
+cd %LL_WrkDir%
+echo working directory: %cd%
+echo %LL_bin%%Prog%.exe
+ pause
+%LL_bin%%Prog%.exe  %input%

@@ -1,0 +1,47 @@
+\clearpage
+\section{The `SelectData' option}\seclab{SelDat}
+
+To create the appropriate files containing antenna positions used for the simulated data as well as to select the portion of the traces that require focussed attention it is necessary to run the script \verb!SimDataSU.sh!. The script reads the input data from \verb!SimData.in!.
+The antenna data are in particular necessary for running data simulations, \secref{Sim}, to explore the sensitivity of the antenna layout.
+Typical input lines are
+
+\begin{linenumbers}
+\resetlinenumber
+\begin{verbatim}
+&Parameters
+ RunOption= "SelectData"
+ Simulation="simulation/S1-1"  ,
+! TimeBase=1221
+ AntennaRange=100  ! [km]
+ Calibrations="Calibrations202202011947.dat" ! 
+ BadAnt_SAI=     1072,   1073,   3054,   3055,   6072,   6073,  21072,  32072, 101090, 121048
+               121049, 121054, 121055, 121062, 121063, 121072, 121073, 121084, 121085, 121091
+               142048, 142049, 125062, 125063, 130072, 130073, 145048, 161084, 181055, 188054
+               188055,  32049   
+ SignFlp_SAI=   161072, 161073,
+!  OutFileLabel="CalSrc"
+ &end
+     1550.   20.44193   8.86218   1.55186 !
+M    10547 250   !
+\end{verbatim}
+\end{linenumbers}
+
+
+\begin{enumerate*}
+\item[2] \verb#` RunOption= "SelectData"'#: The run-option.
+\item[3] \verb#` Simulation="simulation/S1-1" '#:  The place in the "files" folder where the simulation results are written. If necessary the subfolder (recommended) is created.
+\item[4-13] These parameters have the usual meaning.
+\item[14] \verb#` 1550.   20.44193   8.86218   1.55186 '#:  time (at the source position) and position (N,E,h). 
+\item[15] \verb#`M    10547 250 '#: First sample number in the selected data chunk (=10547) and number of samples (=250) copied to a separate file. In case of mark `M' not the first, but the median sample (=10547) is given. 
+\end{enumerate*}
+
+
+\subsection{output and print-out}\seclab{SelDat-out}
+
+The print out \verb!SelectData.out! is very self-explanatory.
+
+Several files are created in the sub-folder \verb!files! following the naming convention as specified by the `Simulation' parameter. The files that contain LOFAR antenna-stations in their names specify the antenna positions for this station as well as the selected part of the trace, cleaned from RFI. The \verb!..._Structure.dat! just list the stations that are active. These files are expected to be present for running simulation calculations as discussed in \secref{Sim} and may be edited at your own risk.
+
+The time traces are corrected for antenna calibrations and the antenna-time offsets (as given in the antenna files) are to correct for source location.
+
+The generated files will be used as input when running the impulsive of the TRI-D imager with option \verb!`Simulation="simulation/S1-1" '!.

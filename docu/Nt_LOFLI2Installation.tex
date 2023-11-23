@@ -1,0 +1,103 @@
+
+\section{Installation cookbook for LOFLI-2.0}
+
+The package operates on Linux as well as Windows platforms. Since, in my own installation, the main working horse operates only on the Linux system, where the main data archives are directly connected to, the Linux system is preferred and tested best.
+
+Throughout a naming convention is followed (newly introduced in November 2023, attempting to be consistent) as outlined in \tabref{Naming}.
+
+\begin{table}[!ht]
+\caption{Naming conventions. \tablab{Naming}}
+\begin{tabular}{|l p{14cm}|}
+\hline
+LL\_Base & The main installation folder (short for Lofar Lightning imaging Base folder).
+\\& This should be set in {\small \verb!.bashrc! } (Linux) or for Windows in the Environment variables.
+\\FlashFolder & one for each flash, named with the tag of the flash as for example in:
+\\&  {\small \verb!FlashFolder=``/MainDir/18D-1"! }
+\\ArchiveDir & The path to the archive containing the .h5 time traces from all antennas for a flash. If these reside on a remote site it is advised to use a SSHFS link through a local directory, as for example:
+\\ &  {\small \verb!ArchiveDir=``/home/olaf/kaptdata/lightning_data/2017/D20170929T202255.000Z"! }
+\\LL\_bin & The folder containing the executables of the programs.
+\\&  {\small \verb!LL_bin=${LL_Base}/bin! }
+\\LL\_scripts & Folder containing useful scripts
+\\&  {\small \verb!LL_scripts=${LL_Base}/scripts!}
+\\\hline
+\end{tabular}
+\end{table}
+
+There are several software packages that should be installed on your system to obtain maximal functionality.
+
+\begin{table}[!ht]
+\caption{Required packages. \tablab{Required}}
+\begin{tabular}{|l p{14cm}|}
+\hline
+gfortran & gnu fortran compiler, present on most Linux systems.\\
+& For Windows, download from: \href{https://sourceforge.net/projects/mingw/}{sourceforge mingw}.
+\\fftpack & Basic FFT routines.  Source code is included in this distribution.\\
+& Download from: \href{http://www.netlib.org/fftpack/}{FFTPACK}; the double precision version is used.
+\\lapack & Advanced linear algebra routines.\\
+& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/lapack/}{LAPACK}.
+\\blas & Basic linear algebra routines.\\
+& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/blas/}{BLAS}.
+\\hdf5-fortran & Allows random access to compressed data files with \href{https://portal.hdfgroup.org/display/support}{.h5} extension.\\
+& Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
+\\
+GLE & Principal plotting utility \cite{GLE}.\\
+& Download from: \href{https://glx.sourceforge.io/index.html}{sourceforge}. The shortcut ``gle" should start running the gle program.
+\\\hline
+\end{tabular}
+\end{table}
+\clearpage
+
+\subsection{Linux installation of LOFLI-2.0}
+
+Start by setting the system variable {\small \verb!LL_Base! } to point to the folder where LOFLI will be installed. To do so, edit {\small \verb!.bashrc! } in your home directory and add a line like\\
+{\small \verb!export LL_Base=/home/olaf/LOFLI! }\\
+where you should be careful not to add spaces around the = sign.
+
+\begin{itemize}
+\item Unpack the zip file  \href{https://zenodo.org/records/7393903}{ZENODO} or upload from  \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository} in the folder where LOFLI will be installed. Here we name this folder ``LOFLI". It is important to keep the directory structure. This should give something looking like \tabref{DirStruc}.
+\item Edit the file ``ShortCuts.sh" between the lines marked with {\small \verb!#####! } to make sure that all system variables point to the right folders. The lines before or after this block should not be edited.
+\end{itemize}
+
+\begin{table}[!ht]
+\caption{Directory structure after complete installation should be like this. \tablab{DirStruc}}
+\begin{tabular}{|l l | p{10cm}|}
+\hline
+{``LOFLI"} & &\multicolumn{1}{|l||}{The main software folder for the LOFLI package} \\
+\hline
+   & bin & containing the executables. \\
+   & docu &  containing documentation files. \\
+   & flash & containing templates for installing the various working directories by running ``NewFlash.sh" scripts. \\
+   & FORTRANsrc & containing the FORTRAN source codes. \\
+   & GLEsrc &  containing gle-scripts for making plots. \\
+   & scripts & containing the various shell scripts used in the background for the different applications. \\
+   & Antennafields & containing information on antenna positions and such. \\
+   & AntenFunct & containing the tables that define the antenna functions (Jones matrix) for the antennas. \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Windows installation of LOFLI-2.0}
+
+This installation is very similar to that for Linux, except for some `insignificant' differences as all scripts have the extension ``.bat" in stead of ``.sh"., using `$\backslash$' in stead of `/' for folders, and `\%...\%' for using environment variables in stead of `\${...}'. 
+
+Start by setting the system variable {\small \verb!LL_Base! } to point to the folder where LOFLI will be installed. To do so, edit the system variables for your windows system. The instructions given in {\small \verb!ModifyingWindowsParameters.docx! } in folder `docu' tell you how to do so. Add a variable named ``LL\_Base" to point to the directory where the LOFLI package is installed, on my system:\\
+{\small \verb!"C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"! }\\
+where the surrounding double quotes are essential when you path includes spaces.
+For the rest follow the Linux instructions for downloading of the LOFAR and other packages, keeping folder names. Then edit the file ``ShortCuts.bat" (note: NOT .sh!!) between the lines marked with {\small \verb!#####! } to make sure that all system variables point to the right folders. The lines before or after this block should not be edited.
+
+In the following instruction ALWAYS substitute extension ``.bat" when the instruction mentions  ``.sh".
+
+
+%\newpage
+\chapter{Setup \& RFI mitigation}
+%The LOFAR data files are written in \href{https://portal.hdfgroup.org/display/support}{HDF5} format and require the installation of \href{https://portal.hdfgroup.org/display/HDF5/HDF5+Fortran+Library}{HDF5 for Fortran}, see the \href{https://www.hdfgroup.org/downloads/hdf5/}{download page}. There is also a \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows installation} possible.
+
+Running the LOFLI package assumes a particular sub-directory structure as well as some particular files is each folder where you work on one particular LOFAR-download (also called flas). The script \verb!"NewFlash.sh"! should be copied from the main LOFLI installation folder to the folder, called `MainDir', where you want to create the folder for analyzing your flash. Running this script creates the correct directory structure, copies the necessary files from the \verb!"LOFLI/flash"! directory to the required new ``FlashFolder" (requires some editing of the shell code), starts to run the RFI-Mitigation code in batch-mode, and starts an exploratory imaging run, see \secref{Explore}, of the data after the RFI-mitigation has finished.
+When setup correctly ``FlashFolder"  has two subfolders named \verb!"Book! and \verb!"files!. The first will store the calibration files which are essential for imaging and the latter files needed for intermediate checking and it may be considered as a scratch directory. These directories as well as necessary script files are copied to their appropriate location by running the script \verb!"NewFlash.sh"! in the MainDir.
+
+Best practise is to name the FlashFolder (as set in script \verb!"NewFlash.sh"!) with the tag of the flash, say \verb!"18D-1"!. Make sure this flash is correctly listed in file `list.ssv' residing in \verb!"LOFLI/scripts"!.
+The translation from the shorter internal flash label used in the lightning group to the UTC-label used by LOFAR is generated by the script \verb!"FlashID.sh"! that resides in the Utilities directory. This script reads the file \verb!"list.ssv"! and make sure this is updated for your system, where the first entry is the short-hand notation used for the FlashFolder name and the third entry refers to the flash identifier used in the (LOFAR) archive.
+
+
+
+In the script \verb!"FlashID.sh"! also \verb!ArchiveDir=/home/olaf/kaptdata/lightning_data/"! needs to be set to the proper place where the raw LOFAR-data reside. Note that there are no spaces allowed around the equal signs. The system variable ``ArchiveBase" as set in ``ShortCuts.sh" should point to the directory that contains the TBB data from LOFAR as .H5 files. It is very handy to make a sshfs logical connection between the remote computer containing the archive and a local folder if the archive is not on your local system already.

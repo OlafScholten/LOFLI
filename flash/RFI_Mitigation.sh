@@ -1,12 +1,8 @@
 #!/bin/bash
 # 
 # 
-source  /home/olaf/LOFLI/ShortCuts.sh
-Prog="RFI_Mitigation"
-echo "Flash Folder:" ${FlashFolder}
-echo "start RFI mitigation"
 
-source ${LL_scripts}RunProgram.sh "2"
+source  ${LL_Base}/scripts/RunProgram.sh RFI_Mitigation  2
 
 echo "Start exploration run"
 nohup ./Explore.sh  >Explore.log 2>&1  &   

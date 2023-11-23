@@ -1,0 +1,209 @@
+\documentclass[fleqn,11pt, A4paper]{book}
+%\documentclass[fleqn,11pt]{article}
+%\documentstyle[olaf,11pt,fleqn]{article}
+\usepackage{hyperref} % \href{}{}
+\usepackage{verbatim}  % \verb;  ;
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{bbold}
+\usepackage{graphicx}
+\usepackage[pdftex,dvipsnames,usenames]{color}		% for pdf latex
+%\usepackage{fancyheadings}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+%\input C:/OlafsUtil/LocalTex/lecture-w.sty
+\usepackage{C:/OlafsUtil/LocalTex/olaf2}
+\usepackage{filedate}
+\usepackage{lineno}
+\usepackage{subfig}
+%\usepackage{titlesec}  % for paragraph sections
+%\usepackage[utf8]{inputenc}
+
+
+\bibliographystyle{apalike}
+%\usepackage{biblatex}
+%\addbibresource{C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs.bib}
+%\addbibresource{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+%\let\tempone\itemize
+%\let\temptwo\enditemize
+%\renewenvironment{itemize}{\tempone\addtolength{\itemsep}{0.5\baselineskip}}{\temptwo}
+\newenvironment{itemize*}%
+  {\begin{itemize}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{itemize}}
+\newenvironment{enumerate*}%
+  {\begin{enumerate}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{enumerate}}
+
+\def\beq{\begin{equation}}
+\def\eeq{\end{equation}}
+\def\bea{\begin{eqnarray}}
+\def\eea{\end{eqnarray}}
+\def\eqref#1{Eq.~(\ref{eq:#1})}
+\def\eqlab#1{\label{eq:#1}}
+\def\pdif#1#2{\frac{\partial #1}{\partial #2}}
+\def\ddt{\frac{d}{dt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Use color for marking
+\newcommand{\RED}{\color[named]{Red}}
+\newcommand{\blue}{\color[named]{Blue}}
+\newcommand{\red}{\marginpar{\RED\textbullet}\RED}
+\newcommand{\m}[1]{{\marginpar{\RED\textbullet}\RED #1}}
+\newcommand{\ToDo}[1]{{\marginpar{\RED\textbullet}{\bf \RED ToDO:} {\bf \blue #1}}}
+\newcommand{\note}[1]{{\RED $\bullet$\ \bf #1 $\bullet$}}
+
+%\newcommand{\thalf}{\mbox{\small{$\frac{3}{2}$}} }
+\def\half{\mbox{\small{$\frac{1}{2}$}}}
+\def\quarter{\mbox{\small{$\frac{1}{4}$}}}
+\def\vslash#1{\mbox{/\llap #1}}    % p-slash
+\def\ns#1{&\hspace*{-.35cm}#1&\hspace*{-.35cm}}
+\def\newsub{\vspace*{0.1cm}
+-------------------------------------------------------------------------------%
+-------------------\\}
+%\def\Var#1{{\textbf{#1}}}
+\def\Subr#1#2{{\subsubsection{\tt{Subroutine #1}}\sublab{#2}}}
+\def\subref#1{Subr.~\ref{sub:#1}}
+\def\sublab#1{\label{sub:#1}}
+
+
+\newcommand*{\FileDate}[1]{\expandafter\filedateX\pdffilemoddate{#1}\relax}
+\def\filedateX#1#2#3#4#5#6#7#8{%X: |#1| |#8| \\
+\filedateXX{#3#4#5#6}{#7#8}}
+\def\filedateXX#1#2#3#4#5#6#7#8{%XX: [#1] [#8] \\
+\filedateXXX{#1}{#2}{#3#4}{#5#6}{#7#8}}
+\def\filedateXXX#1#2#3#4#5#6#7#8\relax{\formatdate{#1}{#2}{#3}{#4}{#5}{#6#7}}
+
+\newcommand*{\formatdate}[6]{#1-#2-#3\ #4:#5:#6}
+
+\def\ListInput#1\relax{
+Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
+%\input{#1}
+}
+%--------------------------------------------
+
+%\pagestyle{fancy}
+%\pagestyle{myheadings}
+%\pagestyle{headings}
+\renewcommand{\sectionmark}[1]{\def\naam{ #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\thesubsection.{\rm \naam}; {\sl #1} \hfill\today\hspace{1cm}}}
+%\markright{\today \hfill
+%     {\it \thesection , \arabic{section} \roman{subsection}
+%      \hspace{1cm}}}
+
+%\setcounter{secnumdepth}{4}
+%\titleformat{\paragraph} {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+%\titlespacing*{\paragraph} {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+            {-2.5ex\@plus -1ex \@minus -.25ex}%
+            {1.25ex \@plus .25ex}%
+            {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4} % how many sectioning levels to assign numbers to
+\setcounter{tocdepth}{4}    % how many sectioning levels to show in ToC
+
+
+%---------
+\voffset-1.0cm
+\textheight 22cm
+\oddsidemargin -.1cm
+%\evensidemargin .5cm
+\textwidth 17cm
+\begin{document}
+
+\centerline{\LARGE \bf LOFLI}\vspace{2ex}
+\centerline{\Large \bf LOFAR Lightning Imaging}\vspace{2ex}
+\centerline{\Large Notes \& software description}\vspace{2ex}
+\centerline{Olaf Scholten}\vspace{2ex}
+\centerline{Kapteyn Institute \& KVI, University of Groningen, The Netherlands}\vspace{2ex}
+\centerline{O.Scholten@rug.nl}\vspace{2ex}
+\centerline{Source: \texttt{\jobname}; \hspace{3ex}
+%Last Modified: \pdffilemoddate{\jobname.tex}\\
+%\thepdfmoddateof{\jobname.tex}\\
+Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
+\centerline{\Large  Guide to the LOFLI 2.0 program suite, V23}
+
+
+\newpage
+
+\vspace{2ex}
+This guide is structured according to the chronological order of the main steps that are usually followed in converting LOFAR TBB data to an image of a lightning flash, with a chapter devoted to each subject. An outline of the basic imaging method can be found in \cite{Scholten:2021-init}.
+Edition later than v21 contains also the routines for full interferometry (TRI-D imager).
+
+In each chapter contains a description of the essential ingredients of the code, examples of input lines, examples of generated output, as well as examples of shell commands for running the code in Linux.
+
+The code is free to be used, however it is requested to cite the publication where the features of the code are introduced and/or cite the software archive from where the code can be downloaded, \href{https://zenodo.org/records/7393903}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository}.
+
+\newpage
+
+\tableofcontents
+
+%\newpage
+
+\hfill \today
+
+\chapter{General Introduction}
+
+\input{Nt_LOFLI2Installation}
+
+\input{Nt_RFImitigt}
+\clearpage
+\chapter{The LOFAR Imagers}\seclab{Image}
+\input{Nt_LOFAR-Imag}
+\input{Nt_Explore}
+\input{Nt_TimCalibr}
+\input{Nt_PulsSelct}
+\input{Nt_Interferometry}
+\input{Nt_SimulateData}
+\chapter{Supplementary scripts}\seclab{supp}
+\input{Nt_CompareCal}
+\input{Nt_InterfSrcSell}
+\input{Nt_Simulate}
+\chapter{Some not well assorted formulas (theory)}\seclab{theory}
+\input{Nt_EInterferometry}
+%\input{Nt_SourceQ}
+\input{Nt_3DAverage}
+
+\input{Nt_Kalman}
+
+\chapter{Program details}
+\input{Nt_Auxill}
+
+\input{Nt_Table}
+
+\Omit{ ------------------------------------------------------
+%\section{taken out of the publication}
+
+%\input{C:/Users/Olaf/Documents/AstroPhys/GeoMagn/notes/Nt_GM-Refs}
+------------------------------------------------------------------ }
+
+%\printbibliography
+\bibliography{../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+\end{document}
+
+\bibliography{\protect{"C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs"}}
+
+\begin{thebibliography}{100}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  \small
+
+
+%\bibitem{Tri15} G. Trinh, O. Scholten, \etal, \Ttl{Influence of Atmospheric Electric Fields on the Radio Emission from Extensive Air Showers} \PRD{93}{2016}{023003}, \arXiv{1511.03045}.
+
+\bibitem{GLE} \href{https://en.wikipedia.org/wiki/Graphics_Layout_Engine}{Plotting package GLE}
+
+\bibitem{Hare:2019} Brian Hare, O. Scholten, \etal, \Ttl{Needle-like structures discovered on positively charged lightning branches} \Nat[10.1038/s41586-019-1086-6]{568}{2019}{360}.
+
+\bibitem{Scholten:2020?} Olaf Scholten, Brian Hare, \etal, \Ttl{xxx} \JGRA[?]{V}{2020}{p}.
+
+\bibitem{nl2sol} John Dennis, David Gay, Roy Welsch, \Ttl{Algorithm 573: An Adaptive Nonlinear Least-Squares Algorithm} ACM Transactions on Mathematical Software, \VYP{7.3}{1981}{367-383}.
+
+\end{thebibliography}
+

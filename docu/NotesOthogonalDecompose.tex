@@ -1,0 +1,234 @@
+%\documentclass[fleqn,11pt]{book}
+\documentclass[fleqn,11pt]{article}
+%\documentstyle[olaf,11pt,fleqn]{article}
+\usepackage{hyperref} % \href{}{}
+\usepackage{verbatim}  % \verb;  ;
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+%\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{bbold}
+\usepackage{graphicx}
+\usepackage[pdftex,dvipsnames,usenames]{color}		% for pdf latex
+%\usepackage{fancyheadings}
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+%\input C:/OlafsUtil/LocalTex/lecture-w.sty
+\usepackage{C:/OlafsUtil/LocalTex/olaf2}
+\usepackage{filedate}
+\usepackage{lineno}
+\usepackage{subfig}
+%\usepackage{titlesec}  % for paragraph sections
+%\usepackage[utf8]{inputenc}
+
+
+\bibliographystyle{apalike}
+%\usepackage{biblatex}
+%\addbibresource{C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs.bib}
+%\addbibresource{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+%\let\tempone\itemize
+%\let\temptwo\enditemize
+%\renewenvironment{itemize}{\tempone\addtolength{\itemsep}{0.5\baselineskip}}{\temptwo}
+\newenvironment{itemize*}%
+  {\begin{itemize}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{itemize}}
+\newenvironment{enumerate*}%
+  {\begin{enumerate}%
+    \setlength{\itemsep}{0pt}%
+    \setlength{\parskip}{0pt}}%
+  {\end{enumerate}}
+
+\def\beq{\begin{equation}}
+\def\eeq{\end{equation}}
+\def\bea{\begin{eqnarray}}
+\def\eea{\end{eqnarray}}
+\def\eqref#1{Eq.~(\ref{eq:#1})}
+\def\eqlab#1{\label{eq:#1}}
+\def\pdif#1#2{\frac{\partial #1}{\partial #2}}
+\def\ddt{\frac{d}{dt}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Use color for marking
+\newcommand{\RED}{\color[named]{Red}}
+\newcommand{\blue}{\color[named]{Blue}}
+\newcommand{\red}{\marginpar{\RED\textbullet}\RED}
+\newcommand{\m}[1]{{\marginpar{\RED\textbullet}\RED #1}}
+\newcommand{\ToDo}[1]{{\marginpar{\RED\textbullet}{\bf \RED ToDO:} {\bf \blue #1}}}
+\newcommand{\note}[1]{{\RED $\bullet$\ \bf #1 $\bullet$}}
+
+%\newcommand{\thalf}{\mbox{\small{$\frac{3}{2}$}} }
+\def\half{\mbox{\small{$\frac{1}{2}$}}}
+\def\quarter{\mbox{\small{$\frac{1}{4}$}}}
+\def\vslash#1{\mbox{/\llap #1}}    % p-slash
+\def\ns#1{&\hspace*{-.35cm}#1&\hspace*{-.35cm}}
+\def\newsub{\vspace*{0.1cm}
+-------------------------------------------------------------------------------%
+-------------------\\}
+%\def\Var#1{{\textbf{#1}}}
+\def\Subr#1#2{{\subsubsection{\tt{Subroutine #1}}\sublab{#2}}}
+\def\subref#1{Subr.~\ref{sub:#1}}
+\def\sublab#1{\label{sub:#1}}
+
+
+\newcommand*{\FileDate}[1]{\expandafter\filedateX\pdffilemoddate{#1}\relax}
+\def\filedateX#1#2#3#4#5#6#7#8{%X: |#1| |#8| \\
+\filedateXX{#3#4#5#6}{#7#8}}
+\def\filedateXX#1#2#3#4#5#6#7#8{%XX: [#1] [#8] \\
+\filedateXXX{#1}{#2}{#3#4}{#5#6}{#7#8}}
+\def\filedateXXX#1#2#3#4#5#6#7#8\relax{\formatdate{#1}{#2}{#3}{#4}{#5}{#6#7}}
+
+\newcommand*{\formatdate}[6]{#1-#2-#3\ #4:#5:#6}
+
+\def\ListInput#1\relax{
+Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
+%\input{#1}
+}
+%--------------------------------------------
+
+%\pagestyle{fancy}
+%\pagestyle{myheadings}
+\pagestyle{headings}
+\renewcommand{\sectionmark}[1]{\def\naam{ #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\thesubsection.{\rm \naam}; {\sl #1} \hfill\today\hspace{1cm}}}
+%\markright{\today \hfill
+%     {\it \thesection , \arabic{section} \roman{subsection}
+%      \hspace{1cm}}}
+
+%\setcounter{secnumdepth}{4}
+%\titleformat{\paragraph} {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+%\titlespacing*{\paragraph} {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\makeatletter
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+            {-2.5ex\@plus -1ex \@minus -.25ex}%
+            {1.25ex \@plus .25ex}%
+            {\normalfont\normalsize\bfseries}}
+\makeatother
+\setcounter{secnumdepth}{4} % how many sectioning levels to assign numbers to
+\setcounter{tocdepth}{4}    % how many sectioning levels to show in ToC
+
+
+%---------
+\voffset-1.0cm
+\textheight 23cm
+\oddsidemargin -.1cm
+%\evensidemargin .5cm
+\textwidth 17cm
+\begin{document}
+
+\centerline{\LARGE \bf Decomposition in orthogonal functions of data on an irregular mesh }\vspace{2ex}
+\centerline{Olaf Scholten}\vspace{2ex}
+\centerline{Kapteyn Institute \& KVI, University of Groningen, The Netherlands}\vspace{2ex}
+\centerline{O.Scholten@rug.nl}\vspace{2ex}
+\centerline{Source: \texttt{\jobname}; \hspace{3ex}
+%Last Modified: \pdffilemoddate{\jobname.tex}\\
+%\thepdfmoddateof{\jobname.tex}\\
+Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
+
+
+
+%\tableofcontents
+\hfill \today
+
+\section{General Introduction}
+
+Orthonormal functions, like Legengre polynomials, show their orthonormality only when integrated over their full range. When decomposing data that has been measured ar random positions such orthonormality conditions have thus to be modified.
+
+Assume we have a set of orthonormal functions (according to the usual mathematical definition) $f_\alpha(x)$ where $\alpha=1, \cdots ,M$ they obey
+\beq
+\delta_{\alpha,\beta} =\int dx f_\alpha(x) \, f_\beta(x) \;.
+\eeq
+When this integral is limited to a sum over a finite set of values $x_i$ with $i=1, \cdots ,N$ we have in general
+\beq
+\delta_{\alpha,\beta} \neq \sum_{i=1}^N dx f_\alpha(x_i) \, f_\beta(x_i) \;.
+\eeq
+For decomposing data that is known on such an irregular mesh it will be nice to have such an orthonormality condition. To arrive at this we introduce weighting factors for each grid point, $w_i$ with $i=1, \cdots ,N$, such that
+\beq
+\delta_{\alpha,\beta} = \sum_{i=1}^N dx \,w_i\,f_\alpha(x_i) \, f_\beta(x_i) \;. \eqlab{Norm1}
+\eeq
+The first (only?) problem we face is how to choose these wights.
+
+To solve this problem it is simplest to introduce a vector notation
+\beq
+\overrightarrow{X} =
+\begin{pmatrix}  % \begin{bmatrix}
+x_1 & x_2 & \cdots & x_n 
+\end{pmatrix}
+ \;,
+\eeq
+and similarly $\overrightarrow{W}$ for the wights at the grid points, $\overrightarrow{D}$ for the data, and $\overrightarrow{F_\alpha}$ for the function values at the grid points. We can define the function tensor (or matrix if you prefer) as $\overrightarrow{\overrightarrow{F}}$ where
+\begin{equation*}
+\overrightarrow{\overrightarrow{F}}_{m,n} =
+\begin{pmatrix}  % \begin{bmatrix}
+f_1(x_1) & f_1(x_2) & \cdots & f_1(x_N) \\
+f_2(x_1) & f_2(x_2) & \cdots & f_2(x_N) \\
+\vdots  & \vdots  & \ddots & \vdots  \\
+f_M(x_1) & f_M(x_2) & \cdots & f_M(x_N) \\
+\end{pmatrix}
+\;.
+\end{equation*}
+The normality condition \eqref{Norm1} can now be rewritten as 
+\beq % \mathds{1}
+\mathbb{1} = \overrightarrow{\overrightarrow{F}}^T \, Diag(\overrightarrow{W}) \, \overrightarrow{\overrightarrow{F}}^T
+\eeq
+where $\mathbb{1}$ is a unit matrix ($M\times M$ in this case) and $Diag(\overrightarrow{W})$ denotes a diagonal matrix with $w_i$ on the diagonal. This leads to
+\beq % \mathds{1}
+\overrightarrow{\overrightarrow{F}}^{-1}  \mathbb{1} \, {\overrightarrow{\overrightarrow{F}}^T}^{-1}= \, Diag(\overrightarrow{W}) 
+\eeq
+Assuming that $M=N $ the matrix can be decomposed as 
+\beq
+\overrightarrow{\overrightarrow{F}} = \sum_j z^\dagger_j \lambda_j z_j
+\eeq
+where $z_j$ is a complex row vector, with
+\beq
+\overrightarrow{\overrightarrow{F}}^{-1} = \sum_j z^\dagger_j \lambda_j^{-1} z_j
+\eeq
+since $z_j z^\dagger_k=\delta_{j,k}$ and $\sum_j z^\dagger_j z_j =\mathbb{1}$ and thus also
+\beq
+\overrightarrow{\overrightarrow{F}}^T = \sum_j z^T_j \lambda_j z^*_j  = \sum_j z^\dagger_j \lambda_j^* z_j
+\eeq
+where for the last step it is used that $F$ is a real matrix and thus equal to its complex conjugate and
+\beq
+{\overrightarrow{\overrightarrow{F}}^T}^{-1} = \sum_j z^\dagger_j {\lambda_j^*}^{-1} z_j \;.
+\eeq
+Theorem: if $z$ is an eigenvector with a complex eigenvalue $\lambda$ the $z^*$ is also an eigenvector with eigenvalue $\lambda^*$ for a real non-symmetric matrix.
+Now 
+\beq % \mathds{1}
+\overrightarrow{\overrightarrow{F}}^{-1}  \, {\overrightarrow{\overrightarrow{F}}^T}^{-1}= \sum_{j,k} z^\dagger_j \lambda_j^{-1} z_j z^\dagger_k {\lambda_k^*}^{-1} z_k = \sum_{j} z^\dagger_j |\lambda_j|^{-2} z_j \neq Diag(|\lambda_j|^{-2}) \;.
+\eeq
+The weights are thus not well defined.
+
+In the literature this problem seems to be known as "empirical orthogonal functions irregular grid" and used in climatology. see \href{https://scholar.google.nl/scholar?q=empirical+orthogonal+functions+irregular+grid&hl=nl&as_sdt=0&as_vis=1&oi=scholart}{EOF}
+and in \href{https://link.springer.com/article/10.1007/BF01581422}{hydrology} and in \href{https://agupubs.onlinelibrary.wiley.com/doi/full/10.1002/2015JB012399}{geomagnetism}.
+
+
+
+%\newpage
+
+
+%\printbibliography
+%\bibliography{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
+
+\end{document}
+
+\bibliography{\protect{"C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs"}}
+
+\begin{thebibliography}{100}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+  \small
+
+
+%\bibitem{Tri15} G. Trinh, O. Scholten, \etal, \Ttl{Influence of Atmospheric Electric Fields on the Radio Emission from Extensive Air Showers} \PRD{93}{2016}{023003}, \arXiv{1511.03045}.
+
+\bibitem{GLE} \href{https://en.wikipedia.org/wiki/Graphics_Layout_Engine}{Plotting package GLE}
+
+\bibitem{Hare:2019} Brian Hare, O. Scholten, \etal, \Ttl{Needle-like structures discovered on positively charged lightning branches} \Nat[10.1038/s41586-019-1086-6]{568}{2019}{360}.
+
+\bibitem{Scholten:2020?} Olaf Scholten, Brian Hare, \etal, \Ttl{xxx} \JGRA[?]{V}{2020}{p}.
+
+\bibitem{nl2sol} John Dennis, David Gay, Roy Welsch, \Ttl{Algorithm 573: An Adaptive Nonlinear Least-Squares Algorithm} ACM Transactions on Mathematical Software, \VYP{7.3}{1981}{367-383}.
+
+\end{thebibliography}

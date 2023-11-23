@@ -1,0 +1,40 @@
+\documentclass[fleqn,11pt]{article}
+%\documentstyle[olaf,11pt,fleqn]{article}
+\usepackage{hyperref} % \href{}{}
+\usepackage{verbatim}  % \verb;  ;
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{bbold}
+\usepackage{graphicx}
+\usepackage[pdftex,dvipsnames,usenames]{color}		% for pdf latex
+\usepackage{C:/OlafsUtil/LocalTex/olaf2e}
+\usepackage{filedate}
+\usepackage{lineno}
+
+\textwidth 17cm
+\begin{document}
+
+\section{Tables and such}
+
+Namelist input for LOFLI.
+Ncomment. A complete list of namelist keywords is given in .
+
+\begin{table}[!ht]
+\caption{Possible {\tt ParameterNames} in the {\tt \&Parameters} namelist of LOFLI (closed off with {\tt \&end}) and their default values.
+}
+\begin{tabular}{|l l |p{11cm}|}
+\hline
+\multicolumn{2}{|c|}{options}
+\\
+%\multicolumn{1}{c}{ xxxx }
+%  \cline{1-2} &
+\verb!CurtainPlot! & =  ---  &   een redelijk compacte beschrijving, kan later worden uitgebreid, bij voorkeur met ref naar paragraaf waar dit beter beschreven wordt.
+\\
+%  \cline{1}{2} &
+\verb!Diagnostics! & =  ---  &    idem
+\\  \verb!Dual! & =  ---  &    idem
+\\\hline
+\end{tabular}
+\end{table}
+
+\end{document}

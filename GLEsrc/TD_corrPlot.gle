@@ -1,0 +1,220 @@
+size   53 30
+B=22
+H=10
+bsh=1.5
+dB=3*bsh+B
+dH=bsh+H
+
+set lwidth 0.04
+set font pstr
+set hei .7
+file$='../19A-1/files/19A1-Ra'
+
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+
+filedat$=file$+'TDcorr.dat'  
+fopen filedat$ inchan read
+freadln inchan label$ NrSrcs dD Dnr
+Dmax=dD*Dnr
+
+fileTr$=file$+'TDtrace.dat'  
+
+!declare sub Clr Cscale
+!include "RdYlBl.gle"
+!include "ClrOld.gle"
+!sub Clr Cscale
+!  !RdYlBl(Cscale)
+!  ClrOld(Cscale)
+!end sub
+
+amove 3.+dB/2 4+H+dH
+write label$ 
+
+! Start plotting
+amove 3.0 4 ! (time,h)
+begin graph
+  size B H
+  vscale 1
+  hscale 1
+  xaxis min 0 max Dmax hei .7 ! dticks  1 dsubticks .2  ! length=7
+  yaxis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  y2axis min 0 hei .7 nolast ! dticks  1 dsubticks .2        ! length=9
+  data filedat$ d3=c1,c3  d4=c1,c4    ignore 1
+   data fileTr$ d12=c1,c2  d13=c1,c3   ignore 1
+  d3 line lwidth 0.1 color red
+  d4 line lwidth 0.1 color blue
+  !If Dnr > 20 Then
+  ! d13 y2axis x2axis marker dot msize 0.5 color red
+  !Else
+   d13 y2axis x2axis line lwidth 0.1 lstyle 2 color red
+  !End If
+end graph
+!set texlabels 1
+begin key
+    pos tr nobox
+    line lwidth 0.1 text "$<\tau>(d)$" color red
+    line lwidth 0.1 text "$sqrt{<\tau^2>}$" color blue
+    line lwidth 0.1 lstyle 2 text "$<d>(t)$" color red
+    !line lwidth 0.1 text LabBlue$ color blue
+end key
+!set color red
+begin key
+    pos tl nobox
+    text "II"
+end key
+!set color black
+
+amove 3.+dB 4+H+dH
+write  ', $N_s$=' NrSrcs ', $\delta_d$=' dD*1000 '[m]'
+
+amove 3. 4+H+dH
+write "$\rho(d)=frac{N(d)}{\delta_d N_s (N_s-1)/2}$ [/km] "
+
+!set texlabels 0
+
+amove dB/3+1.  1.5+H+dH
+write 'N_s=' NrSrcs ', \Delta_d=' dD*1000 '[m]'
+
+amove 3.0 4+H ! 
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min 0 max Dmax  ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   x2labels on
+   yaxis min 0 ! dticks  1 dsubticks .2        ! length=9
+   y2axis  ! dticks  1 dsubticks .2        ! length=9
+   data filedat$ d5=c1,c5 d6=c1,c6   ignore 1
+   data filedat$ d2=c1,c2    ignore 1
+   data fileTr$ d12=c1,c2  d13=c1,c3   ignore 1
+   d5 line lwidth 0.1 color magenta
+   d6 line lwidth 0.1 color orange
+   d2 y2axis line lwidth 0.1 color green
+   d12 y2axis x2axis line lwidth 0.1 lstyle 2 color green
+end graph
+!set texlabels 0
+begin key
+    pos tr nobox
+    line lwidth 0.1 text "\sigma\ [s]" color magenta
+    line lwidth 0.1 text "\sigma_2 [s]" color orange
+    line lwidth 0.1 text "N(d) [1/km]" color green
+    line lwidth 0.1 lstyle 2 text "N(t) [1/ms]" color green
+    !line text "2018, bin= 20 \mu sec" color blue
+end key
+begin key
+    pos tl nobox
+    text "I"
+end key
+
+fopen fileTr$ inchan read
+freadln inchan label$ T_span dBin_size N_id
+
+amove B+dB/2+1.  0.5+H+dH
+write 'D-bin size=' dBin_size*1000. '[m]'
+
+amove 3.0+dB 4 ! 
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min 0 max T_span  ! dticks  1 dsubticks .2  ! length=7
+   yaxis nolast ! dticks  1 dsubticks .2        ! length=9
+   data fileTr$ d2=c4,c5  d3=c4,c6 d4=c4,c7 d5=c4,c8 d6=c4,c9 d7=c4,c10   ignore 1
+   d2 line lwidth 0.1 color red
+   d3 line lwidth 0.1 color magenta
+   d4 line lwidth 0.1 color blue
+   d5 line lwidth 0.1 color green
+   d6 line lwidth 0.1 color orange
+end graph
+!set texlabels 0
+begin key
+    pos tr nobox
+    !Clr(0)
+    line lwidth 0.1 text "D-bin 1"  color red
+    line lwidth 0.1 text "D-bin 2"  color magenta
+    line lwidth 0.1 text "D-bin 3"  color blue
+    line lwidth 0.1 text "D-bin 4"  color green
+    line lwidth 0.1 text "D-bin 5"  color orange
+end key
+begin key
+    pos tc nobox
+    text "\zeta(\tau,D-bin) [ms^{-1}km^{-1}]"
+end key
+begin key
+    pos tl nobox
+    text "IV"
+end key
+
+fileTrCC$=file$+'TtrCC.dat'  
+!fopen fileTr$ inchan read
+!freadln inchan label$ T_span dBin_size N_id
+
+amove 3.0+dB 4+H ! 
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min 0 max T_span  ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   x2labels on
+   yaxis  ! dticks  1 dsubticks .2        ! length=9
+   data fileTrCC$ d2=c1,c2  d3=c1,c3 d4=c1,c4 d5=c1,c5 d6=c1,c6 d7=c1,c7  ! ignore 1
+   d2 line lwidth 0.1 color red
+   d3 line lwidth 0.1 color magenta
+   d4 line lwidth 0.1 color blue
+   d5 line lwidth 0.1 color green
+   d6 line lwidth 0.1 color orange
+   !let d9=0
+   !d9 line lwidth 0.1 color black
+end graph
+!set texlabels 0
+begin key
+    pos tr nobox
+    !Clr(0)
+    line lwidth 0.1 text "D-bin 1"  color red
+    line lwidth 0.1 text "D-bin 2"  color magenta
+    line lwidth 0.1 text "D-bin 3"  color blue
+    line lwidth 0.1 text "D-bin 4"  color green
+    line lwidth 0.1 text "D-bin 5"  color orange
+end key
+begin key
+    pos tc nobox
+    text "\zeta_{CC}(t,d)=\zeta(\tau,D-bin) \times \zeta(\tau+t,D-bin)"
+end key
+begin key
+    pos tl nobox
+    text "III"
+end key
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set hei .7
+amove 3.5  2.9
+text  d [km]
+
+!amove 3.8 1.2+2*dH ! 
+!text  t [ms]
+
+amove 3.8+dB 2.9 ! 
+text  \tau [ms]
+
+amove 4  1.
+!tex "$N(d)=frac{2}{N_s (N_s-1)}\sum_{t_i > t_j} \delta\left(d-d_{i j}\right)$\ ;&
+!   \ \ $<\tau^k>(d)=frac{2}{N_s (N_s-1)\,N(d)}\sum_{t_i > t_j} \left[ (t_i-t_j)^k\, \delta\left(d-d_{i j}\right)\right]$"
+
+amove 1.5 6
+begin rotate 90
+text [ms]
+end rotate
+
+amove 1.5 1*dH+3
+!begin rotate 90
+!tex "$\sigma=sqrt{<\tau^2>-<\tau>^2}$ [ms]"
+!end rotate
+
+translate -0. -0.5
+include note.gle
+@note label$ 
+

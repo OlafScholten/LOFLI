@@ -1,0 +1,38 @@
+\section{3D angular averaging}
+
+The issue at hand is to find the mean 3D vector (trivial) and its standard deviation for a collection of unit vectors. For 2D there exists theorems, see for example \href{https://en.wikipedia.org/wiki/Directional_statistics}{Wikipedia}.
+
+The average direction is along the z-axis, chosen such that $\bar{Z}=(1/N)\sum_i^N \hat{z} \cdot\vec{v}_i$ is maximal and $\bar{X}=(1/N)\sum_i^N \hat{x}\cdot \vec{v}_i=0$  and the same for $\hat{x}$.
+
+To obtain the expression for the standard deviation, assume that the vectors are distributed around the z-axis with a Gaussian probability distribution given by
+\beq
+{\cal P}=(1/{\cal N}) e^{-\theta^2/2\sigma^2} \sin{\theta}\, d\theta\, d\phi \;.
+\eeq
+The following equations are valid in the limit of small $\sigma$, such that everywhere the small angle approximation can be used thus simplifying the integrals.
+\beq
+{\cal N}=\int_0^\pi e^{-\theta^2/2\sigma^2} \theta\, d\theta\,2\pi=\pi\int_0^\infty e^{-\theta^2/2\sigma^2} d\theta^2=2\pi \sigma^2 \;.
+\eeq
+From this we obtain
+\bea
+R=\bar{Z} &=& \frac{1}{2\pi \sigma^2}\int_0^\pi \cos{\theta}\,e^{-\theta^2/2\sigma^2} \sin{\theta} \, d\theta 2\pi=\frac{1}{2 \sigma^2}\int_0^\pi e^{-\theta^2/2\sigma^2} \sin{2\theta} \, d\theta \nonumber \\
+&=&\frac{1}{2 \sigma^2}\int_0^\pi e^{-\theta^2/2\sigma^2} \left( 2\theta -(2\theta)^3/6 \right) \, d\theta =1-4 \sigma^2 /3
+\eea
+where $R$ is the length of the averaged unit vectors. The standard-deviation square can thus be calculated as
+\beq
+\sigma^2=\frac{3}{4}(1-R) \;.
+\eeq
+This is derived in the limit where $\sigma\ll 1$ and thus $0< (1-R) \ll 1$. To arrive at an expression that (may) also apply outside this limit we use the same approach as used to calculate the standard deviation for circular averaging where $(1-R)$ is replaced by $-\ln{R}$ (which is valid in the limit where $R \approx 1$) thus arriving at
+\beq
+\sigma=\sqrt{-\frac{3}{4}\ln{R}}\;.
+\eeq
+
+For polarization vectors $\vec{p}_i$(where + and - directions are ambiguous) the mean direction can be obtained almost as before where $\bar{Z}_p=(1/N)\sum_i^N |\hat{z} \cdot \vec{p}_i|=R_p$ is maximal.
+
+To obtain the standard deviation a similar approach as before could be used. The complication is that $R$ is always (much) larger than zero since it is obtained from a sum of absolute values. In fact for very large $\sigma$ we have
+\beq
+R^\infty \equiv R_p(\sigma=\infty)=\int_0^{\pi/2} \cos{\theta}\,\sin{\theta} d\theta =\int_0^1 \cos{\theta}\, d\cos{\theta}=1/2
+\eeq
+For finite statistics with $N$ vectors we will have $R_N^\infty=1-\frac{N-1}{2N}= \frac{N+1}{2N}$ ($R_N^\infty$ should approach unity for $N=1$). For small $\sigma$ we should have the same expression as for the 3D case. For larger values of $(1-R_p)$ the deviation should be quadratic where for $R_p=R_N^\infty$ the expression should give $\infty$. We thus arrive at
+\beq
+\sigma_p= \sqrt{-\frac{3}{4}\ln{\left[R_p -R_N^\infty\,(1-R_p)^2 \frac{(2N)^2}{(N-1)^2}\right]}} = \sqrt{-\frac{3}{4}\ln{\left[R_p -(1-R_p)^2 \frac{2N(N+1)}{(N-1)^2} \right]}}\;.
+\eeq 

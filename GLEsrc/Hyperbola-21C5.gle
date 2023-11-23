@@ -1,0 +1,294 @@
+!============================
+   Center_x=-40. ! W
+   Center_y=1.
+   Center_x=-40.  !NW
+   Center_y=40.
+   Center_x=-15.3  !N
+   Center_y=-1.7
+!============================
+
+!size   23 38
+fontSz=0.5
+!fontSz=1.0
+!fontSz=0.8
+!bsh=2.5*fontSz    ! 1.5
+hmove=1.5 !+bsh
+vmove=2.0 !+bsh
+hOS=25.
+Scl=190 ! for the full width of the plot (size in km)
+SupTN=hOS*0.439+vmove
+SupTE=hOS*0.463+hmove
+B=hOS*70./Scl  ! 70 km on the plot
+size SupTE+B+3*fontSz  SupTN+B+3*fontSz
+
+!BaseDir$='C:/Users/"Olaf Scholten"/Documents/AstroPhys/Lightning/Lght_papers/Olaf/' ! does not work
+BaseDir$='../../../../Lght_papers/Olaf/'
+amove hmove vmove    ! Background map
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove SupTE-B-3*fontSz SupTN-B-3*fontSz
+      Box 2*B+6*fontSz  2*B+6*fontSz
+   End Path
+   postscript BaseDir$+'OpenStrMap25sq.eps' hOS hOS  ! scale 885000
+End Clip ! -----------------
+set hei fontSz/2
+set just br
+set color darkmagenta
+amove SupTE+B+2.5*fontSz SupTN-B-2.5*fontSz ! ---------------------------------------------------
+begin box fill lightyellow add 0.1 round .3
+   text https://www.openstreetmap.org/copyright
+end box
+
+file$='files/StationPositions-21C5'   ! Active stations for this recording
+!file$=BaseDir$+'StationPositions'
+if(nargs() > 0 ) then 
+    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+end if
+filedat$=file$+'.dat'
+!filedat$='../files/'+file$+'.dat'
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+set just cc
+set color black
+
+Ref_x=0.0
+Ref_y=0.0
+Z=16.5/2. ! EdgeOffset=11000, z=EdgeOffset*5*10^(-9) *3*10^8=16.5 km
+!Nr_Unique  21C-5   CS001 CS003 CS004 CS005 CS006 CS007 CS011 CS013 CS028 CS030 CS031 CS032 CS101 CS201 RS205 RS208 RS210 
+!                     CS301 CS302 RS305 RS306 RS307 RS310 CS401 RS407 RS409 CS501 RS508
+
+declare sub Clr Cscale
+!include "RdYlBl.gle"
+include "ClrOld.gle"
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+set arrowsize .4
+sub Hyperbola A0 dA C Ant_x Ant_y
+   local  A, B, dx, i, x0, y0, xp, xm, yp, ym, cph, sph
+   A=A0+dA
+   B=C^2-A^2
+   If(B > 0.) Then
+      cph=0.5*Ant_x/C
+      sph=0.5*Ant_y/C
+      B=sqrt(B)
+      dx=1./B
+      If (dx < 0.25) then
+         dx=0.25
+      End If
+      set color red
+      For i = 1 to 10
+         x0=A*(1+i*dx)
+         y0=B*sqrt((x0/A)^2-1)
+         xp=x0*cph-y0*sph+Ant_x/2
+         yp=x0*sph+y0*cph+Ant_y/2
+         xm=x0*cph+y0*sph+Ant_x/2
+         ym=x0*sph-y0*cph+Ant_y/2
+         If (A < 0 ) and (dA > 0) Then
+            amove xg(xp) yg(yp) 
+            aline  xg(xp+30*dx*cph) yg(yp+30*dx*sph) arrow end
+            amove xg(xm) yg(ym)
+            aline  xg(xm+30*dx*cph) yg(ym+30*dx*sph) arrow end
+         Else If (A > 0 ) and (dA < 0) Then
+            amove xg(xp) yg(yp) 
+            aline  xg(xp-30*dx*cph) yg(yp-30*dx*sph) arrow end
+            amove xg(xm) yg(ym)
+            aline  xg(xm-30*dx*cph) yg(ym-30*dx*sph) arrow end
+         Else
+            amove xg(xp) yg(yp)
+            aline  xg(xm) yg(ym)
+         End If
+      Next i
+      !let d30 = A*(1+x*dx) from 1 to 10 step 1
+      !let d31 = d30, B*sqrt((d30/A)^2-1)
+      !line d31
+   End If
+End Sub
+
+sub Hyperbolap A0 dA C Ant_x Ant_y  ! parallel lines to the limiting hyperbola
+   local  A, B, dx, i, j, x0, y0, xp, xm, yp, ym, cph, sph, Cscale
+   For j = 0 to 10
+      A=A0+dA*(1.+j/5.)
+      B=C^2-A^2   !  in (x/A)^2 -(y/B)^2=1  where distance between focal points is 2C
+      If(B > 0.) Then
+         Cscale = j/20
+         Clr(Cscale)
+         cph=0.5*Ant_x/C
+         sph=0.5*Ant_y/C
+         B=sqrt(B)
+         dx=1./B
+         If (dx < 0.25) then
+            dx=0.25
+         End If
+         amove xg(A*cph+Ant_x/2) yg(A*sph+Ant_y/2)
+         Cscale = 80/(dx*sqrt(A^2+B^2))  ! to set length of each arm to approx 80 km
+         For i = 1 to Cscale step 1
+            x0=A*(1+i*dx)
+            y0=B*sqrt((x0/A)^2-1)
+            xp=x0*cph-y0*sph+Ant_x/2
+            yp=x0*sph+y0*cph+Ant_y/2
+            aline xg(x0*cph-y0*sph+Ant_x/2) yg(x0*sph+y0*cph+Ant_y/2) 
+         Next i
+         amove xg(A*cph+Ant_x/2) yg(A*sph+Ant_y/2)
+         For i = 1 to Cscale step 1
+            x0=A*(1+i*dx)
+            y0=B*sqrt((x0/A)^2-1)
+            aline xg(x0*cph+y0*sph+Ant_x/2) yg(x0*sph-y0*cph+Ant_y/2) 
+         Next i
+      End If
+   Next j
+End Sub
+
+
+sub Hyperbolas  Ant_x Ant_y
+   local Ap, Am, C, cph, sph
+   set color red
+   C=sqrt(Ant_x*Ant_x+Ant_y*ANt_y)/2.  !  since reference antenna is at zero
+   A=(sqrt((Center_x)^2+(Center_y)^2) - sqrt((Center_x-Ant_x)^2+(Center_y-Ant_y)^2))/2.
+   !amove 10. 1.
+   !write 'A=' A 'c=' C
+   Ap=Z
+   Hyperbola A Ap C Ant_x Ant_y
+   Am=-Z
+   Hyperbola A Am C Ant_x Ant_y 
+   set color black
+End Sub
+
+sub Hyperbolaps  Ant_x Ant_y
+   local Ap, Am, C, cph, sph
+   set color red
+   C=sqrt(Ant_x*Ant_x+Ant_y*ANt_y)/2.   !  since reference antenna is at zero
+   A=(sqrt((Center_x)^2+(Center_y)^2) - sqrt((Center_x-Ant_x)^2+(Center_y-Ant_y)^2))/2.   ! distance difference to focal points
+   !amove 10. 1.
+   !write 'A=' A 'c=' C
+   Ap=Z
+   Hyperbolap A Ap C Ant_x Ant_y
+   Am=-Z
+   Hyperbolap A Am C Ant_x Ant_y 
+   set color black
+End Sub
+
+!Parabolas Ant_x Ant_y
+
+!======================================================
+B=hOS*70./Scl  ! 70 km on the plot
+
+sub Flash xFl yFl label$
+begin translate xg(xFl) yg(yFl)
+   alph=pi/5.
+   begin path stroke fill yellow
+      amove 0 a
+      aline b*sin(alph) b*cos(alph)
+      aline a*sin(2*alph) a*cos(2*alph)
+      aline b*sin(3*alph) b*cos(3*alph)
+      aline a*sin(4*alph) a*cos(4*alph)
+      aline b*sin(5*alph) b*cos(5*alph)
+      aline a*sin(6*alph) a*cos(6*alph)
+      aline b*sin(7*alph) b*cos(7*alph)
+      aline a*sin(8*alph) a*cos(8*alph)
+      aline b*sin(9*alph) b*cos(9*alph)
+      aline a*sin(10*alph) a*cos(10*alph)
+      !aline 0 0
+      closepath
+   end path
+   amove 0 0
+   write label$ 
+end translate
+End sub
+
+Sub Source xsrc ysrc Label$
+   amove xg(xsrc) yg(ysrc)
+   begin box fill cyan add 0.02 round .3
+      write Label$
+   end box
+End Sub
+
+Sub Source_m Nsrc Esrc 
+   amove xg(Esrc/1000.) yg(Nsrc/1000.)
+   begin box fill cyan add 0.02 round .3
+      write 'o'
+   end box
+End Sub
+
+amove SupTE-B SupTN-B   ! Draw coordinates
+begin graph
+   size 2*B 2*B
+   vscale 1
+   hscale 1
+   xaxis min -70 max 70 hei fontSz*2 dticks  50 ! dsubticks .2  ! length=7
+   yaxis min -70 max 70 hei fontSz*2 dticks  50 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   data filedat$ d1=c1,c3 
+   !y1labels off
+   y2labels on
+   x2labels on
+   ! d4 marker cross msize 0.2 color blue
+end graph
+set hei fontSz*2
+amove SupTE-B-fontSz SupTN+B+fontSz
+write "[km]"
+amove SupTE+B SupTN-B-1*fontSz
+text [km]
+!
+amove xg(Center_x) yg(Center_y)
+set color magenta
+text \bigoplus 
+
+fopen filedat$ inchana read
+set hei fontSz
+set just cc
+for i = 1 to ndata(d1)
+   freadln inchana icore Label$ Npos Epos
+   If (icore=1) then
+      amove xg(Epos) yg(Npos)
+      begin box fill orange add 0.1 round .3
+         write Label$
+      end box
+      Hyperbolaps Epos Npos 
+   End If
+next i
+set color yellow
+set hei fontSz*2
+amove SupTE SupTN    ! Mark the superterp
+text \bigoplus 
+set color red
+amove xg(15.1) yg(0.6)    ! Mark the Magnetic loop antenna (N,E)=(0.6,15.1)
+text \bigoplus 
+set color black
+!set hei fontSz
+
+a=1.2*fontSz
+b=2*a
+!Flash -30 -5 'A'  !(x,y)=(E,N)
+!Source -13.4 -4.8 '1'
+!Source -12.3 -5.2 '2'
+Source -55. 70. 'F'
+Source -33. 65. 'F'
+Source -81. 48. 'E'
+Source -12. -46. 'D'
+Source -16. -2. 'C'
+Source -14. 12. 'C'
+Source -15. 13. 'B'
+Source -15. 17. 'B'
+Source -2. 32. 'A'
+Source 8. 38. 'A'
+!Flash 43 -15 'C'
+!
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "EventsMap"+"-"+file$
+translate 0 2
+!end rotate
+
+
+
+
+
+
+
+
