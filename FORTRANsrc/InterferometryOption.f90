@@ -323,7 +323,7 @@ Subroutine ChainRuns(NewCenLoc)
       Write(10,"(9(A,/) )") &
          '#!/bin/bash -v', &
          '#','#', &
-         'source  ${LL_BaseDir}/ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
+         'source  ${LL_Base}/ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
 !         'source ${UtilDir}/compile.sh',  &
          'cp ${LL_bin}/LOFAR-Imag ./Imag-'//TRIM(OutFileLabel)//'.exe',  &  ! Just to display a more intelligent name when runnung 'ps' or 'top'
          './Imag-'//TRIM(OutFileLabel)//'.exe  ${FlashFolder} <'//TRIM(IntfRun_file)//'.in',  &
