@@ -1,0 +1,37 @@
+The latest versions are put in LOFLI2.0
+
+This update contains a new folder organization, as well as some bug fixws in 
+the main program. The (at places maybe outdated, still for the old organization 
+of folders) instruction can be found in "Nts_LofarImaging.pdf" residing in 
+folder 'docu'. This document contains a relatively detailed installation 
+instruction. In particular you need to edit the initial part of "ShortCuts.sh" 
+to point to the right directories for libraries on your machine. Please look in 
+the instructions on how to install GLE and the necessary libraries. A line 
+should be added to your .bashrc script: " export LL_BaseDir=/home/olaf/LOFLI "
+
+The two analysis programs "FalshImage" and "InterfSrcSel" have been merged to 
+"DataSelect" that sorts through the source files created by either the 
+Impulsive or the TRI-D imager to sort those that fall inside a spatio-temporal 
+window and obey certain quality conditions.  In addition it may do track 
+finding and calculate velocities and pulse densities, as well as apply the 
+time-distance correlator. 
+
+To get started on analyzing a flash, use the script "NewFlas.sh" in the main 
+directory, or copy all of folder "flash" to the new working directory 
+(including subfolders!).
+
+Some recent modifications
+
+17/11/2023 Added info on how to change Windos-system variables to main directory.
+            Logated gfortran code in the mingw subfolder \bin\ on windows system. 
+17/11/2023 Included amplitude option in the TD-correlator in "DataSelect"; results are not as I had hoped for.
+19/11/2023 Solve issue with time mismatch when using the "ChainRun" option in TRI-D.
+19/11/2023 Modify defaults in running "DataSelect" to automatically detect impulsive of TRI-D imager source.
+            Automatically use amplitude weighting for tracks when AmplitudePlot>0 .
+19/11/2023 Write time from the TR_D imager with more digits.
+
+For a more detailed description of the installation procedure and running of 
+the codes read the description in docu\Nts_LofarImaging.pdf. Have fun!!! 
+
+ps for questions ask anybody, but definitely NOT Olaf Scholten, 
+o.scholten@rug.nl or scholten.olaf@gmail.com  
