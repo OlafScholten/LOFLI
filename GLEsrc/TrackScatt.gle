@@ -175,7 +175,7 @@ begin rotate -90
 text \delta h [m]
 end rotate
 
-set dolor red
+set color red
 amove HorOff-2.5*fontsz VerOff+H/2
 begin rotate 90
 text #/\delta E [m]

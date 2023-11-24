@@ -61,7 +61,7 @@ else
    
    #REM  Old definitions
    export ProgramDir="${LL_bin}/"
-   export UtilDir="${LL_Utilities}/"
+   export UtilDir="${LL_utilities}/"
    #:: echo %Path%
    Vrsn=""  # version number
    #  It is essential not to have spaces around the = sign in the previous commands
