@@ -36,5 +36,8 @@ source ${Prog}_depd.sh
 echo "Dependencies for" ${Prog} "are" ${MainProgDepd}
 make -f ${LL_scripts}/HDF5-Compile.make
 
+#Clean
+rm *.o
+rm *.mod
 # End compilation, return to the FlashFolder
 cd ${FlashFolder}
