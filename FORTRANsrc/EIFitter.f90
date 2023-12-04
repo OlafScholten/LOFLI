@@ -607,6 +607,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    ! testing linear polarisation
    !write(2,*) 'EI_PolGridDel:PolTestCath(NEh2PB, Stk)', StI, STI12
    Call PolTestCath(NEh2PB, Stk)
+   !Call PolTestCath(NEh2PB, Stk, VoxLoc)
    !
    Do m=1,3
       Do n=1,3
@@ -664,14 +665,57 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
 End Subroutine EI_PolGridDel
 !-----------------------------------------------
 Subroutine PolTestCath(NEh2PB, Stk)
-   ! testing linear polarisation
-   use constants, only : dp, pi, ci
-   Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm
+   ! testing linear polarisation in cartesian coordinates.
+   use constants, only : dp
+   Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm, Stk_NEh
    Implicit none
    Real(dp), intent(in) :: NEh2PB(1:3,1:3)
    Complex, intent(in) :: Stk(3,3)
+!   Real(dp), intent(in) :: VoxLoc(1:3)
+   Complex :: Amat(3,3), Bmat(3,3)
+   Integer :: i
+   logical :: prin=.true.
+   !
+   !
+   Bmat(:,:)=Stk(:,:)
+   !Bmat(3,:)=Bmat(3,:)/sqrt(2.)
+   !Bmat(:,3)=Bmat(:,3)/sqrt(2.)
+   Write(2,*) 'Polarization angle analysis in (1=(Rxz)xR, 2=Rx(h=vertical up), 3=R=Radial-out); 3 reduced'
+   Call PolPCACath(Bmat, PolZen, PolAzi, PolMag, PoldOm, prin)
+   !
+   !  Transform Polarization tensor form PB (polarisation base=core radial) to Cartesian (N,E,h) frame
+   Amat(:,:)=NEh2PB(:,:)
+   Do i=1,3
+      Amat(i,:)=(NEh2PB(:,i))
+   EndDo !i=1,3
+   Call RotTensor(Bmat, Amat, Stk_NEh)
+   !
+   Write(2,*) 'Polarization angle analysis in (1=North, 2=East, 3=height)'
+   Call PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
+   !
+   Return
+End Subroutine PolTestCath
+!-----------------------------------------------
+Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
+   ! Here we use the full complex Stokes matrix, however one expects that for
+   !  averaging over long slices, or over many slices (the same thing) the
+   !  Real part of the Stokes matrix will dominate because it is assumed that
+   !  the imaginary part will average to zero for a large enough ensemble
+   !  i.e. assumes there is no preferred circular polarization direction.
+   ! In Pricipal Component Analysis one maximizes
+   !  sum_i( p_i . P)^2  for (th) and (ph) where
+   !  P=[cos(ph) cos(yh) , sin(ph) cos(th) , sin(th)]
+   !  and where Stk_NEh(x,y)= sum_i( p^x_i p^y_i)
+   ! Note that performing a  Pricipal Component Analysis on the polarization vector is
+   !  identical to finding the eigenvector for the largest eigenvalue of the Stokes matrix.
+   use constants, only : pi
+   Implicit none
+   Complex, intent(in) :: Stk_NEh(1:3,1:3)
+   Real, intent(out) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
+   Logical, intent(in) :: prin
+!   Real(dp), intent(in) :: VoxLoc(1:3)
    Real :: A, theta, phi, N, E, h, dOmg
-   Complex :: Stk_NEh(3,3),C, EigVec(3,3)
+   Complex :: C, EigVec(3,3)
    Integer :: i ! ,j,k,m
    Character(len=1) :: JOBZ= 'V'   !  Compute eigenvalues and eigenvectors.,
    Character(len=1) :: UPLO= 'L'   !  Lower triangle of A is stored., a(1,1),(2,1),(3,1)
@@ -685,29 +729,6 @@ Subroutine PolTestCath(NEh2PB, Stk)
    !       If LWORK = -1, then a workspace query is assumed;.,
    Real :: RWORK(7) ! is REAL array, dimension (max(1, 3*N-2)),
    Integer :: INFO
-   !  Transform Polarization tensor form PB (polarisation base=core radial) to Cartesian (N,E,h) frame
-   Amat(:,:)=NEh2PB(:,:)
-   Do i=1,3
-      Amat(i,:)=(NEh2PB(:,i))
-   EndDo !i=1,3
-   Call RotTensor(Stk, Amat, Stk_NEh)
-   !RStk_NEh(:,:)=Real(Stk_NEh(:,:))  ! interested in lin pol only
-   !Do i=1,3
-   !   write(2,*) 'RStk_NEh(i,:)', RStk_NEh(i,:) ! ,' ; ', Stk_NEh(i,:)
-   !EndDo !i=1,3
-   !
-!   !test
-!   Amat(:,:)=0.
-!   Amat(1,1)=1.  ; Amat(2,2)=1.  ; Amat(3,3)=1.
-!   Amat(2,1)=(1.+ci)/4.  ; Amat(3,2)=(1.+ci)/4.  ; Amat(3,1)=(1.+ci)/4.  ! 4 = sqrt(20[samples])
-!   Call cheev (JOBZ, UPLO, Adim, Amat, LDA, WW, WORK, LWORK, RWORK, INFO) ! from LAPACK library
-!   write(2,*) 'WW:', WW
-!! gives:    WW:  0.500000119      0.816987514       1.68301320
-! true noise has more lite  1.3  0.3  0.09  for 10 5, 15 2.5, 5 10 grid
-! true noise has more lite  1.5  0.5  0.1  for 50 5, 80 2.5, 15 10 grid
-!   stop 'test polarization'
-   !
-   !end testing linear polarisation
    !
    !  CHEEV computes all eigenvalues and, optionally, eigenvectors of a complex Hermitian matrix A.
    Amat(:,:)=Stk_NEh(:,:) !  A is COMPLEX array, dimension (LDA, N)
@@ -743,19 +764,21 @@ Subroutine PolTestCath(NEh2PB, Stk)
       A=N*N + E*E
       Theta=atan2(sqrt(A),h)*180./pi  ; Phi=atan2(E,N)*180./pi ! The real part corresponds to lin polarized
       dOmg=acos(sqrt(A+h*h))*180./pi  ! the angle between the real and the complex vector
-      write(2,*) 'max Real(Vec(i))', WW(i), ' ; ', EigVec(:,i), ' ; th,ph,dO=', theta, Phi, dOmg
+      If(prin) write(2,*) 'max Real(Vec(i))', WW(i), ' ; ', EigVec(:,i), ' ; th(3),ph(1),dO=', theta, Phi, dOmg
       PolZen(4-i)=Theta  ; PolAzi(4-i)=Phi  ; PolMag(4-i)=WW(i)  ; PoldOm(4-i)=dOmg
+      !
    EndDo !i=1,3
-End Subroutine PolTestCath
+End Subroutine PolPCACath
 ! ----------------------------------
 Subroutine RotTensor(Stk_PB, NEh2PB, Stk_NEh)
    ! B=Rot^T A rot
    !First index in NEh2PB is the old basis, second the new one
+   Implicit none
    Complex, intent(in) :: Stk_PB(3,3)
    Complex, intent(in) :: NEh2PB(3,3)
    Complex, intent(out) :: Stk_NEh(3,3)
    Complex :: C,Rot_T(3,3)
-   Integer :: i,j,k,m
+   Integer :: i,j,k !,m
    Stk_NEh(:,:)=0
    Do i=1,3
       Rot_T(i,:)=Conjg(NEh2PB(:,i))
