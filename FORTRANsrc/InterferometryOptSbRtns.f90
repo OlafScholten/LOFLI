@@ -293,12 +293,13 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Use Interferom_Pars, only : SumStrt, SumWindw, polar, N_pix, d_loc, IntfLead, CenLocPol, CenLoc, RimSmPow
    Use Interferom_Pars, only : PixLoc, PixelPower, MaxSmPow, N_smth, Nr_IntFerMx, Nr_IntFerCh, i_chunk, IntfNuDim
    Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
-   Use Interferom_Pars, only : alpha, PolBasis  ,    NGridInterpol, RMSGridInterpol, NGridExtrapol
+!   Use Interferom_Pars, only : alpha, PolBasis  ,    NGridInterpol, RMSGridInterpol, NGridExtrapol
+   Use Interferom_Pars, only : PolBasis  ,    NGridInterpol, RMSGridInterpol, NGridExtrapol
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax, AmpltPlot, t_offsetPow
    Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RatMax, PixPowOpt
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
-   Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm  !  calculated in "PolTestCath"
+   Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm, Stk_NEh  !  calculated in "PolTestCath"
    use Chunk_AntInfo, only : NoiseLevel
    use ThisSource, only : Dual
    use GLEplots, only : GLEplotControl
@@ -347,7 +348,10 @@ Subroutine OutputIntfPowrMxPos(i_eo)
          'Chi^2/DoF, P_un, P_lin, P_circ [%]'
       OPEN(UNIT=27,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolAng'//TRIM(txt)//'.dat')
       Write(27,"(A,T19,A,T30,A,T38,A,T48,A, T60,A,T132,A)") '! slice#, samp# ;', &
-         'Intensty','Zenith', 'Azimuth','domg','Twice repeated','time[ms] ;, StI, dStI, StI12[%], dStI12[%]'
+         'Intensty','Zenith', 'Azimuth','domg','Twice repeated','time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
+      OPEN(UNIT=26,STATUS='unknown',ACTION='WRITE', &
+         FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecCartStokes'//TRIM(txt)//'.dat')
+      Write(26,"(A,T19,A)") '! slice#, samp# ;', 'time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
    Else
       OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt)//'.dat')
       write(28,"(6F8.2,2F9.3,A,F7.1,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
@@ -450,9 +454,11 @@ Subroutine OutputIntfPowrMxPos(i_eo)
             100*StI3/StI, 100*dStI3/StI, 100*StU1/StI, 100*dStU1/StI, 100*StV1/StI, 100*dStV1/StI, &
             100*StU2/StI, 100*dStU2/StI, 100*StV2/StI , 100*dStV2/StI, &
             Chi2pDF, 100.*P_un, 100.*P_lin, 100.*P_circ
-         Write(27,"(i5,',',i6, 3(' , ',g12.4, 3(',',f7.2)) ,',',f11.5,',', 2(g12.4,','), 2(f8.3,',') )") &
-               i_slice, (1+i_slice*N_smth), (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3), &
-               t_ms-t_shft, StI, dStI, 100*StI12/StI, 100*dStI12/StI
+         Write(27,"(i5,',',i6, 3(' , ',g12.4, 3(',',f7.2)) ,',',f12.6, 6(',',2g12.4) )") &
+            i_slice, (1+i_slice*N_smth), (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3), &
+            t_ms-t_shft ! , Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
+         Write(26,"(i5,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") i_slice, (1+i_slice*N_smth), t_ms-t_shft, &
+            Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
          !
       Else
          ! =======================================================================
@@ -502,6 +508,8 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Close(Unit=29)
    If(Dual) Then
       DeAllocate( CMTime_pix )
+      Close(Unit=27)
+      Close(Unit=26)
    EndIf
    If (NGridInterpol.gt.0) Then
       write(2,"(A,I5,A,3F5.2,A,I4,A)") 'GridInterpol:', NGridInterpol, ', RMS of interpolation [grid spacing]=' &

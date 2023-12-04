@@ -478,7 +478,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !
    !write(2,*) 'Trace A=', Cur2E(1,1)+Cur2E(2,2)+Cur2E(3,3)
    Call Inverse33(Cur2E,E2Cur, alpha, PolBasis)  ! PolBasis are normalized to unity
-   FMT_A="(A,F7.3,A,'(',2(F7.3,','), F7.3 ,')')"
+   FMT_A="(A,F9.5,A,'(',2(F7.3,','), F7.3 ,')')"
    write(2,FMT_A) 'a1:', alpha(1),', ev1:', PolBasis(:,1)
    write(2,FMT_A) 'a2:', alpha(2),', ev2:', PolBasis(:,2)
    FMT_A="(A,F7.3,A,'(',2(F7.3,','),F7.3,')',A,F7.3)"

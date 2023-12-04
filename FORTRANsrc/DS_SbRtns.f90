@@ -7,10 +7,12 @@ Module DS_Select
    Character*100, save :: WriDir
    !
    integer, parameter :: maxd=123000
-   real*8 :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
-   Integer :: Label(4,maxd)  ! Unique source label and amplitude and widths
-   real :: QualIndic(4,maxd)  ! Quality indicators
-   Integer :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
+   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
+   Integer, save :: Label(4,maxd)  ! Unique source label and amplitude and widths
+   real, save :: QualIndic(4,maxd)  ! Quality indicators
+   Complex, save :: Stk_NEh(1:6,maxd)
+   Logical :: PolarAna
+   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    !
    Integer, parameter :: Nmax_Ampl=5000
    Real(dp) :: MaxAmplFitPercent=100.
@@ -85,12 +87,13 @@ Subroutine DS_ReadCntrl(Fini)
    StatNCut=.false.
    MaxTrackDist= 0.1 ! [km]
    Wtr= 0.5      ! Weight for next point on track
-   dt_MTL=0.5
+   dt_MTL=tiny
    TimeWin=0.1
    HeightFact=3.
    NLongTracksMax=0
    Aweight=tiny
    ZoomBox='NoBox'
+   PolarAna=.false.
    !
    Fini=0
    read(*,NML = Parameters,IOSTAT=nxx)
@@ -117,92 +120,95 @@ Subroutine DS_ReadCntrl(Fini)
    if (j>= iachar("a") .and. j<=iachar("z") ) then
       RunOption(1:1) = achar(j-32)
    end if
+   !
    If(SrcDensTimeResol.eq.tiny) SrcDensTimeResol=TimeWin
+   If(dt_MTL.eq.tiny) dt_MTL=TimeWin
+   !
    write(2,*) 'RunOption:', RunOption
-      SELECT CASE (RunOption(1:1))
-      CASE("I")  ! Impulsive Imager
-         Write(2,*) 'Image data from Impulsive Imager, PlotName=',TRIM(PlotName)
-         DS_Mode=1
-         If(AmplitudePlot.eq.tiny) AmplitudePlot=10.
-         write(2,*) 'Source selection criteria:'
-         Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (Impulsive).')  ! width of plot?
-         If(CutSigmaH.gt. 0.) Then
-            Call PrintValues(CutSigmaH,'CutSigmaH', 'Condition: [Sigma(h) < CutSigmaH], unit [m].')  ! width of plot?
-            Call PrintValues(LinCutH,'LinCutH', 'Condition: [Sigma(h) * h/LinCutH < CutSigmaH] when [h < LinCutH], unit [km].')  ! width of plot?
-         Else
-            write(2,*) 'Cut of sigma(h) requires positive value for "CutSigmaH"'
-         EndIf
-         Call PrintValues(RMS_ns,'RMS_ns', 'Condition: [sqrt(Chi^2) < RMS_ns], unit [ns].')  ! width of plot?
-         Call PrintValues(DelNEff,'DelNEff', 'Condition: [(Max_EffAnt - N_EffAnt) <= DelNEff], hard when [DelNEff > 0]'//&
-            'otherwise soft: [(sqrt(Chi^2)-RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff) < RMS_ns] ')
-         Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
-         Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
-         write(2,*) 'Image control:'
-         Call PrintValues(PlotName,'PlotName', 'Added to flash name to label plots')  ! width of plot?
-         Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
-         Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
-         Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
-         Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  ! width of plot?
-         If(NLongTracksMax.gt.0) Then
-            Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
-            Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
-            Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  ! width of plot?
-            Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
-            Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
-            Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
-            Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
-            Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
-         EndIf!(NLongTracksMax.gt.0)
-         If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
-            Call PrintValues(Corr_dD,'Corr_dD', 'Distance step size for time-distance correlator.')  ! width of plot?
-            Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
-            Call PrintValues(Corr_dtau,'Corr_dtau', 'Time step size for time-distance correlator.')  ! width of plot?
-         Else
-            Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
-         EndIf
-         Call PrintValues(QualPlot,'QualPlot', 'make scattter plot of different quality indicators.')  ! width of plot?
-      CASE("T")  ! TRI-D Imager
-         Write(2,*) 'Image data from TRI-D Imager, PlotName extension=',TRIM(PlotName)
-         DS_Mode=2
-         If(AmplitudePlot.eq.tiny) AmplitudePlot=10.
-         If(Aweight.eq. tiny .and. AmplitudePlot.gt.0.) Aweight=1.
-         write(2,*) 'Source selection criteria:'
-         Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (TRI_D).')  ! width of plot?
-         Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  ! width of plot?
-         Call PrintValues(SMPowCut,'SMPowCut', 'Threshol Intensity.')  ! width of plot?
-         !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  ! width of plot?
-         Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  ! width of plot?
-         Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
-         Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
-         write(2,*) 'Image control:'
-         Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  ! width of plot?
-         Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
-         Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
-         Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
-         Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  ! width of plot?
-         Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  ! width of plot?
-         If(NLongTracksMax.gt.0) Then
-            Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
-            Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
-            Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  ! width of plot?
-            Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
-            Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
-            Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
-            Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
-            Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
-         EndIf!(NLongTracksMax.gt.0)
-         If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
-            Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  ! width of plot?
-            Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
-            Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  ! width of plot?
-         Else
-            Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
-         EndIf
-      CASE DEFAULT  ! Help
-         Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
-         Write(*,*) '- "Impulsive" for the impulsive Imager'
-         Write(*,*) '- "TRI-D" for the TRI-D imager with polarization observables, accounting for antenna function'
-         Stop 'No valid RunOption specified in namelist input'
+   SELECT CASE (RunOption(1:1))
+   CASE("I")  ! Impulsive Imager
+      Write(2,*) 'Image data from Impulsive Imager, PlotName=',TRIM(PlotName)
+      DS_Mode=1
+      If(AmplitudePlot.eq.tiny) AmplitudePlot=-1.
+      write(2,*) 'Source selection criteria:'
+      Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (Impulsive).')  ! width of plot?
+      If(CutSigmaH.gt. 0.) Then
+         Call PrintValues(CutSigmaH,'CutSigmaH', 'Condition: [Sigma(h) < CutSigmaH], unit [m].')  ! width of plot?
+         Call PrintValues(LinCutH,'LinCutH', 'Condition: [Sigma(h) * h/LinCutH < CutSigmaH] when [h < LinCutH], unit [km].')  ! width of plot?
+      Else
+         write(2,*) 'Cut of sigma(h) requires positive value for "CutSigmaH"'
+      EndIf
+      Call PrintValues(RMS_ns,'RMS_ns', 'Condition: [sqrt(Chi^2) < RMS_ns], unit [ns].')  ! width of plot?
+      Call PrintValues(DelNEff,'DelNEff', 'Condition: [(Max_EffAnt - N_EffAnt) <= DelNEff], hard when [DelNEff > 0]'//&
+         'otherwise soft: [(sqrt(Chi^2)-RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff) < RMS_ns] ')
+      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
+      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
+      write(2,*) 'Image control:'
+      Call PrintValues(PlotName,'PlotName', 'Added to flash name to label plots')  ! width of plot?
+      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
+      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
+      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
+      Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  ! width of plot?
+      If(NLongTracksMax.gt.0) Then
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
+         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
+         Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  ! width of plot?
+         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
+         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
+         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
+         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
+         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
+      EndIf!(NLongTracksMax.gt.0)
+      If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
+         Call PrintValues(Corr_dD,'Corr_dD', 'Distance step size for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_dtau,'Corr_dtau', 'Time step size for time-distance correlator.')  ! width of plot?
+      Else
+         Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
+      EndIf
+      Call PrintValues(QualPlot,'QualPlot', 'make scattter plot of different quality indicators.')  ! width of plot?
+   CASE("T")  ! TRI-D Imager
+      Write(2,*) 'Image data from TRI-D Imager, PlotName extension=',TRIM(PlotName)
+      DS_Mode=2
+      If(AmplitudePlot.eq.tiny) AmplitudePlot=10.
+      If(Aweight.eq. tiny .and. AmplitudePlot.gt.0.) Aweight=1.
+      write(2,*) 'Source selection criteria:'
+      Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (TRI_D).')  ! width of plot?
+      Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  ! width of plot?
+      Call PrintValues(SMPowCut,'SMPowCut', 'Threshol Intensity.')  ! width of plot?
+      !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  ! width of plot?
+      Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  ! width of plot?
+      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
+      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
+      write(2,*) 'Image control:'
+      Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  ! width of plot?
+      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
+      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
+      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
+      Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  ! width of plot?
+      Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  ! width of plot?
+      If(NLongTracksMax.gt.0) Then
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
+         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
+         Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  ! width of plot?
+         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
+         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
+         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
+         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
+         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
+      EndIf!(NLongTracksMax.gt.0)
+      If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
+         Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  ! width of plot?
+      Else
+         Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
+      EndIf
+   CASE DEFAULT  ! Help
+      Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
+      Write(*,*) '- "Impulsive" for the impulsive Imager'
+      Write(*,*) '- "TRI-D" for the TRI-D imager with polarization observables, accounting for antenna function'
+      Stop 'No valid RunOption specified in namelist input'
    End SELECT
    If(NEhtBB(1).ne.Tiny) Then
       xyztBB(1:2)=NEhtBB(3:4)
@@ -324,7 +330,7 @@ Subroutine DS_ReadSelData_Imp
          EndIf
          Ampl=100+mod(i,10) ; Wl=1 ; Wu=1
          !TOrder=+1  ! older version
-         !write(2,*) 'Read error:',i,y,x,z,t,val,sigma, N_EffAnt, Max_EffAnt, Ampl, Wl, Wu
+         !write(2,*) 'Read error:',nxx,i,y,x,z,t,val,sigma, N_EffAnt, Max_EffAnt, Ampl, Wl, Wu
       Endif
       x=x/1000.d0                   ! convert to [km]
       y=y/1000.d0                   ! convert to [km]
@@ -340,31 +346,31 @@ Subroutine DS_ReadSelData_Imp
 !     CutSigma_h  <-- ICVal
 !     LinCutH <-- Height_1
 !     RMS_ns <-- Chi_max
-         If(CutSigmaH.gt.0.) Then
-            If(z.gt. LinCutH) then
-               Q=sigma(3)
-            Else
-               Q=sigma(3)*z/LinCutH
-            Endif
-            If(Q.gt. CutSigmaH .and. val.gt.CutSigmaH) cycle
-         EndIf
-         Q=sqrt(val)
-         If(DelNEff .lt. 0) then
-            Q=Q - RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff
-         else
-            If( (Max_EffAnt - N_EffAnt) .gt. DelNEff) cycle
+      If(CutSigmaH.gt.0.) Then
+         If(z.gt. LinCutH) then
+            Q=sigma(3)
+         Else
+            Q=sigma(3)*z/LinCutH
          Endif
-         If(Q.gt. RMS_ns) cycle
-         !
-         j=j+1
-         RA(1,j)=t ;  RA(2,j)=x ;  RA(3,j)=y ;  RA(4,j)=z   ! units [ms], [km], [km], [km]
-         Label(1,j)=i ;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
-         QualIndic(1,j)=Chi ; QualIndic(2:4,j)=sigma(1:3)
-         if(j.eq.maxd) then
-            write(*,*) 'Max. dimension reached of', maxd,' at',i
-            write(2,*) 'Max. dimension reached of', maxd,' at',i
-            exit
-         EndIf
+         If(Q.gt. CutSigmaH .and. val.gt.CutSigmaH) cycle
+      EndIf
+      Q=sqrt(val)
+      If(DelNEff .lt. 0) then
+         Q=Q - RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff
+      else
+         If( (Max_EffAnt - N_EffAnt) .gt. DelNEff) cycle
+      Endif
+      If(Q.gt. RMS_ns) cycle
+      !
+      j=j+1
+      RA(1,j)=t ;  RA(2,j)=x ;  RA(3,j)=y ;  RA(4,j)=z   ! units [ms], [km], [km], [km]
+      Label(1,j)=i ;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
+      QualIndic(1,j)=Chi ; QualIndic(2:4,j)=sigma(1:3)
+      if(j.eq.maxd) then
+         write(*,*) 'Max. dimension reached of', maxd,' at',i
+         write(2,*) 'Max. dimension reached of', maxd,' at',i
+         exit
+      EndIf
    enddo     ! loop over all source points in this file
 998 continue
    Close(Unit=28)  ! following is mainly important for multiple files-reads for TRI-D
@@ -381,6 +387,7 @@ Subroutine DS_ReadSelData_TRID
    Use constants, only : dp, CI, pi, c_l
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use DS_Select, only : tiny
+   Use DS_Select, only : PolarAna, Stk_NEh
    Use DS_Select, only : NDataFil, datafile,  TimeBase, t_offset, AmplitudePlot, SMPowCut
    Use DS_Select, only : tCutl, tCutu, SourcTotNr, FileStatN, StatNCut
    Use DS_Select, only : QualIndic, RA, Maxd, Label, AmplScale, xyztBB
@@ -388,7 +395,8 @@ Subroutine DS_ReadSelData_TRID
    Use unque, only : Selection_sort
    IMPLICIT none
    Character*20 :: BoxOption !, Utility, release
-   character*100 ::  FileMain, extension, datfile !, OutFileLabel, SelFileName, PlotName, shellin
+   character*100 ::  FileMain, datfile
+   character*25 ::  extension, PolExten !, OutFileLabel, SelFileName, PlotName, shellin
    Character(len=180) :: lineTXT !, OS
    integer :: i,j, nxx, i_datfil, PrevSourcTotNr
    Real*8 :: t_start
@@ -401,8 +409,13 @@ Subroutine DS_ReadSelData_TRID
    Integer :: SourceNrIncr, ScalAmpl(1:4000), AmplMax, AmplStatN, FileStatNp, AmplStatNp, FileStatNm, AmplStatNm
    Real :: NoiseLevel,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx ! just for rewriting
    integer :: n_repack, PixPowOpt
+   Real(dp) :: tp
+   Integer :: i_scr, i_slice
+   Complex :: Stks(1:6)
    !
-   extension='IntfSpecPowMx_d.dat' ! For TRI-D (beamformed) data file
+   extension='IntfSpecPowMx_d.dat' ! For TRI-D (beamformed) source position data file
+   PolExten ='IntfSpecCartStokes_d.dat' ! For TRI-D (beamformed) polarization data file
+   PolarAna = .true.
    First28=.true.  ! Read timebase from sources file
    First29=.true.
    RepackData=.false.
@@ -416,7 +429,7 @@ Subroutine DS_ReadSelData_TRID
       nxx=0
       i_sequence=0
       LastChar=LEN_TRIM(datafile(i_datfil))
-         write(2,*) 'RepackData-1', RepackData, First29
+      !   write(2,*) 'RepackData-1', RepackData, First29
       Do While (i_sequence.lt.100)  ! run over the full sequnce of files for this name
          !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar)
          datfile=datafile(i_datfil)
@@ -432,7 +445,7 @@ Subroutine DS_ReadSelData_TRID
                !write(2,*) datfile
             EndIf
          EndIf
-         write(2,*) 'RepackData-2', RepackData, First29
+         !write(2,*) 'RepackData-2', RepackData, First29
          FileMain=datfile  ! Base for output file
          datfile=TRIM(DataFolder)//trim(datfile)
          OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
@@ -441,11 +454,23 @@ Subroutine DS_ReadSelData_TRID
             Close(Unit=28)
             exit
          endif
+         If(PolarAna) Then
+            OPEN(unit=27,FILE=trim(datfile)//TRIM(PolExten), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
+            If(nxx.ne.0) then   ! check weather this particular file can be opened
+               Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(PolExten),'"'
+               PolarAna=.false.
+            Else
+               Read(27,*) lineTXT
+            endif
+         EndIf
          n_repack=   n_repack + 10000
          If(First29 .and. RepackData) Then
-            datfile=trim(datfile)//'Repack'//TRIM(extension)
-            write(2,*) 'raw source data will be re-packed into file',trim(datfile)
-            OPEN(unit=29,FILE=trim(datfile), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+            write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'Repack'//TRIM(extension),'"'
+            OPEN(unit=29,FILE=trim(datfile)//'Repack'//TRIM(extension), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+            If(PolarAna) Then
+               write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'Repack'//TRIM(PolExten),'"'
+               OPEN(unit=30,FILE=trim(datfile)//'Repack'//TRIM(PolExten), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+            EndIf
          EndIf
          !
          Do
@@ -457,13 +482,17 @@ Subroutine DS_ReadSelData_TRID
          Enddo
          !write(2,*) 'from data file, lineTXT:', lineTXT
          read(lineTXT,*,IOSTAT=nxx) xMinR, xMaxR, yMinR, yMaxR, zMinR, zMaxR, tMinR, tMaxR, BoxOption, t_start, PixPowOpt     ! from the first line that does not start with !
-         If(First29 .and. RepackData) write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") &
-            xMinR, xMaxR, yMinR, yMaxR, zMinR, zMaxR, tMinR, tMaxR, ' NoBox ', t_start, PixPowOpt
+         If(First29 .and. RepackData) Then
+            write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") &
+               xMinR, xMaxR, yMinR, yMaxR, zMinR, zMaxR, tMinR, tMaxR, ' NoBox ', t_start, PixPowOpt
+         EndIf
          Call SelectBB(xMinR, xMaxR, yMinR, yMaxR, zMinR, zMaxR, tMinR, tMaxR)
          !
          Read(28,*) i, j, Q, SMPow, lineTXT, AmpltPlotRead, a1, b1, c1, a2, b2, c2, d2,NoiseLevel
-         If(First29 .and. RepackData) write(29,*) &
-             '0 ',j,' 0 0 ',Trim(lineTXT),AmpltPlotRead,' 0 0 0 0 0 0 0 ',NoiseLevel,  '1.0 !'
+         If(First29 .and. RepackData) Then
+            write(29,*) &
+                '0 ',j,' 0 0 ',Trim(lineTXT),AmpltPlotRead,' 0 0 0 0 0 0 0 ',NoiseLevel,  '1.0 !'
+         EndIf
          !
          If(First28) Then
             If(TimeBase.eq.tiny) then
@@ -489,9 +518,6 @@ Subroutine DS_ReadSelData_TRID
          j=0
          do    ! loop over all source points in this file
             NXX=0
-!         write(29,"(i6,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
-!         PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowMx, &   ! MaxPowPix(:,i)
-!                                                             MaxSmPowQ(i_slice), MaxSmPowU(i_slice), MaxSmPowV(i_slice), MaxSmPowI3(i_slice) ,s,X
 !         s=sqrt(MaxSmPowQ(i_slice)*MaxSmPowQ(i_slice)+MaxSmPowU(i_slice)*MaxSmPowU(i_slice))
 !         X=(ATAN2(MaxSmPowU(i_slice),MaxSmPowQ(i_slice))/2.+AngOff)*180./pi
 !         MaxSmPowI3  = I3/SMPowMx  where  SMPowMx depends on  PixPowOpt
@@ -502,8 +528,28 @@ Subroutine DS_ReadSelData_TRID
                !Write(2,*) 'EOF reached'
                exit
             Endif
-            If(RepackData) write(29,"(i8,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") n_repack+i,t,x,y,z,SMPow &
-               ,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx
+            If(PolarAna) Then
+               read(27,*,iostat=nxx)  i_slice, i_scr,  tp, Stks(1:6)
+               If(nxx.ne.0) then
+                  write(2,*) 'Read error polar data:', nxx,i,t,i_slice, i_scr,  tp
+                  write(2,*) Stks(1:6)
+                  PolarAna=.false.
+                  Close(unit=27)
+                  If(RepackData) Close(unit=30)
+               ElseIf(t.ne.tp) Then
+                  write(2,*) 'times in source and polar data not equal:',t, tp
+                  PolarAna=.false.
+                  Close(unit=27)
+                  If(RepackData) Close(unit=30)
+               EndIf
+            Endif
+            If(RepackData) Then
+               write(29,"(i8,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") n_repack+i,t,x,y,z,SMPow &
+                  ,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx
+               If(PolarAna) Then
+                  write(30,"(i5,',',i6,',',f12.6, 6(',',2g12.4) )") i_slice, i_scr,  tp, Stks(1:6)
+               EndIf
+            EndIf
             !
             t=t+t_start  ! Same t-scale now as for first file
             if(x.le.xyztBB(1) .or. x.ge.xyztBB(2)) cycle
@@ -518,6 +564,8 @@ Subroutine DS_ReadSelData_TRID
             RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=x ;  RA(3,SourcTotNr)=y ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
             Label(1,SourcTotNr)=i
             Label(2,SourcTotNr)=SMPow*AmplScale
+            Label(3,SourcTotNr)=SourcTotNr  !  to keep track of the polorization observables after re-sorting
+            If(PolarAna) Stk_NEh(1:6,SourcTotNr) = Stks(1:6)
             if(SourcTotNr.eq.maxd) then
                write(*,*) 'Max. dimension reached of', maxd,' at',i
                write(2,*) 'Max. dimension reached of', maxd,' at',i,t
@@ -525,8 +573,7 @@ Subroutine DS_ReadSelData_TRID
             EndIf
          enddo     ! loop over all source points in this file
          Close(Unit=28)  ! following is mainly important for multiple files-reads for TRI-D
-         !For Impulsive:
-         !For TRI-D:
+         If(PolarAna) Close(Unit=27)
          SourceNrIncr=SourcTotNr-PrevSourcTotNr
          AmplMax=-1
          AmplStatNm=-AmplScale
@@ -561,7 +608,10 @@ Subroutine DS_ReadSelData_TRID
       EndDo ! i_sequence loop
    Enddo
    write(2,*) 'Last event read:',i,' @ t=',t,'[s]'
-   If(RepackData) Close(Unit=29)
+   If(RepackData) Then
+      Close(Unit=29)
+      If(PolarAna) Close(Unit=30)
+   EndIf
    !
    !
     Return

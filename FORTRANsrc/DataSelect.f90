@@ -26,6 +26,7 @@ PROGRAM DataSelect
    Use TrackConstruct, only : Wtr, MaxTrackDist, TimeWin, HeightFact, dt_MTL, Aweight, TrackENr, TrackE, TrackNrLim, Aweight
    Use DS_Select, only : Image, BckgrFile, datafile, ZoomBox, RMS_ns
    Use DS_Select, only : RA, maxd, SourcTotNr, Label, t_offset, tCutl, tCutu, xyztBB
+   Use DS_Select, only : Stk_NEh, PolarAna
    Use DS_Select, only : DS_Mode, MaxAmplFitPercent, SMPowCut
    Use DS_Select, only : Corr_dD, Corr_Dnr, Corr_dtau, QualPlot, AmplScale,  AmplitudePlot
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
@@ -100,7 +101,7 @@ PROGRAM DataSelect
             PlotFile=TRIM(DataFolder)//trim(Image)
             Write(2,"(A,A,A,I6)") 'PlotFile: ',trim(PlotFile)
             Flush(unit=2)
-            Call ConstructTracks(RA, Label, SourcTotNr, PlotFile)
+            Call ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
             !
             Call AmplitudeFitTracks(TrackNr,TrackLenMax,TrackNrMax,TrackENR,TrackE)
             write(2,*) 'AmplitudeFitTracks(AmplitudeFit) was called!!!!!!'
@@ -113,12 +114,15 @@ PROGRAM DataSelect
                Call AnalyzeBurst(RA, Label, SourcTotNr, PlotFile) ! Analyze how many sources occur within a certain time-resolution
                Call GLEplotControl(PlotType='TrackScatt', PlotName=TRIM(Image)//'TrSc', &
                   PlotDataFile=TRIM(PlotFile), Submit=.false.)
+               Call GLEplotControl(PlotType='TrackAngles', PlotName=TRIM(Image)//'Angl', &
+                  PlotDataFile=TRIM(PlotFile), Submit=.false.)
                !SystemCommand="call GLE -d pdf -o TrSc_"//trim(datfile)//".pdf ../Utilities/TrackScatt.gle "//trim(pars)
                !      CALL SYSTEM(SystemCommand,stat)
             EndIf
          EndIf
       EndIf  ! (NLongTracksMax.Gt.0)
       !
+      If(PolarAna) Call PolarizationAna()
       !
       If(MaxAmplFitPercent.gt.0.) Then
          SelFileName=TRIM(DataFolder)//'AmplFit'//trim(Image)
@@ -155,7 +159,8 @@ PROGRAM DataSelect
       write(28,"('! SourceLab',T15,'time',T29,'x=East',T46,'y=North',T61,'z=h',T80,'Ampl',T87,'Wl',T92,'Wr')")
       !
       Do j=1,SourcTotNr  !  finally write all accepted source to file
-         write(28,"(1x,i8,4(2x,g14.8),1x,F12.2,2x,I3,2x,I3)")  Label(1,j),RA(1:4,j), Label(2,j)/AmplScale
+         write(28,"(1x,i8,4(1x,f13.6),1x,F12.2,2x,I3,2x,I3)")  Label(1,j),RA(1:4,j), Label(2,j)/AmplScale
+!         write(29,"(i6,',',4(f12.6,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
       enddo
       close(unit=28)
       write(2,*) 'testing trim(ZoomBox):', trim(ZoomBox)
@@ -212,6 +217,39 @@ Subroutine ApplyQualityAna()  ! du -sh  directory size
    Call GLEplotControl(PlotType='QualContrPlot', PlotName=TRIM(Image)//'QC', &
          PlotDataFile=TRIM(DataFolder)//trim(Image), Submit=.false.)
 End Subroutine ApplyQualityAna
+!--------------------------------------------------
+Subroutine PolarizationAna()  ! du -sh  directory size
+   Use constants, only : dp
+   !use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows, RunMode
+   !Use DS_Select, only : Image !,  WriDir
+   !use GLEplots, only : GLEplotControl
+   Use DS_Select, only : Stk_NEh,SourcTotNr, Label
+   IMPLICIT none
+   Integer :: i, i_src
+   Complex :: AveStks(1:3,1:3)
+   Real :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
+   logical :: prin=.true.
+   !
+   !
+   !OPEN(unit=29,FILE=TRIM(DataFolder)//trim(Image)//'QuAna.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
+  ! write(29,"(2x,A,1x,I6,1x,F6.3,i5,' !')") trim(Image), SourcTotNr
+   Write(2,*) 'Polarization analysis,  ', SourcTotNr
+   AveStks(:,:)=0
+   Do i_src=1,SourcTotNr ! Add all stokes matrices
+      AveStks(1,1:3)=AveStks(1,1:3)+ Stk_NEh(1:3,Label(3,i_src))
+      AveStks(2,2:3)=AveStks(2,2:3)+ Stk_NEh(4:5,Label(3,i_src))
+      AveStks(3,3)=AveStks(3,3)+ Stk_NEh(6,Label(3,i_src))
+   EndDo ! i_src=1,SourcTotNr
+   AveStks(2:3,1)=AveStks(1,2:3)
+   AveStks(3,2)=AveStks(2,3)
+   !
+   Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
+   !Write(2,*) 'ApplyQualityAna; File:',TRIM(DataFolder)//trim(Image)//'QuAna.dat',' with ',SourcTotNr, ' data lines'
+   !
+   !Call GLEplotControl(PlotType='QualContrPlot', PlotName=TRIM(Image)//'QC', &
+   !      PlotDataFile=TRIM(DataFolder)//trim(Image), Submit=.false.)
+End Subroutine PolarizationAna
+!--------------------------------------------------
 !-----------------------------------------------------
 ! ----------------------------------------------------------------------------------------
 !     shellin = 'gle /d pdf '//trim(dummy3(i))//'.gle'

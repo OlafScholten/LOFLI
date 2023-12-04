@@ -167,7 +167,7 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
    Return
 End Subroutine Assign2Tracks
 !===============================================
-Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
+Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    ! Construct mean, smooth, tracks from assigned source locations on return in  LeaderPos
    ! Calculate lateral deviations of source locations from mean track
    ! Used:
@@ -177,17 +177,22 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
    !  forth, following the individual sources, when too big many corners may be cut-off
    !Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackENr, TrackE, LeaderPos
    !Use TrackConstruct, only : Wtr, MaxTrackDist, TimeWin, TOrder, TrackLenMax
-   Use constants, only : dp
+   Use constants, only : dp, pi
    IMPLICIT none
    Real(dp), Intent(in) :: RA(4,*)
    Integer, intent(in) :: SourcTotNr, Label(4,*)
+   Logical, intent(in) :: PolarAna
+   Complex, intent(in) :: Stk_NEh(1:6,*)
    Character(len=*) :: PlotFile
-   Real*8 :: TrackPos(1:3,TrackLenMax)  !  TrackPos(1:3,i): position of the head of the i^th track
+   !Real*8 :: TrackPos(1:3,TrackLenMax)  !  TrackPos(1:3,i): position of the head of the i^th track
    !
    Integer :: i_LongTr, i,j,k,kk,jk
    Character*8 :: extension
    Real*8 :: Xsq, Ysq, Zsq, tw, w, Pos(1:3), dt
-   Real*8 :: RadDev, HorDev, HDist, Velocity, TW2
+   Real*8 :: RadDev, HorDev, HDist, Velocity, TW2, V_n, V_E, V_h, V_hor, V_th, V_ph
+   complex  :: LeaderStks(1:6), AveStks(1:3,1:3) !  ,TrackLenMax)
+   Real :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3), Thet1, Phi1
+   logical :: prin
    !Integer, Parameter :: bin_max=30
    !Integer :: i_bin
    !Real*8 :: Hist1(0:bin_max), Hist2(0:bin_max)
@@ -198,6 +203,8 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
     i_LongTr=0
    !Call Flush(2)
    !    Hist1=0.000001 ; Hist2=0.000001
+   prin=.false.   !  Do not print polarization observables
+   PolZen(1:3)=0. ; PolAzi(1:3)=0. ; PolMag(1:3)=0. ; PoldOm(1:3)=0.
     do i=1,TrackNr
         If(TrackENr(i).lt. LongTrack_Min) cycle
         i_LongTr=i_LongTr+1
@@ -208,6 +215,10 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
         write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
         write(29,"('!',T7,'time',T22,'x=East',T38,'y=North',T53,'z=height',T73,'x=East',T89,'y=North',T104,'z=height', &
             T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
+        OPEN(unit=30,FILE=TRIM(PlotFile)//'Angls'//trim(extension),FORM='FORMATTED',STATUS='unknown')
+        write(30,"('!',T10,'Running Average Leader Head position',T47,'Velocity angle',T77,'Polarization amplitudes & angles')")
+        write(30,"('!',T5,'time',T17,'x=East',T28,'y=North',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
+            T82,'Th(Zen), Azim(N), d(omga)',T116,'Repeated twice more')")
         !write(29,*) 'TrackNr=',i
         !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
         Xsq=0.
@@ -218,6 +229,7 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
             ! Calculate Estimated Leader position
             tw=0.
             Pos(1:3)=0.
+            LeaderStks(1:6)=0.
             Do kk=1,TrackENr(i) ! average positions of sources along this track with gaussian-in-time weighting
                 jk=TrackE(kk,i) ! jk= rank-number of other sources on track i
                 dt=(RA(1,j)-RA(1,jk))**2        ! dt has units of t^2 !!!
@@ -225,10 +237,18 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
                 w=exp(-dt/Tw2)*(Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
                 tw=tw+w
                 Pos(1:3)=Pos(1:3)+w*RA(2:4,jk)
-                ! write(*,*) k,kk,dt,w
+                If(PolarAna) LeaderStks(1:6)=LeaderStks(1:6)+w*Stk_NEh(1:6,Label(3,jk))
             enddo
             LeaderPos(1,k,i)=RA(1,j)         ! Time of the leader head = the time of the last source
             LeaderPos(2:4,k,i)=Pos(1:3)/tw  ! position of the leader head
+            If(PolarAna) Then
+               AveStks(1,1:3)=LeaderStks(1:3)/tw
+               AveStks(2,2:3)=LeaderStks(4:5)/tw
+               AveStks(3,3)=LeaderStks(6)/tw
+               AveStks(2:3,1)=AveStks(1,2:3)
+               AveStks(3,2)=AveStks(2,3)
+               Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
+            EndIf
             !
             RadDev=(RA(4,j)-LeaderPos(4,k,i))*RA(4,j)  ! deviation along the axis from souce to reference antenna
             HorDev=0.d0
@@ -255,12 +275,28 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
                   EndIf
                Else
                   Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))  ! units: 10^6 m/s
+                  v_E=(LeaderPos(2,k,i)-LeaderPos(2,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  v_N=(LeaderPos(3,k,i)-LeaderPos(3,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  v_h=(LeaderPos(4,k,i)-LeaderPos(4,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  V_hor=sqrt(V_N*V_N + V_E*V_E)
+                  V_th=atan2(V_hor,V_h)*180./pi  ; V_ph=atan2(V_E,V_N)*180./pi
                   !write(2,*) 'Velocity',k, Velocity, SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2)), &
                   !   (LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
                EndIf
+               If(k.eq.2) Then
+                  Thet1=V_th ;  Phi1=V_ph
+               EndIf
+               If( (abs(PolAzi(1)-Phi1) .gt. 90.) .and. (abs(PolAzi(1)-Phi1) .lt. 270.) ) Then
+                  PolAzi(1)=PolAzi(1)+180.
+                  If(PolAzi(1) .gt. 180.) PolAzi(1)=PolAzi(1)-360.
+                  PolZen(1)=180.-PolZen(1)
+               EndIf
+               Phi1=PolAzi(1)
                write(29,"(1x,4(2x,g14.8),3x,3(2x,g14.8),3x,g14.8,3(2x,g14.8),3x,g12.3,1x,F8.2)") &
                     LeaderPos(1:4,k,i), RA(2:4,j), LeaderPos(1,k,i)-LeaderPos(1,k-1,i) &
                     ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, tw*1000.
+               write(30,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
+                    LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3)  !V_hor, V_N, V_E, V_h!
             EndIf
             !write(29,"(1x,3i4,4(2x,g14.8),3x,f8.6)")  i,k,j, RA(1:4,j)
             !i_bin=(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))/Bin1size
@@ -278,8 +314,9 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile)
         enddo  ! k=1,TrackENr(i) loop over sources in track i
         Write(2,"(A,i2,I5,A,3F7.1)") 'Track#',i,TrackENr(i),', RMS(E,N,H)[m]:', &
          sqrt(Xsq/TrackENr(i))*1000., sqrt(Ysq/TrackENr(i))*1000., sqrt(Zsq/TrackENr(i))*1000.
-        close(unit=29)
-         Write(2,*) 'ConstructTracks, File written:',TRIM(PlotFile)//trim(extension),' with ',TrackENr(i), ' data lines'
+        Close(unit=29)
+        Close(unit=30)
+        Write(2,*) 'ConstructTracks, File written:',TRIM(PlotFile)//trim(extension),' with ',TrackENr(i), ' data lines'
     enddo ! i=1,TrackNr
     !
    Return
@@ -294,7 +331,7 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
    Real(dp), Intent(in) :: RA(4,*)
    Integer, intent(in) :: SourcTotNr
    Character(len=*) :: PlotFile
-   Real*8 :: TrackPos(1:3,TrackLenMax)  !  TrackPos(1:3,i): position of the head of the i^th track
+   !Real*8 :: TrackPos(1:3,TrackLenMax)  !  TrackPos(1:3,i): position of the head of the i^th track
    !
    Integer, parameter :: Nmax_MTL=500
    Real*8 :: MeanTrackLoc(1:4,Nmax_MTL)   !, dt_MTL=0.2  ! [ms]
