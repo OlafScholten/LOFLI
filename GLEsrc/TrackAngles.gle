@@ -84,6 +84,8 @@ begin graph
    !d8 line lstyle 1 lwidth 0.01 color magenta
    !let d9=cos(pi/4.)
    !d9 line lstyle 1 lwidth 0.01 color blue
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
    If N_slice > N_max Then
       d12 marker dot  msize DotSz err d22 errwidth .1  color coral
       d1 marker dot  msize DotSz err d2 errwidth .1  color crimson
