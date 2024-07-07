@@ -4131,7 +4131,7 @@ subroutine nl2sol ( n, p, x, calcr, calcj, iv, v, uiparm, urparm, ufparm, error 
 ! v........ (input/output) a floating-point value array of length at
 !                  least 93 + n*p + 3*n + p*(3*p+33)/2 that helps con-
 !                  trol the nl2sol algorithm and that is used to store
-!                  various intermediate quantities.  of particular in-
+!                  various intermediate quantities.  Of particular in-
 !                  terest are the entries in v that limit the length of
 !                  the first step attempted (lmax0), specify conver-
 !                  gence tolerances (afctol, rfctol, xctol, xftol),
@@ -5169,8 +5169,8 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
  190  continue
 
       if ( .not. stopx ( dummy ) ) go to 200
-         iv(1) = 11
-         go to 205
+      iv(1) = 11
+      go to 205
 !
 !  Come here when restarting after function evaluation limit or STOPX.
 !
@@ -5185,21 +5185,19 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
  200  continue
 
       if (iv(nfcall) < iv(mxfcal) + iv(nfcov)) go to 210
-         iv(1) = 9
-
- 205     continue
-
-         if (v(f) >= v(f0)) then
-           call itsmry ( d, iv, p, v, x )
-           return
-         end if
+      iv(1) = 9
+205   continue
+      if (v(f) >= v(f0)) then
+        call itsmry ( d, iv, p, v, x )
+        return
+      end if
       !write(2,*) 'nl2itr-205:',X(1:p)
 !
 !  In case of STOPX or function evaluation limit with
 !  improved V(F), evaluate the gradient at X.
 !
-         iv(cnvcod) = iv(1)
-         go to 560
+      iv(cnvcod) = iv(1)
+      go to 560
 !
 !  Compute candidate step.
 !
@@ -5207,39 +5205,32 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
 
       step1 = iv(step)
       w1 = iv(w)
-!
-!  Compute Levenberg-Marquardt step.
-!
-      !write(2,*) '210-iv(model)',iv(model),model,error
+      !write(2,*) '!210-iv(model)',iv(model),model,error
       if ( iv(model) /= 2 ) then
-
+         !
+         !  Compute Levenberg-Marquardt step.
+         !
          qtr1 = iv(qtr)
-
+         !write(2,*) '!210-iv(kalm)',iv(kalm), kalm, error
          if ( iv(kalm) < 0 ) then
-
-           rd1 = iv(rd)
-
-           if (-1 == iv(kalm)) then
-             call qrfact ( nn, n, p, j, v(rd1), &
-             iv(ipivot), iv(ierr), 0, v(w1) )
-           end if
-
-           call qapply ( nn, n, p, j, v(qtr1), iv(ierr) )
-
+            !write(2,*) '!210-qrfactz', error
+            rd1 = iv(rd)
+            if (-1 == iv(kalm)) then
+               call qrfact ( nn, n, p, j, v(rd1), iv(ipivot), iv(ierr), 0, v(w1) )
+            end if
+            call qapply ( nn, n, p, j, v(qtr1), iv(ierr) )
          end if
-
+         !
+         !  Copy R matrix to H.
+         !
          h1 = iv(h)
-!
-!  Copy R matrix to H.
-!
+         !write(2,*) '!210-iv(h))', h1, h, error
          if ( h1 <= 0 ) then
-
               h1 = -h1
               iv(h) = h1
               k = h1
               rd1 = iv(rd)
               v(k) = v(rd1)
-
               do i = 2, p
                    call vcopy(i-1, v(k+1), j(1,i))
                    k = k + i
@@ -5247,144 +5238,127 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
                    v(k) = v(rd1)
               end do
          end if
-
          g1 = iv(g)
-         call lmstep ( d, v(g1), iv(ierr), iv(ipivot), iv(kalm), p, &
-                     v(qtr1), v(h1), v(step1), v, v(w1) )
-!
-!  Compute Goldfeld-Quandt-Trotter step (augmented model).
-!
+         call lmstep ( d, v(g1), iv(ierr), iv(ipivot), iv(kalm), p, v(qtr1), v(h1), v(step1), v, v(w1) )
+         !write(2,*) '!210-lmstepb',iv(g), g,error
       else
-!write(*,*) '210 iv(h)',iv(h),h
-        if ( iv(h) <= 0 ) then
-!
-!  Set H to inverse ( D ) * ( J' * J + s) ) * inverse ( D ).
-!
-          h1 = -iv(h)
-          iv(h) = h1
-          s1 = iv(s)
-!
-!  J is in its original form.
-!
-          if ( iv(kalm) == -1 ) then
-
-            do i = 1, p
-              t = 1.0D+00 / d(i)
-              do k = 1, i
-                v(h1) = t * (dotprd(n,j(1,i),j(1,k))+v(s1)) / d(k)
-                h1 = h1 + 1
-                s1 = s1 + 1
-              end do
-            end do
-
-!
-!  LMSTEP has applied QRFACT to J.
-!
-          else
-
-            smh = s1 - h1
-            h0 = h1 - 1
-            ipiv1 = iv(ipivot)
-            t1 = 1.0D+00 / d(ipiv1)
-            rd0 = iv(rd) - 1
-            rdof1 = v(rd0 + 1)
-
-            do i = 1, p
-
-              l = ipiv0 + i
-              ipivi = iv(l)
-              h1 = h0 + ( ipivi*(ipivi-1) ) / 2
-              l = h1 + ipivi
-              m = l + smh
-!
-!  v(l) = h(ipivot(i), ipivot(i))
-!  v(m) = s(ipivot(i), ipivot(i))
-!
-              t = 1.0D+00 / d(ipivi)
-              rdk = rd0 + i
-              e = v(rdk)**2
-              if ( 1 < i ) then
-                e = e + dotprd(i-1, j(1,i), j(1,i))
-              end if
-              v(l) = (e + v(m)) * t**2
-
-              if ( i /= 1 ) then
-
-                l = h1 + ipiv1
-                if (ipivi < ipiv1) then
-                  l = l + ((ipiv1-ipivi)*(ipiv1+ipivi-3)) / 2
-                end if
-                m = l + smh
-!
-!  v(l) = h(ipivot(i), ipivot(1))
-!  v(m) = s(ipivot(i), ipivot(1))
-!
-                v(l) = t * (rdof1 * j(1,i)  +  v(m)) * t1
-
-                do k = 2, i - 1
-                  ipk = ipiv0 + k
-                  ipivk = iv(ipk)
-                  l = h1 + ipivk
-                  if (ipivi < ipivk) then
-                    l = l + ((ipivk-ipivi)*(ipivk+ipivi-3)) / 2
-                  end if
+         !
+         !  Compute Goldfeld-Quandt-Trotter step (augmented model).
+         !
+         !write(*,*) '210 iv(h)',iv(h),h
+         if ( iv(h) <= 0 ) then
+            !
+            !  Set H to inverse ( D ) * ( J' * J + s) ) * inverse ( D ).
+            !
+            h1 = -iv(h)
+            iv(h) = h1
+            s1 = iv(s)
+            !
+            !  J is in its original form.
+            !
+            if ( iv(kalm) == -1 ) then
+               do i = 1, p
+                 t = 1.0D+00 / d(i)
+                 do k = 1, i
+                   v(h1) = t * (dotprd(n,j(1,i),j(1,k))+v(s1)) / d(k)
+                   h1 = h1 + 1
+                   s1 = s1 + 1
+                 end do
+               end do
+               !
+               !  LMSTEP has applied QRFACT to J.
+               !
+            else
+               smh = s1 - h1
+               h0 = h1 - 1
+               ipiv1 = iv(ipivot)
+               t1 = 1.0D+00 / d(ipiv1)
+               rd0 = iv(rd) - 1
+               rdof1 = v(rd0 + 1)
+               do i = 1, p
+                  l = ipiv0 + i
+                  ipivi = iv(l)
+                  h1 = h0 + ( ipivi*(ipivi-1) ) / 2
+                  l = h1 + ipivi
                   m = l + smh
-!
-!  v(l) = h(ipivot(i), ipivot(k))
-!  v(m) = s(ipivot(i), ipivot(k))
-!
-                  km1 = k - 1
-                  rdk = rd0 + k
-                  v(l) = t * (dotprd(km1, j(1,i), j(1,k)) + &
-                    v(rdk)*j(k,i) + v(m)) / d(ipivk)
-                end do
+                  !
+                  !  v(l) = h(ipivot(i), ipivot(i))
+                  !  v(m) = s(ipivot(i), ipivot(i))
+                  !
+                  t = 1.0D+00 / d(ipivi)
+                  rdk = rd0 + i
+                  e = v(rdk)**2
+                  if ( 1 < i ) then
+                     e = e + dotprd(i-1, j(1,i), j(1,i))
+                  end if
+                  v(l) = (e + v(m)) * t**2
+                  if ( i /= 1 ) then
+                     l = h1 + ipiv1
+                     if (ipivi < ipiv1) then
+                        l = l + ((ipiv1-ipivi)*(ipiv1+ipivi-3)) / 2
+                     end if
+                     m = l + smh
+                     !
+                     !  v(l) = h(ipivot(i), ipivot(1))
+                     !  v(m) = s(ipivot(i), ipivot(1))
+                     !
+                     v(l) = t * (rdof1 * j(1,i)  +  v(m)) * t1
 
-              end if
-
-            end do
-
-          end if
-
-        end if
-!
-!  Compute actual Goldfeld-Quandt-Trotter step.
-!
-        h1 = iv(h)
-        dig1 = iv(dig)
-        lmat1 = iv(lmat)
-
-        call gqtstp ( d, v(dig1), v(h1), iv(kagqt), v(lmat1), p, v(step1), &
-                  v, v(w1), error)
-        If(error.gt.0) Then
-            write(2,*) 'error from gqtstp',error
+                     do k = 2, i - 1
+                        ipk = ipiv0 + k
+                        ipivk = iv(ipk)
+                        l = h1 + ipivk
+                        if (ipivi < ipivk) then
+                          l = l + ((ipivk-ipivi)*(ipivk+ipivi-3)) / 2
+                        end if
+                        m = l + smh
+                        !
+                        !  v(l) = h(ipivot(i), ipivot(k))
+                        !  v(m) = s(ipivot(i), ipivot(k))
+                        !
+                        km1 = k - 1
+                        rdk = rd0 + k
+                        v(l) = t * (dotprd(km1, j(1,i), j(1,k)) + v(rdk)*j(k,i) + v(m)) / d(ipivk)
+                     end do
+                  end if
+               end do
+            end if
+         end if
+         !
+         !  Compute actual Goldfeld-Quandt-Trotter step.
+         !
+         h1 = iv(h)
+         dig1 = iv(dig)
+         lmat1 = iv(lmat)
+         call gqtstp ( d, v(dig1), v(h1), iv(kagqt), v(lmat1), p, v(step1), v, v(w1), error)
+         If(error.gt.0) Then
+            !write(2,*) 'error from gqtstp',error
             return
-        EndIf
-
+         EndIf
       end if
       !
       ! write Hessian
-      !h1 = iv(h)
-      !write(2,"('Hessian:')")
+      h1 = iv(h)
+      !write(2,"('!Hessian:',i3)") error
       !Do i=1,p
-      !  write(2,*) 'row',i,v(h1+i*(i-1)/2:h1+i*(i+1)/2-1)
+      !  write(2,*) '!row',i,v(h1+i*(i-1)/2:h1+i*(i+1)/2-1)
       !enddo
-      !
       ! end write Hessian
       !
-!
-!  Compute R(X0 + STEP).
-!
  310  continue
-
+      !
+      !  Compute R(X0 + STEP).
+      !
+      !write(2,*) '!310-iv(irc):',iv(irc),irc,error,X(1:p)
       if ( iv(irc) /= 6 ) then
         x01 = iv(x0)
         step1 = iv(step)
         x(1:p) = v(step1:step1+p-1) + v(x01:x01+p-1)
-        !write(2,*) 'nl2itr-310',step1,x01,v(step1:step1+5),';',v(x01:x01+5)
+        !write(2,*) '!nl2itr-310',step1,x01,v(step1:step1+5),';',v(x01:x01+5)
         iv(nfcall) = iv(nfcall) + 1
         iv(1) = 1
         iv(toobig) = 0
-        ! write(2,*) 'nl2itr-310:',error,X(1:p)
+        !write(2,*) '!nl2itr-310:',error,X(1:p)
         return
       end if
 !
@@ -5682,7 +5656,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
         iv(1) = iv(cnvcod)
         iv(cnvcod) = 0
         call itsmry(d, iv, p, v, x)
-      !write(2,*) 'nl2itr-700:',X(1:p)
+         !write(2,*) 'nl2itr-700:',X(1:p)
         return
       end if
 
@@ -5724,7 +5698,7 @@ subroutine nl2itr ( d, iv, j, n, nn, p, r, v, x, error )
       return
 
  730  continue
-!write(*,*) 'iv(restor)',restor,iv(restor),'iv(toobig)',toobig,iv(toobig)
+   !write(*,*) 'iv(restor)',restor,iv(restor),'iv(toobig)',toobig,iv(toobig)
   if ( iv(restor) == 1 .or. iv(toobig) /= 0 ) then
     go to 710
   end if

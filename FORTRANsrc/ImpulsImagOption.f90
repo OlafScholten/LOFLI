@@ -195,14 +195,13 @@ Subroutine ImpulsImagRun
          PlotDataFile=TRIM(DataFolder)//TRIM(Sources2) )
    EndIf
    !
-   Call GLEplotControl(SpecialCmnd='cd '//TRIM(ProgramFolder))
    If(Windows) Then
-      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track.f90 %LIBRARY%')
+      Call GLEplotControl(SpecialCmnd='call %LL_Base%\scripts\RunProgram.bat DataSelect '//TRIM(lname))
+      !call %LL_Base%\scripts\RunProgram.bat DataSelect DataSelect.in
    Else
-      Call GLEplotControl(SpecialCmnd='gfortran -o TrackExe.exe Track.f90 ${LIBRARY}')
+      Call GLEplotControl(SpecialCmnd='source  ${LL_Base}/scripts/RunProgram.sh DataSelect '//TRIM(lname))
+      !source  ${LL_Base}/scripts/RunProgram.sh DataSelect  DataSelect.in
    EndIf
-   Call GLEplotControl(SpecialCmnd='cd '//TRIM(FlashFolder))
-   Call GLEplotControl(SpecialCmnd=TRIM(ProgramFolder)//'TrackExe.exe  <'//TRIM(lname))
    !
    If(Dual) then
       Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'d'//TRIM(OutFileLabel), &

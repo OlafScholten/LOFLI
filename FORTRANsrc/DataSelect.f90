@@ -39,6 +39,7 @@ PROGRAM DataSelect
    IMPLICIT none
    character*150 :: SystemCommand, SelFileName, PlotFile
    Character*20 :: Utility, release
+   Character*10 :: extension
    Character(len=180) :: lineTXT
    integer :: i,j,k, nxx, d_Ampl, Fini, SuccessImages  ! unit,
    integer :: kk, jk, wrunt, N_EffAnt !, Max_EffAnt
@@ -80,6 +81,7 @@ PROGRAM DataSelect
       ! write(*,*) 'Sorting Done'
       !
       !-------------- Start putting sources on tracks ----------------------
+      LongTrackNr=0
       If(NLongTracksMax.Gt.0) Then
          If(TimeWin .lt. 0.) TimeWin = ((RA(1,SourcTotNr)-RA(1,1))*10./SourcTotNr) ! *((RA(1,SourcTotNr)-RA(1,1))*10./SourcTotNr)
          ! 2017:  0.03 0.3 0.01  ! MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]
@@ -91,7 +93,6 @@ PROGRAM DataSelect
             '; Weight new event=', Wtr, ', TimeWin=', TimeWin,'[ms], Max Nr Long Tracks=', NLongTracksMax
          !call flush(2)
          !
-         LongTrackNr=0
          If(NLongTracksMax.gt.0) then
             Call Assign2Tracks(RA, Label, SourcTotNr)
          EndIf
@@ -114,7 +115,7 @@ PROGRAM DataSelect
                Call AnalyzeBurst(RA, Label, SourcTotNr, PlotFile) ! Analyze how many sources occur within a certain time-resolution
                Call GLEplotControl(PlotType='TrackScatt', PlotName=TRIM(Image)//'TrSc', &
                   PlotDataFile=TRIM(PlotFile), Submit=.false.)
-               Call GLEplotControl(PlotType='TrackAngles', PlotName=TRIM(Image)//'Angl', &
+               If(PolarAna) Call GLEplotControl(PlotType='TrackAngles', PlotName=TRIM(Image)//'Angl', &
                   PlotDataFile=TRIM(PlotFile), Submit=.false.)
                !SystemCommand="call GLE -d pdf -o TrSc_"//trim(datfile)//".pdf ../Utilities/TrackScatt.gle "//trim(pars)
                !      CALL SYSTEM(SystemCommand,stat)
@@ -184,6 +185,17 @@ PROGRAM DataSelect
             Call ApplyQualityAna
       endif
       !
+      ! Clean some temporary files
+      j=0
+      do i=1,TrackNr
+         If(TrackENr(i).lt. LongTrack_Min) cycle
+         j=j+1
+         if(j.gt.LongTrackNr) exit
+         write(extension,"(i1,A4)") j,'.dat' !,&
+         Call GLEplotControl(CleanPlotFile=TRIM(Image)//trim(extension))
+         If(PolarAna) Call GLEplotControl(CleanPlotFile=TRIM(Image)//'Angls'//trim(extension))
+      EndDo
+      !
 998   write(2,*) '======================================='
    enddo !  end of the main reading loop
    !
@@ -244,7 +256,7 @@ Subroutine PolarizationAna()  ! du -sh  directory size
    AveStks(3,2)=AveStks(2,3)
    !
    Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
-   !Write(2,*) 'ApplyQualityAna; File:',TRIM(DataFolder)//trim(Image)//'QuAna.dat',' with ',SourcTotNr, ' data lines'
+   !Write(2,*) 'PolarizationAna:'
    !
    !Call GLEplotControl(PlotType='QualContrPlot', PlotName=TRIM(Image)//'QC', &
    !      PlotDataFile=TRIM(DataFolder)//trim(Image), Submit=.false.)
