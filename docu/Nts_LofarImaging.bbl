@@ -1,0 +1,361 @@
+%apsrev4-2.bst 2019-01-14 (MD) hand-edited version of apsrev4-1.bst
+%Control: key (0)
+%Control: author (72) initials jnrlst
+%Control: editor formatted (1) identically to author
+%Control: production of article title (-1) disabled
+%Control: page (0) single
+%Control: year (1) truncated
+%Control: production of eprint (0) enabled
+\begin{thebibliography}{16}%
+\makeatletter
+\providecommand \@ifxundefined [1]{%
+ \@ifx{#1\undefined}
+}%
+\providecommand \@ifnum [1]{%
+ \ifnum #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \@ifx [1]{%
+ \ifx #1\expandafter \@firstoftwo
+ \else \expandafter \@secondoftwo
+ \fi
+}%
+\providecommand \natexlab [1]{#1}%
+\providecommand \enquote  [1]{``#1''}%
+\providecommand \bibnamefont  [1]{#1}%
+\providecommand \bibfnamefont [1]{#1}%
+\providecommand \citenamefont [1]{#1}%
+\providecommand \href@noop [0]{\@secondoftwo}%
+\providecommand \href [0]{\begingroup \@sanitize@url \@href}%
+\providecommand \@href[1]{\@@startlink{#1}\@@href}%
+\providecommand \@@href[1]{\endgroup#1\@@endlink}%
+\providecommand \@sanitize@url [0]{\catcode `\\12\catcode `\$12\catcode
+  `\&12\catcode `\#12\catcode `\^12\catcode `\_12\catcode `\%12\relax}%
+\providecommand \@@startlink[1]{}%
+\providecommand \@@endlink[0]{}%
+\providecommand \url  [0]{\begingroup\@sanitize@url \@url }%
+\providecommand \@url [1]{\endgroup\@href {#1}{\urlprefix }}%
+\providecommand \urlprefix  [0]{URL }%
+\providecommand \Eprint [0]{\href }%
+\providecommand \doibase [0]{https://doi.org/}%
+\providecommand \selectlanguage [0]{\@gobble}%
+\providecommand \bibinfo  [0]{\@secondoftwo}%
+\providecommand \bibfield  [0]{\@secondoftwo}%
+\providecommand \translation [1]{[#1]}%
+\providecommand \BibitemOpen [0]{}%
+\providecommand \bibitemStop [0]{}%
+\providecommand \bibitemNoStop [0]{.\EOS\space}%
+\providecommand \EOS [0]{\spacefactor3000\relax}%
+\providecommand \BibitemShut  [1]{\csname bibitem#1\endcsname}%
+\let\auto@bib@innerbib\@empty
+%</preamble>
+\bibitem [{\citenamefont {Scholten}\ \emph
+  {et~al.}(2021{\natexlab{a}})\citenamefont {Scholten}, \citenamefont {Hare},
+  \citenamefont {Dwyer}, \citenamefont {Sterpka}, \citenamefont {Kolmasova},
+  \citenamefont {Santolik}, \citenamefont {Lan}, \citenamefont {Uhlir},
+  \citenamefont {Buitink}, \citenamefont {Corstanje}, \citenamefont {Falcke},
+  \citenamefont {Huege}, \citenamefont {H\"{o}randel}, \citenamefont {Krampah},
+  \citenamefont {Mitra}, \citenamefont {Mulrey}, \citenamefont {Nelles},
+  \citenamefont {Pandya}, \citenamefont {Pel}, \citenamefont {Rachen},
+  \citenamefont {Trinh}, \citenamefont {Veen}, \citenamefont {Thoudam},\ and\
+  \citenamefont {Winchen}}]{Scholten:2021-init}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author}
+  {\bibfnamefont {I.}~\bibnamefont {Kolmasova}}, \bibinfo {author}
+  {\bibfnamefont {O.}~\bibnamefont {Santolik}}, \bibinfo {author}
+  {\bibfnamefont {R.}~\bibnamefont {Lan}}, \bibinfo {author} {\bibfnamefont
+  {L.}~\bibnamefont {Uhlir}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Buitink}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Corstanje}}, \bibinfo {author} {\bibfnamefont
+  {H.}~\bibnamefont {Falcke}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont {J.~R.}\
+  \bibnamefont {H\"{o}randel}}, \bibinfo {author} {\bibfnamefont {G.~K.}\
+  \bibnamefont {Krampah}}, \bibinfo {author} {\bibfnamefont {P.}~\bibnamefont
+  {Mitra}}, \bibinfo {author} {\bibfnamefont {K.}~\bibnamefont {Mulrey}},
+  \bibinfo {author} {\bibfnamefont {A.}~\bibnamefont {Nelles}}, \bibinfo
+  {author} {\bibfnamefont {H.}~\bibnamefont {Pandya}}, \bibinfo {author}
+  {\bibfnamefont {A.}~\bibnamefont {Pel}}, \bibinfo {author} {\bibfnamefont
+  {J.~P.}\ \bibnamefont {Rachen}}, \bibinfo {author} {\bibfnamefont {T.~N.~G.}\
+  \bibnamefont {Trinh}}, \bibinfo {author} {\bibfnamefont {S.~t.}\ \bibnamefont
+  {Veen}}, \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont {Thoudam}},\ and\
+  \bibinfo {author} {\bibfnamefont {T.}~\bibnamefont {Winchen}},\ }\href
+  {https://doi.org/https://doi.org/10.1029/2020JD033126} {\bibfield  {journal}
+  {\bibinfo  {journal} {Journal of Geophysical Research: Atmospheres}\ }\textbf
+  {\bibinfo {volume} {126}},\ \bibinfo {pages} {e2020JD033126} (\bibinfo {year}
+  {2021}{\natexlab{a}})},\ \bibinfo {note} {e2020JD033126
+  2020JD033126}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Pugmire}\ \emph {et~al.}(2015)\citenamefont
+  {Pugmire}, \citenamefont {Mundt}, \citenamefont {LaBella},\ and\
+  \citenamefont {Struyf}}]{GLE}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {C.}~\bibnamefont
+  {Pugmire}}, \bibinfo {author} {\bibfnamefont {S.~M.}\ \bibnamefont {Mundt}},
+  \bibinfo {author} {\bibfnamefont {V.~P.}\ \bibnamefont {LaBella}},\ and\
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Struyf}},\ }\href
+  {https://glx.sourceforge.io/index.html} {\bibinfo {title} {Graphics layout
+  engine gle 4.2.5 user manual}},\ \bibinfo {howpublished}
+  {\url{https://en.wikipedia.org/wiki/Graphics_Layout_Engine}} (\bibinfo {year}
+  {2015}),\ \Eprint {https://arxiv.org/abs/http://www.gle-graphics.org/}
+  {http://www.gle-graphics.org/} \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Scholten}\ \emph {et~al.}(2023)\citenamefont
+  {Scholten}, \citenamefont {Hare}, \citenamefont {Dwyer}, \citenamefont {Liu},
+  \citenamefont {Sterpka}, \citenamefont {Mulrey},\ and\ \citenamefont
+  {Veen}}]{Scholten:2023PL}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {N.}~\bibnamefont {Liu}}, \bibinfo {author}
+  {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author} {\bibfnamefont
+  {K.}~\bibnamefont {Mulrey}},\ and\ \bibinfo {author} {\bibfnamefont {S.~T.}\
+  \bibnamefont {Veen}},\ }\href
+  {https://doi.org/https://doi.org/10.1038/s41598-023-41218-x} {\bibfield
+  {journal} {\bibinfo  {journal} {Scientific Reports}\ }\textbf {\bibinfo
+  {volume} {13}},\ \bibinfo {pages} {14485} (\bibinfo {year}
+  {2023})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Scholten}\ \emph
+  {et~al.}(2021{\natexlab{b}})\citenamefont {Scholten}, \citenamefont {Hare},
+  \citenamefont {Dwyer}, \citenamefont {Liu}, \citenamefont {Sterpka},
+  \citenamefont {Buitink}, \citenamefont {Corstanje}, \citenamefont {Falcke},
+  \citenamefont {Huege}, \citenamefont {H\"{o}randel}, \citenamefont {Krampah},
+  \citenamefont {Mitra}, \citenamefont {Mulrey}, \citenamefont {Nelles},
+  \citenamefont {Pandya}, \citenamefont {Rachen}, \citenamefont {Trinh},
+  \citenamefont {{ter Veen}}, \citenamefont {Thoudam},\ and\ \citenamefont
+  {Winchen}}]{Scholten:2021-HANL}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.}~\bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {N.}~\bibnamefont {Liu}}, \bibinfo {author}
+  {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Buitink}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Corstanje}}, \bibinfo {author} {\bibfnamefont
+  {H.}~\bibnamefont {Falcke}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont
+  {J.}~\bibnamefont {H\"{o}randel}}, \bibinfo {author} {\bibfnamefont
+  {G.}~\bibnamefont {Krampah}}, \bibinfo {author} {\bibfnamefont
+  {P.}~\bibnamefont {Mitra}}, \bibinfo {author} {\bibfnamefont
+  {K.}~\bibnamefont {Mulrey}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Nelles}}, \bibinfo {author} {\bibfnamefont
+  {H.}~\bibnamefont {Pandya}}, \bibinfo {author} {\bibfnamefont
+  {J.}~\bibnamefont {Rachen}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Trinh}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {{ter Veen}}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Thoudam}},\ and\ \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Winchen}},\ }\href
+  {https://doi.org/https://doi.org/10.1016/j.atmosres.2021.105688} {\bibfield
+  {journal} {\bibinfo  {journal} {Atmospheric Research}\ }\textbf {\bibinfo
+  {volume} {260}},\ \bibinfo {pages} {105688} (\bibinfo {year}
+  {2021}{\natexlab{b}})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Scholten}\ \emph
+  {et~al.}(2021{\natexlab{c}})\citenamefont {Scholten}, \citenamefont {Hare},
+  \citenamefont {Dwyer}, \citenamefont {Liu}, \citenamefont {Sterpka},
+  \citenamefont {Kolmasova}, \citenamefont {Santolik}, \citenamefont {Lan},
+  \citenamefont {Uhlir}, \citenamefont {Buitink}, \citenamefont {Corstanje},
+  \citenamefont {Falcke}, \citenamefont {Huege}, \citenamefont {H\"{o}randel},
+  \citenamefont {Krampah}, \citenamefont {Mitra}, \citenamefont {Mulrey},
+  \citenamefont {Nelles}, \citenamefont {Pandya}, \citenamefont {Rachen},
+  \citenamefont {Trinh}, \citenamefont {Veen}, \citenamefont {Thoudam},\ and\
+  \citenamefont {Winchen}}]{Scholten:2021-RNL}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {N.}~\bibnamefont {Liu}}, \bibinfo {author}
+  {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author} {\bibfnamefont
+  {I.}~\bibnamefont {Kolmasova}}, \bibinfo {author} {\bibfnamefont
+  {O.}~\bibnamefont {Santolik}}, \bibinfo {author} {\bibfnamefont
+  {R.}~\bibnamefont {Lan}}, \bibinfo {author} {\bibfnamefont {L.}~\bibnamefont
+  {Uhlir}}, \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont {Buitink}},
+  \bibinfo {author} {\bibfnamefont {A.}~\bibnamefont {Corstanje}}, \bibinfo
+  {author} {\bibfnamefont {H.}~\bibnamefont {Falcke}}, \bibinfo {author}
+  {\bibfnamefont {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont
+  {J.~R.}\ \bibnamefont {H\"{o}randel}}, \bibinfo {author} {\bibfnamefont
+  {G.~K.}\ \bibnamefont {Krampah}}, \bibinfo {author} {\bibfnamefont
+  {P.}~\bibnamefont {Mitra}}, \bibinfo {author} {\bibfnamefont
+  {K.}~\bibnamefont {Mulrey}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Nelles}}, \bibinfo {author} {\bibfnamefont
+  {H.}~\bibnamefont {Pandya}}, \bibinfo {author} {\bibfnamefont {J.~P.}\
+  \bibnamefont {Rachen}}, \bibinfo {author} {\bibfnamefont {T.~N.~G.}\
+  \bibnamefont {Trinh}}, \bibinfo {author} {\bibfnamefont {S.~t.}\ \bibnamefont
+  {Veen}}, \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont {Thoudam}},\ and\
+  \bibinfo {author} {\bibfnamefont {T.}~\bibnamefont {Winchen}},\ }\href
+  {https://doi.org/10.1038/s41598-021-95433-5} {\bibfield  {journal} {\bibinfo
+  {journal} {Scientific Reports}\ }\textbf {\bibinfo {volume} {11}},\ \bibinfo
+  {pages} {16256} (\bibinfo {year} {2021}{\natexlab{c}})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Machado}\ \emph {et~al.}(2021)\citenamefont
+  {Machado}, \citenamefont {Scholten}, \citenamefont {Hare}, \citenamefont
+  {Buitink}, \citenamefont {Corstanje}, \citenamefont {Falcke}, \citenamefont
+  {Huege}, \citenamefont {H\"{o}randel}, \citenamefont {Krampah}, \citenamefont
+  {Mitra},\ and\ \citenamefont {et~al.}}]{Machado:2021}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {J.}~\bibnamefont
+  {Machado}}, \bibinfo {author} {\bibfnamefont {O.}~\bibnamefont {Scholten}},
+  \bibinfo {author} {\bibfnamefont {B.}~\bibnamefont {Hare}}, \bibinfo {author}
+  {\bibfnamefont {S.}~\bibnamefont {Buitink}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Corstanje}}, \bibinfo {author} {\bibfnamefont
+  {H.}~\bibnamefont {Falcke}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont
+  {J.}~\bibnamefont {H\"{o}randel}}, \bibinfo {author} {\bibfnamefont {G.~K.}\
+  \bibnamefont {Krampah}}, \bibinfo {author} {\bibfnamefont {P.}~\bibnamefont
+  {Mitra}},\ and\ \bibinfo {author} {\bibnamefont {et~al.}},\ }\href
+  {https://doi.org/https://doi.org/10.1029/2021EA001958} {\bibfield  {journal}
+  {\bibinfo  {journal} {Earth and Space Science}\ }\textbf {\bibinfo {volume}
+  {n/a}},\ \bibinfo {pages} {e2021EA001958} (\bibinfo {year} {2021})},\
+  \bibinfo {note} {e2021EA001958 2021EA001958},\ \Eprint
+  {https://arxiv.org/abs/https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2021EA001958}
+  {https://agupubs.onlinelibrary.wiley.com/doi/pdf/10.1029/2021EA001958}
+  \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Scholten}\ \emph
+  {et~al.}(2021{\natexlab{d}})\citenamefont {Scholten}, \citenamefont {Hare},
+  \citenamefont {Dwyer}, \citenamefont {Liu}, \citenamefont {Sterpka},
+  \citenamefont {Buitink}, \citenamefont {Huege}, \citenamefont {Nelles},\ and\
+  \citenamefont {ter Veen}}]{Scholten:2021-INL}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {N.}~\bibnamefont {Liu}}, \bibinfo {author}
+  {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Buitink}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Nelles}},\ and\ \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {ter Veen}},\ }\href
+  {https://doi.org/10.1103/PhysRevD.104.063022} {\bibfield  {journal} {\bibinfo
+   {journal} {Phys. Rev. D}\ }\textbf {\bibinfo {volume} {104}},\ \bibinfo
+  {pages} {063022} (\bibinfo {year} {2021}{\natexlab{d}})}\BibitemShut
+  {NoStop}%
+\bibitem [{\citenamefont {Wang}\ \emph {et~al.}(2023)\citenamefont {Wang},
+  \citenamefont {Hare}, \citenamefont {Zhou}, \citenamefont {St\"{o}cker},\
+  and\ \citenamefont {Scholten}}]{Wang:2023}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {L.}~\bibnamefont
+  {Wang}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {K.}~\bibnamefont {Zhou}}, \bibinfo {author}
+  {\bibfnamefont {H.}~\bibnamefont {St\"{o}cker}},\ and\ \bibinfo {author}
+  {\bibfnamefont {O.}~\bibnamefont {Scholten}},\ }\href
+  {https://doi.org/https://doi.org/10.1016/j.chaos.2023.113346} {\bibfield
+  {journal} {\bibinfo  {journal} {Chaos, Solitons \& Fractals}\ }\textbf
+  {\bibinfo {volume} {170}},\ \bibinfo {pages} {113346} (\bibinfo {year}
+  {2023})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Scholten}\ \emph {et~al.}(2022)\citenamefont
+  {Scholten}, \citenamefont {Hare}, \citenamefont {Dwyer}, \citenamefont {Liu},
+  \citenamefont {Sterpka}, \citenamefont {Kolma\ifmmode~\check{s}\else
+  \v{s}\fi{}ov\'a}, \citenamefont {Santol\'{\i}k}, \citenamefont {L\'an},
+  \citenamefont {Uhl\'{\i}\ifmmode~\check{r}\else \v{r}\fi{}}, \citenamefont
+  {Buitink}, \citenamefont {Huege}, \citenamefont {Nelles},\ and\ \citenamefont
+  {ter Veen}}]{Scholten:2022}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {O.}~\bibnamefont
+  {Scholten}}, \bibinfo {author} {\bibfnamefont {B.~M.}\ \bibnamefont {Hare}},
+  \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont {Dwyer}}, \bibinfo
+  {author} {\bibfnamefont {N.}~\bibnamefont {Liu}}, \bibinfo {author}
+  {\bibfnamefont {C.}~\bibnamefont {Sterpka}}, \bibinfo {author} {\bibfnamefont
+  {I.}~\bibnamefont {Kolma\ifmmode~\check{s}\else \v{s}\fi{}ov\'a}}, \bibinfo
+  {author} {\bibfnamefont {O.}~\bibnamefont {Santol\'{\i}k}}, \bibinfo {author}
+  {\bibfnamefont {R.}~\bibnamefont {L\'an}}, \bibinfo {author} {\bibfnamefont
+  {L.}~\bibnamefont {Uhl\'{\i}\ifmmode~\check{r}\else \v{r}\fi{}}}, \bibinfo
+  {author} {\bibfnamefont {S.}~\bibnamefont {Buitink}}, \bibinfo {author}
+  {\bibfnamefont {T.}~\bibnamefont {Huege}}, \bibinfo {author} {\bibfnamefont
+  {A.}~\bibnamefont {Nelles}},\ and\ \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {ter Veen}},\ }\href
+  {https://doi.org/10.1103/PhysRevD.105.062007} {\bibfield  {journal} {\bibinfo
+   {journal} {Phys. Rev. D}\ }\textbf {\bibinfo {volume} {105}},\ \bibinfo
+  {pages} {062007} (\bibinfo {year} {2022})},\ \Eprint
+  {https://arxiv.org/abs/2110.02547} {arXiv:2110.02547} \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Bridle}\ and\ \citenamefont
+  {Baldwin}(1967)}]{Bridle:1967}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {A.~H.}\ \bibnamefont
+  {Bridle}}\ and\ \bibinfo {author} {\bibfnamefont {J.~E.}\ \bibnamefont
+  {Baldwin}},\ }\href {https://doi.org/10.1093/mnras/136.2.219} {\bibfield
+  {journal} {\bibinfo  {journal} {Monthly Notices of the Royal Astronomical
+  Society}\ }\textbf {\bibinfo {volume} {136}},\ \bibinfo {pages} {219}
+  (\bibinfo {year} {1967})},\ \Eprint
+  {https://arxiv.org/abs/https://academic.oup.com/mnras/article-pdf/136/2/219/8075223/mnras136-0219.pdf}
+  {https://academic.oup.com/mnras/article-pdf/136/2/219/8075223/mnras136-0219.pdf}
+  \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Mulrey}\ \emph {et~al.}(2019)\citenamefont {Mulrey},
+  \citenamefont {Bonardi}, \citenamefont {Buitink}, \citenamefont {Corstanje},
+  \citenamefont {Falcke}, \citenamefont {Hare}, \citenamefont {H\"{o}randel},
+  \citenamefont {Huege}, \citenamefont {Mitra}, \citenamefont {Nelles},
+  \citenamefont {Rachen}, \citenamefont {Rossetto}, \citenamefont {Schellart},
+  \citenamefont {Scholten}, \citenamefont {ter Veen}, \citenamefont {Thoudam},
+  \citenamefont {Trinh},\ and\ \citenamefont {Winchen}}]{Mulrey:2019}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {K.}~\bibnamefont
+  {Mulrey}}, \bibinfo {author} {\bibfnamefont {A.}~\bibnamefont {Bonardi}},
+  \bibinfo {author} {\bibfnamefont {S.}~\bibnamefont {Buitink}}, \bibinfo
+  {author} {\bibfnamefont {A.}~\bibnamefont {Corstanje}}, \bibinfo {author}
+  {\bibfnamefont {H.}~\bibnamefont {Falcke}}, \bibinfo {author} {\bibfnamefont
+  {B.}~\bibnamefont {Hare}}, \bibinfo {author} {\bibfnamefont {J.}~\bibnamefont
+  {H\"{o}randel}}, \bibinfo {author} {\bibfnamefont {T.}~\bibnamefont {Huege}},
+  \bibinfo {author} {\bibfnamefont {P.}~\bibnamefont {Mitra}}, \bibinfo
+  {author} {\bibfnamefont {A.}~\bibnamefont {Nelles}}, \bibinfo {author}
+  {\bibfnamefont {J.}~\bibnamefont {Rachen}}, \bibinfo {author} {\bibfnamefont
+  {L.}~\bibnamefont {Rossetto}}, \bibinfo {author} {\bibfnamefont
+  {P.}~\bibnamefont {Schellart}}, \bibinfo {author} {\bibfnamefont
+  {O.}~\bibnamefont {Scholten}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {ter Veen}}, \bibinfo {author} {\bibfnamefont
+  {S.}~\bibnamefont {Thoudam}}, \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Trinh}},\ and\ \bibinfo {author} {\bibfnamefont
+  {T.}~\bibnamefont {Winchen}},\ }\href
+  {https://doi.org/https://doi.org/10.1016/j.astropartphys.2019.03.004}
+  {\bibfield  {journal} {\bibinfo  {journal} {Astroparticle Physics}\ }\textbf
+  {\bibinfo {volume} {111}},\ \bibinfo {pages} {1 } (\bibinfo {year}
+  {2019})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {van Haarlem}\ \emph {et~al.}(2013)\citenamefont {van
+  Haarlem} \emph {et~al.}}]{Haarlem:2013}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {M.~P.}\ \bibnamefont
+  {van Haarlem}} \emph {et~al.},\ }\href
+  {https://doi.org/10.1051/0004-6361/201220873} {\bibfield  {journal} {\bibinfo
+   {journal} {A\&A}\ }\textbf {\bibinfo {volume} {556}},\ \bibinfo {pages} {A2}
+  (\bibinfo {year} {2013})}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {{Briggs}}\ \emph {et~al.}(1999)\citenamefont
+  {{Briggs}}, \citenamefont {{Schwab}},\ and\ \citenamefont
+  {{Sramek}}}]{Briggs:1999}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {D.~S.}\ \bibnamefont
+  {{Briggs}}}, \bibinfo {author} {\bibfnamefont {F.~R.}\ \bibnamefont
+  {{Schwab}}},\ and\ \bibinfo {author} {\bibfnamefont {R.~A.}\ \bibnamefont
+  {{Sramek}}},\ }in\ \href
+  {http://www.phys.unm.edu/~gbtaylor/astr423/s98book.pdf} {\emph {\bibinfo
+  {booktitle} {Synthesis Imaging in Radio Astronomy II}}},\ \bibinfo {series}
+  {Astronomical Society of the Pacific Conference Series}, Vol.\ \bibinfo
+  {volume} {180},\ \bibinfo {editor} {edited by\ \bibinfo {editor}
+  {\bibfnamefont {G.~B.}\ \bibnamefont {{Taylor}}}, \bibinfo {editor}
+  {\bibfnamefont {C.~L.}\ \bibnamefont {{Carilli}}},\ and\ \bibinfo {editor}
+  {\bibfnamefont {R.~A.}\ \bibnamefont {{Perley}}}}\ (\bibinfo {year} {1999})\
+  p.\ \bibinfo {pages} {127}\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Yatawatta}(2014)}]{Yatawatta:2014}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {S.}~\bibnamefont
+  {Yatawatta}},\ }\href {https://doi.org/10.1093/mnras/stu1494} {\bibfield
+  {journal} {\bibinfo  {journal} {Monthly Notices of the Royal Astronomical
+  Society}\ }\textbf {\bibinfo {volume} {444}},\ \bibinfo {pages} {790}
+  (\bibinfo {year} {2014})},\ \Eprint
+  {https://arxiv.org/abs/https://academic.oup.com/mnras/article-pdf/444/1/790/18508311/stu1494.pdf}
+  {https://academic.oup.com/mnras/article-pdf/444/1/790/18508311/stu1494.pdf}
+  \BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Jackson}(1975)}]{Jackson:1975}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {J.~D.}\ \bibnamefont
+  {Jackson}},\ }\href {https://cds.cern.ch/record/100964} {\emph {\bibinfo
+  {title} {{Classical electrodynamics; 2nd ed.}}}}\ (\bibinfo  {publisher}
+  {Wiley},\ \bibinfo {address} {New York, NY},\ \bibinfo {year}
+  {1975})\BibitemShut {NoStop}%
+\bibitem [{\citenamefont {Dennis}\ \emph {et~al.}(1981)\citenamefont {Dennis},
+  \citenamefont {Gay},\ and\ \citenamefont {Welsch}}]{nl2sol}%
+  \BibitemOpen
+  \bibfield  {author} {\bibinfo {author} {\bibfnamefont {J.}~\bibnamefont
+  {Dennis}}, \bibinfo {author} {\bibfnamefont {D.}~\bibnamefont {Gay}},\ and\
+  \bibinfo {author} {\bibfnamefont {R.}~\bibnamefont {Welsch}},\ }\href
+  {https://doi.org/10.1145/355958.355965} {\bibfield  {journal} {\bibinfo
+  {journal} {ACM Trans. Math. Softw.}\ }\textbf {\bibinfo {volume} {7}},\
+  \bibinfo {pages} {367} (\bibinfo {year} {1981})}\BibitemShut {NoStop}%
+\end{thebibliography}%

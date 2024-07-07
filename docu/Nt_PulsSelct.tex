@@ -6,6 +6,7 @@ Source finding is performed by the script \verb!"Imaging.sh"! residing in the Fl
 
 \begin{linenumbers}
 \resetlinenumber
+\tiny
 \begin{verbatim}
 &Parameters
  RunOption='Impulsive'
@@ -47,12 +48,12 @@ While in imaging mode only very few parameters need to be specified and often th
 \item[12] \verb#'! CCShapeCut_lim=0.6 '#:  Maximum ratio of the width of the cross correlation function by that of the self correlation.
 \item[13] \verb#"! SearchRangeFallOff=4. " #:  Multiplier for the (parabolic) width of the pulse-search window.
 \item[14] \verb#"! Sigma_AntT=3 " #:  Constant added to width of search window for pulses.
-
 \item[15] \verb!' Calibrations = "Calibrations201912042045.dat"'!: The name of the calibration file created at the end of the time calibration procedure.
 \item[16] \verb#" BadAnt_SAI=   003065, "#: The antenna SAI identifiers (see \secref{RFI-out}) of the antennas that do not have good data.
 \item[18] \verb#' OutFileLabel="-s" '#: An additional label for the output files, including the list of sources.
 \item[21] \verb#"C  1165 , -45500.  7700.   5300.0 , 101.7 300 "#: Specification of the starting time, approximate location of the flash, and the time frame where sources should be searched. If `S' is used instead of `C' (or space) the given time will correspond to the time at the indicated position.
 \end{enumerate*}
+
 The last line in the input specifies
 \\1) The start time, $T_0=1165$  (in ms), of the flash. The output of the RFI-mitigation and also that of the Explore runs should give you a reasonable estimate of when the flash started.
 \\2--4) The general direction towards the flash (N,E,h) in m.
@@ -78,17 +79,21 @@ See later sections for the details of the source-finding procedure including the
 The most important output is the list of source locations with their quality identifiers. Additionally a plot is made of the peak-finding statistics like shown in \figref{PeakStat}.
 
 \begin{figure}[th]
-\centering{\includegraphics[bb=0cm 0cm 25.5cm 31.4cm,clip, width=0.49\textwidth]{Figs/PeakStats} }
+\centering{\includegraphics[bb=0cm 0cm 18.5cm 9.4cm,clip, width=0.49\textwidth]{Figs/PeakStats} }
 %\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
 	\caption{Statistics of the source-finding procedure for the impulsive imager. For each time frame the number of located sources is given with a chi-square below the maximum specified.}	 \figlab{PeakStat}
 \end{figure}
 
 \section{Plotting flashes}
 
+Note: This section in obsolete by now since the utility \verb!FlashImage! is superseded by \verb!DataSelect! and discussed in \secref{DataSelect}.
+The utility \verb!FlashImage! is depreciated and no longer maintained.
+
 For plotting it is advised to use the script \verb!FlashImage.sh! that reads the input from \verb!FlashImage.in! specifying values for the quality indicators as well as the windows for which the source locations and timings will be plotted. The script \verb!FlashImage.bat! is for running under windows.
 
 \begin{linenumbers}
 \resetlinenumber
+\small
 \begin{verbatim}
  "Srcs18-evenS" 5. 2. 3.0 55   18D1e-i   -30.00 -27.  -7.5 -5.0  4.5 7.0  0. 30.  NoBox
  0.1 0.5 0.1      ""  1.  1.   1   0.5                                             ! MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]

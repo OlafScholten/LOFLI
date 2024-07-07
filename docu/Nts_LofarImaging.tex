@@ -11,7 +11,9 @@
 %\usepackage{fancyheadings}
 \DeclareGraphicsExtensions{.pdf,.png,.jpg}
 %\input C:/OlafsUtil/LocalTex/lecture-w.sty
-\usepackage{C:/OlafsUtil/LocalTex/olaf2}
+%\usepackage{C:/OlafsUtil/LocalTex/olaf2}
+\long\def\Omit#1{}
+
 \usepackage{filedate}
 \usepackage{lineno}
 \usepackage{subfig}
@@ -19,7 +21,9 @@
 %\usepackage[utf8]{inputenc}
 
 
-\bibliographystyle{apalike}
+%\bibliographystyle{apalike}
+%\bibliographystyle{abbrv}
+\bibliographystyle{apsrev4-2}
 %\usepackage{biblatex}
 %\addbibresource{C:/Users/Olaf Scholten/Documents/AstroPhys/Lightning/Lght_papers/Olaf/LightningImagingRefs.bib}
 %\addbibresource{../../../../Lght_papers/Olaf/LightningImagingRefs.bib}
@@ -46,8 +50,22 @@
 \def\eqlab#1{\label{eq:#1}}
 \def\pdif#1#2{\frac{\partial #1}{\partial #2}}
 \def\ddt{\frac{d}{dt}}
+% figures
+\setlength{\unitlength}{1.0cm}
+\def\figref#1{Fig.~\ref{fig:#1}}
+\def\figlab#1{\label{fig:#1}}  % Put in caption
+%\@addtoreset{figure}{section}  % reset numbering for new (sub)section
+%\def\thefigure{\thesection.\arabic{figure}} %compose fig. numbers
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Tables
+\def\tabref#1{Table~\ref{tab:#1}}
+\def\tablab#1{\label{tab:#1}}  % Put in caption
+%\@addtoreset{table}{section}  % reset numbering for new (sub)section
+%\def\thetable{\thesection.\arabic{table}} %compose equ. numbers
+
+\def\secref#1{Section~\ref{sec:#1}}
+\def\seclab#1{\label{sec:#1}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
 %%% Use color for marking
 \newcommand{\RED}{\color[named]{Red}}
 \newcommand{\blue}{\color[named]{Blue}}
@@ -55,6 +73,9 @@
 \newcommand{\m}[1]{{\marginpar{\RED\textbullet}\RED #1}}
 \newcommand{\ToDo}[1]{{\marginpar{\RED\textbullet}{\bf \RED ToDO:} {\bf \blue #1}}}
 \newcommand{\note}[1]{{\RED $\bullet$\ \bf #1 $\bullet$}}
+
+\newcommand{\Olaf}{\color[named]{Purple}}
+\newcommand{\os}[1]{{\marginpar{\Olaf Olaf}\Olaf\bf #1}}
 
 %\newcommand{\thalf}{\mbox{\small{$\frac{3}{2}$}} }
 \def\half{\mbox{\small{$\frac{1}{2}$}}}
@@ -110,9 +131,11 @@ Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
 %---------
 \voffset-1.0cm
 \textheight 22cm
-\oddsidemargin -.1cm
-%\evensidemargin .5cm
+\oddsidemargin 0.0cm
+\evensidemargin 0.0cm
 \textwidth 17cm
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
 \centerline{\LARGE \bf LOFLI}\vspace{2ex}
@@ -136,7 +159,7 @@ Edition later than v21 contains also the routines for full interferometry (TRI-D
 
 In each chapter contains a description of the essential ingredients of the code, examples of input lines, examples of generated output, as well as examples of shell commands for running the code in Linux.
 
-The code is free to be used, however it is requested to cite the publication where the features of the code are introduced and/or cite the software archive from where the code can be downloaded, \href{https://zenodo.org/records/7393903}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository}.
+The code is free to be used, however it is requested to cite the publication where the features of the code are introduced and/or cite the software archive from where the code can be downloaded, \href{https://zenodo.org/records/4707495}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository}.
 
 \newpage
 
@@ -146,6 +169,7 @@ The code is free to be used, however it is requested to cite the publication whe
 
 \hfill \today
 
+%\Omit{
 \chapter{General Introduction}
 
 \input{Nt_LOFLI2Installation}
@@ -160,6 +184,7 @@ The code is free to be used, however it is requested to cite the publication whe
 \input{Nt_Interferometry}
 \input{Nt_SimulateData}
 \chapter{Supplementary scripts}\seclab{supp}
+\input{Nt_DataSelect}
 \input{Nt_CompareCal}
 \input{Nt_InterfSrcSell}
 \input{Nt_Simulate}
@@ -167,12 +192,10 @@ The code is free to be used, however it is requested to cite the publication whe
 \input{Nt_EInterferometry}
 %\input{Nt_SourceQ}
 \input{Nt_3DAverage}
-
 \input{Nt_Kalman}
-
+%}
 \chapter{Program details}
 \input{Nt_Auxill}
-
 \input{Nt_Table}
 
 \Omit{ ------------------------------------------------------
