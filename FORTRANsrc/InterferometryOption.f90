@@ -241,6 +241,7 @@ Subroutine ChainRuns(NewCenLoc)
    character*100 :: shellin, IntfRun_file
    Character*5 :: RunOption='TRI-D' !, E_FieldsCalc
    Real(dp), external :: tShift_ms
+   Logical :: FollowCenterIntensity=.false.
    NAMELIST /Parameters/ RunOption &!, E_FieldsCalc  &  ! just those that are of interest for interferometry
          , IntfSmoothWin, TimeBase, PixPowOpt  &
          , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations, SaturatedSamplesMax &
@@ -251,7 +252,7 @@ Subroutine ChainRuns(NewCenLoc)
    t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
    StartTime_ms=StartTime_ms-t_shft-TimeBase
    StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
-   If(t_track.le.0.) Then
+   If(t_track.le.0.) Then  ! Move along a track when present
       If(ChainRun.gt.0) Then
          ChainRun=ChainRun-1
          StartTime_ms=StartTime_ms+sample_ms*SumWindw
@@ -266,9 +267,12 @@ Subroutine ChainRuns(NewCenLoc)
       If(PreDefTrackFile.ne.'') Then  ! With a track defined StartTime_ms is actually midtime
          Call  GetTrPos(StartTime_ms, NewCenLoc)
          write(2,*) 'NewCenLoc from track', StartTime_ms, NewCenLoc
-      EndIf
+      Else If(.not.  FollowCenterIntensity) Then
+         NewCenLoc(:)=CenLoc(:) ! Stick to the old position
+         write(2,*) 'old position for image cube kept @',CenLoc(:)
+      EndIf ! otherwise take the NewCenLoc as has been calculated (=centroid of strength in present run)
       t_new=-1.
-   Else
+   Else ! move image window along track but keep time fixed (used for looking for positive leaders)
       If(ChainRun.le.0) Then
          write(2,*) 'Chainrun should be positive for the "Follow a track at fixed time" (FTFT) option '
          Stop 'Negative Chainrun with FTFT'
@@ -321,7 +325,7 @@ Subroutine ChainRuns(NewCenLoc)
       Close(Unit=10)
       Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(IntfRun_file)//'.sh' )
       Write(10,"(9(A,/) )") &
-         '#!/bin/bash -v', &
+         '#!/bin/bash', &  !   -v', &
          '#','#', &
          'source  ${LL_Base}/ShortCuts.sh' ,   &  ! defines ${ProgramDir} and ${FlashFolder}
 !         'source ${UtilDir}/compile.sh',  &

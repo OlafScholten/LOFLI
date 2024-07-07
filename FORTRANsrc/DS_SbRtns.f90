@@ -133,74 +133,75 @@ Subroutine DS_ReadCntrl(Fini)
       write(2,*) 'Source selection criteria:'
       Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (Impulsive).')  ! width of plot?
       If(CutSigmaH.gt. 0.) Then
-         Call PrintValues(CutSigmaH,'CutSigmaH', 'Condition: [Sigma(h) < CutSigmaH], unit [m].')  ! width of plot?
-         Call PrintValues(LinCutH,'LinCutH', 'Condition: [Sigma(h) * h/LinCutH < CutSigmaH] when [h < LinCutH], unit [km].')  ! width of plot?
+         Call PrintValues(CutSigmaH,'CutSigmaH', 'Condition: [Sigma(h) < CutSigmaH], unit [m].')  !
+         Call PrintValues(LinCutH,'LinCutH', 'Condition: [Sigma(h) * h/LinCutH < CutSigmaH] when [h < LinCutH], unit [km].')  !
       Else
          write(2,*) 'Cut of sigma(h) requires positive value for "CutSigmaH"'
       EndIf
-      Call PrintValues(RMS_ns,'RMS_ns', 'Condition: [sqrt(Chi^2) < RMS_ns], unit [ns].')  ! width of plot?
+      Call PrintValues(RMS_ns,'RMS_ns', 'Condition: [sqrt(Chi^2) < RMS_ns], unit [ns].')  !
       Call PrintValues(DelNEff,'DelNEff', 'Condition: [(Max_EffAnt - N_EffAnt) <= DelNEff], hard when [DelNEff > 0]'//&
          'otherwise soft: [(sqrt(Chi^2)-RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff) < RMS_ns] ')
-      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
-      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
+      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  !
+      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  !
       write(2,*) 'Image control:'
-      Call PrintValues(PlotName,'PlotName', 'Added to flash name to label plots')  ! width of plot?
-      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
-      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
-      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
-      Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  ! width of plot?
+      Call PrintValues(PlotName,'PlotName', 'Added to flash name to label plots')  !
+      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayed as a grey background plot.')  !
+      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  !
+      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  !
+      Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
       If(NLongTracksMax.gt.0) Then
-         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
-         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
-         Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  ! width of plot?
-         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
-         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
-         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
-         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
-         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
+         Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  !
+         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
+         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  !
+         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  !
+         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  !
+         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  !
       EndIf!(NLongTracksMax.gt.0)
       If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
-         Call PrintValues(Corr_dD,'Corr_dD', 'Distance step size for time-distance correlator.')  ! width of plot?
-         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
-         Call PrintValues(Corr_dtau,'Corr_dtau', 'Time step size for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_dD,'Corr_dD', 'Distance step size for time-distance correlator.')  !
+         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  !
+         Call PrintValues(Corr_dtau,'Corr_dtau', 'Time step size for time-distance correlator.')  !
       Else
          Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
       EndIf
-      Call PrintValues(QualPlot,'QualPlot', 'make scattter plot of different quality indicators.')  ! width of plot?
+      Call PrintValues(QualPlot,'QualPlot', 'make scatter plot of different quality indicators.')  !
    CASE("T")  ! TRI-D Imager
       Write(2,*) 'Image data from TRI-D Imager, PlotName extension=',TRIM(PlotName)
       DS_Mode=2
       If(AmplitudePlot.eq.tiny) AmplitudePlot=10.
       If(Aweight.eq. tiny .and. AmplitudePlot.gt.0.) Aweight=1.
       write(2,*) 'Source selection criteria:'
-      Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (TRI_D).')  ! width of plot?
-      Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  ! width of plot?
-      Call PrintValues(SMPowCut,'SMPowCut', 'Threshol Intensity.')  ! width of plot?
-      !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  ! width of plot?
-      Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  ! width of plot?
-      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  ! width of plot?
-      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  ! width of plot?
+      Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (TRI_D).')  !
+      Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  !
+      Call PrintValues(SMPowCut,'SMPowCut', 'Threshol Intensity.')  !
+      !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  !
+      Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  !
+      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  !
+      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  !
       write(2,*) 'Image control:'
-      Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  ! width of plot?
-      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayes as grey background plot.')  ! width of plot?
-      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  ! width of plot?
-      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  ! width of plot?
-      Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  ! width of plot?
-      Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  ! width of plot?
+      Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  !
+      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayed as a grey background plot.')  !
+      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  !
+      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  !
+      Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  !
+      Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  !
+      Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
       If(NLongTracksMax.gt.0) Then
-         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  ! width of plot?
-         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  ! width of plot?
-         Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  ! width of plot?
-         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  ! width of plot?
-         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  ! width of plot?
-         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  ! width of plot?
-         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  ! width of plot?
-         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  ! width of plot?
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
+         Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  !
+         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
+         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  !
+         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  !
+         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  !
+         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  !
       EndIf!(NLongTracksMax.gt.0)
       If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
-         Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  ! width of plot?
-         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  ! width of plot?
-         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  ! width of plot?
+         Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  !
+         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  !
+         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  !  
       Else
          Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
       EndIf
@@ -220,7 +221,27 @@ Subroutine DS_ReadCntrl(Fini)
       NEhtBB(1:2)=xyztBB(3:4)
       NEhtBB(5:8)=xyztBB(5:8)
    EndIf
-   write(2,"(A,3(2F9.3,2x),A,2F10.4,A)") 'used NEhtBB=', xyztBB(1:6),'[km]', xyztBB(7:8),' [ms]'
+   If(NEhtBB(1) .gt. NEhtBB(2)) Then ! interchange
+      NEhtBB(1)=xyztBB(4)
+      NEhtBB(2)=xyztBB(3)
+      xyztBB(3:4)=NEhtBB(1:2)
+   EndIf
+   If(NEhtBB(3) .gt. NEhtBB(4)) Then ! interchange
+      NEhtBB(3)=xyztBB(2)
+      NEhtBB(4)=xyztBB(1)
+      xyztBB(1:2)=NEhtBB(3:4)
+   EndIf
+   If(NEhtBB(5) .gt. NEhtBB(6)) Then ! interchange
+      NEhtBB(5)=xyztBB(6)
+      NEhtBB(6)=xyztBB(5)
+      xyztBB(5:6)=NEhtBB(5:6)
+   EndIf
+   If(NEhtBB(7) .gt. NEhtBB(8)) Then ! interchange
+      NEhtBB(7)=xyztBB(8)
+      NEhtBB(8)=xyztBB(7)
+      xyztBB(7:8)=NEhtBB(7:8)
+   EndIf
+   write(2,"(A,3(2F9.3,2x),A,2F10.4,A)") 'used NEhtBB=', NEhtBB(1:6),'[km]', xyztBB(7:8),' [ms]'
    !
    If(ZoomBox.ne.'NoBox')  ZoomBox=TRIM(DataFolder)//ZoomBox
    !Write(2,"(A,F7.2,A,F7.2,A,F7.2)") 'quality cuts: sigma(z)=', ICVal,'[m] @', Height_1,'[km]'
@@ -443,6 +464,8 @@ Subroutine DS_ReadSelData_TRID
                EndIf
                i_sequence=i_sequence+1 ! exit when =0
                !write(2,*) datfile
+            Elseif (i_datfil .eq. 1) Then
+               RepackData=.false.
             EndIf
          EndIf
          !write(2,*) 'RepackData-2', RepackData, First29
@@ -460,16 +483,17 @@ Subroutine DS_ReadSelData_TRID
                Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(PolExten),'"'
                PolarAna=.false.
             Else
-               Read(27,*) lineTXT
+               Read(27,"(A180)") lineTXT
             endif
          EndIf
          n_repack=   n_repack + 10000
          If(First29 .and. RepackData) Then
             write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'Repack'//TRIM(extension),'"'
-            OPEN(unit=29,FILE=trim(datfile)//'Repack'//TRIM(extension), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+            OPEN(unit=29,FILE=trim(datfile)//'-R-'//TRIM(extension), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
             If(PolarAna) Then
                write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'Repack'//TRIM(PolExten),'"'
-               OPEN(unit=30,FILE=trim(datfile)//'Repack'//TRIM(PolExten), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+               OPEN(unit=30,FILE=trim(datfile)//'-R-'//TRIM(PolExten), FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
+               Write(30,*) lineTXT, ' Repacked'
             EndIf
          EndIf
          !
@@ -531,13 +555,14 @@ Subroutine DS_ReadSelData_TRID
             If(PolarAna) Then
                read(27,*,iostat=nxx)  i_slice, i_scr,  tp, Stks(1:6)
                If(nxx.ne.0) then
-                  write(2,*) 'Read error polar data:', nxx,i,t,i_slice, i_scr,  tp
+                  write(2,*) '*******Read error polar data:', nxx,i,t,i_slice, i_scr,  tp
+
                   write(2,*) Stks(1:6)
                   PolarAna=.false.
                   Close(unit=27)
                   If(RepackData) Close(unit=30)
-               ElseIf(t.ne.tp) Then
-                  write(2,*) 'times in source and polar data not equal:',t, tp
+               ElseIf( ABS(t-tp) .gt. 5.d-6) Then
+                  write(2,*) '*******times in source and polar data not equal:',t, tp
                   PolarAna=.false.
                   Close(unit=27)
                   If(RepackData) Close(unit=30)
@@ -547,7 +572,7 @@ Subroutine DS_ReadSelData_TRID
                write(29,"(i8,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") n_repack+i,t,x,y,z,SMPow &
                   ,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx
                If(PolarAna) Then
-                  write(30,"(i5,',',i6,',',f12.6, 6(',',2g12.4) )") i_slice, i_scr,  tp, Stks(1:6)
+                  write(30,"(i8,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") n_repack+i_slice, i_scr,  tp, Stks(1:6)
                EndIf
             EndIf
             !

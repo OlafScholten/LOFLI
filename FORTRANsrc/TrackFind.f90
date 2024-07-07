@@ -205,26 +205,29 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    !    Hist1=0.000001 ; Hist2=0.000001
    prin=.false.   !  Do not print polarization observables
    PolZen(1:3)=0. ; PolAzi(1:3)=0. ; PolMag(1:3)=0. ; PoldOm(1:3)=0.
-    do i=1,TrackNr
-        If(TrackENr(i).lt. LongTrack_Min) cycle
-        i_LongTr=i_LongTr+1
-        if(i_LongTr.ge.10) exit
-        !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
-        write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
-        OPEN(unit=29,FILE=TRIM(PlotFile)//trim(extension),FORM='FORMATTED',STATUS='unknown')
-        write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
-        write(29,"('!',T7,'time',T22,'x=East',T38,'y=North',T53,'z=height',T73,'x=East',T89,'y=North',T104,'z=height', &
-            T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
-        OPEN(unit=30,FILE=TRIM(PlotFile)//'Angls'//trim(extension),FORM='FORMATTED',STATUS='unknown')
-        write(30,"('!',T10,'Running Average Leader Head position',T47,'Velocity angle',T77,'Polarization amplitudes & angles')")
-        write(30,"('!',T5,'time',T17,'x=East',T28,'y=North',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
+   do i=1,TrackNr
+      !write(2,*) 'ConstructTracks',i,TrackENr(i), LongTrack_Min, PolarAna
+      If(TrackENr(i).lt. LongTrack_Min) cycle
+      i_LongTr=i_LongTr+1
+      if(i_LongTr.ge.10) exit
+      !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
+      write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
+      OPEN(unit=29,FILE=TRIM(PlotFile)//trim(extension),FORM='FORMATTED',STATUS='unknown')
+      write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
+      write(29,"('!',T7,'time',T22,'x=East',T38,'y=North',T53,'z=height',T73,'x=East',T89,'y=North',T104,'z=height', &
+         T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
+      If(PolarAna) Then
+         OPEN(unit=30,FILE=TRIM(PlotFile)//'Angls'//trim(extension),FORM='FORMATTED',STATUS='unknown')
+         write(30,"('!',T10,'Running Average Leader Head position',T47,'Velocity angle',T77,&
+            'Polarization amplitudes & angles')")
+         write(30,"('!',T5,'time',T17,'x=East',T28,'y=North',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
             T82,'Th(Zen), Azim(N), d(omga)',T116,'Repeated twice more')")
-        !write(29,*) 'TrackNr=',i
-        !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
-        Xsq=0.
-        Ysq=0.
-        Zsq=0.
-        Do k=1,TrackENr(i)
+      EndIf
+      !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
+      Xsq=0.
+      Ysq=0.
+      Zsq=0.
+      Do k=1,TrackENr(i)
             j=TrackE(k,i) ! j= rank-number of k-th source on track i
             ! Calculate Estimated Leader position
             tw=0.
@@ -247,6 +250,7 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
                AveStks(3,3)=LeaderStks(6)/tw
                AveStks(2:3,1)=AveStks(1,2:3)
                AveStks(3,2)=AveStks(2,3)
+               !write(2,*) 'ConstructTracks',k,LeaderStks(:)
                Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
             EndIf
             !
@@ -295,8 +299,9 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
                write(29,"(1x,4(2x,g14.8),3x,3(2x,g14.8),3x,g14.8,3(2x,g14.8),3x,g12.3,1x,F8.2)") &
                     LeaderPos(1:4,k,i), RA(2:4,j), LeaderPos(1,k,i)-LeaderPos(1,k-1,i) &
                     ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, tw*1000.
-               write(30,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
+               If(PolarAna) write(30,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
                     LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3)  !V_hor, V_N, V_E, V_h!
+               !write(2,*) 'ConstructTracks', PolMag(:), PolZen(:)
             EndIf
             !write(29,"(1x,3i4,4(2x,g14.8),3x,f8.6)")  i,k,j, RA(1:4,j)
             !i_bin=(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))/Bin1size
@@ -315,7 +320,7 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
         Write(2,"(A,i2,I5,A,3F7.1)") 'Track#',i,TrackENr(i),', RMS(E,N,H)[m]:', &
          sqrt(Xsq/TrackENr(i))*1000., sqrt(Ysq/TrackENr(i))*1000., sqrt(Zsq/TrackENr(i))*1000.
         Close(unit=29)
-        Close(unit=30)
+        If(PolarAna) Close(unit=30)
         Write(2,*) 'ConstructTracks, File written:',TRIM(PlotFile)//trim(extension),' with ',TrackENr(i), ' data lines'
     enddo ! i=1,TrackNr
     !

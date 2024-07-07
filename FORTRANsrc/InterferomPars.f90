@@ -57,7 +57,8 @@ Module Interferom_Pars
    Integer, save :: PixPowOpt=0   ! used in "EIAnalyzePixelTTrace"
    Real(dp),save :: StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Real(dp),save :: dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
-   Real(dp), save :: PolZen(3), PolAzi(3), PolMag(3), PoldOm(3) ! analyzed polarization direction, from "PolTestCath"
+   Complex, save :: Stk_NEh(1:3,1:3)  ! Not double; Stokes parameters in Cartesian frame
+   Real, save :: PolZen(3), PolAzi(3), PolMag(3), PoldOm(3) ! analyzed polarization direction, from "PolTestCath"
    Real(dp),save ::  BoundingBox(1:2,1:4)
    !Real(dp) :: EleAng,AziAng  elevation & azimuth
    !

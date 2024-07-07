@@ -4,8 +4,8 @@ Module GLEplots
    use DataConstants, only : RunMode ! 1=Explore; 2=Calibrate; 3=Impulsive imager; 4=Interferometry
    implicit none
 Contains
-Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit, Bckgr)
-   character(LEN=*), intent(in), optional :: PlotType, PlotName, PlotDataFile, SpecialCmnd, Bckgr
+Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit, Bckgr, CleanPlotFile)
+   character(LEN=*), intent(in), optional :: PlotType, PlotName, PlotDataFile, SpecialCmnd, Bckgr, CleanPlotFile
    Logical, intent(in), optional :: Submit
    Character(len=40), save :: BatchFile=''
    character*100 :: shellin
@@ -93,9 +93,22 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
             EndIf
    EndIf
    !
+   If(present(CleanPlotFile)) Then  ! PlotName, PlotDataFile
+            If(Windows) Then
+              write(10,"('del files\',A)") TRIM(CleanPlotFile)
+            Else
+              write(10,"('rm files/',A)") TRIM(CleanPlotFile)
+            EndIf
+   EndIf
+   !
    If(present(Submit)) Then
       If(Submit) Then
          If(windows) then
+            If(RunMode.eq.5) Then
+              write(10,"('del files\*_STD-*.dat')")
+              write(10,"('del files\AmplFit*.dat')")
+              write(10,"('del files\*_bin_1.dat')")
+            EndIf
             Close(unit=10)
             shellin = 'RunGLEplots.bat'
             CALL system(shellin)
@@ -105,6 +118,10 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
             If(RunMode.eq.2) Then
               write(10,"('rm ',A,'{LOFAR_Corr*.dat,CCPeakPhase*.dat}')") TRIM(DataFolder)
       !!         write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
+            ElseIf(RunMode.eq.5) Then
+              write(10,"('rm ',A,'*_STD-*.dat')") TRIM(DataFolder)
+              write(10,"('rm ',A,'AmplFit*.dat')") TRIM(DataFolder)
+              write(10,"('rm ',A,'*_bin_1.dat')") TRIM(DataFolder)
             EndIf
             Close(unit=10)
             shellin = 'chmod 755 '//TRIM(BatchFile)//'.sh'

@@ -1,13 +1,16 @@
 %\section{Auxiliary}
 \section{Details of the LOFLI code}
 
+Some details you never wanted to know and are absolutely not interested in.
+
 The code used for source finding and antenna calibration.
 
 \subsection{Data reading}
 
-Data read requires that the files have been pre-processed to determine the RFI-mitigation parameters for each antenna using \verb!"program RFI_mitigation"!. In this process of RFI mitigation the files \verb!"RFI_Filters.uft"! and \verb!"LOFAR_H5files_Structure.dat"! are produced which are required here as input.
+Data read requires that the files have been pre-processed to determine the RFI-mitigation parameters for each antenna using  \verb!"program RFI_mitigation"!. In this process of RFI mitigation the files \verb!"RFI_Filters.uft"! and \verb!"LOFAR_H5files_Structure.dat"! are produced which are required here as input.
 
 \Subr{AntennaRead}{AR}
+%\subsubsection{Subroutine ``AntennaRead"}
 
 All data files in \verb!"directory.out"! are looped-over.
 Info on the structure of the data files and concerning RFI-mitigation parameters is is read from the auxiliary files. Information on pole-flip and bad antennas is supplied. Files that contain data from antennas that have already been read are skipped. Antenna and station calibration in the data-files are combined with calibration tables that have been generated in earlier calibration runs (see \secref{Calibr}). The calibrations delays are combined with the delay calculated from \verb!"SourceGuess"!, a guessed source position that ideally should correspond to the center of the lightning flash. This should guarantee that pulses are roughly lined-up. The appropriate chunk of data is read-in. The Chunk-length equals \verb!"Time_dim"!. If the number of zeros in this chunk is disproportionably large, (number-of-2/number-of-0 $<$ 0.66) this Chunk is skipped. Otherwise the data are multiplied by a Hann window (\verb!"HW_size"!=32) and the trace is fourier transformed, RFI-filtered, phase-shifted according to the expected delay (w.r.t.\ the LOFAR-core), and transformed back to the time domain. Spectra are stored in one big array for all antennas and the various time-periods (data chunks).
@@ -22,12 +25,15 @@ Candidate pulses are selected in subroutine DualPeakFind. First pulses are selec
 In the \verb!Dual! mode the first even/odd antenna pair at the same location are chosen as reference antennas.
 
 \Subr{DualPeakFind}{DPF}
-The Hilbert-envelope of the spectrum of the reference dipole for the even or the odd numbered antennas is searched for the highest value. This search is done for the samples more than \verb!"EdgeOffset"! samples away from either beginning or the end of the chunk. The length of a chunk is equal to \verb!"Time_dim"=32768!. \verb!"EdgeOffset"!=7000 is chosen such that two sources that are separated by 5km  will have their pulses not further than \verb!"EdgeOffset"! samples apart,
+%\subsubsection{Subroutine ``DualPeakFind"}
+
+The Hilbert-envelope of the spectrum of the reference dipole for the even or the odd numbered antennas is searched for the highest value. This search is done for the samples more than \verb!"EdgeOffset"! samples away from either beginning or the end of the chunk. The length of a chunk is equal to \verb!"Time_dim"=32768!.  \verb!"EdgeOffset"!=7000 
+is chosen such that two sources that are separated by 5km  will have their pulses not further than \verb!"EdgeOffset"! samples apart,
 \beq
-\texttt{EdgeOffset} =5\ \rm{[km/c /sample]}=5\, 10^3 /(3\, 10^8 \times 5\, 10^{-9})=5\, 10^3/1.5=7000\; \rm{[samples]} \;.
+{\texttt{EdgeOffset}} =5\ \rm{[km/c /sample]}=5\, 10^3 /(3\, 10^8 \times 5\, 10^{-9})=5\, 10^3/1.5=7000\; \rm{[samples]} \;.
 \eeq
 
-Once the peak is found it is checked where the closest local minimum is to the left (\verb!"Wl"!) and right (\verb!"Wu"!) of the peak. In addition the condition is imposed that this minimum is below a fraction (1/2) of the peak value. If within a distance of \verb!"W_low"!=6 samples from the peak the spectrum has been zeroed (because previously a peak has been found) the part of the spectrum between \verb!"Wl"! and \verb!"Wu"! is zeroed and the peak-position is not stored. Otherwise the peak is considered genuine and is stored and the region of the spectrum from \verb!"Separation"! below till \verb!"Separation"! above the found peak-position is zeroed. This process is repeated till \verb!"PeakS_dim"! peaks have been found. \verb!"Separation"!=20 is used as zero padding in the calculation of the cross correlations.
+Once the peak is found it is checked where the closest local minimum is to the left  (\verb!"Wl"!) and right (\verb!"Wu"!) of the peak. In addition the condition is imposed that this minimum is below a fraction (1/2) of the peak value. If within a distance of \verb!"W_low"!=6 samples from the peak the spectrum has been zeroed (because previously a peak has been found) the part of the spectrum between \verb!"Wl"! and \verb!"Wu"! is zeroed and the peak-position is not stored. Otherwise the peak is considered genuine and is stored and the region of the spectrum from \verb!"Separation"! below till \verb!"Separation"! above the found peak-position is zeroed. This process is repeated till \verb!"PeakS_dim"! peaks have been found. \verb!"Separation"!=20 is used as zero padding in the calculation of the cross correlations.
 
 Peaks are kept in order of their peak-value in the reference antenna, separately for even and odd numbered antennas.
 
