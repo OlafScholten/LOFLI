@@ -118,7 +118,6 @@ begin graph
    !yaxis log min 0.05 max 5 !dticks 5 dsubticks 1
      data filePreamb$+'AntF'+AntId$+'.dat' d1=c1,c2  d11=c1,c3
      d11 marker fcircle msize .3  color green
-     d1 marker fcircle msize .1  color red
      d11 line lwidth .02  color green
      d1 marker fcircle msize .1  color red
      d1 line lwidth .02  color red
