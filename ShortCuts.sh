@@ -1,6 +1,10 @@
 #  Define some importants shortcuts for running the LOFLI codes (LL=Lofar Lightning)
 #@echo off is in LINUX:  scriptname > /dev/null
-
+#
+# Make sure the following line is set correctly in .bashrc  in your top folder
+#                  export LL_Base=/home/olaf/LOFLI  ls
+# 
+#
 # Test if the LOFLI system was installed already
 if [[ ! -z "${LL_mod}" ]]; then
    echo LOFLI system variables have already been defined
@@ -32,11 +36,13 @@ else
    
    # point to directory where HDF5 utilities are stored
    export HDF5lib="/usr/lib/x86_64-linux-gnu/hdf5/serial"
+   export HDF5Compile="-g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1+docs=. -fstack-protector-strong -I/usr/include/hdf5/serial"
+   export HDF5Link="-L${HDF5lib} ${HDF5lib}/libhdf5hl_fortran.a ${HDF5lib}/libhdf5_hl.a ${HDF5lib}/libhdf5_fortran.a ${HDF5lib}/libhdf5.a -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,${HDF5lib}"
 
    #############################################################################
-   # Rest are LOFLI system definitions and should not be touched
+   # Rest are LOFLI system definitions and should not be touched,
+   # except that the extension .a for libraries may be replaced by .so  whenever required by the system installation.
    export  LL_WrkDir=$(pwd)
-
    export LL_bin=${LL_Base}/bin
    export LL_src=${LL_Base}/FORTRANsrc
    export LL_mod=${LL_src}/modules
@@ -44,22 +50,20 @@ else
    export LL_utilities=${LL_Base}/GLEsrc
    export PATH=${PATH}:${LL_bin}  
    #echo "path:" ${PATH}
-   
+ 
    #   Windows:
    # set LL_generalLib=C:\OlafsUtil\NumLib\bin
    # set LAPACKlib=%LL_generalLib%\liblapack.a
    # set BLASlib=%LL_generalLib%\libblas.a
    # set FFTLIB=%LL_generalLib%\libFFTPack-d.a
+
    #   LINUX:
    export LOFLIlib="-lm ${LL_bin}/libLOFLI.a ${FFTLIB} ${LAPACKlib} ${BLASlib}"
-   export LOFLIinc="-I${LL_mod}"
-   
+   export LOFLIinc="-I${LL_mod}" 
    export FCFLAGS="-fcheck=bounds"
-   export HDF5Compile="-g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1+docs=. -fstack-protector-strong -I/usr/include/hdf5/serial"
-   export HDF5Link="-L${HDF5lib} ${HDF5lib}/libhdf5hl_fortran.a ${HDF5lib}/libhdf5_hl.a ${HDF5lib}/libhdf5_fortran.a ${HDF5lib}/libhdf5.a -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,${HDF5lib}"
    
    
-   #REM  Old definitions
+   #REM  Old definitions: (obsolete)
    export ProgramDir="${LL_bin}/"
    export UtilDir="${LL_utilities}/"
    #:: echo %Path%
