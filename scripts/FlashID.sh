@@ -6,7 +6,7 @@
 #
 #FlashFolder='19A-4'
 FlaID=${NewFlashFolder}
-FlaLine="$(grep ${FlaID} ${LL_scripts}list.ssv)"
+FlaLine="$(grep ${FlaID} ${LL_scripts}/list.ssv)"
 FlaArray=($FlaLine)
 FlaUTC=${FlaArray[2]}
 FlaYear=${FlaArray[1]}
