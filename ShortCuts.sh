@@ -24,6 +24,11 @@ else
    
    # Base directory from where the raw data are retrieved, needed when running "NewFlash" 
    export ArchiveBase="/home/olaf/kaptdata/lightning_data"
+   # This may be connected to the true datarepository by executing for example
+   #  >sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata
+   # or through a symlink as in
+   #  >ln -s /net/dataserver3/data/users/hare ~/kaptdata
+
    
    # should point to the "fftpack5.1d" library, containing FFT routines
    FFTLIB="-lm /home/olaf/NumLib/bin/libfftpack5.1d.a"  # FFT library, double precision
@@ -32,10 +37,14 @@ else
    LAPACKlib="/usr/lib/x86_64-linux-gnu/lapack/liblapack.a"
    
    # Link to "blas" library for basic algebra functions
+   # or to "openblas" as for example   BLASlib="/usr/lib/x86_64-linux-gnu/blas/libopenblas.so"
    BLASlib="/usr/lib/x86_64-linux-gnu/blas/libblas.a"
    
    # point to directory where HDF5 utilities are stored
    export HDF5lib="/usr/lib/x86_64-linux-gnu/hdf5/serial"
+   # It may be that you have to make symlinks in this folder pointing to the lib 
+   #     and header files as used in the following compile and link commands. On your machine they
+   #     may reside in different folders like /lib64, /usr/include, .....
    export HDF5Compile="-g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1+docs=. -fstack-protector-strong -I/usr/include/hdf5/serial"
    export HDF5Link="-L${HDF5lib} ${HDF5lib}/libhdf5hl_fortran.a ${HDF5lib}/libhdf5_hl.a ${HDF5lib}/libhdf5_fortran.a ${HDF5lib}/libhdf5.a -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,${HDF5lib}"
 
