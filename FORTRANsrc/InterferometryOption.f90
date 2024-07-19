@@ -108,9 +108,9 @@ Subroutine InterferometerRun
    If(SliceLen.lt.1) SliceLen=1 ! obsolete
    NrSlices=SumWindw/SliceLen ! obsolete
    write(2,"(A,I5,A,I5,A,F6.3)") 'Adjusted TRI-D window, SumStrt=',SumStrt, ', SumWindw=', SumWindw, ', AmpltPlot=', AmpltPlot
-   If(SumStrt.lt.0) Then
-      write(2,*) 'Window starting sample should be positive'
-      Stop 'Window starting sample should be positive'
+   If(SumStrt.lt.1000) Then
+      write(2,*) 'Window starting sample should be 1000'
+      Stop 'Window starting sample should be sufficiently large'
    EndIf
 
    If(PreDefTrackFile.ne.'') Then  ! time was mid-time on track

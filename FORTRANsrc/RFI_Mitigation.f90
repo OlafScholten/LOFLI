@@ -45,13 +45,15 @@ program RFI_mitigation
     Character(len=5) :: Version='v18  '
     INTEGER :: i, VeryFirstSampl, MostLatestSampl=0
     Character(len=5) :: txt
+    Logical :: AllBckgrSpec=.false.  ! produce data files for plotting the backgroung frequency spectra for the reference antennas only
+    !Logical :: AllBckgrSpec=.true. ! produce data files for plotting the backgroung frequency spectra for all antennas.
     !
     Integer :: nxx, NFail=0 ! number of antennas for which RFI-determination failed
     Integer :: i_even=0, i_odd=0, MinAmp_Ant(Ant_nrMax), Powr_Ant(Ant_nrMax)
     Real(dp) :: LFRAnt_crdnts(3), MinAmpAv, MinAmpSq, sigma, powrAv, powrSq, powrSigm, power_Even, power_Odd
     !
     Integer :: j,i_fil,i_filR,i_file,i_grp,i_dst, i_chunk, i_ant !
-    Character(LEN=100) :: AntennaFieldsDir='../AntennaFields/'   ! Directory where info on antenna positions
+    Character(LEN=100) :: AntennaFieldsDir='../AntennaFields'   ! Directory where info on antenna positions
       !           can be found if not present in the HDF5 files of the dat
     !
     !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -125,7 +127,7 @@ program RFI_mitigation
          write(14,"(i3,1x,A)") DSet_nr, trim(Group_Names(i_grp))
          Do i_dst=1,DSet_nr
             Call ListDataAtt(Group_Names(i_grp),DSet_Names(i_dst)) ! >>>>>>>>>>>>>>>>>>>>
-            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID
+            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID 
             !
             If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
             !
@@ -137,20 +139,22 @@ program RFI_mitigation
             i_chunkMax=DATA_LENGTH/Time_dim -1
             If(i_chunkMax.lt.100) goto 999 ! not worthwhile
             If(((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) .or. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0))) then
-               MakePlots=.true.
+               MakePlots=.true.  !  write statistics to file for the reference station only
             Else
                MakePlots=.false.
             EndIf
             !MakePlots=.true.
             Allocate( MaxAmpChunk(0:i_chunkMax))
             Call RoughStatistics(i_dst)
+            !     N_zeroChunk= (number of chucks that have an excess in zero valued samples) is determined for this antenna
+            !     MaxAmpChunk(i_chunk) is determined for this antenna
             !
             Call AccumulateBackgrFreq()
             DeAllocate (MaxAmpChunk)
             !
             ! Determine averaged frequency spectrum for low-MaxAmpli chuncks
             Call BuildRFIFilter()
-            !
+            !  Powr is calculated
             !
             i_ant=i_ant+1
             If(i_ant.le. Ant_nrMax) then
@@ -172,19 +176,23 @@ program RFI_mitigation
             If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
             If(MostLatestSampl.lt.(SAMPLE_NUMBER_first+DATA_LENGTH)) MostLatestSampl=(SAMPLE_NUMBER_first+DATA_LENGTH)
             !
+            write(2,*) 'Unique_SAI(i_ant)', i_ant, Unique_SAI(i_ant)
+            !
             ! Test effect filter
-            If(i_file.eq.i_filR) then  ! The reference station
-               If((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) then
-                  RefOdd=Ant_ID
-                  write(2,*) 'odd reference antenna',trim(DSet_Names(i_dst))
-                  Call PlotFreqFilt(i_dst)  ! Frequency spectra
-                  Call TestFilter(i_dst)     ! Filtered time spectra
-               Else If((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0)) then
-                  RefEve=Ant_ID
-                   write(2,*) 'even reference antenna',trim(DSet_Names(i_dst))
-                  Call PlotFreqFilt(i_dst)  ! Frequency spectra
-                  Call TestFilter(i_dst)     ! filtered spectra
-               EndIf
+            If(i_file.eq.i_filR .and. ((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) ) then  ! The reference station
+               RefOdd=Ant_ID
+               write(2,*) 'odd reference antenna',trim(DSet_Names(i_dst))
+               Call PlotFreqFilt(i_dst)  ! Frequency spectra
+               Call TestFilter(i_dst)     ! Filtered time spectra
+            Else If(i_file.eq.i_filR .and. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0)) ) then
+               RefEve=Ant_ID
+               write(2,*) 'even reference antenna',trim(DSet_Names(i_dst))
+               Call PlotFreqFilt(i_dst)  ! Frequency spectra
+               Call TestFilter(i_dst)     ! filtered spectra
+            Else If(AllBckgrSpec) Then
+               write(2,*) 'Working on frequency spectrum for ',trim(DSet_Names(i_dst))
+               Call PlotFreqFilt(i_dst)  ! Frequency spectra
+               Call TestFilter(i_dst)    ! Filtered time spectra
             EndIf
             !
 999         continue
@@ -223,6 +231,7 @@ program RFI_mitigation
             Call CloseDSet !<<<<<<<<<<<<<<<<<<<<
          Enddo ! i_dst=1,DSet_nr
          Call CloseGroup !<<<<<<<<<<<<<<<<<<<<
+         Flush(unit=14)
         EndDo ! ListGroups
         Call CloseFile !<<<<<<<<<<<<<<<<<<<<
    Enddo
@@ -312,7 +321,7 @@ Subroutine GetAntLofarAntPos(LFRAnt_crdnts, AntennaFieldsDir)
    INTEGER :: i,j,k,nxx
    Real(dp) :: central(3),RelPos(1:3,0:1)
    !
-   Open(unit=11, STATUS='old',ACTION='read', FILE = TRIM(AntennaFieldsDir)//'etrs-antenna-positions.csv')
+   Open(unit=11, STATUS='old',ACTION='read', FILE = TRIM(AntennaFieldsDir)//'/etrs-antenna-positions.csv')
    !
    If(First) Then
       !    real(dp), intent(out) :: RotMat(3,3) = reshape( (/ 0.8056597 ,  0.        ,  0.59237863 , &
@@ -382,6 +391,8 @@ End Subroutine GetAntLofarAntPos
 Subroutine RoughStatistics(i_dst)
 !Scan file for non-lightning sections
 ! Note that the noise is NOT gaussian since RFI has not been removed yet !
+!     N_zeroChunk= (number of chucks that have an excess in zero valued samples) is determined for this antenna
+!     MaxAmpChunk(i_chunk) is determined for this antenna
    use constants, only : dp,pi,ci, sample
    use DataConstants, only : DataFolder, Time_dim
    use HDF5_LOFAR_Read, only : DSet_names!, DATA_LENGTH
@@ -408,7 +419,7 @@ Subroutine RoughStatistics(i_dst)
       N_one=COUNT(Chunk.eq.1)
       ChMax=MaxVal(Chunk)
       ChMin=MinVal(Chunk)
-      If(N_one*1.0/NZero .lt. .5) then
+      If(N_one*1.0/NZero .lt. .5) then  !  too many zero samples in this trace
          !Write(2,"(A,i11,F7.4,A,2i8)") 'Ratio of twos/zeros in chunk=',i_chunk, &
          !  Ntwo*1.0/NZero,', min & max=', ChMin, ChMax
          N_zeroChunk = N_zeroChunk +1
@@ -459,7 +470,7 @@ Subroutine AccumulateBackgrFreq()
    EndIf
    q=1.2
    j=0
-   Do while (j.lt.NBackgrMax*2) ! build in safety margin
+   Do while (j.lt.NBackgrMax*2) ! build in safety margin and set the amplitude range over which the noise is normalized
       q=q+.05
       j=COUNT(MaxAmpChunk.lt.MinAmp*q)
       !write(2,*) 'count:',j,q
@@ -468,7 +479,7 @@ Subroutine AccumulateBackgrFreq()
          return
       EndIf
    Enddo
-   !write(2,*) 'i_chunkMax, j, q, MinAmp:',i_chunkMax, j, q,MinAmp
+   write(2,*) 'Determine range of maximum amplutudes per chunk for which background power is determined:',i_chunkMax, q,MinAmp
    MinAmp=MinAmp*q
    !
    Do i_chunk=1,i_chunkMax-1
@@ -539,7 +550,7 @@ Subroutine BuildRFIFilter()
          !Freq_s(nu)=Av
          Filtring=Filtring + 1
       Endif
-         Powr=Powr + Freq_s(nu)*Freq_s(nu)*nu_fltr(nu)
+      Powr=Powr + Freq_s(nu)*Freq_s(nu)*nu_fltr(nu)
    Enddo  ! nu=nu_i-dnu,nu_f!
    ! apply (sum of square) in stead of (square of sum) factor (4/pi) since Freq_s(:)=Freq_s(:) + abs(Cnu_s(:))  and later /NBackgr
    Powr=Powr*4./pi

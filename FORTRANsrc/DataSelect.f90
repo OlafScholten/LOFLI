@@ -255,7 +255,7 @@ Subroutine PolarizationAna()  ! du -sh  directory size
    AveStks(2:3,1)=AveStks(1,2:3)
    AveStks(3,2)=AveStks(2,3)
    !
-   Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
+   Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)  ! in EIFitter
    !Write(2,*) 'PolarizationAna:'
    !
    !Call GLEplotControl(PlotType='QualContrPlot', PlotName=TRIM(Image)//'QC', &
