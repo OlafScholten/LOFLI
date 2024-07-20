@@ -167,8 +167,8 @@ Sub EIPlots
       NorthLab$="d\phi= "+format$(d_N,"fix 3")+"^o"
       hLab$="dR= "+format$(d_h,"fix 1")+" [m]"
    else
-      NorthLab$="dNorth= "+format$(d_N,"fix 1")+" [m]"
-      EastLab$="dEast= "+format$(d_E,"fix 1")+" [m]"
+      NorthLab$="dNorth= "+format$(d_N*pi/180.,"fix 1")+" [m]"
+      EastLab$="dEast= "+format$(d_E*pi/180.,"fix 1")+" [m]"
       hLab$="dh= "+format$(d_h,"fix 1")+" [m]"
    end if
    
