@@ -127,7 +127,7 @@ program RFI_mitigation
          write(14,"(i3,1x,A)") DSet_nr, trim(Group_Names(i_grp))
          Do i_dst=1,DSet_nr
             Call ListDataAtt(Group_Names(i_grp),DSet_Names(i_dst)) ! >>>>>>>>>>>>>>>>>>>>
-            !write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID ! moved to later
+            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID 
             !
             If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
             !
@@ -195,7 +195,6 @@ program RFI_mitigation
                Call TestFilter(i_dst)    ! Filtered time spectra
             EndIf
             !
-            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID
 999         continue
             !
             !DeAllocate (MaxAmpChunk)

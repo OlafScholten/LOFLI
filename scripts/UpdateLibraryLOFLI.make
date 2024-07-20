@@ -22,7 +22,7 @@ $(info Updating LOFLI Library)
 ${LL_bin}/libLOFLI.a: ${LibrarySources}
 	$(info 'Complete list:' $(LibrarySources))
 	$(info 'Updates used:' $?)
-	-Messages=$(shell ${LL_scripts}/LibraryAdd.sh '$?')
+	-Messages=$(shell ${LL_scripts}/LibraryAdd.sh '$?')   # this is where the actual work is done
 	$(info Messages: $(Messages)) # still creates error messages
 
 .PHONY: clean

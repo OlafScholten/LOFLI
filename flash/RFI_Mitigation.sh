@@ -11,5 +11,6 @@ echo "Explore was submitted, now wait."
 exit
 #sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata
  olaf@APP01:~/kapdatalink/lightning_data/2018
+# nohup ./RFI_Mitigation.sh  >RFI_Mitigation.log 2>&1  &   
 
 

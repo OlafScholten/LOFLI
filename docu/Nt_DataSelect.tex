@@ -31,7 +31,7 @@ The complete list of possible parameters with a short explanation can be found i
 
 For generating a flash image the following parameters may also be important, beside the basic ones.
 
-Specific options when using data from the impulsive imager, with their default value. All determine the quality conditions a source should obey to be plotted. 
+Specific options when using data from the impulsive imager, with their default value. All determine the quality conditions a source should obey to be plotted.
 \begin{enumerate*}
 \item \verb!RMS_ns= 4.0!: condition [$\sqrt(\chi^2) <$ \verb!RMS_ns!] in units [ns].
 \item \verb!DelNEff= 25 ! (integer): condition when [\verb!DelNEff! $>0$] is [(\# of available antennas) - (\# number of used antennas)) $\leq$ \verb!DelNEff! ], where (\# of available antennas) is the number of antennas that have data for this source and (\# number of used antennas) is the number of antennas where the pulse from this source could be identified unambiguously.
@@ -103,7 +103,7 @@ Some Generic options when using data from both imagers, with their default value
 \item \verb!SrcDensTimeResol=!: [ms]. Source Density Time Resolution.
 \end{enumerate*}
 
-        
+
 \begin{figure}[th]
 \centering{\includegraphics[ width=0.49\textwidth]{Figs/TrSc_18D1e-i} }
 %\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
@@ -111,6 +111,8 @@ Some Generic options when using data from both imagers, with their default value
 \end{figure}
 
 If the 7th number on the second line in the input, ``FlashImage.in", is positive, a graph like \figref{ImpulsiveTrack} is made for each track. The second panel from the top shows the pulse density along the flash as function of time for various width of a gaussian smoothing function. The top panel shows the fourier decomposition of this plot. The third from the top gives the velocity along the track. The blue line for each source along the track, the red line for an average leader-tip location. The bottom three panels show the spread of the sources in the three directions from the propagating tip of the leader, in blue as a scatter plot v.s.\ time of the source (top and right scales), in red as a histogram (bottom and left scales).
+
+For TRI-D based images a Principal Component analysis is performed on the direction of the polarization vector for each slice and a plot is make.
 
 \subsection{Power spectrum}
 Produces a power-law fit to source intensities, much like what was used in Ref.~\cite{Machado:2021, Scholten:2021-INL}
@@ -130,7 +132,7 @@ N(I)= {\cal N} \,I^{-\alpha}  \,e^{-\gamma/I}\;, \eqlab{PowLaw}
 \end{equation}
 where $I$ is expressed in units of [GB]. The last factor, dependent on $\gamma$, suppresses the distribution at small amplitudes to good agreement with the data. The values for the fitted values for the normalization ${\cal N}$, the power $\alpha$, and the small-intensity suppression factor $\gamma$ are given in the output file (with extension .out).
 
-The out file \verb#'IntfrSrcSel.out'# looks like
+The out file %\verb#'IntfrSrcSel.out'# looks like
 
 \begin{linenumbers}
 \tiny

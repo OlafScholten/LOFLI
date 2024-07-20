@@ -6,83 +6,102 @@ Source finding is performed by the script \verb!"Interferometry.sh"! residing in
 
 \begin{linenumbers}
 \resetlinenumber
+\tiny
 \begin{verbatim}
  &Parameters  RunOption= "TRI-D"
-! CurtainHalfWidth= 100     ! Produce a "Curtain" plot when positive.
-! Simulation= ""     ! Run on simulated data from such files.
- ChainRun= 0     ! Automatically start jobs (for - previous or + following timeslots, made to follow a negative leader.
- IntfSmoothWin= 19     ! Width (in samples) of the slices for TRI-D imaging.
-! PixPowOpt= 0     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
- TimeBase=320    ! Time-offset from the start of the data, best if kept the same for all analyses for this flash
- NoiseLevel= 1.0000000000000000E-002     ! Any weaker sources will not be imaged.
- CalibratedOnly= T     ! Use only antennas that have been calibrated.
+ OutFileLabel= "XYZ"
  AntennaRange= 100.     ! Maximum distance (from the core) for the range of the antennas (in [km]).
- SaturatedSamplesMax= 3     ! Maximum number of saturates time-samples per chunk of data
+ TimeBase=320.    ! Time-offset from the start of the data, best if kept the same for all analyses for this flash
+! Simulation= ""     ! Run on simulated data from such files.
+! ChainRun= 0     ! Automatically start jobs (for - previous or + following timeslots, made to follow a negative leader.
+! IntfSmoothWin= 19     ! Width (in samples) of the slices for TRI-D imaging.
+! PixPowOpt= 0     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
+! CalibratedOnly= T     ! Use only antennas that have been calibrated.
+ NoiseLevel= 1.0000000000000000E-002     ! Any weaker sources will not be imaged.
  Calibrations="Calibrations202202071332.dat" ! FldCal all antennas
  BadAnt_SAI=   5095,   7093,  11089,  13088,  13089,  17084,  17085,  17094,  17095
                101085, 141083, 141086, 141087, 167094, 169082, 169090, 169094,
  ExcludedStat=  "RS305"      ! Mnemonics of the stations that should be excluded.
  SignFlp_SAI=  142092, 142093
- OutFileLabel= "XYZ"
+ SaturatedSamplesMax= 3     ! Maximum number of saturates time-samples per chunk of data
  &end  !
-S    8.2 ,-3.7, -34.11    !    Reference/Source-| time, & position
-C   80 2.5, 30 2.5, 72 4 !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(grid spacing, #gridpoints)
+S  231.  8.2 ,-3.7, -34.11    !    Reference/Source-| time, & position
+C   80 2.5, 30 2.5, 72 4 !   Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing)
 F  25000  15000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
 \end{verbatim}
 \end{linenumbers}
 
-*** Obviously more editing needed, not up-to-date yet ******
-
 The lines in the namelist \verb!"&Parameters"! input specify:
 \begin{enumerate*}
-\item[1] \verb!'RunOption= "TRI-D"'!: Run the TRI-D Imager
-\item[2] \verb#"! CurtainHalfWidth= 100"#: Produce "Curtain" plots when positive.
-\item[3] \verb#"IntfPhaseCheck=.false."#: Do not print for each antenna the amplitude, phase, and angle to the source, done for the central pixel. This can be helpful to check if there are certain stations that are off in certain ways, but the info is difficult to interpret. Make sure that the direction for the central pixel is such that it is perfect for the largest source in the selected time trace. When commented, this information will appear in the output.
-\item[4] \verb!"! CurtainPlot=.true."!: When un-commented, a curtain plot (see \secref{Curtainplot}) will be made for the time-traces lined up for the central pixel.
-\item[5] \verb!"TimeBase=669."!: This time is added to the relative time specified in the input.
-\item[6] \verb!"Calibrations ="!: The name of the file containing calibration and RFI information.
-\item[7] \verb!"BadAnt_SAI="!: These antennas are excluded from the analysis.
-\item[10] \verb!"SignFlp_SAI="!: The amplitude for this antenna is multiplied by minus unity.
-\item[11] \verb!"ExcludedStat="!: Mnemonics of the stations that will be excluded from interferometry. The exclusion is usually based on unexpected phases seen when running with \verb!"IntfPhaseCheck=.true."!.
-\item[12] \verb!"OutFileLabel="!: Additional label used for the output files, including the plots.
-\item[13] \verb!"AntennaRange="!: The maximal distance (in [km]) from the reference station of the antenna stations that are included in interferometry.
-\item[14] \verb!"IntfSmoothWin="!: Integer. The width of the sampling function used for Time Resolved Imaging (in [samples]). This number should be of the order of the impulse-response time, about 20~samples.
-\item[15] \verb!"Dual="!: default=.true. in version 20 and higher. Include antenna function and unfold polarization in interference calculation and use the approach discussed in \secref{E_Intf}.
-   \\ \verb!"Dual=.false."!: Perform the interferometry separately for the X- and Y-LOFAR dipoles (the odd and even antennas).
-\item[16] \verb!"PixPowOpt="!: Integer. Selects how the intensity of a pixel is calculated.
+\item \verb!RunOption= "TRI-D"!: Run the TRI-D Imager
+\item \verb!OutFileLabel="XYZ"!: Additional label used for the output files, including the plots.
+\item \verb!AntennaRange=100.!: The maximal distance (in [km]) from the reference station of the antenna stations that are included in imaging.
+\item \verb!TimeBase=320.!: This time is added to the relative time specified in the input.
+\item \verb# Simulation= ""#: No simulated data are used in blank, otherwise the simulated data are read from these files and should have the same value as used when generating the simulated data, see \secref{Sim}.
+\item \verb# ChainRun=0# (Integer, default=0): If =0 the present run will not spawn any children, otherwise see \secref{ChainRun}.
+\item \verb!IntfSmoothWin=19! (Integer, default=20): the width of the sampling function used for Time Resolved Imaging (in [samples]). This number should be of the order of the impulse-response time, about 20~samples.
+\item \verb!PixPowOpt=! (Integer, 0): selects how the intensity of a pixel is calcula
    \\\verb!PixPowOpt =0! (default): sum two transverse (as seen from the core) polarizations only.
    \\\verb!PixPowOpt =1! : sum all polarizations weighted with alpha to compensate $A^{-1}$ thus intensity =  $|\vec{F}|$, see \eqref{F_as}.
    \\\verb!PixPowOpt =2! : Sum all three polarizations, thus including longitudinal with the full weight.
-\item[17] \verb!"ChainRun="!: Integer. If =0 the present run will not spawn any children. \\If positive another run is generated with identical parameters except
-     \begin{itemize}
-     \item The central location of the hypercube (line 17) which will be pinned down to the most intense spot for the present time interval.
-     \item The start time (line 17) will be increased by 0.3~ms. If the total window (line 19) equals 60040 (line 19, where 40=$2\times$"IntfSmoothWin") this will generate image data that can later be stitched together to generate (using \secref{InterfSrcSel}) a continuous image along a negative leader.
-     \item The absolute value of \verb!"ChainRun"! is decreased by unity.
-     \item The present value of \verb!"ChainRun"! is worked into \verb!"OutFileLabel"! as well as the naming of the spawned scripts.
-     \end{itemize}
-     If "ChainRun=" negative, the same will be done, only backward in time. \\Chaining jobs works only on Linux systems.
-\item[18] \verb!"NoiseLevel="!: Only sources with a coherent intensity exceeding this will be imaged.
+\item \verb!CalibratedOnly= T! (logical, .true.): use only antennas that have been calibrated.
+\item \verb!NoiseLevel=!: only sources with a coherent intensity exceeding this value will be imaged.
+\item \verb!Calibrations =""!: The name of the file containing calibration data.
+\item \verb!"BadAnt_SAI="!: These antennas are excluded from the analysis.
+\item \verb!"SignFlp_SAI="!: The amplitude for this antenna is multiplied by minus unity.
+\item \verb!"ExcludedStat="!: Mnemonics of the stations that will be excluded from interferometry. The exclusion is usually based on unexpected phases.
 \end{enumerate*}
 
+
 The following lines specify:
-\begin{description}
-\item[245.1 , $\cdots$]
-   Entry\#1) Starting time in the trace (in the reference antenna, which differs from the time of the sources) of the data-chunk that will be used. Time is taken relative to \verb!"TimeBase"!.
-   \\Entry\#2-4) Coordinates of the central pixel in (N,E,h) notation. The units may be [km].
-\item[P  50 .005, $\cdots$]
-   Entry\#1) If capital "P" or "C" a Polar or Cartesian grid is forced. If anything else (including a space) a reasonable choice is made based on the specified grid structure. A Polar grid (recommended) is specified in the order: Azimuth angle $\phi$, elevation angle $\theta_e$, distance to reference antenna $R$. A Cartesian grid as: Northing $N$, Easting $E$, altitude $h$. Internally both are used in parallel.
-   \\Entry\#2, 4, 6) Number of grid points.
-   \\Entry\#3, 5, 7) Grid spacing.
-\item[4000  $\cdots$]
-   Entry\#1) The first sample number used for interferometric imaging of the trace. The program needs select some previous channels as a buffer to be able to image the indicated part of the chunk in the reference antenna. The first sample thus be larger than zero. Error messages are generated and image is truncated when the value is too small.
-   \\Entry\#2) The length of the window (in [samples]) used for imaging. 60k~samples corresponds to 0.3~ms. The additional 40 (=$2\times$"IntfSmoothWin") is to accommodate for the beginning and end smoothing windows when performing Time Resolved Imaging (see \secref{TRID}).
-\end{description}
+\begin{enumerate*}
+\item[line +1:]   ``\verb#S  231.  8.2 ,-3.7, -34.11#''
+   \begin{enumerate*}
+   \item[1] Option, "R" or "S" (capital, the very first character on this line): time is specified at the Reference antenna or at the Source location for the tesseract.
+   \item[2] $t_t$, the starting time of the data-chunk in which the tesseract is taken, given in time [ms]. Time is taken relative to \verb!"TimeBase"!.
+   \item[3-5] Space coordinates of the center of this tesseract, in (N,E,h) notation. The units may be [km] or in [m], but have to be the same for all three.
+   \end{enumerate*}
+\item[line +2:]   ``\verb#C   80 2.5, 30 2.5, 72 4#''
+   \begin{enumerate}
+   \item[1] Option, "P" or "C" (capital, the very first character on this line): determines if a Polar or Cartesian grid is used for the tesseract. The polar grid is taken as a wedge, focussed ar the reference antenna. A Polar grid is specified in the order: Azimuth angle $\phi$, elevation angle $\theta_e$, and distance to reference antenna $R$. A Cartesian grid as: Northing $N$, Easting $E$, and altitude $h$.
+   \item[2, 4, 6] Number of grid points, counting from the center.
+   \item[3, 5, 7] Grid spacing in degrees or meter.
+   \end{enumerate}
+\item[line +3]:   ``\verb#F  25000  15000 10.#''
+   \item[1] Option, ``F" or ``M" (capital, the very first character on this line): determines if the time is set at the First or the Middle sample of the time window.
+   \item[2] (integer): Time-offset of the tesseract from the start of the data chunk, in samples of 5 ns. Care should be taken that the start of the tesseract is at least 1000 samples from the beginning of the data chunk to avoid antennas from dropping out. Error messages are generated and image is truncated when the value is too small. If option ``F" (``M") is specified the value is pointing to the First (Middle) time sample of tesseract.
+   \item[3] (integer): The length of the window (in [samples]) that is imaged. The maximum window length is 60k~samples (corresponding to 0.3~ms) to which 40 (=$2\times$"IntfSmoothWin") may be added is to accommodate for the beginning and end smoothing windows when performing Time Resolved Imaging (see \secref{TRID}).
+   \item[4] : an indicator of the maximum size of the circles used in plotting, taken proportional to source intensity. If negative, dots are used and the intensity spectrum is not analyzed.
+\end{enumerate*}
 
 
-This script produces interferometric images (see \secref{TRID} for the procedures followed)
+This script produces TRI-D images (see \secref{TRID} for the procedures followed)
 and puts the results in several data files in the subdirectory \verb!"files"!. It also prepares the command files (in \verb!"GLE-plotsXYZ.sh"!) for running the GLE scripts \cite{GLE} to produce \verb!"InterfContourXYZ.pdf"!, \verb!"XYZInfImgBar_0.pdf"!, \verb!"XYZInfImaMx_0.pdf"!, \verb!"InterfTrackXYZ.pdf"!. The interferometric hypercube is also shown in the plot of the source locations.
 
-It is recommended to subsequently run the script \verb!"InterfSrcSel.sh"! using \verb!"InterfSrcSel.in"! as input to produce the plots that are zoomed in on the region of interest, see \secref{InterfSrcSel}.
+It is recommended to subsequently run the script \verb!"DataSelect.sh"! using \verb!"DataSelect.in"! as input to produce the plots that are zoomed in on the region of interest, see \secref{DataSelect}
+
+\subsection{Chainrun} \seclab{ChainRun}
+
+If \verb# ChainRun=0# the present run will not spawn any children, otherwise, a chain of jobs will be generated to allow for the TRI-D imager to follow the track of a leader, or to image a fixed spot for a long time period.
+if \verb# ChainRun=0# is non zero line ``+1'' may have a different structure which is determining what the structure of the chaining will be.
+
+Typically [line +1] may read:  ``\verb#S  825.15   "I-19A-1b-D3a.trc" #'' where the space coordinates have been replaced by a file name containing a track. The first few lines of this file could read
+{\tiny
+\begin{verbatim}
+   825.0   -12.  -27.05   7.6
+   826.12   -12.  -27.05   7.6
+  826.12049     -11.872760     -26.808671      7.4762350
+  826.13483     -11.822525     -26.901188      7.5054529
+  826.14391     -11.817934     -26.985353      7.4927362
+\end{verbatim}
+}
+where the bulk of the file was generated using the 'longtrack' option in utility \verb!DataSelect! as described in \secref{DataSelect}. Each line gives the coordinates of the track as (time, N, E, h). The file may also be a .dat file (in stead of .trc),  having the same format at image-source files, i.e.\ (label, t, x, y, z). The program will construct a cube of size as specified in [line +2] centered at the the position on the track at time $t_t$=825.15 for the present example. At the end of the run an input for a following job is created where the time on the track is increased by the time duration of the tesseract. \verb# ChainRun# will be decreased by one and a new job is submitted. This proceeds till \verb# ChainRun# is reduced to zero, or the end of the track is reached. The present value of \verb!"ChainRun"! is worked into \verb!"OutFileLabel"! as well as the naming of the spawned scripts.
+
+When \verb# ChainRun# is negative, the time of the next run will be decreased and \verb# ChainRun# is increased, i.e.\ the track is scanned in the opposite direction as before. 
+
+In case not a track, but coordinates are given, the program will center the new image cube at the center of intensity of the present image. This option sounds fancy but in practice does not really perform up to expectation.
+
+If the track file name is followed by a positive real, this is interpreted at the time on the track. The tesseracts will follow the track in space coordinates, but are all taken at the same fixed time given by $t_t$. The next image box is now taken such that the side touches that of the previous, independent of the time duration of the tesseract, but following the track. This option is used in Ref.~\cite{Scholten:2023PL}. 
 
 \subsection{Output}\seclab{Interf}
 
@@ -112,6 +131,9 @@ In case \verb!"Dual=.true."! the Intensity plot will contain a single half of \f
 
 \subsection{Selective plotting}\seclab{InterfSrcSel}
 
+Note: This section in obsolete by now since the utility "InterfSrcSel" is superseded by "DataSelect" discussed in \secref{DataSelect}.
+
+\Omit{ -------------------------------------------------------------
 The script \verb!"InterfSrcSel.sh"! using \verb!"InterfSrcSel.in"! as input allows to produce plots that are zoomed in on the region of interest. This script plots the position of the sources using the GLE-script, \verb!"SourcesPlot.gle"! and the distribution of sources intensities using \verb!"SourcesPlot.gle"!. These are run via spawned scripts on Windows as well as Linux machines.
 A typical input resembles:
 
@@ -150,3 +172,4 @@ The lines in the namelist \verb!"&Parameters"! input specify:
 
 The plots will be made for the `Mx' and `Bar' files as well as for X- and Y-dipoles, all resembling \figref{TRIDSelSrcsImg}. This allows for appending seamless the results of different interferometry runs.
 
+} %---------------------------------------------------------------------
