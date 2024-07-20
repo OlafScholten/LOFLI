@@ -2,7 +2,6 @@
 # 
 # 
 
-#cd temp
 cd modules
 echo A-Me-Hoela [=NoProblem]: $1
 
