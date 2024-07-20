@@ -1,0 +1,148 @@
+!size   23 38
+fontSz=0.5
+!fontSz=1.0
+!fontSz=0.8
+bsh=2.5*fontSz    ! 1.5
+HorOff=1.5+bsh
+VerOff=2.0+bsh
+hOS=25.
+Scl=190 ! for the full width of the plot (size in km)
+!postscript OpenStrMap25sq.eps hOS hOS  ! scale 885000
+SupTN=hOS*0.439+vmove
+SupTE=hOS*0.463+hmove
+B=hOS*70./Scl  ! 70 km on the plot
+size   HorOff+3*B+bsh VerOff+3*B+3*bsh ! ----------------------------
+!
+file$='StationPositions'
+if(nargs() > 0 ) then 
+    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+end if
+filedat$=file$+'.dat'
+!filedat$='../files/'+file$+'.dat'
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+set just cc
+
+sub Flash xFl yFl label$
+begin translate xg(xFl) yg(yFl)
+   alph=pi/5.
+   begin path stroke fill yellow
+      amove 0 a
+      aline b*sin(alph) b*cos(alph)
+      aline a*sin(2*alph) a*cos(2*alph)
+      aline b*sin(3*alph) b*cos(3*alph)
+      aline a*sin(4*alph) a*cos(4*alph)
+      aline b*sin(5*alph) b*cos(5*alph)
+      aline a*sin(6*alph) a*cos(6*alph)
+      aline b*sin(7*alph) b*cos(7*alph)
+      aline a*sin(8*alph) a*cos(8*alph)
+      aline b*sin(9*alph) b*cos(9*alph)
+      aline a*sin(10*alph) a*cos(10*alph)
+      !aline 0 0
+      closepath
+   end path
+   amove 0 0
+   write label$ 
+end translate
+End sub
+
+hA3=25.
+wA3=hA3*420./296.
+hmove=-5
+amove hmove 0
+!postscript NoordNed.eps wA3 hA3 ! Google
+!postscript Untitled3.eps hA3 hA3 ! screen capture open maps
+!amove 22.2 23.7  !for hA3=50
+!amove wA3*0.5948+hmove 0.474*hA3
+!text \bigoplus 
+!
+!set arrowsize 0.5
+!amove 10 5.5
+!rline 0.2396*wA3 0 arrow both  ! 70. km (17 for hA3=50)
+!text 70 km
+!amove 10 8.5
+
+hmove=HorOff
+vmove=VerOff
+amove hmove vmove
+!hOS=21.
+!Scl=160 ! for the full width of the plot (size in km)
+!postscript OpenStrMap21sq.eps hOS hOS  ! scale 885000
+!SupTN=hOS*0.555+vmove
+!SupTE=hOS*0.57+hmove
+!
+hOS=25.
+Scl=190 ! for the full width of the plot (size in km)
+SupTN=hOS*0.439+vmove
+SupTE=hOS*0.463+hmove
+B=hOS*70./Scl  ! 70 km on the plot
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove SupTE-B-3*fontSz SupTN-B-3*fontSz
+      Box 2*B+6*fontSz  2*B+6*fontSz
+   End Path
+   postscript OpenStrMap25sq.eps hOS hOS  ! scale 885000
+End Clip ! -----------------
+set hei fontSz/2
+set just br
+set color darkmagenta
+amove SupTE+B+2.5*fontSz SupTN-B-2.5*fontSz ! ---------------------------------------------------
+begin box fill lightyellow add 0.1 round .3
+   text https://www.openstreetmap.org/copyright
+end box
+set hei fontSz
+set just cc
+set color black
+
+amove SupTE-B SupTN-B
+begin graph
+   size 2*B 2*B
+   vscale 1
+   hscale 1
+   xaxis min -70 max 70 hei fontSz*2 dticks  50 ! dsubticks .2  ! length=7
+   yaxis min -70 max 70 hei fontSz*2 dticks  50 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   data filedat$ d1=c1,c3 
+   !y1labels off
+   y2labels on
+   x2labels on
+   ! d4 marker cross msize 0.2 color blue
+end graph
+set hei fontSz*2
+amove SupTE-B-fontSz SupTN+B+fontSz
+write "[km]"
+amove SupTE+B SupTN-B-1*fontSz
+text [km]
+!
+fopen filedat$ inchana read
+set hei fontSz
+set just cc
+for i = 1 to ndata(d1)
+   freadln inchana icore Label$ Npos Epos
+   If (icore=1) then
+   amove xg(Epos) yg(Npos)
+   begin box fill orange add 0.1 round .3
+      write Label$
+   end box
+   End If
+next i
+set color red
+set hei fontSz*2
+amove SupTE SupTN    ! Mark the superterp
+text \bigoplus 
+set color black
+!set hei fontSz
+
+a=1.2*fontSz
+b=2*a
+!Flash -20 +40 'B'
+Flash -30 -5 'A'  !(x,y)=(E,N)
+!
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "EventsMap"+"-"+file$
+translate 0 2
+!end rotate
