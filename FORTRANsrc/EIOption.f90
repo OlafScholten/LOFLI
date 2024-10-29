@@ -67,14 +67,17 @@ Subroutine EI_Run
    RimInten(:,:)=0.
    MaxSmPow(:)=0.
    Int_best(:,:)=0.
-   Select Case(PixPowOpt)
-      Case (1)
-         write(2,*) 'PixPowOpt=1 : sum all polarizations weighted with alpha to compensate A^-1 == intensity of F vector'
-      Case(2)
-         write(2,*) 'PixPowOpt=2 : Sum all three polarizations, thus including longitudinal with the full weight'
-      Case Default
-         write(2,*) 'PixPowOpt=0=default : sum two transverse polarizations only'
-   End Select
+   If(FirstTimeInterf) Then
+      Select Case(PixPowOpt)
+         Case (1)
+            write(2,*) 'PixPowOpt=1 : sum all polarizations weighted with alpha to compensate A^-1 == intensity of F vector'
+         Case(2)
+            write(2,*) 'PixPowOpt=2 : Sum all three polarizations, thus including longitudinal with the full weight'
+         Case Default
+            write(2,*) 'PixPowOpt=0=default : sum two transverse polarizations only'
+      End Select
+   EndIf
+   !
    Do i_h= N_pix(3,1), N_pix(3,2) ! or distance
       CALL DATE_AND_TIME (Values=DATE_T)
       If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' i_height=',i_h
@@ -114,7 +117,7 @@ Subroutine EI_Run
    !
    DeAllocate( CMCnu, CMTime_pix )
    !----------------------------------------
-   WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' analyze'
+   If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' analyze'
    WRITE(*,"(A,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' analyze',(DATE_T(i),i=5,8), achar(27)//'[0m'
    call cpu_time(CPUTime)
    CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
@@ -135,7 +138,7 @@ Subroutine EI_Run
    CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
    WallTime=WallCount/WallRate - WallstartTime
    !Write(2,*) 'Wall:', WallTime, WallCount, WallRate, CPUTime
-   WRITE(2,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   If(FirstTimeInterf) WRITE(2,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
    WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
    FirstTimeInterf=.false.
    Return

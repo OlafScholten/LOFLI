@@ -186,10 +186,11 @@ Module Interferom_Pars
       If(FirstTimeInterf) write(2,"('Storing pixel traces takes ',F10.6,' Gbytes')")  &
             NrPixSmPowTr* (N_pix(1,2)-N_pix(1,1)+1.)* (N_pix(2,2)-N_pix(2,1)+1.)* (N_pix(3,2)-N_pix(3,1)+1.)*4./1.E9
       allocate(  RimSmPow(N_pix(3,1):N_pix(3,2)) )
+      Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
       If(NrPixSmPowTr_Previous .ne. NrPixSmPowTr) Then
          write(2,*) '!Reallocate arrays MaxSmPow..', NrPixSmPowTr_Previous, NrPixSmPowTr
-         If( Allocated( MaxSmPowGrd)) DeAllocate( MaxSmPowGrd )
-         Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
+         !If( Allocated( MaxSmPowGrd)) DeAllocate( MaxSmPowGrd )
+         !Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( MaxSmPow)) DeAllocate( MaxSmPow)
          Allocate( MaxSmPow(0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( MaxSmPowLoc)) DeAllocate( MaxSmPowLoc)
@@ -198,6 +199,7 @@ Module Interferom_Pars
          Allocate( Grd_best(1:3,1:N_best,0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( Int_best)) DeAllocate( Int_best)
          Allocate( Int_best(1:N_best,0:NrPixSmPowTr) )  ! keep for possible later use
+         NrPixSmPowTr_Previous=NrPixSmPowTr
       EndIf
    End Subroutine Alloc_EInterfImag_Pars
 ! -----------------------------

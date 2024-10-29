@@ -462,7 +462,7 @@ Subroutine WindowShift(N_Smth, smooth, Intens, Sampl_shift, txt)
          If(A_s .gt. (Intens(i_d+i) + Intens(i_u+i)) ) Then
             Sampl_shift=i
             A_s = (Intens(i_d+i) + Intens(i_u+i) )
-            write(2,*) '!t-shift option3:', i, A_s
+            !write(2,*) '!t-shift option3:', i, A_s
          EndIf
       EndDo
    EndIf

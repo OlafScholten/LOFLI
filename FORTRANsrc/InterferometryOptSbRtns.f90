@@ -218,7 +218,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z')
       Write(30,"(10(A,I4))") '! nx ', N_pix(2,2)-N_pix(2,1)+1, ' ny ', N_pix(1,2)-N_pix(1,1)+1,  &
          ' xmin ', N_pix(2,1), ' xmax ', N_pix(2,2) , ' ymin ', N_pix(1,1) , ' ymax ', N_pix(1,2)
-      write(2,*) 'OutputIntfPowrTotal:', trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z'
+      If(FirstTimeInterf) write(2,*) 'OutputIntfPowrTotal:', trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z'
       Do i_N=N_pix(1,1),N_pix(1,2)   ! or Phi  ! Loop over pixels
          write(30,FMT) PixSmPowTr(0, i_N, N_pix(2,1):N_pix(2,2), i_h)
       Enddo
