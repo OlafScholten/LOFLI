@@ -209,20 +209,29 @@ Real(kind=8) Function SubRelDist(SrcPos,i_ant,i_chunk)
       SubRelDist=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
    !write(2,*) 'SubRelDist:',Rdist, Ant_RawSourceDist(i_ant,i_chunk)
 End Function SubRelDist
-Pure Subroutine SetSmooth(N_Smth, Smooth)
+!---------------------------------
+Pure Subroutine SetSmooth(N_Smth, ParabolicSmooth, Smooth)
+! Subroutine SetSmooth(N_Smth, ParabolicSmooth, Smooth)
+   ! smooth(j)=weight factors for power (amplitude^2) per sample, used in calculating voxel power as in:
+   ! Stk(m,n)= Stk(m,n) + smooth(j)*CMTime_pix(IntfLead+i_s+j,m)*Conjg(CMTime_pix(IntfLead+i_s+j,n))
    use constants, only : dp
    Implicit none
    Integer, intent(in) :: N_Smth
+   logical, intent(in) :: ParabolicSmooth
    Real(dp), intent(out) :: Smooth(-N_smth:N_smth)
    integer :: i
    !Allocate( Smooth(-N_smth:N_smth) )
    Smooth(:)=0.
    Smooth(0)=1.
+   !write(2,*) 'SetSmooth:',N_smth, ParabolicSmooth
    Smooth(N_smth/2)=0.5  ! needed for block profile for even values of N_smth
    Do i=1,N_smth
-      !Smooth(i)=(1.-(Real(i)/N_smth)**2)**2.5  ! Parabola to power to make it =0.5 at N_smth/2
-      If(i.lt.(N_smth+1)/2) Smooth(i)=1.      ! Block gives indistinguishable results from parabola; parabola has a tiny bit smaller volume around peak.
-      Smooth(-i)=Smooth(i)
+      If(ParabolicSmooth) Then
+         Smooth(i)=(1.-(Real(i)/N_smth)**2)**2.5  ! Parabola to power to make it =0.5 at N_smth/2
+      Else
+         If(i.lt.(N_smth+1)/2) Smooth(i)=1.      ! Block gives indistinguishable results from parabola; parabola has a tiny bit smaller volume around peak.
+         Smooth(-i)=Smooth(i)
+      EndIf
    EndDo
    !SmPow=SUM(Smooth(:))
    Smooth(:)=Smooth(:)/SUM(Smooth(:))

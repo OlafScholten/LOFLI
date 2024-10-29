@@ -148,11 +148,14 @@ Subroutine AntFieParGen()
    Complex(dp) :: Vp, Vt
    Integer :: nxx, it, nthet, i_freq, j
    Character(len=150) :: AntFunFile
+   Character(len=150), save :: AntFunFile_Prev=''
    !Complex(dp) :: J_0p(Freq_min:Freq_max),J_0t(Freq_min:Freq_max),J_1p(Freq_min:Freq_max),J_1t(Freq_min:Freq_max) ! only for testing
    !Complex(dp) :: Ji_p0(Freq_min:Freq_max),Ji_t0(Freq_min:Freq_max),Ji_p1(Freq_min:Freq_max),Ji_t1(Freq_min:Freq_max)
    !
    !WRITE (*,*) "LIBRARY=",TRIM(ldata)
    CALL get_environment_variable("AntennaFun", AntFunFile)
+   If(AntFunFile .eq. AntFunFile_Prev) Return
+   AntFunFile_Prev=AntFunFile
    WRITE (2,*) "Using environment variable: AntennaFun; Antenna Function from files:",' "',TRIM(AntFunFile)//'LBA_Vout_*.txt"'
    If(AntTst) Then
       open(Unit=80,Status='unknown',Action='write',File='V_t-nu.dat') !fix th=0, phi=0, nu-dependence

@@ -191,7 +191,7 @@ Subroutine PreReadPeakFitInfo(ChunkNr_dim,i_peak)
    Real(dp) :: T1, NEh(1:3)
    CHARACTER(LEN=6) :: txt
    Character(LEN=30) :: FMTSrces
-   Integer, parameter :: lnameLen=180
+   Integer, parameter :: lnameLen=300
    Character(LEN=lnameLen) ::  lname
 
    ChunkNr_dim=0
@@ -256,7 +256,7 @@ Subroutine ReadPeakFitInfo(NEh)
    integer :: i_eo, i_chunk, i_dist, i, j, k, i_c,i_ca,i_eoa, i_d, n_shft
    Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
    integer :: i_Peak, nxx
-   Integer, parameter :: lnameLen=210
+   Integer, parameter :: lnameLen=300
    Character(LEN=lnameLen) ::  lname
    character*10 :: txt
    character*1 :: Label
@@ -446,7 +446,7 @@ Subroutine DualReadPeakInfo(i_eo,i_chunk)
     Return
 End Subroutine DualReadPeakInfo
 !==========================================
-Subroutine PrntNewSources(ZeroCalOffset)
+Subroutine PrntNewSources(ZeroCalOffset, OutUnit)
    use constants, only : dp
    use ThisSource, only : PeakNrTotal, ChunkNr, Peak_eo, ChunkNr, Dual, Dropped
    use ThisSource, only : Nr_Corr, CorrAntNrs, ExclStatNr
@@ -456,6 +456,7 @@ Subroutine PrntNewSources(ZeroCalOffset)
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Real(dp), intent(in) :: ZeroCalOffset
+   Integer, intent(in) :: OutUnit
    integer ( kind = 4 ) :: i,j, i_Peak, i_chunk, i_eo, i_stat, i_ant, j_corr, count(0:1,1:Station_nrMax), Station_ID
    integer ( kind = 4 ) :: Peaks(0:1)
    integer, external :: XIndx
@@ -483,14 +484,14 @@ Subroutine PrntNewSources(ZeroCalOffset)
             If(Dropped(i_stat,i_peak).eq.0) count(i_eo,i_stat)=count(i_eo,i_stat)+1
          EndDo
       EndDo
-      write(2,"('Station(',i2,'): ')", ADVANCE='NO') Nr_UniqueStat
+      write(OutUnit,"('Station(',i2,'): ')", ADVANCE='NO') Nr_UniqueStat
       Do i=1,Nr_UniqueStat
-         Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(Unique_StatID(i))
+         Write(OutUnit,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(Unique_StatID(i))
       Enddo
       Do i_eo=0,1
-         write(2,"(/,'#pulss',i1,'(',I3,') ')", ADVANCE='NO') i_eo,Peaks(i_eo)
+         write(OutUnit,"(/,'#pulss',i1,'(',I3,') ')", ADVANCE='NO') i_eo,Peaks(i_eo)
          Do i_stat=1,Nr_UniqueStat
-            Write(2,"(1x,I5)", ADVANCE='NO') count(i_eo,i_stat)
+            Write(OutUnit,"(1x,I5)", ADVANCE='NO') count(i_eo,i_stat)
          Enddo
       Enddo
       write(2,*) ' '
@@ -509,22 +510,22 @@ Subroutine PrntNewSources(ZeroCalOffset)
    EndIf
    !
    !
-   Write(2,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, -----); RMS[ns], sqrt(chi^2/df), Excluded: ' &
+   Write(OutUnit,*) 'Nr,eo,Blk,PPos,(Northing,   Easting,    height, -----); RMS[ns], sqrt(chi^2/df), Excluded: ' &
       ,'Peak positions shifted by ', ZeroCalOffset, 'due to time-calibration offset'
    i_chunk=0
    Do i_Peak = 1,PeakNrTotal
       If(i_chunk.ne.ChunkNr(i_Peak)) then
          i_chunk=ChunkNr(i_Peak)
-         Write(2,"(5x,F13.6, 3F10.3,i9)")  ChunkStTime_ms(i_chunk), ChunkFocus(:,i_chunk)/1000, i_chunk
+         Write(OutUnit,"(5x,F13.6, 3F10.3,i9)")  ChunkStTime_ms(i_chunk), ChunkFocus(:,i_chunk)/1000, i_chunk
        !  write(2,"(A,i2,A,I11,A,f10.3,A)") 'block=',i_chunk,', starting time=',StartT_sam(i_chunk),&
        !     '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
       Endif
-      Call PrntCompactSource(i_Peak,ZeroCalOffset)
+      Call PrntCompactSource(i_Peak,ZeroCalOffset, OutUnit)
    Enddo  !  i_Peak = 1,PeakNrTotal
    !
 End Subroutine PrntNewSources
 !==========================================
-Subroutine PrntCompactSource(i_Peak,ZeroCalOffset)
+Subroutine PrntCompactSource(i_Peak,ZeroCalOffset, OutUnit)
    use constants, only : dp,Sample_ms
    use FitParams, only : station_nrMax
    use DataConstants, only : RunMode
@@ -534,6 +535,7 @@ Subroutine PrntCompactSource(i_Peak,ZeroCalOffset)
    Implicit none
    Integer, intent(in) :: i_Peak
    Real(dp), intent(in) :: ZeroCalOffset
+   Integer, intent(in) :: OutUnit
    integer ( kind = 4 ) :: i,k, i_chunk,i_eo, i_src
    Character(len=5) :: Station_Mnem
    Real(dp) :: RDist,Time
@@ -553,31 +555,31 @@ Subroutine PrntCompactSource(i_Peak,ZeroCalOffset)
    EndIf
    Time=( StartT_sam(ChunkNr(i_Peak)) + PeakPos(i_Peak) - tShift_smpl(SourcePos(:,i_Peak)) )*Sample_ms
    !
-   i_src=SourceNr(i_Peak)
+   i_src=SourceNr(i_Peak)  !
    If(i_src.lt.100) Then
-      Write(2,"('C',3i2,I8)", ADVANCE='NO') i_src,i_eo,ChunkNr(i_Peak),k
+      Write(OutUnit,"('C',3i2,I8)", ADVANCE='NO') i_src,i_eo,ChunkNr(i_Peak),k
    Else
-      Write(2,"('C',i2.2,2i2,I8)", ADVANCE='NO') MODULO(i_src,100),i_eo,ChunkNr(i_Peak),k
+      Write(OutUnit,"('C',i2.2,2i2,I8)", ADVANCE='NO') MODULO(i_src,100),i_eo,ChunkNr(i_Peak),k
    EndIf
-   Write(2,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
+   Write(OutUnit,"(3(F10.2,','))", ADVANCE='NO') SourcePos(:,i_Peak)
    If(RunMode.le.3) Then
       !Write(2,"(F8.2)", ADVANCE='NO') RefAntErr(i_Peak)
-      write(2,"(F12.5';',F7.2,',',F7.2)", ADVANCE='NO') Time, PeakRMS(i_Peak),sqrt(PeakChiSQ(i_Peak))
+      write(OutUnit,"(F12.5';',F7.2,',',F7.2)", ADVANCE='NO') Time, PeakRMS(i_Peak),sqrt(PeakChiSQ(i_Peak))
    ElseIf(RunMode.ge.7) Then
-      write(2,"(F12.5';',F7.2)", ADVANCE='NO') Time, PeakChiSQ(i_Peak)
+      write(OutUnit,"(F12.5';',F7.2)", ADVANCE='NO') Time, PeakChiSQ(i_Peak)
    EndIf
    If(Station_nrMax.gt.0 .and. ((SUM(Dropped(:,i_Peak)).gt.0).or.(ExclStatNr(1,i_peak) .ne.0))) then
       Do i=1,Station_nrMax
          If(ExclStatNr(i,i_peak).eq.0) exit
-         Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(ExclStatNr(i,i_peak))
+         Write(OutUnit,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(ExclStatNr(i,i_peak))
       Enddo
-      write(2,"(/,'exclude  ')", ADVANCE='NO')
+      write(OutUnit,"(/,'exclude  ')", ADVANCE='NO')
       Do i=1,Station_nrMax
          If(Dropped(i,i_peak).eq.0) cycle
-         Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(Unique_StatID(i))
+         Write(OutUnit,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(Unique_StatID(i))
       Enddo
    Endif
-   write(2,*) ' '
+   write(OutUnit,*) ' '
    Return
 End Subroutine PrntCompactSource
 !==========================================

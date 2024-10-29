@@ -45,7 +45,7 @@ contains
 Subroutine DS_ReadCntrl(Fini)
    Use constants, only : dp, CI, pi, c_l
    Use TrackConstruct, only : PreDefTrackNr, PreDefTrackFile, SrcDensTimeResol
-   Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, NLongTracksMax, TrackLenMax
+   Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, NLongTracksMax, TrackLenMax, LongTrack_Min
    Use TrackConstruct, only : Wtr, Aweight, MaxTrackDist, TimeWin, HeightFact, dt_MTL, TrackENr, TrackE, TrackNrLim
    use LOFLI_Input
    IMPLICIT none
@@ -55,9 +55,9 @@ Subroutine DS_ReadCntrl(Fini)
    Character(len=120) :: PlotFile
    logical :: exist
    NAMELIST /Parameters/ datafile, BckgrFile, PlotName, TimeBase, &
-      SMPowCut, DelNEff, MaxAmplFitPercent, FileStatN, StatNCut, SrcDensTimeResol, &
+      SMPowCut, MaxAmplFitPercent, FileStatN, StatNCut, SrcDensTimeResol, AmplitudePlot, &
       tCutl, tCutu, RunOption , xyztBB, NEhtBB, CutSigmaH, LinCutH, RMS_ns, DelNEff, ZoomBox &
-   , MaxTrackDist, Wtr, Aweight, TimeWin, PreDefTrackFile, dt_MTL, HeightFact, NLongTracksMax, AmplitudePlot &
+   , MaxTrackDist, Wtr, Aweight, TimeWin, PreDefTrackFile, dt_MTL, HeightFact, NLongTracksMax, LongTrack_Min &
    , Corr_dD, Corr_Dnr, Corr_dtau, QualPlot
    !
    OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='DataSelect.out')
@@ -89,6 +89,7 @@ Subroutine DS_ReadCntrl(Fini)
    Wtr= 0.5      ! Weight for next point on track
    dt_MTL=tiny
    TimeWin=0.1
+   DelNEff=5
    HeightFact=3.
    NLongTracksMax=0
    Aweight=tiny
@@ -154,6 +155,7 @@ Subroutine DS_ReadCntrl(Fini)
          Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
          Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  !
          Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
+         Call PrintValues(LongTrack_Min,'LongTrack_Min', 'Minimum number of sources on a long track.')  !
          Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  !
          Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  !
          Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  !
@@ -193,6 +195,7 @@ Subroutine DS_ReadCntrl(Fini)
          Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
          Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  !
          Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
+         Call PrintValues(LongTrack_Min,'LongTrack_Min', 'Minimum number of sources on a long track.')  !
          Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  !
          Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  !
          Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  !
@@ -201,7 +204,7 @@ Subroutine DS_ReadCntrl(Fini)
       If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
          Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  !
          Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  !
-         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  !  
+         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  !
       Else
          Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
       EndIf

@@ -7,6 +7,7 @@ Subroutine System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, F
    Integer :: i,j,i_guess
    character(len=1) :: FChar='/'
    INTEGER :: DATE_T(8)
+   Character(len=150) :: AntFunFile
    !
    write(2,"(3x,5(1H-),1x,'Utility: ',A,', release ',A20,25(1H-))") TRIM(Utility), release
    CALL DATE_AND_TIME (Values=DATE_T)
@@ -50,6 +51,10 @@ Subroutine System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, F
       FlashFolder='${FlashFolder}'//'/'  ! '../'//TRIM(FlashName)//'/' is shorter, but should be equivalent in usage to the original FlashName (with ending /)
    EndIf
    Write(2,*) 'FlashName: "',TRIM(FlashName) ! ,'", FlashFolder: "',TRIM(FlashFolder),'"'
+   CALL get_environment_variable("AntennaFun", AntFunFile)
+   Write(2,*) 'Environment variable "AntennaFun"= "',TRIM(AntFunFile) ! ,'", FlashFolder: "',TRIM(FlashFolder),'"'
+   CALL get_environment_variable("AntennaFieldsDir", AntFunFile)
+   Write(2,*) 'Environment variable "AntennaFieldsDir"= "',TRIM(AntFunFile) ! ,'", FlashFolder: "',TRIM(FlashFolder),'"'
    !
    Return
 End Subroutine System_Initiation

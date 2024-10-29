@@ -57,7 +57,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
-   !write(2,*) 'Simulation,WriteSimulation(2):', Simulation,WriteSimulation(:), 'file14open:',file14open
+   write(2,*) 'Simulation,WriteSimulation(2):', Simulation,';',WriteSimulation(:), 'file14open:',file14open
    If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then  ! imaging on real data (="") or 'SelectData' (.gt.0) options
       If(file14open) then
          Rewind(unit=14)
@@ -65,6 +65,8 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       Else
          Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
          Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
+         write(2,*) '!File 14 opened:', 'Book/LOFAR_H5files_Structure-v18.dat'
+         flush(unit=2)
       EndIf
    Else  ! simulation ne '' and width <0; run on simulation data
       If(file14open) then
@@ -80,7 +82,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       Call CreateNewFolder(Simulation) ! create new folder when needed
       Open(Unit=30,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat')
       write(2,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
-      !write(*,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
+      write(*,*) 'created simulation file:','files/'//TRIM(Simulation)//'_Structure.dat'
    EndIf
    Ant_nr(i_chunk)=0
    AntNr_lw=1
@@ -574,7 +576,8 @@ Subroutine SimulationRead(SourceGuess)
    Real*8, intent(in) :: SourceGuess(3) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
    !
    Real(dp) :: RTime_s(1:Time_dim)
-   Complex(dp) :: CNu_s(0:Cnu_dim)  ! CTime_s(1:Time_dim),
+   Real*4, allocatable :: RTime_read(:)
+   Complex(dp) :: CNu_s(0:Cnu_dim)  !,  CTime_s(1:Time_dim),
    Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
    Character(len=12) :: Lab1, Lab2, Lab3, Lab4
    Integer :: i_file, i_ant, j_ant, i_sample, k,  AntNr_lw, AntNr_up
@@ -583,6 +586,9 @@ Subroutine SimulationRead(SourceGuess)
    Real*8 :: dnu, StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Spec(64)
    Character(len=4),save :: Signature='----'
+   Logical :: UnformattedSimul=.true.
+   !INTEGER, PARAMETER :: SEEK_SET = 0, SEEK_CUR = 1, SEEK_END = 2
+   INTEGER ::  Start_read, final_read, NrSamples_prev! , Read_offset, ierr
    !
    !Open(unit=14,STATUS='old',ACTION='read', FILE = TRIM(Simulation)//'_Structure.dat')
    !
@@ -602,43 +608,130 @@ Subroutine SimulationRead(SourceGuess)
       read(14,*,IOSTAT=nxx) STATION_ID, Station_name(i_file)
       If(nxx.ne.0) exit
       Station_number(i_file)=STATION_ID
-      If(i_file.eq.1) Then
-         write(2,*) 'Reading simulated data from files like= "', &
-               'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat','"'
-      EndIf
-      Open(unit=12,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat')
-      If(EvenOdd.eq.-1) Then
-         Read(12,*) Lab1
-         Read(12,*) Lab1
-         read(Lab1,*,IOSTAT=nxx) Ant_ID
-         If(nxx.eq.0) Then ! there was a number at this place
-            EvenOdd=1
-            Signature='Dual'
-         Else
-            EvenOdd=0
+      inquire(FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.udt', exist=UnformattedSimul)
+      If(UnformattedSimul) Then
+         Open(unit=12,STATUS='old',ACTION='read', Form='unformatted', &
+            FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.udt')
+         If(i_file.eq.1) Then
+            write(2,*) 'Reading simulated data from files like= "', &
+                  'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.udt','"'
          EndIf
-         rewind(unit=12)
+      Else
+         Open(unit=12,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat')
+         If(i_file.eq.1) Then
+            write(2,*) 'Reading simulated data from files like= "', &
+                  'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.dat','"'
+         EndIf
       EndIf
-      !write(2,*) 'EvenOdd',EvenOdd,Signature
-      !flush(Unit=2)
-      If(EvenOdd.eq.0) then
-         Read(12,*) Lab1, StatStartTime, Lab2, NrSamples, lab4, powr  ![ms],,&  =noise power
-         !write(2,*) Lab1, StatStartTime, Lab2, NrSamples, lab4, powr
-      else
-         Read(12,*) Lab1, StatStartTime, Lab2, NrSamples, lab3, NrAnt, lab4, powr  ![ms],,&  =noise power
-         !write(2,*) Lab1, StatStartTime, Lab2, NrSamples, lab3, NrAnt, lab4, powr
-      endIf
-      if(powr.lt.1.d-36) Powr=1.d-36  ! =noise power
+      !
+      If(UnformattedSimul) Then
+         EvenOdd=1
+         Signature='Dual'
+         !OFFSET = FTELL(12)
+         !write(2,*) '!OFFSETa=', FTELL(12)
+         Read(12)  StatStartTime,  NrSamples,  NrAnt    ![ms],,&  =noise power
+         !OFFSET = FTELL(12)
+         !write(2,*) '!OFFSETb=', FTELL(12), StatStartTime,  NrSamples,  NrAnt, STATION_ID, Station_name(i_file)
+         powr=1.
+      Else
+         If(EvenOdd.eq.-1) Then
+            Read(12,*) Lab1
+            Read(12,*) Lab1
+            read(Lab1,*,IOSTAT=nxx) Ant_ID
+            If(nxx.eq.0) Then ! there was a number at this place
+               EvenOdd=1
+               Signature='Dual'
+            Else
+               EvenOdd=0
+            EndIf
+            rewind(unit=12)
+         EndIf
+         !write(2,*) 'EvenOdd',EvenOdd,Signature
+         !flush(Unit=2)
+         If(EvenOdd.eq.0) then
+            Read(12,*) Lab1, StatStartTime, Lab2, NrSamples, lab4, powr  ![ms],,&  =noise power
+            !write(2,*) Lab1, StatStartTime, Lab2, NrSamples, lab4, powr
+         else
+            Read(12,*) Lab1, StatStartTime, Lab2, NrSamples, lab3, NrAnt, lab4, powr  ![ms],,&  =noise power
+            !write(2,*) Lab1, StatStartTime, Lab2, NrSamples, lab3, NrAnt, lab4, powr
+         endIf
+         if(powr.lt.1.d-36) Powr=1.d-36  ! =noise power
+      EndIf
+      !
       NrAntLine=0
+      If( i_file .eq. 1 ) Then
+         Allocate( RTime_read(1:NrSamples))
+         NrSamples_prev=NrSamples
+      ElseIf(NrSamples_prev .ne. NrSamples) Then
+         write(2,*) '********** NrSamples should be equal for all traces:', NrSamples
+         stop 'NrSamples unequal in Simulation read'
+      EndIf
+      !Read_offset = 4 * (NrSamples) * 2 +16 !*(NrAntLine-1) + 24 + 48 * (NrAntLine-1)
+      !Read_offset = 8 * (NrSamples) * 2 +16 !*(NrAntLine-1) + 24 + 48 * (NrAntLine-1)
       Do
          NrAntLine=NrAntLine+1
-         If(EvenOdd.eq.0) then
-            Read (12,*,IOSTAT=nxx) Signature, lab1, LFRAnt_crdnts
-         else
-            If(NrAnt.eq.NrAntLine-1) exit
-            Read (12,*,IOSTAT=nxx) Ant_ID, lab1, LFRAnt_crdnts
-         endIf
-         !Read (12,*,IOSTAT=nxx) Signature, Ant_ID,  LFRAnt_crdnts
+         If(UnformattedSimul) Then
+            !write(2,*) '!record read start:', FTELL(12), j_ant, STATION_ID, Station_name(i_file), &
+            !      AntNr_up-AntNr_lw, NrAntLine, NrSamples
+            !flush(unit=2)
+            !
+            Read (12,IOSTAT=nxx) lab1, Ant_ID, LFRAnt_crdnts
+            !OFFSET = FTELL(12)
+            !write(2,*) '!lab1, Ant_ID:', lab1,';', Ant_ID,';', LFRAnt_crdnts,' OFFSET=', FTELL(12)
+            !!Sarts at 24 and jumps with 48 at each read, except for the last read
+            !flush(unit=2)
+            If(nxx.ne.0) Then ! capture EOF
+               exit
+            EndIf
+            If(TRIM(lab1) .ne. 'AntId' ) Then
+               write(2,*) '***** should not reach this:', lab1,';', j_ant, Ant_ID,';', STATION_ID, Station_name(i_file)
+               flush(unit=2)
+               exit
+            EndIf
+            !write(2,*) '! OFFSETa=', FTELL(12)
+            !flush(unit=2)
+            !CALL FSEEK(12, Read_offset, SEEK_cur, ierr)  ! move to to next antenna
+            Read(12) RTime_read(1) ! skip next record
+            !write(2,*) '! OFFSETb=', FTELL(12),  RTime_read(1)
+            !flush(unit=2)
+            Read(12)  RTime_read(1) ! skip next record
+            !write(2,*) '! OFFSETc=', FTELL(12),  RTime_read(1)
+            !flush(unit=2)
+!Station=  1        3 CS003 uses 4 antenna pairs. Start time=   0.13549[ms]
+ !writing:       32768           1
+ !before time trace:                   72
+ !between time trace:               131152
+ !after time trace:               262232
+
+ ! OFFSETa=                   72
+ ! OFFSETb=               131152  -18.7691250
+ ! OFFSETc=               262232  -5.02223063
+ !read start; :      262160               262232           0           3 CS003           2           2       32768
+
+ !writing:       32768           2
+ !before time trace:               262280
+ !between time trace:               393360
+ !after time trace:               524440
+ !writing:       32768           3
+ !before time trace:               524488
+ !between time trace:               655568
+ !after time trace:               786648
+ !writing:       32768           4
+ !before time trace:               786696
+ !between time trace:               917776
+ !after time trace:              1048856
+
+ !lab1, Ant_ID:AntId       ;          40 ;   121.23829390865501       -102.24296387865057        8.3365201607392692E-003  OFFSET=              1048856
+ ! OFFSETa=              1048856
+
+         Else
+            If(EvenOdd.eq.0) then
+               Read (12,*,IOSTAT=nxx) Signature, lab1, LFRAnt_crdnts
+            else
+               If(NrAnt.eq.NrAntLine-1) exit
+               Read (12,*,IOSTAT=nxx) Ant_ID, lab1, LFRAnt_crdnts
+            endIf
+         EndIf
          If(nxx.ne.0) exit
          Call RelDist(SourceGuess,LFRAnt_crdnts,RDist)
          AntNr_up=AntNr_up+1
@@ -668,12 +761,23 @@ Subroutine SimulationRead(SourceGuess)
       EndDo
       Ant_nr(i_chunk)=AntNr_up
       !write(2,*) 'Ant_IDs',Ant_IDens(1:Ant_nr(i_chunk),i_chunk)
-      RTime_s(:)=0.
+      Rewind(unit=12) ! reposition file
+      read(12) lab1
       Do j_ant=1,AntNr_up-AntNr_lw  ! read spectra
-         Rewind(unit=12) ! reposition file
-         Do k=1,NrAntLine
-            read(12,*) Lab1
-         EndDo
+         If(UnformattedSimul) Then
+            If(Mod(j_ant,2).eq.1) read(12) lab1
+            !write(2,*) '! FTELL(12) starting:', FTELL(12), j_ant, Lab1
+            !Do k=1,NrAntLine
+            !   read(12) Lab1
+            !EndDo
+         Else
+            Rewind(unit=12) ! reposition file
+            Do k=1,NrAntLine
+               read(12,*) Lab1
+            EndDo
+         EndIf
+         !OFFSET = FTELL(12)   != 24 + 48 * (AntNr_up-AntNr_lw)
+         !write(2,*) 'lab1, :', lab1,'; OFFSET=',OFFSET
          i_ant=AntNr_lw+j_ant
          RDist=Ant_RawSourceDist(i_ant,i_chunk)
          !StatAnt_Calib=StatStartTime/Sample ! StatAnt_Calib in units of samples
@@ -708,15 +812,54 @@ Subroutine SimulationRead(SourceGuess)
                exit
             EndIf
          EndIf
-         Do i_sample=1,NrSamples
-            read(12,*) spec(1:AntNr_up-AntNr_lw)
-            !write(2,*) i_sample, Sample_Offset
-            If( (i_sample+Sample_Offset).lt.1) cycle
-            If( (i_sample+Sample_Offset).gt.Time_dim) exit
-            RTime_s(i_sample+Sample_Offset)=spec(j_ant)/sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
-         Enddo
+         !
+         RTime_s(:)=0.
+         If(UnformattedSimul) Then
+            Start_read = 1-Sample_Offset
+            If(Start_read.lt.1) Start_read=1
+            final_read = Time_dim-Sample_Offset
+            If(final_read .gt. NrSamples) final_read=NrSamples
+            If(Start_read .gt. final_read-50) Then
+               write(2,*) 'Too few samples to read; Start, final:',Start_read, final_read, Sample_Offset, &
+                     j_ant, STATION_ID, Station_name(i_file)
+               stop 'Too few samples in simulation read'
+            EndIf
+            !Read_offset = 8 * (NrSamples+1) * (j_ant-1) + 24 + 48 * ((j_ant+1)/2)
+            !write(2,*) '! read; Start, final:',Start_read, final_read, Sample_Offset, &
+            !      j_ant, STATION_ID, Station_name(i_file)
+            !write(2,*) '!Read_offset:',Read_offset, FTELL(12), Read_offset+ 8 * (NrSamples+1)
+            !!Read_offset = Read_offset + 8* (Start_read-1)
+!  CALL FSEEK(fd, offset, SEEK_SET, ierr)  ! move to OFFSET
+!  CALL FSEEK(fd, 0, SEEK_END, ierr)       ! move to end
+!  CALL FSEEK(fd, 0, SEEK_SET, ierr)       ! move to beginning
+            !flush(unit=2)
+            !!CALL FSEEK(12, Read_offset, SEEK_SET, ierr)  ! move to OFFSET
+            !write(2,*) '! FTELL(12) before:', FTELL(12), ierr
+            !flush(unit=2)
+            !read(12) RTime_read(1: final_read-Start_read)
+            read(12,IOSTAT=nxx) RTime_read(1:NrSamples)
+            !write(2,*) '! FTELL(12) after:', FTELL(12), RTime_read(1: 1), nxx, &
+            !   Start_read+Sample_Offset, final_read+Sample_Offset, NrSamples, Time_dim
+            !flush(unit=2)
+            RTime_s(Start_read+Sample_Offset: final_read+Sample_Offset)=RTime_read(Start_read: final_read)/sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
+            !write(2,*) 'total power:', RTime_read(Start_read:Start_read+4)
+            !write(2,*) 'total power:', RTime_read(Start_read), RTime_read(final_read), &
+            !   sum(RTime_read(Start_read: final_read)**2)/(final_read-Start_read), Powr
+         Else
+            Do i_sample=1,NrSamples
+               read(12,*) spec(1:AntNr_up-AntNr_lw)
+               !write(2,*) i_sample, Sample_Offset
+               If( (i_sample+Sample_Offset).lt.1) cycle
+               If( (i_sample+Sample_Offset).gt.Time_dim) exit
+               RTime_s(i_sample+Sample_Offset)=spec(j_ant)/sqrt(Powr)  ! Since power level is normalized to 100. in rest of code
+            Enddo
+         EndIf
+         !OFFSET = FTELL(12)         ! =16 * NrSamples * (AntNr_up-AntNr_lw) + previous offset +8
+         !write(2,*) 'i_sample, :', i_sample,NrSamples,'; OFFSET=',OFFSET
+         ! better to use  CALL FSEEK(fd, offset, SEEK_SET, ierr)  ! move to OFFSET
          Call RFTransform_CF_Filt(RTime_s,nu_fltr,-SubSample_Offset,Cnu_s)
          Call RFTransform_CF2CT(Cnu_s,CTime_spectr(1,i_ant,i_chunk) )
+         !write(2,*) 't-trace:', i_ant,i_chunk, CTime_spectr(Start_read,i_ant,i_chunk), CTime_spectr(final_read,i_ant,i_chunk)
          !
       Enddo ! j_ant=1,NrAnt
       Close(unit=12)
@@ -730,9 +873,41 @@ Subroutine SimulationRead(SourceGuess)
       stop 'too few antennas'
    EndIf
    !
+   DeAllocate( RTime_read )
    ! stop
    !
    Return
    !
 End Subroutine SimulationRead
+!However, if we only know the size of each item but not the size of the records on a file we can use recl=1 on the OPEN statement to have the I/O list itself determine how many items to read:
+!
+!Example: Direct-access read, variable-length records, recl=1:
+!
+!demo% cat Direct3.f
+!	integer u, v, w, x, y, z
+!	open( 1, access='DIRECT', recl=1 )
+!	read( 1, rec=1 ) u, v, w
+!	read( 1, rec=13 ) x, y, z
+!	write(*,*) u, v, w, x, y, z
+!	end
+!demo% f77 -silent Direct3.f
+!demo% a.out
+!------------------
+!    open(unit=1, file='bytes.bin', access='stream', status='replace', &
+!       & action='write', iostat=status)
+!
+!    write(1, iostat=status) i8
+!    inquire(1, POS=my_pos)
+!    print *, "Second byte will be written at the position", my_pos
+!    write(1, iostat=status) i8
+!    write(1, iostat=status) i8
+!    write(1, iostat=status) i8
+!
+!    inquire(1, POS=final_pos)
+!    print *, "Temp final position (unwritten) ", final_pos
+
+!INTEGER :: file_pos
+!INQUIRE(UNIT=iu, POS=file_pos)   !  stream access
+!READ (iu,"()", ADVANCE='NO', POS=file_pos)
+!
 ! ========================

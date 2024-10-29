@@ -44,7 +44,7 @@
         !Unique_StatID(:)=Station_IDs(:)
         FP_MNem(:)=' '
         If(RunMode.eq.1) goto 1
-        Call GetStationFitOption(FP_s, FitNoSources)
+        Call GetStationFitOption(FP_s, FitNoSources)  ! source code in file FindCallibr.f90
     endif
   1   Continue
     !
@@ -127,6 +127,7 @@ Subroutine PrntFitPars(X)
     !use FittingParameters
     use ThisSource, only : PeakPos, PeakNrTotal, Peak_eo, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped
     use Chunk_AntInfo, only : Unique_StatID, StartT_sam
+    use Chunk_AntInfo, only : Tot_UniqueAnt, Unique_SAI ! constructed in "Find_unique_StatAnt" in FitParams.f90
     use StationMnemonics, only : Station_ID2Mnem
     use StationMnemonics, only : Statn_ID2Mnem
     !use DataConstants, only : ChunkNr_dim
@@ -143,6 +144,7 @@ Subroutine PrntFitPars(X)
         Do i=1,N_FitStatTim
             Call Station_ID2Mnem(Unique_StatID(FitParam(i)),Station_Mnem)
             write(2,"(A,i2,'), ',A5,50F11.3)") 'Fit_TimeOffsets[samples](',i,Station_Mnem,(X(j),j= X_Offset(i),X_Offset(i+1)-1)
+            If(Fit_AntOffset) write(2,"(30x,50i11)")(Unique_SAI(Tot_UniqueAnt(FitParam(i)-1)+j),j= 1,X_Offset(i+1)-X_Offset(i))
         enddo
     endif
     i_chunk=0

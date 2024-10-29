@@ -118,14 +118,17 @@ Subroutine ReadCalib()
       read(9,"(A60)",IOSTAT=nxx) tst  ! Check for a new-style calibration file
        if(nxx.ne.0) exit
        read(tst,*,IOSTAT=nxx) txt, Delay, n
-       !write(2,*) nxx,txt, Delay, n,tst
+       !write(2,*) nxx,'"',txt,'"', Delay, n,'"',tst
        if(nxx.ne.0) n=0
-           Nr_StatDelay=Nr_StatDelay+1
-           Fine_STMnm(Nr_StatDelay) = txt
-           Fine_STDelay(Nr_StatDelay)= Delay ! already in samples
-           StationInCal(Nr_StatDelay)=n
+       If(txt(2:2).ne.'S') exit
+        Nr_StatDelay=Nr_StatDelay+1
+        Fine_STMnm(Nr_StatDelay) = txt
+        Fine_STDelay(Nr_StatDelay)= Delay ! already in samples
+        StationInCal(Nr_StatDelay)=n
+        txt=''  !  to catch empty in-read line
    enddo
    close(unit=9)
+   !write(2,*) 'Nr_StatDelay:', Nr_StatDelay, Fine_STMnm(Nr_StatDelay-3:Nr_StatDelay)
    !
    If(.not.FMT2022) Then  ! Archaic delays need to be merged
       Do i_fine=1,Nr_StatDelay    ! Write stationdelays
@@ -188,8 +191,10 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
    use DataConstants, only : Station_nrMax, Ant_nrMax, Calibrations, RunMode  ! , DataFolder
    use DataConstants, only : FlashName, OutFileLabel
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Tot_UniqueAnt, Nr_UniqueAnt, RefAnt, Ant_Stations
-   Use Interferom_Pars, only : IntFer_ant
+   use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, BadAnt_nr
+   use Chunk_AntInfo, only : ExcludedStat, SaturatedSamplesMax, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    !Use Chunk_AntInfo, only : Fine_STMnm, Fine_STDelay, Fine_AntDelay, SAI_AntDelay, Nr_AntDelay, Nr_StatDelay, CalibrDelay ! all these are generated in 'ReadCalib'
+   Use Interferom_Pars, only : IntFer_ant
    use FitParams, only : Fit_AntOffset, Fit_TimeOffsetStat, Fit_TimeOffsetAnt, FitQual
    use unque,only : Double_IR_sort
    use StationMnemonics, only : Statn_ID2Mnem,Station_ID2Mnem
@@ -198,10 +203,10 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
    Real(dp) :: Delay, mean(Station_nrMax), UpDate_STDelay(1:Ant_nrMax)=0.
    character(len=5) :: txt, Station_Mnem!, Fine_STMnm(Station_nrMax), LOFAR_STMnm(Station_nrMax)
    integer :: i, k, nxx, i_fine, SAI, n, i_unq
-   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI, Nr_WriteStat, k_Ref
+   INTEGER :: DATE_T(8), Ant(1), i_stat, i_SAI, Nr_WriteStat, k_Ref, OutUnit
    Character(len=12) :: Date_mn
    Character(len=7) :: cmnt
-   Character(len=70) :: CalibrationFileName
+   Character(len=70) :: CalibrationFileName, FMT
    !
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(Date_mn,"(I4,I2.2,I2.2, I2.2,I2.2)") &
@@ -304,10 +309,12 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
    EndIf
    !
    i_fine=Nr_StatDelay  ! all stations, ECHBG; will be increased with the newly found ones
+   !write(2,*) 'Nr_StatDelay:', Nr_StatDelay, Nr_WriteStat
    Do k=1,Nr_WriteStat    ! Write stationdelays
      If(Unique_StatID(k).le. 0) exit  ! should not happen; The first are the stations
      Call Station_ID2Mnem(Unique_StatID(k),Station_Mnem)
      !write(2,*) 'mnem',k,Unique_StatID(k),Station_Mnem
+     !flush(unit=2)
      !core=((RunMode.eq.1) .and. (Station_Mnem(1:2) .eq. 'CS'))  ! zero the calibration timings for the core stations
      If( Unique_StatID(k).eq. n ) k_Ref=k
      nxx=0
@@ -327,7 +334,7 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
          Fine_STDelay(i_fine)  = UpDate_STDelay(i_fine)
          !If(core) Fine_STDelay(i_fine) = 0
          nxx=i_fine
-         !write(2,*) 'i_fine',i_fine,UpDate_STDelay(i_fine)
+         !write(2,*) 'i_fine',i_fine,UpDate_STDelay(i_fine), Station_Mnem, k
      endif
    Enddo
    ZeroCalOffset=Fine_STDelay(k_ref)
@@ -336,6 +343,7 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
    !write(2,*) 'Calibration constant zeroed for ref-station:', Fine_STMnm(k_ref)
    !flush(unit=2)
    ! RefAnt(i_chunk,i_eo)
+   !write(2,*) 'Nr_StatDelay_2:', Nr_StatDelay, Nr_WriteStat
    write(2,"(' station',1x,'NewCalibrations; Updated with [samples]; overall calibration shift=',F8.1)") ZeroCalOffset
    Do i=1,i_fine
       n=0
@@ -349,6 +357,33 @@ Subroutine WriteCalibration(ZeroCalOffset) ! MergeFine
       write(2,"(1x,A5,2F13.3,i5)") Fine_STMnm(i), Fine_STDelay(i)-ZeroCalOffset, UpDate_STDelay(i),n
       write(19,"(1x,A5,F14.4,i5)") Fine_STMnm(i), Fine_STDelay(i)-ZeroCalOffset, n
    enddo
+   !
+   write(19,*) '!========================================'
+   !use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, BadAnt_nr
+   !use Chunk_AntInfo, only : ExcludedStat, SaturatedSamplesMax, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
+ !ExcludedStat= 'RS210'
+ !
+ !BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+ !SignFlp_SAI=   161072, 161073, ! 130085  !, 130054, 130084
+ !PolFlp_SAI=    130084 ! 150090 !
+   n=0
+   Do i=1,ExcludedStat_max
+      If(ExcludedStat(i).eq.'     ') exit
+      n=n+1
+   enddo
+   !If(n.gt.0) Then
+   !   Date_mn=15H('"',A,'"')
+   !   write(FMT,"(A,I2,A,')'   )") n,Date_mn
+   !   write(2,*) 'FMT=',FMT
+   !   Flush(unit=2)
+   !   write(19, FMT) 'ExcludedStat=', ExcludedStat(1:n)
+   !EndIf
+   write(19,"(  50A)") 'ExcludedStat=', ('"', ExcludedStat(i), '",', i=1,n)
+   write(19,"( A,40(I7,',') )") 'BadAnt_SAI= ', BadAnt_SAI(1:BadAnt_nr)
+   write(19,"( A,40(I7,',') )") 'SignFlp_SAI=', SignFlp_SAI(1:SgnFlp_nr)
+   write(19,"( A,40(I7,',') )") 'PolFlp_SAI= ', PolFlp_SAI(1:PolFlp_nr)
+   OutUnit=19
+   Call PrntNewSources(ZeroCalOffset, OutUnit)
    Close(unit=19)
    !
    Return
