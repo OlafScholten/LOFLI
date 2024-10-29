@@ -40,12 +40,12 @@ Subroutine EI_Run
    Complex(dp), allocatable :: CMCnu(:,:,:), CMTime_Pix(:,:)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
-   WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' start Interferometry'
+   If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' start Interferometry'
    WRITE(*,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), achar(27)//'[0m'
    call cpu_time(CPUTime)
    CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
    If(FirstTimeInterf) WallstartTime=WallCount/WallRate
-   WRITE(2,"(A,F9.3,A)") 'CPU time:', CPUTime, '[s]'  ! count_rate, count_max
+   If(FirstTimeInterf) WRITE(2,"(A,F9.3,A)") 'CPU time:', CPUTime, '[s]'  ! count_rate, count_max
    !
    !i_chunk=1
    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
@@ -129,7 +129,7 @@ Subroutine EI_Run
    If(FirstTimeInterf) Call OutputIntfSlices(i_eo)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
-   WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry'
+   If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry'
    Call DeAlloc_EInterfImag_Pars
    call cpu_time(CPUTime)
    CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
@@ -699,7 +699,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
             Enddo
          Enddo
          SMpow=100./(Stk(1,1)+Stk(2,2))
-         write(29,"(i6,',',g12.4,8(',',f7.1))") i_s, Real(Stk(1,1)+Stk(2,2)), &
+         write(29,"(i6,',',g12.4,8(',',f7.1))") i_s-1, Real(Stk(1,1)+Stk(2,2)), &
             Real(Stk(1,1)-Stk(2,2))*SMpow, 2*Real(Stk(1,2))*SMpow, 2*Imag(Stk(1,2))*SMpow, Real(Stk(3,3))*SMpow ! &
 !            , Real(Stk(3,3))*SMpow, &
 !            Real(Stk(2,3))*SMpow, Real(Stk(3,1))*SMpow, &
