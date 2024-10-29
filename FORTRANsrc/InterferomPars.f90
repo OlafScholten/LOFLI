@@ -183,7 +183,7 @@ Module Interferom_Pars
       Allocate( PixSmPowTr(0:NrPixSmPowTr,N_pix(1,1):N_pix(1,2),N_pix(2,1):N_pix(2,2),N_pix(3,1):N_pix(3,2)) )
       ! since Real(4), single precision, requires 4 bytes.
       ! Integer calculation may cause overflow to the sign bit, or worse, thus convert to real early on
-      write(2,"('Storing pixel traces takes ',F10.6,' Gbytes')")  &
+      If(FirstTimeInterf) write(2,"('Storing pixel traces takes ',F10.6,' Gbytes')")  &
             NrPixSmPowTr* (N_pix(1,2)-N_pix(1,1)+1.)* (N_pix(2,2)-N_pix(2,1)+1.)* (N_pix(3,2)-N_pix(3,1)+1.)*4./1.E9
       allocate(  RimSmPow(N_pix(3,1):N_pix(3,2)) )
       If(NrPixSmPowTr_Previous .ne. NrPixSmPowTr) Then

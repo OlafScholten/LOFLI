@@ -57,7 +57,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
-   write(2,*) 'Simulation,WriteSimulation(2):', Simulation,';',WriteSimulation(:), 'file14open:',file14open
+   !write(2,*) 'Simulation,WriteSimulation(2):', Simulation,';',WriteSimulation(:), 'file14open:',file14open
    If((Simulation.eq."") .or. (WriteSimulation(2).gt.0)) Then  ! imaging on real data (="") or 'SelectData' (.gt.0) options
       If(file14open) then
          Rewind(unit=14)
@@ -365,8 +365,8 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
 9  Continue  ! entry after simulation read
    NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor 100 (and more) that was introduced in antenna-read
    NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor that was introduced in antenna-read
-   write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd
-   write(2,*) sum(ABS(CTime_spectr(:,10,1))**2),Time_dim,Powr
+   write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd,Powr
+   !write(2,*) sum(ABS(CTime_spectr(:,10,1))**2),Time_dim,Powr
    write(2,*) 'Height-Corrected Index of Refraction=', HeightCorrectIndxRef
    !write(2,*) 'NAnt_eo:',NAnt_eo(:)
    !

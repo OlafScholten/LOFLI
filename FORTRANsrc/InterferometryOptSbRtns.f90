@@ -579,7 +579,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
          ,sqrt(RMSGridInterpol(:)),'; ', NGridExtrapol &
          ,' interpolations beyond 3-D limit of 0.75; ideal interpolation distance=sqrt(1/12)=0.29'
    EndIf
-   write(2,"(A,2I6,2F6.3,A,3F7.3,A,I7,A,F9.1)") 'number of sources in plots:',NMx,NBar, NoiseLevel, RatMax
+   If(FirstTimeInterf) write(2,"(A,2I6,2F6.3,A,3F7.3,A,I7,A,F9.1)") 'number of sources in plots:',NMx,NBar, NoiseLevel, RatMax
    If(NMx.gt.1) then
       Call GLEplotControl(PlotType='SourcesPlot', PlotName='IntfMx'//TRIM(txt)//TRIM(OutFileLabel), &
          PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt) )
