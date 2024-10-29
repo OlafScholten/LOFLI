@@ -5,6 +5,7 @@ Subroutine EI_PrntFitPars(X)
     !use FittingParameters
     use ThisSource, only : PeakPos, PeakNrTotal, ChunkNr, PeakChiSQ
     use Chunk_AntInfo, only : Unique_StatID, StartT_sam
+   use Chunk_AntInfo, only : Tot_UniqueAnt, Unique_SAI ! constructed in "Find_unique_StatAnt" in FitParams.f90
     use StationMnemonics, only : Station_ID2Mnem
     use StationMnemonics, only : Statn_ID2Mnem
     use DataConstants, only : ChunkNr_dim
@@ -19,6 +20,8 @@ Subroutine EI_PrntFitPars(X)
         Do i=1,N_FitStatTim
             Call Station_ID2Mnem(Unique_StatID(FitParam(i)),Station_Mnem)
             write(2,"(A,i2,'), ',A5,50F11.3)") 'Fit_TimeOffsets[samples](',i,Station_Mnem,(X(j),j= X_Offset(i-1),X_Offset(i)-1)
+            !write(2,*) i,FitParam(i), Tot_UniqueAnt(FitParam(i)-1), Tot_UniqueAnt(FitParam(i)), X_Offset(i), X_Offset(i-1)
+            If(Fit_AntOffset) write(2,"(30x,50i11)") (Unique_SAI(Tot_UniqueAnt(FitParam(i)-1)+j),j= 1,X_Offset(i)-X_Offset(i-1))
         enddo
     endif
     i_chunk=0
@@ -33,7 +36,7 @@ Subroutine EI_PrntFitPars(X)
                   '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
             Endif
             Write(2,"(i3,2x,i2,A,I6,A,3F8.3)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),&
-                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.d0
+                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.d0 
             write(2,"(', chi^2/df=',F7.2)", ADVANCE='NO') PeakChiSQ(i_Peak)
             !If(Station_nrMax.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
             !      write(2,"(' Excluded:')", ADVANCE='NO')
@@ -102,7 +105,7 @@ Subroutine EIX2Source(X)
     return
 End Subroutine EIX2Source
 !-----------------------------------------------
-Subroutine EI_PolarizPeak(i_Peak)
+Subroutine EI_PolarizPeak(i_Peak)   ! called in "EI_Fitter"
    use constants, only : dp
    use DataConstants, only : Ant_nrMax
    use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk

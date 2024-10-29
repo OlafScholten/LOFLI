@@ -106,7 +106,7 @@
  !   I   Module ansi_colors
  !   I   M   Function color(str, code) result(out)
  !   I   Subroutine Convert2m(CenLoc)
- !   I   Pure Subroutine SetSmooth(N_Smth, Smooth)
+ !   I   Pure Subroutine SetSmooth(N_Smth, ParabolicSmooth, Smooth)
  !   I   Function random_stdnormal() Result(x)
  !   I   end Function random_stdnormal
  !   I   Subroutine random_stdnormal3D(x)
@@ -314,13 +314,13 @@ Program LOFAR_Imaging
     use FitParams, only : FitIncremental, WriteCalib, FullAntFitPrn,  AntennaRange
     use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
     use FitParams, only : FullSourceSearch ! , SigmaGuess
-    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, TimeFrame
+    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, DataReadError! , TimeFrame
     use Chunk_AntInfo, only : NoiseLevel, PeaksPerChunk, TimeBase, Simulation, WriteSimulation, CalibratedOnly
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
     use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
-    Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ChainRun, PixPowOpt, N_fit
+    Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ParabolicSmooth, ChainRun, PixPowOpt, N_fit, RefinePolarizObs
     use GLEplots, only : GLEplotControl
     Implicit none
     !
@@ -342,7 +342,7 @@ Program LOFAR_Imaging
     Integer :: i_dist, i_guess, nxx, valueRSS
     NAMELIST /Parameters/ RunOption &
          , FullSourceSearch, CurtainHalfWidth, XcorelationPlot &
-         , IntfPhaseCheck, IntfSmoothWin, TimeBase,  ChainRun  &
+         , IntfPhaseCheck, IntfSmoothWin, ParabolicSmooth, TimeBase,  ChainRun, RefinePolarizObs  &
          , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
          , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel &
@@ -367,10 +367,12 @@ Program LOFAR_Imaging
    CCShapeCut_lim=0.6 ; ChiSq_lim=80. ; EffAntNr_lim=0.8
    NoiseLevel=70.
    IntfSmoothWin=20
+   ParabolicSmooth=.false.
    CurtainHalfWidth=-1
    SaturatedSamplesMax=5
    Simulation=""
    CalibratedOnly=.true.
+   RefinePolarizObs=.false.
    !reshape((/ -1.D-10,0.d0,0.d0,0.d0,-1.D-10,0.d0,0.d0,0.d0,-1.D-10 /), shape(array))
    !AntennaRange_km=AntennaRange
    read(*,NML = Parameters,iostat=nxx)
@@ -486,7 +488,7 @@ Program LOFAR_Imaging
          NoiseLevel=20.
          WriteSimulation(2)=-1
          Simulation=""
-      CASE("C")  ! Calibrate                          RunMode=2
+      CASE("C")  ! Calibrate    using the  Impulsive imager                   RunMode=2
          ChunkNr_dim=0
          FitIncremental=.false.
          !
@@ -596,12 +598,13 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         Call PrintValues(ParabolicSmooth,'ParabolicSmooth', 'Use a parabolic-like smmoothing window.')
          Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
          !
       CASE("T")  ! PolInterferometry==TRI-D imager         RunMode=24
          Interferometry=.true.
          FitRange_Samples=7
-         CurtainHalfWidth=-1
+         !CurtainHalfWidth=-1
          Dual=.true.
          !Polariz=.true.  ! Affects reading in LOFAR Data; even/odd pairs only & equal delay for the pair
          PeakNr_dim=2
@@ -615,6 +618,7 @@ Program LOFAR_Imaging
          Call PrintValues(ChainRun,'ChainRun', &
             'Automatically start jobs (for - previous or + following timeslots, made to follow a leader.' )
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.' )
+         Call PrintValues(ParabolicSmooth,'ParabolicSmooth', 'Use a parabolic-like smmoothing window.')
          Call PrintValues(PixPowOpt,'PixPowOpt', &
             '=0=default: Intensity=sum two transverse polarizations only; '//&
             '=1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; '//&
@@ -622,6 +626,10 @@ Program LOFAR_Imaging
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+         Call PrintValues(RefinePolarizObs,'RefinePolarizObs', &
+            'Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.'//&
+            ' & possibly produce curtain plots' ) !
+         Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
       CASE("P")  ! PeakInterferometry            RunMode=8
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=N_Chunk_max
@@ -643,6 +651,16 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         Call PrintValues(ParabolicSmooth,'ParabolicSmooth', 'Use a parabolic-like smmoothing window.')
+         Call PrintValues(PixPowOpt,'PixPowOpt', &
+            '=0=default: Intensity=sum two transverse polarizations only; '//&
+            '=1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; '//&
+            '=2: Intensity=sum all three polarizations, including longitudinal with the full weight')
+         Call PrintValues(CalibratedOnly,'CalibratedOnly', &
+            'Use only antennas that have been calibrated.')
+         Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+         Call PrintValues(RefinePolarizObs,'RefinePolarizObs', &
+            'Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.' ) !
          !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'

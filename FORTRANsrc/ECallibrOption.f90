@@ -34,7 +34,7 @@ Subroutine E_Callibr()
    use ThisSource, only : ChunkNr
    use FitParams, only : N_FitPar, N_FitPar_max, Nr_TimeOffset, WriteCalib
    use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
-   Use Interferom_Pars, only : IntFer_ant, StartTime_ms, Nr_IntferCh ! the latter gives # per chunk
+   Use Interferom_Pars, only : IntFer_ant, Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Alloc_EInterfCalib_Pars
    use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
    ! use LOFLI_Input, only : ReadSourceTimeLoc
@@ -52,7 +52,7 @@ Subroutine E_Callibr()
    character*80 :: lname
    real(dp) :: t, Time_width, Space_Spread(1:3)
    !real(dp) :: dt,B, MTC, dtI
-   Integer :: i_SAI
+   Integer :: i_SAI, OutUnit
    !
    !       Read appropriate data chunks
    Call  ReadPeakFitInfo(SourceGuess(:,1))
@@ -173,7 +173,9 @@ Subroutine E_Callibr()
    If(WriteCalib) then
       Call WriteCalibration(ZeroCalOffset) ! was MergeFine
    Endif
-   Call PrntNewSources(ZeroCalOffset)
+   !
+   OutUnit=2
+   Call PrntNewSources(ZeroCalOffset, OutUnit)
    !
    Return
     !

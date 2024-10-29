@@ -8,7 +8,7 @@
 !-----------------------------------
 !-----------------------------------
 Program Simulate_Data
-   use constants, only : dp,sample,pi,  c_mps ! ,Refrac,pi,ci
+   use constants, only : dp,sample,pi, ci, c_mps ! ,Refrac,pi,ci
    use DataConstants, only : Station_nrMax
    use AntFunCconst, only : Freq_min, Freq_max
    use AntFunCconst, only : J_0p, J_0t, J_1p, J_1t,Gain
@@ -46,12 +46,15 @@ Program Simulate_Data
    Real(dp), allocatable :: SourcesListLocNEh(:,:), SourcesListTms(:), SourcesListAmpNEh(:,:)
    Real(dp), allocatable :: SourcesListTS(:)  !  Souce time in samples
    !
-   Integer :: NtSamples= 2**10 ! =1024 !Time_dim !
+   !Integer :: NtSamples= 2**10 ! =1024 !Time_dim !
+   Integer :: NtSamples= 2**12 ! =4k ! equivalent to Time_dim !
    Integer :: NnuSamples
    Real(dp), allocatable :: RTime_s(:), RTime_0(:), RTime_1(:)
    Complex(dp), allocatable :: CTime_0(:), CTime_1(:)
    Real(dp), allocatable :: FTime_0(:,:), FTime_1(:,:)
    Complex(dp), allocatable :: CNu_s(:), CNu_0(:), CNu_1(:), CNu_p(:), CNu_t(:)
+   Complex(dp) :: phShift, dphShift, CX
+   Complex(dp), parameter ::   ipi=ci*pi  ! This is the complex constant i*pi
    !Real(dp), allocatable :: nu_Fltr(:) !, Av, Bv, FiltFact
    !
    Real(dp) :: Ras(1:3), Vec_p(1:3), Vec_t(1:3)
@@ -220,7 +223,10 @@ Program Simulate_Data
       !   EndIf
       !   rewind(unit=12)
       !EndIf
-      Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.dat')
+      !
+      !Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.dat')
+      OPEN( Unit=22, STATUS='unknown',ACTION='write', Form='unformatted', &
+         FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.udt')
       Read(12,*) Lab1! , StatStartTime, Lab2, i_src, lab3, NrAnt, lab4, powr  ![ms],,&  =noise power
       j_ant=0
       Do    ! count number of antenna pairs
@@ -251,13 +257,15 @@ Program Simulate_Data
       Call RelDist(SourceGuess,Ant_pos(:,1),RDist)
       StatStartTime=SourcesListTms(1)/(Sample*1000.)+RDist-200 ! place first source at sample 200 in trace
       StatStartTime=StatStartTime + TimingErr_ns * random_stdnormal()/5. ! to convert timing error to samples
-      write(22,*) 'StartTime[ms]=', StatStartTime*(Sample*1000.), 'N_samples=', NtSamples, &
-            'N_ant=', Ant_nr, 'P_noise= 1.'  ![ms],,&  =noise power
+      !write(22,*) 'StartTime[ms]=', StatStartTime*(Sample*1000.), 'N_samples=', NtSamples, &
+      !      'N_ant=', Ant_nr, 'P_noise= 1.'  ![ms],,&  =noise power
+      write(22)  StatStartTime*(Sample*1000.),  NtSamples, Ant_nr
       write(2,"(A,I3,I9,1x,A5,A,I2,A,A,F10.5,A,F9.6)") 'Station=',i_file,STATION_ID, Station_name, &
          ' uses',j_ant,' antenna pairs.', ' Start time=',StatStartTime*(Sample*1000.),'[ms]'
       Flush(unit=2)
       Do j_ant=1,Ant_nr  ! Calculate and write spectra
-         write(22,*) Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
+         !write(22,*) Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
+         write(22) 'AntId       ', Ant_IDs(j_ant), Ant_pos(:,j_ant)
          ! Instrumental noise:
          Do i_sampl=1,NtSamples
             RTime_0(i_sampl)=random_stdnormal()
@@ -328,7 +336,22 @@ Program Simulate_Data
             SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
             RTime_s(:)=0.
             RTime_s(Sample_Offset)=1.
-            Call RFTransform_CF(RTime_s,Cnu_s(0)) ! delta peak at right time, filtering done while selecting proper frequencies.
+            Call RFTransform_CF(RTime_s,Cnu_s(0)) ! delta peak at abou right time, filtering done while selecting proper frequencies.
+            !
+            !  testing
+            !dphShift=exp(ipi*SubSample_Offset/NnuSamples )
+            !phShift=1. !exp(-ipi*inu1*SubSample_Offset/NnuSamples )
+            !Do i_nu=0,NnuSamples   ! Increment frequency spectrum of the antenna with the signal from this source
+            !   nu=i_nu*dnu
+            !   Cnu_s(i_nu)=phShift*Cnu_s(i_nu)
+            !   phShift=phShift*dphShift
+            !Enddo
+            !Call RFTransform_CF2CT(Cnu_s(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
+            !k=Maxloc( (Abs(CTime_0(:))**2),1)
+            !write(2,*) '!testTimeshift:',SubSample_Offset, T_Offset-k, &
+            !      (Abs(CTime_0(k-1))**2), (Abs(CTime_0(k))**2), (Abs(CTime_0(k+1))**2)
+
+            !
             ! get t and p oriented signals
             !
             Ras(:)=(SourcesListLocNEh(:,i_src)-Ant_pos(:,j_ant))/1000.  ! \vec{R}_{antenna to source}
@@ -365,16 +388,23 @@ Program Simulate_Data
                   Ji_t0(i_freq)*J_0p(i_freq)+Ji_t1(i_freq)*J_1p(i_freq),  &
                't', Ji_t0(i_freq)*J_0t(i_freq)+Ji_t1(i_freq)*J_1t(i_freq), Ji_p0(i_freq)*J_0t(i_freq)+Ji_p1(i_freq)*J_1t(i_freq)
             EndIf
+
+
+            !  for sub-sample shift of peak position:
+            dphShift=exp(ipi*SubSample_Offset/NnuSamples )
+            phShift=exp(ipi*inu1*SubSample_Offset/NnuSamples )
             Do i_nu=inu1,inu2   ! Increment frequency spectrum of the antenna with the signal from this source
                nu=i_nu*dnu
                i_freq=Int(nu)
                dfreq=nu-i_freq
+               CX=phShift*Cnu_s(i_nu)
                Cnu_0(i_nu)=Cnu_0(i_nu) + &
-                           ((1.-dfreq)*J_0p(i_freq) + dfreq*J_0p(i_freq+1)) * (A_p*Cnu_s(i_nu)) + &
-                           ((1.-dfreq)*J_0t(i_freq) + dfreq*J_0t(i_freq+1)) * (A_t*Cnu_s(i_nu))
+                           ((1.-dfreq)*J_0p(i_freq) + dfreq*J_0p(i_freq+1)) * A_p*CX + &
+                           ((1.-dfreq)*J_0t(i_freq) + dfreq*J_0t(i_freq+1)) * A_t*CX
                Cnu_1(i_nu)=Cnu_1(i_nu) + &
-                           ((1.-dfreq)*J_1p(i_freq) + dfreq*J_1p(i_freq+1)) * (A_p*Cnu_s(i_nu)) + &
-                           ((1.-dfreq)*J_1t(i_freq) + dfreq*J_1t(i_freq+1)) * (A_t*Cnu_s(i_nu))
+                           ((1.-dfreq)*J_1p(i_freq) + dfreq*J_1p(i_freq+1)) * A_p*CX + &
+                           ((1.-dfreq)*J_1t(i_freq) + dfreq*J_1t(i_freq+1)) * A_t*CX
+               phShift=phShift*dphShift
             Enddo
             !write(2,*) 'Src=',i_src,SUM(ABS(Cnu_0(:))**2)*NtSamples/PulseRespWidth, &
             !      SUM(ABS(Cnu_1(:))**2)*NtSamples/PulseRespWidth, A_p, A_t, Sample_Offset
@@ -383,6 +413,12 @@ Program Simulate_Data
          !
          Call RFTransform_CF2RT(Cnu_0(0),FTime_0(1,j_ant) )
          Call RFTransform_CF2RT(Cnu_1(0),FTime_1(1,j_ant) )
+         !write(2,*) '!writing:', NtSamples, j_ant
+         !write(2,*) '!before time trace:', FTELL(22)
+         write(22) REAL(NormEvenOdd *FTime_0(1:NtSamples,j_ant),4)
+         !write(2,*) '!between time trace:', FTELL(22)
+         write(22) REAL(NormEvenOdd *FTime_1(1:NtSamples,j_ant),4)
+         !write(2,*) '!after time trace:', FTELL(22)
          If(i_file.eq.1 .and. j_ant.eq.1) Then
             Call RFTransform_CF2CT(Cnu_0(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
             Call RFTransform_CF2CT(Cnu_1(0),CTime_1(1) )
@@ -401,10 +437,11 @@ Program Simulate_Data
       Enddo ! j_ant=1,NrAnt
       !
       !NormEvenOdd   ! to undo the action of NormEven & NormOdd in AntennaRead
-      Do i_sampl=1,NtSamples
-         write(22,*) (NormEvenOdd *FTime_0(i_sampl,j_ant), NormEvenOdd *FTime_1(i_sampl,j_ant), j_ant=1,Ant_nr)
-         !write(2,*) i_sample, Sample_Offset
-      Enddo
+      !Do i_sampl=1,NtSamples
+      !   !write(22,*) (NormEvenOdd *FTime_0(i_sampl,j_ant), NormEvenOdd *FTime_1(i_sampl,j_ant), j_ant=1,Ant_nr)
+      !   write(22) (NormEvenOdd *FTime_0(i_sampl,j_ant), NormEvenOdd *FTime_1(i_sampl,j_ant), j_ant=1,Ant_nr)
+      !   !write(2,*) i_sample, Sample_Offset
+      !Enddo
       Close(unit=22)
       Close(unit=12)
       !
@@ -430,7 +467,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Real(dp), intent(in) :: NrmStI
    !
    Character(len=12) :: Lab1  !, Lab2, Lab3, Lab4  Station_name,
-   Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
+   !Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Time_Interval, Sources_TS, Sources_LocNEh(1:3), Sources_AmpNEh(1:3),t_shft
    Integer :: NConstruct, nxx, i_src
    Real(dp) :: D, Phi, Thet, Time_width, Space_width, PolSpread, R,Epsln=epsilon(Epsln)

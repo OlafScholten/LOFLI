@@ -7,8 +7,10 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    use DataConstants, only : Station_nrMax, Time_dim, DataFolder, OutFileLabel  ! , ChunkNr_dim
    use ThisSource, only : PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
    use Chunk_AntInfo, only : CTime_spectr, Ant_Pos, Ant_nr, Ant_RawSourceDist, Unique_StatID,  Nr_UniqueStat, Ant_Stations, RefAnt
+   use Chunk_AntInfo, only : Tot_UniqueAnt, Unique_SAI ! constructed in "Find_unique_StatAnt" in FitParams.f90
+   use Chunk_AntInfo, only : Ant_IDs
    use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
-   use FitParams, only : Fit_TimeOffsetStat ! , N_FitPar_max, Fit_AntOffset, Fit_TimeOffsetAnt, PulsPosCore
+   use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt ! , N_FitPar_max, Fit_AntOffset, Fit_TimeOffsetAnt, PulsPosCore
    use GLEplots, only : GLEplotControl
    Implicit none
    !
@@ -17,6 +19,7 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
    Integer :: j, Lower, Upper, Ch1, Ch2, OffSet
    Integer :: unt
    Integer :: i_ant, i_time, i_eo, i_chunk, i_stat, i_peak
+   Integer :: SAI, i_SAI, k
    Logical :: UsePeakNr
    CHARACTER(LEN=60) :: GLE_file
    ! Character(len=25), save :: OutFileLabel=''
@@ -57,9 +60,20 @@ Subroutine PlotAllCurtainSpectra(CurtainWidth)
          !   A=MaxLoc(Stations, mask=Stations.eq.Ant_Stations(I_ant,i_chunk))
          !   i_stat=A(1)
          !
+         !write(2,*) 'SAI:',I_ant,i_stat, Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat) &
+         !      ,Fit_TimeOffsetAnt(i_ant), Ant_IDs(i_ant,i_chunk), Unique_StatID(i_stat)
+         SAI=1000*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
+         Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
+            If(SAI .eq. Unique_SAI(i_SAI)) Then !     found the dalay for this antenna
+               exit
+            EndIf
+         EndDo
+         !write(2,*) 'SAI_AntDelay(:', k, SAI, i_SAI, Unique_SAI(i_SAI), Fit_TimeOffsetAnt(i_SAI)
+         !
          Call RelDist(SourcePos(1,i_Peak),Ant_pos(1,i_ant,i_chunk),RDist)
-         OffSet=NINT(Rdist - Ant_RawSourceDist(i_ant,i_chunk) + Fit_TimeOffsetStat(i_stat) -OSt)
-         !write(2,*) 'curtainoffset',OffSet, Rdist - Ant_RawSourceDist(i_ant,i_chunk)
+         OffSet=NINT(Rdist - Ant_RawSourceDist(i_ant,i_chunk) + Fit_TimeOffsetStat(i_stat) +Fit_TimeOffsetAnt(i_SAI) -OSt)
+         !write(2,*) Ant_Stations(i_ant,i_chunk), 'curtainoffset:',OffSet, Rdist, Ant_RawSourceDist(i_ant,i_chunk), &
+         !      Fit_TimeOffsetStat(i_stat), Fit_TimeOffsetAnt(i_SAI), OSt
          Ch2=PeakPos(i_Peak) + OffSet
          Lower=MIN(CurtainWidth, Ch2-1)
          Upper=MIN(CurtainWidth,(Time_dim - Ch2))
@@ -105,10 +119,11 @@ End Subroutine PlotAllCurtainSpectra
 Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
    use constants, only : dp
     use DataConstants, only : Time_dim, DataFolder, OutFileLabel
-    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat
+    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_nr, Ant_IDs, Ant_pos, Ant_RawSourceDist, Nr_UniqueStat, Unique_StatID
     use DataConstants, only : Station_nrMax
     use StationMnemonics, only : Station_ID2Mnem
     use ThisSource, only : PeakPos, ChunkNr, ExclStatNr
+   use ThisSource, only : PeakNrTotal, Dropped
     use GLEplots, only : GLEplotControl
     Implicit none
     Integer, intent(in) :: unt, CurtainWidth, i_Peak
@@ -116,9 +131,11 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     Character(Len=*), intent(in) :: file
     integer :: I_ant, i_stat, Stat_nr, Stations(1:Station_nrMax), i_time, i_c, lstyle
     integer :: A(1), Plot_scale, ch1, ch2, VLine, i_chunk, k
+   Integer ::  i_src, i_Peak_o, i_eo, k_peak
     Character(len=42) :: txt
     Character(len=5) :: Station_Mnem
     real*8 :: plot_offset,b
+   Integer, external :: SourceNr  ! source code in  LOFLI_InputHandling.f90
     !
     i_chunk=ChunkNr(i_peak)
     Plot_scale= 2. ! int(B) + 2.
@@ -126,12 +143,28 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     ch1=PeakPos(i_Peak)-CurtainWidth
     ch2=PeakPos(i_Peak)+CurtainWidth
     !vsize=Nr_UniqueStat*2 34
+   !
+   ! Check if there is another peak (with other i_eo) is associated with this source
+   i_src=SourceNr(i_Peak)
+   i_Peak_o=i_Peak
+   If(i_src.gt.0) then
+      Do k=i_Peak+1,PeakNrTotal
+         If(i_src .eq. SourceNr(k) ) Then
+            i_Peak_o=k
+            Exit
+         EndIf
+      EndDo
+   end if
+   !write(2,*) PeakNrTotal, i_src, i_peak, i_Peak_o
+   !write(2,"(40I3)") Dropped(1:Nr_UniqueStat,i_peak)
+   !write(2,"(40I3)") Dropped(1:Nr_UniqueStat,i_peak_o)
     !
     !write(2,*) 'GLEscript_CurtainPlot:Nr_UniqueStat=', Nr_UniqueStat
     Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
     Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
+    ! make sure:  export GLE_USRLIB=/Users/users/scholten/LOFLI/GLEsrc
     Write(unt,"(A,I2,3(/A),3(/A,I0))") 'size 63 ',2*Nr_UniqueStat+8,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
-        'include "../Utilities/DiscreteColor.gle"',&
+        'include "DiscreteColor.gle"',&
         'set lwidth 0.1','t_min = ',ch1,'t_max = ',ch2,'scl = ',Plot_scale
 !        'set lwidth 0.1','t_min = 13250 !12500 !0','t_max = 13350 !15000 !',Time_dim,'scl = ',Plot_scale
      If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
@@ -142,7 +175,7 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
     Write(unt,"(A,2(/A),i2,3(/A),7(/A))")  'amove 4 4','begin graph', &
         '   size 55 ',2*Nr_UniqueStat+1,'   vscale 1','  hscale 1',&
         '   title  "Time Spectra, '//TRIM(txt)//'"', &
-        '   xtitle "time [samples]"','   ytitle "Amplitude"',&
+        '   xtitle "time [samples] with shifts rounded off, see XCP for sub-sample accuracy"','   ytitle "Amplitude"',&
         '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
         '   x2labels on',' end graph'
     Write(unt,"(A,6(/A))" ) 'begin key','position tc','nobox','   offset 20. -1.5', &
@@ -165,23 +198,27 @@ Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
             i_stat=A(1)
             !write(2,*) 'i_stat=',i_Stat,Stations(1:Stat_nr)
         endif
+        !write(2,"(A, 40I3)") 'i_stat=',i_Stat,Stat_nr, Ant_Stations(I_ant,i_chunk), Stations(1:Stat_nr)
         If(UsePeakNr) Then  !  "'//TRIM(OutFileLabel)//'"
             write(txt,"(A,i3.3,'-',i3.3)") TRIM(OutFileLabel),I_ant,i_peak
         Else
             write(txt,"(A,i3.3)") TRIM(OutFileLabel),I_ant
         EndIf
         !write(txt,"(i3.3,'-'i2.2)") I_ant,i_peak
-        plot_offset=2*i_stat + 2 + mod(Ant_IDs(I_ant,i_chunk),2)
-        i_c = I_Ant-11*int(I_Ant/11)
+        i_eo=mod(Ant_IDs(I_ant,i_chunk),2)
+        plot_offset=2*i_stat + 2 + i_eo
+        i_c = I_Ant-11*int(I_Ant/11)      ! color
         !
         lstyle=0
-        Do k=1,Station_nrMax
-            If(ExclStatNr(k,i_peak).eq.0) exit
-            If(Stations(I_stat).eq.ExclStatNr(k,i_peak)) Then
-               lstyle=4  !  ! Marks excluded station, see "ReImAtMax"
+        k_peak=i_peak
+        If(i_eo.eq.1) k_peak=i_peak_o
+         Do i_stat=1, Nr_UniqueStat      ! Get station number from the Unique_StatID list
+             If(Unique_StatID(i_stat).eq. Ant_Stations(I_ant,i_chunk)) Then
+               If(Dropped(i_stat,k_peak) .gt. 0)  lstyle=4  !  ! Marks excluded station, see "ReImAtMax"
+        !write(2,"(A, 40I5)") 'i_stat=',i_Stat, Ant_Stations(I_ant,i_chunk), i_eo, Dropped(i_stat,k_peak)
                exit
-            EndIf
-        Enddo
+             EndIf
+         Enddo
         !
         Write(Unt,901) plot_offset,trim(DataFolder), TRIM(txt),I_Ant,I_Ant,lstyle,i_c
 901     Format('amove 4 ',F5.2,/'begin graph',/'  size 55 2',/'  vscale 1',&
@@ -229,7 +266,7 @@ Subroutine GLE_Corr()
     Integer :: J_Corr
     Integer ::  i_ant, i_tp, i_tp2, pbase
     !
-    Integer ::  i_Peak, i_eo, Station, i_c, i_chunk, lstyle
+    Integer ::  i_Peak, i_eo, Station, i_c, i_chunk, lstyle, i_src
     Integer :: i, i_max, k, J_corr_st(0:Station_nrMax),Height,lr
     Logical :: nra,nrb
     character(len=5) :: Station_Mnem,Lab_a,Lab_b
@@ -237,6 +274,7 @@ Subroutine GLE_Corr()
     character(len=13) :: XCorrPlot
     Character(len=2) :: EveOdd(0:1)=(/'Ev','Od'/), tp(0:1)=(/'Th','Ph'/), ext
     Real(dp) :: plot_offset, lwidth
+    Integer, external :: SourceNr  ! source code in  LOFLI_InputHandling.f90
     !
     !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
     i_tp2=0
@@ -247,6 +285,8 @@ Subroutine GLE_Corr()
         i_chunk=ChunkNr(i_peak)
         Station=Ant_Stations(CorrAntNrs(1,i_eo,i_chunk),i_chunk)
         pBase=0
+        i_src=SourceNr(i_peak)
+        If(i_src .le. 0 ) i_src=i_peak
         !If(polariz) then
         !    ext=tp(i_tp)
         !    If(i_tp.eq.1) pBase=Ant_nrMax/2
@@ -269,13 +309,14 @@ Subroutine GLE_Corr()
         J_corr_st(i_max)=Nr_Corr(i_eo,i_chunk)+1
         Height=4 + (i_max+Nr_Corr(i_eo,i_chunk))/3
         Open(UNIT=9,STATUS='unknown',ACTION='WRITE',FILE=trim(XCorrPlot))
+    ! make sure:  export GLE_USRLIB=/Users/users/scholten/LOFLI/GLEsrc
         Write(9,"(A,i3,3(/A),3(/A,I0))") 'size 63 ',Height+8,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
-            'include "../Utilities/DiscreteColor.gle"',&
+            'include "DiscreteColor.gle"',&
             'set lwidth 0.1','t_min = ',-Safety,'t_max = ',Safety,'Height = ',Height
     !        'set lwidth 0.1','t_min = 13250 !12500 !0','t_max = 13350 !15000 !',Time_dim,'scl = ',Plot_scale
-        Write(9,"(A,5(/A),I3,'=',i3,':',i5.5,'(',A,')',A,6(/A))") &
+        Write(9,"(A,5(/A),I3,'=',i3,':',i5.5,'(',A,')',A,i3,A,     6(/A))") &
             'amove 4 4','begin graph','  size 55 Height','  vscale 1','  hscale 1',&
-            '   title  "Time Spectra, Peak# ',i_peak,i_chunk,Peakpos(i_peak),TRIM(ext),'"', &
+            '   title  "X-correlation traces, Peak# ',i_peak,i_chunk,Peakpos(i_peak),TRIM(ext),', src#',i_src,'"', &
             '   xtitle "time [samples]"', &! '   ytitle "Abs cross corr"',&
             '   xaxis min t_min max t_max ! nticks 10','   yaxis  min 0 max 2 dticks 5 dsubticks 1', &
             '   x2labels on',' end graph'
@@ -356,6 +397,7 @@ Subroutine GLE_Corr()
         !
         Close(unit=9)
          Call GLEplotControl(SpecialCmnd='gle -d pdf '//trim(XCorrPlot)) !  Command to produce curtain plots
+         Call GLEplotControl(SpecialCmnd='rm '//trim(XCorrPlot)) !  Command to delete curtain files
       Enddo  ! i_tp=0,i_tp2
     enddo  !  i_peak=1,PeakNrTotal
     Return
@@ -370,7 +412,6 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    use Chunk_AntInfo, only : Ant_Stations, Nr_UniqueStat, Unique_StatID,  Ant_IDs, Ant_pos
    use DataConstants, only : Station_nrMax
    Use Interferom_Pars, only : IntFer_ant,  Nr_IntferCh ! the latter gives # per chunk
-   use ThisSource, only : ChunkNr
    use GLEplots, only : GLEplotControl
    use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
@@ -395,8 +436,9 @@ Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap,
    !Write(2,*) 'GLEscript_Curtains:Nr_UniqueStat=',Nr_UniqueStat
    Open(UNIT=UNT,STATUS='unknown',ACTION='WRITE',FILE=trim(file)//'.gle')
    Write(unt,"(A)") '! COMMAND:  gle -d pdf '//trim(file)//'.gle'
+    ! make sure:  export GLE_USRLIB=/Users/users/scholten/LOFLI/GLEsrc
    Write(unt,"(A,I2,3(/A),2(/A,I0))") 'size 63 ',Nr_UniqueStat+9,'set font pstr fontlwidth 0.08 hei 1.2 just CC',&
-      'include "../Utilities/DiscreteColor.gle"',&
+      'include "DiscreteColor.gle"',&
       'set lwidth 0.1','t_min = ', -WWidth,'t_max = ', WWidth
    Write(unt,"(A,F5.1,A,2(/A),i2,3(/A),7(/A))")  'amove',HOffSt_p,' 4','begin graph', &
       '   size 27 ',Nr_UniqueStat+1,'   vscale 1','  hscale 1',&

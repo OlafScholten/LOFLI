@@ -1,13 +1,14 @@
 ! contour
-size 24 20
+size 18 20
 dir$=''
 if(nargs() > 0 ) then 
     dir$=arg$(1)
 end if
 set font texcmr
 set lwidth .03
+xOffset=2
+yOffset=1
 include "color.gle"
-!dfile$="Intf"
 B1=5.
 H1=5.
 
@@ -29,22 +30,14 @@ sub contour_labels file$ fmt$
 end sub
    
 sub HeightPanel file$ Titl$
-!  interference contour plot
-   ! creates the z-value file to be used by the contour command
-   begin fitz        ! Produces file  "file.z"  from "file.csv"
-      data file$+".csv"
-      x from NxL to NxU step 1.
-      y from NyL to NyU step 1.
-      ncontour 6
-   end fitz
    cc_min=0
-   cc_Stp=   cc_max/10
+   cc_Stp=   (cc_max-cc_min)/10
    !
-   begin contour     ! needed for making contours, produes "file-cdata.dat" and "file-clabels.dat" from "file.z" created earlier
-      data file$+".z"
-      values from cc_min to cc_max step cc_Stp
-      !values 0.5 1 1.5 2 3
-   end contour
+   !begin contour     ! needed for making contours, produes "file-cdata.dat" and "file-clabels.dat" from "file.z" created earlier
+   !   data file$+".z"
+   !   values from cc_min to cc_max step cc_Stp
+   !   !values 0.5 1 1.5 2 3
+   !end contour
    !
    begin graph
       size B1 H1
@@ -54,15 +47,15 @@ sub HeightPanel file$ Titl$
       title "power"+"/"+format$(WinLength,"fix 0")+" "+Titl$
       xtitle xLab$
       ytitle yLab$
-      xticks color white
-      yticks color white
+      xticks length -.1 ! color white
+      yticks length -.1 ! color white
       colormap file$+".z" 500 500 color zmin cc_min zmax cc_max
       !data file$+"-cdata.dat"  ! for the actual drawing of the contours (made by Contour)
       d1 line color white lwidth 0.02
    end graph
    !
-   if Titl$="@h=0" then
-      amove xg(xgmax)+0.5 yg(ygmin)
+   if Titl$="@E=0" then
+      amove xg(xgmax)+1.0 yg(ygmin)
       color_range_vertical zmin cc_min zmax cc_max zstep cc_Stp pixels 1500 format "eng 2 append GB"
       !contour_labels file$  "fix 0"
    end if
@@ -71,17 +64,26 @@ end sub
 
 Sub EIPlots 
    gsave
-   dfile$=dir$+"_EISpeceo.csv"
-   fopen dfile$ inchan read
-   freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus
    dwfile$=dir$+"_EISpec.csv"
    fopen dwfile$ inchanw read
-   freadln inchanw cc_max 
-   freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h
+   freadln inchanw StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus name$
+   freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h 
+   !
+   dfile$=dir$+"_EISpeceo.csv"
+   fopen dfile$ inchan read
+   freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus cc_max N_smth
+   !
+   N_marks=WinLength/N_smth
+   Nmark_max=8
+   if(N_marks>Nmark_max) Then
+      N_marks=Nmark_max*Nmark_max/N_marks
+   End If
+   amove xOffset yOffset+2*H1+3
+   write name$
 
-   amove 2 15
+   amove xOffset yOffset+2*H1+4
    begin graph
-      size 3*B1-2 H1-1
+      size 3*B1 H1-1
       vscale 1
       hscale 1
       xaxis min 0 max 328
@@ -110,57 +112,67 @@ Sub EIPlots
    aline xg((offset+WinLength)/200.) yg(10)
    
    OS$ = format$(OffSet,"fix 0")
-   amove 10 8
+   amove xOffset+B1+2 yOffset+H1+2+H1/2
    begin graph
-      size B1 H1
+      size 2*B1-2 H1/2
       vscale 1
       hscale 1
       xaxis nticks 4
       !yaxis min Ymin max Ymax
-      yaxis log min 3.e-3
+      yaxis log min 1.e-2
       title "power spectrum [arb]"
-      xtitle "t [samples]+"+OS$
-      x1ticks length -.2
+      !xtitle "t [samples]+"+OS$
+      !x1ticks length -.2
+      x1labels off
       x2ticks length +.2
       !ytitle "power"
       data dwfile$ d1=c1,c2  ignore 2
-      d1 line color red lwidth 0.02
+      d1 line color red lwidth 0.03
       !d2 line color green lwidth 0.02
    end graph
    begin key
        nobox
        position tr
        set color black
-       line color red lwidth 0.02 text "(1+2)"
+       line color red lwidth 0.03 text "(1+2)"
        !line color green lwidth 0.02 text "(1+3)-(2)"
    end key
                                                                                     
-   amove 18 8
+   amove xOffset+B1+2 yOffset+H1+2
    begin graph
-      size B1 H1
+      size 2*B1-2 H1/2
       vscale 1
       hscale 1
       xaxis nticks 4
-      !yaxis min Ymin max Ymax
-      yaxis !log !min 3.e-3
-      title "power spectrum [Gal.bckgr]"
+      yaxis min -100 max 100 nticks 4
+      !title "power spectrum [Gal.bckgr]"
       xtitle "t [samples]+"+OS$
       x1ticks length -.2
-      x2ticks length +.2
+      !x2ticks length +.2
       !ytitle "power"
       data dwfile$ d1=c1,c3 d2=c1,c4 d3=c1,c5 ignore 2
-      d1 line color red lwidth 0.02
+      d1 line color blue lwidth 0.02
       d2 line color green lwidth 0.02
-      d3 line color blue lwidth 0.02
+      d3 line color magenta lwidth 0.02
    end graph
    begin key
        nobox
        position tr
        set color black
-       line color red lwidth 0.02 text "Q"
+       line color blue lwidth 0.02 text "Q"
        line color green lwidth 0.02 text "U"
-       line color blue lwidth 0.02 text "V"
+       line color magenta lwidth 0.02 text "V"
    end key
+   set lwidth 0.02
+   set lstyle 4
+   i=0.5
+   while i < N_marks
+      amove xg(i*N_smth) yg(-100)
+      aline xg(i*N_smth) yg(-100)+H1
+      i = i + 1
+   Next
+   set lstyle 0
+   set lwidth 0.03
                                                                                     
    if ipol=1 then
       EastLab$="d\theta= "+format$(d_E,"fix 3")+"^o" 
@@ -172,28 +184,32 @@ Sub EIPlots
       hLab$="dh= "+format$(d_h,"fix 1")+" [m]"
    end if
    
-   amove 2 8
-   NxL=-N_N
-   NxU=N_N
-   NyL=N_Elow
-   NyU=N_Eup
-   xLab$=NorthLab$
-   yLab$=EastLab$
-   HeightPanel dir$+"Interferometerd_NE" "@h=0"
-   !
-   amove 2.5 1
-   NyL=N_hlow
-   NyU=N_hup
-   yLab$=hLab$
-   HeightPanel dir$+"Interferometerd_Nh" "@E=0"
-   amove 9.5 1
+   amove xOffset yOffset
    NxL=N_Elow
    NxU=N_Eup
    xLab$=EastLab$
+   NyL=-N_N
+   NyU=N_N
+   yLab$=NorthLab$
+   HeightPanel dir$+"Interferometerd_EN" "@h=0"
+   !
+   amove xOffset+B1+2 yOffset
+   NxL=N_hlow
+   NxU=N_hup
+   xLab$=hLab$
+   HeightPanel dir$+"Interferometerd_hN" "@E=0"
+   
+   amove xOffset yOffset+H1+2
+   NxL=N_Elow
+   NxU=N_Eup
+   xLab$=EastLab$
+   NyL=N_hlow
+   NyU=N_hup
+   yLab$=hLab$
    HeightPanel dir$+"Interferometerd_Eh" "@N=0"
-   amove 5.5 7
-   set hei .6
-      write "pairs, range="+format$(DistMax,"fix 1")+" [km]"
+   amove 6. 7
+   set hei .5
+      write "ant. range="+format$(DistMax,"fix 1")+" [km]"
    grestore
 end sub
 !=========================================================================

@@ -79,11 +79,12 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
                   "gle -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
                         //TRIM(FlashFolder)//TRIM(PlotDataFile)
                EndIf
-               If((PlotType.eq.'InterfContour') .or. (PlotType.eq.'EIContour')) then
-                  write(10,"('rm ',A,'{*.z,*-cvalues.dat,*-clabels.dat,*-cdata.dat}')") TRIM(DataFolder)
-                  write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") &
-                              TRIM(DataFolder)//trim(OutFileLabel)
-               EndIf
+               !If((PlotType.eq.'InterfContour') .or. (PlotType.eq.'EIContour') ) then
+               !   write(10,"('rm ',A,'{*-cvalues.dat,*-clabels.dat,*-cdata.dat}')") TRIM(DataFolder)
+               !   !write(10,"('rm ',A,'{*.z}')") TRIM(DataFolder)
+               !   !write(10,"('rm ',A,'{*SpecWin_*.csv,*IntfTrack_*.csv,*Interferometer*.csv,*_EISpec*.csv}')") &
+               !   !            TRIM(DataFolder)//trim(OutFileLabel)
+               !EndIf
             EndIf
    EndIf
    !

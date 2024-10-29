@@ -1,0 +1,178 @@
+! contour
+size 16 15
+fontSz=0.5
+dir$='files\tst'
+if(nargs() > 0 ) then 
+    dir$=arg$(1)
+    Obs$=arg$(2)
+    Source$=arg$(3)
+end if
+set font texcmr
+set lwidth .03
+include "color.gle"
+B1=5.
+H1=5.
+Offset=0.5
+
+!amove 9 3
+!write dir$ ',' Obs$ ',' Source$ ','
+sub contour_labels file$ fmt$
+   ! draws the labels on a contour plot
+   ! file$ = filename of file with label data
+   ! fmt$ = format string used to format labels
+   set just cc hei 0.25 color blue
+   fopen file$+"-clabels.dat" f1 read
+   until feof(f1)
+      fread f1 x y i v
+      amove xg(x) yg(y)
+      s$ = format$(v, fmt$)
+      begin box add 0.05 fill white
+         write s$
+      end box
+   next
+   fclose f1
+end sub
+   
+sub HeightPanel file$ Titl$
+!  interference contour plot
+!
+   ! creates the z-value file to be used by the contour command
+   !begin fitz        ! Produces file  "file.z"  from "file.csv"
+   !   data file$+".csv"
+   !   x from NxL to NxU step 1.
+   !   y from NyL to NyU step 1.
+   !   ncontour 6
+   !end fitz
+   !
+   cc_Stp=  (cc_max-cc_min)/10
+   !
+   begin contour     ! needed for making contours, produes "file-cdata.dat" and "file-clabels.dat" from "file.z" created earlier
+      data file$+".z"
+      values from cc_min to cc_max step cc_Stp
+      !values 0.5 1 1.5 2 3
+   end contour
+   !
+   begin graph
+      size B1 H1
+      vscale 1
+      hscale 1
+      !title "for h="+format$(hght,"fix 1")+" [km]" hei 0.35
+      title Obsrv$+" "+Titl$
+      xtitle xLab$
+      ytitle yLab$
+      xticks color white
+      yticks color white
+      colormap file$+".z" 500 500 color zmin cc_min zmax cc_max
+      !data file$+"-cdata.dat"  ! for the actual drawing of the contours (made by Contour)
+      d1 line color white lwidth 0.02
+   end graph
+   !
+   if Titl$="@h=0" then
+      amove xg(xgmax)+0.5 yg(ygmin)
+      color_range_vertical zmin cc_min zmax cc_max zstep cc_Stp pixels 1500 format "eng 2 append []"
+      !contour_labels file$  "fix 0"
+   end if
+end sub
+
+
+Sub EIPlots 
+   gsave
+!  //'PkIntf-Chi2_'//txt//'.dat')
+   dfile$=dir$+Obs$+'_'+Source$
+   fopen dfile$+'.csv' inchanw read
+   freadln inchanw cc_max CC_min N_N N_E N_h d_N d_E d_h PkNr$ Obsrv$
+   freadln inchanw N_pos E_pos h_pos Pk_pos time
+   fclose inchanw
+   !
+   amove Offset Offset+4.2+2*H1
+   write Obsrv$+" for peak# "+PkNr$
+   amove Offset+4 Offset+4.2+2*H1
+   write "center @ (N,E,h)=(" format$(N_pos,"fix 4") ", " format$(E_pos,"fix 4") ", " format$(h_pos,"fix 4") ") km"  
+   amove Offset+4.5 Offset+4.2+2*H1-fontSz
+   write "sample_{ref}="  Pk_pos ", time_{src}=" format$(time,"fix 6") "ns"
+
+      NorthLab$="d_N= "+format$(d_N,"fix 1")+" [m]"
+      EastLab$="d_E= "+format$(d_E,"fix 1")+" [m]"
+      hLab$="d_h= "+format$(d_h,"fix 1")+" [m]"
+   
+   amove Offset+1 Offset+1
+   xLab$=EastLab$
+   NxL=-N_E
+   NxU=N_E
+   yLab$=NorthLab$
+   NyL=-N_N
+   NyU=N_N
+   HeightPanel dfile$+"_EN" "@h=0"
+   !
+   amove Offset+B1+5 Offset+1
+   NxL=-N_h
+   NxU=N_h
+   xLab$=hLab$
+   HeightPanel dfile$+"_hN" "@E=0"
+   !
+   amove Offset+1 Offset+H1+3
+   NxL=-N_E
+   NxU=N_E
+   xLab$=EastLab$
+   NyL=-N_h
+   NyU=N_h
+   yLab$=hLab$
+   HeightPanel dfile$+"_Eh" "@N=0"
+   !
+   Specfile$=dir$+Source$+".csv"
+   fopen Specfile$ inchanw read
+   freadln inchanw N_smth N_shift i_down i_up
+   fclose inchanw
+   !
+   amove Offset+B1+3 Offset+H1+3
+   begin graph
+      size B1+2 H1
+      vscale 1
+      hscale 1
+      !title "for h="+format$(hght,"fix 1")+" [km]" hei 0.35
+      title "time trace" 
+      xtitle "samples" 
+      xaxis min -N_smth max N_smth ! hei fontSz*2 dticks  50 ! dsubticks .2  ! length=7
+      yaxis 
+      data Specfile$ d1=c1,c3 d2=c1,c4 d3=c1,c5 ignore 1
+      d1 line color black lwidth 0.02
+      d2 line color red lwidth 0.02
+      d3 line color green lwidth 0.02
+   end graph
+   begin key
+       nobox
+       position tr
+      line color black lwidth 0.02 text "intensity"
+      line color red lwidth 0.02 text "pol-1"
+      line color green lwidth 0.02 text "pol-2"
+   end key
+   amove xg(i_down) yg(0)-fontSz/4 
+   marker ftriangle 0.5
+   !aline xg(i_down) yg(10)
+   amove xg(i_up) yg(0)-fontSz/4 
+   marker ftriangle 0.5
+   !aline xg(i_up) yg(10)
+   !
+   set color red
+   amove xg(i_down+N_shift) yg(0)-fontSz/4 
+   marker ftriangle 0.5
+   amove xg(i_up+N_shift) yg(0)-fontSz/4 
+   marker ftriangle 0.5
+   amove Offset+B1+2 Offset+H1+2
+   write "suggested shift=" N_shift
+   !
+   grestore
+end sub
+!=========================================================================
+
+EIPlots 
+
+
+
+!translate 15 0
+!IntferPlots "1"
+
+
+
+
+

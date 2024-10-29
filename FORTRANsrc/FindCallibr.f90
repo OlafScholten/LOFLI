@@ -56,7 +56,7 @@ Subroutine FindCallibr(SourceGuess)
     Complex(dp), Allocatable :: ST01nu(:)
     Complex(dp), Allocatable :: ST01T(:)
     Complex(dp) :: ST01_max
-    Integer :: UpSF= 16, i_SAI ! UpSampleFactor
+    Integer :: UpSF= 16, i_SAI, OutUnit ! UpSampleFactor
    !
    !       Initialize
    Call Find_unique_StatAnt()
@@ -287,7 +287,8 @@ Subroutine FindCallibr(SourceGuess)
    If(WriteCalib) then
       Call WriteCalibration(ZeroCalOffset) ! was MergeFine
    Endif
-   Call PrntNewSources(ZeroCalOffset)
+   OutUnit=2
+   Call PrntNewSources(ZeroCalOffset, OutUnit)
    !
    PlotCCPhase=.false.
    Return
@@ -425,7 +426,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    Logical, Intent(out) ::  FitNoSources
    Character(len=5) :: FP_MNem(0:N_FitPar_max)
    logical,dimension(Nr_UniqueStat) :: mask
-   character*180 :: lname
+   character*300 :: lname
    character*4 :: option
    Integer :: i, nxx, k, N_FitPar
    !

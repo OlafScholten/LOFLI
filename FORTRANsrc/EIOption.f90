@@ -1,7 +1,7 @@
 !    Include 'InterferometryOptSbRtns-v18d.f90'
     !
 Subroutine EI_Run
-    !+++++++++ What is used:
+    !+++++++++ What is done:
     !- Loop over antennas
     ! - make frequency spectra
     !- End antennaLoop
@@ -22,8 +22,8 @@ Subroutine EI_Run
    Use Interferom_Pars, only : polar, N_pix, d_loc, CenLocPol, CenLoc, PixLoc, Nr_IntFerMx, Nr_IntFerCh, IntFer_ant, IntfNuDim
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, SumWindw !, MaxIntfIntenLoc
    Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !
-   Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, Nr_IntFerCh
-   Use Interferom_Pars, only : PixPowOpt
+   Use Interferom_Pars, only : i_chunk
+   Use Interferom_Pars, only : PixPowOpt, FirstTimeInterf, Int_best
    use constants, only : dp, ci, pi
    use StationMnemonics, only : Statn_ID2Mnem
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
@@ -33,6 +33,8 @@ Subroutine EI_Run
    Implicit none
    integer :: i_eo, i, Nr_IntFer !,j, i_s, i_loc(1), i_ant, j_corr, Station, j_IntFer, i_nu, nxx
    Real(dp) :: PixLocPol(1:3) !, SmPow
+   Integer, save :: WallCount
+   Real,save :: CPUTime, CPUstopTime=-1., WallTime=0, WallstartTime=-1., WallRate
    Integer :: Date_T(8)
    integer :: i_N, i_E, i_h, error !, N_h,  N_hlow, N_Eup, N_Elow
    Complex(dp), allocatable :: CMCnu(:,:,:), CMTime_Pix(:,:)
@@ -40,12 +42,17 @@ Subroutine EI_Run
    CALL DATE_AND_TIME (Values=DATE_T)
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' start Interferometry'
    WRITE(*,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), achar(27)//'[0m'
+   call cpu_time(CPUTime)
+   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   If(FirstTimeInterf) WallstartTime=WallCount/WallRate
+   WRITE(2,"(A,F9.3,A)") 'CPU time:', CPUTime, '[s]'  ! count_rate, count_max
    !
-   i_chunk=1
+   !i_chunk=1
    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
+                  ! uses  1:ChunkNr_dim
    Nr_IntFer=Nr_IntFerCh(i_chunk)
-   Call PixBoundingBox()      !  allocate array space, sets IntfNuDim
-   Call Alloc_EInterfImag_Pars  ! initialize FFT to appropriate window
+   Call PixBoundingBox()      !  does not allocate array space, sets IntfNuDim
+   Call Alloc_EInterfImag_Pars  ! initialize FFT to appropriate window and allocates many arrays
    Allocate( CMCnu(Nr_IntFer,0:IntfNuDim,1:3),  CMTime_pix(1:2*IntfNuDim,1:3) )
    Call EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !Nr_IntFerMx=Nr_IntFerCh(i_chunk) since there is only a single chunk
@@ -59,6 +66,7 @@ Subroutine EI_Run
    AveIntenN(:,:)=0.
    RimInten(:,:)=0.
    MaxSmPow(:)=0.
+   Int_best(:,:)=0.
    Select Case(PixPowOpt)
       Case (1)
          write(2,*) 'PixPowOpt=1 : sum all polarizations weighted with alpha to compensate A^-1 == intensity of F vector'
@@ -69,8 +77,9 @@ Subroutine EI_Run
    End Select
    Do i_h= N_pix(3,1), N_pix(3,2) ! or distance
       CALL DATE_AND_TIME (Values=DATE_T)
-      WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' height',i_h
-      WRITE(*,"(A,i3,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' height',i_h,(DATE_T(i),i=5,8), achar(27)//'[0m'
+      If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' i_height=',i_h
+      If(FirstTimeInterf) &
+         WRITE(*,"(A,i3,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' i_height=',i_h,(DATE_T(i),i=5,8) , achar(27)//'[0m'
       Flush(unit=2)
       !
       Do i_N=N_pix(1,1),N_pix(1,2)   ! or Phi  ! Loop over pixels
@@ -107,14 +116,28 @@ Subroutine EI_Run
    !----------------------------------------
    WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' analyze'
    WRITE(*,"(A,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' analyze',(DATE_T(i),i=5,8), achar(27)//'[0m'
+   call cpu_time(CPUTime)
+   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   WallTime=WallCount/WallRate - WallstartTime
+   WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   !
+   !If(FirstTimeInterf) Then
+   !EndIf
    i_eo=0
    Call OutputIntfPowrTotal(IntFer_ant(1,1), i_eo)  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)
-   Call OutputIntfSlices(i_eo)
+   If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)  ! main one for analyzing slices
+   If(FirstTimeInterf) Call OutputIntfSlices(i_eo)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
-   WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry',i_eo
+   WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry'
    Call DeAlloc_EInterfImag_Pars
+   call cpu_time(CPUTime)
+   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   WallTime=WallCount/WallRate - WallstartTime
+   !Write(2,*) 'Wall:', WallTime, WallCount, WallRate, CPUTime
+   WRITE(2,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   FirstTimeInterf=.false.
    Return
     !
 End Subroutine EI_Run
@@ -221,7 +244,7 @@ Subroutine EISelectAntennas(i_chunk)
    use constants, only : dp
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
-   Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntferCh, Nmax_IntFer ! the latter gives # per chunk
+   Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntferCh, Nmax_IntFer, FirstTimeInterf ! the latter gives # per chunk
    use FitParams, only : AntennaRange
    use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
    use StationMnemonics, only : Statn_ID2Mnem
@@ -261,7 +284,8 @@ Subroutine EISelectAntennas(i_chunk)
    EndDo
    Nr_IntferCh(i_chunk)=j_IntFer
    If(j_IntFer .gt. Nr_IntFerMx) Nr_IntFerMx=j_IntFer  ! =max number for all chunks
-   write(2,*) 'first antenna pair in station',Ant_Stations(IntFer_ant(1,i_chunk),i_chunk),' for chunk=',i_chunk
+   If(FirstTimeInterf) &
+      write(2,*) 'first antenna pair in station',Ant_Stations(IntFer_ant(1,i_chunk),i_chunk),' for chunk=',i_chunk
    !EndDo
    !
     vec(:)=0
@@ -314,7 +338,7 @@ Subroutine EISelectAntennas(i_chunk)
 End Subroutine EISelectAntennas
 !------------------------
 !------------------------
-Subroutine EIPixBoundingBox()
+Subroutine xxEIPixBoundingBox()  ! obsolete
    ! Check max time shift for neighboring pixels; should ideally differ by 1 sample for neighboring pixels
    ! Calculate approximate bounding box of pixel image
    ! Setup arrays
@@ -385,7 +409,7 @@ Subroutine EIPixBoundingBox()
    !write(2,*) diff(:)
    !
    Return
-End Subroutine EIPixBoundingBox
+End Subroutine xxEIPixBoundingBox
 ! =========================
 !-----------------------------------------------
 Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
@@ -402,7 +426,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    use StationMnemonics, only : Statn_ID2Mnem
    Use Interferom_Pars, only : IntfBase, SumStrt, SumWindw  !, IntfPhaseCheck
    Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerCh, Nr_IntFerMx
-   Use Interferom_Pars, only : IntFer_ant
+   Use Interferom_Pars, only : IntFer_ant, FirstTimeInterf
    Use Interferom_Pars, only : CenLoc, t_shft, t_offsetPow, tMin, tMax
    Use Interferom_Pars, only : alpha, PolBasis !, PowerScale
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain ! J_0p,J_0t,J_1p,J_1t,
@@ -431,7 +455,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !Nr_IntFer=Nr_IntFerCh(i_chunk)
    !
    Cur2E(:,:)=0.
-   write(2,*) 'Nr_IntFer=',Nr_IntFer
+   If(FirstTimeInterf) write(2,*) 'Nr_IntFer=',Nr_IntFer
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
       i_ant=IntFer_ant(j_IntFer,i_chunk)  ! Refers to even antenna
       !write(2,*) i_ant, j_IntFer, Ant_pos(:,i_ant,i_chunk)
@@ -468,7 +492,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
          Enddo
       Enddo
    Enddo
-   If(Nr_IntFer.lt.200) then
+   If(Nr_IntFer.lt.-200) then
       !write(2,"(A,F11.3,300F8.2)") 'EISetupSpec(old); W:',Weight(1),Weight(1:Nr_IntFer)/Weight(1)
       write(2,"(A,F11.3,300F8.2)") 'EISetupSpec(new); W:',Weight(1),Weight(1:Nr_IntFer)/Weight(1)
       !write(2,"(A,I5,300F8.2)") 'EISetupSpec(try); Weights:',Nr_IntFer,Weight(1:Nr_IntFer)/Weight(1)
@@ -479,10 +503,10 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !write(2,*) 'Trace A=', Cur2E(1,1)+Cur2E(2,2)+Cur2E(3,3)
    Call Inverse33(Cur2E,E2Cur, alpha, PolBasis)  ! PolBasis are normalized to unity
    FMT_A="(A,F9.5,A,'(',2(F7.3,','), F7.3 ,')')"
-   write(2,FMT_A) 'a1:', alpha(1),', ev1:', PolBasis(:,1)
-   write(2,FMT_A) 'a2:', alpha(2),', ev2:', PolBasis(:,2)
+   If(FirstTimeInterf) write(2,FMT_A) 'a1:', alpha(1),', ev1:', PolBasis(:,1)
+   If(FirstTimeInterf) write(2,FMT_A) 'a2:', alpha(2),', ev2:', PolBasis(:,2)
    FMT_A="(A,F7.3,A,'(',2(F7.3,','),F7.3,')',A,F7.3)"
-   write(2,FMT_A) 'a3:', alpha(3),', ev3:', PolBasis(:,3), ', Trace A=',alpha(1)+alpha(2)+alpha(3)
+   If(FirstTimeInterf) write(2,FMT_A) 'a3:', alpha(3),', ev3:', PolBasis(:,3), ', Trace A=',alpha(1)+alpha(2)+alpha(3)
    !
    !Call AntFun_Inv(thet_d(1),Phi_d(1)) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
    !w=SUM(ABS(Ji_p0(Freq_min:Freq_max))**2)+SUM(ABS(Ji_p1(Freq_min:Freq_max))**2)+ &
@@ -494,7 +518,7 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !PowerScale=1.
    !NormEven=sqrt(PowerScale*2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor 100 (and more) that was introduced in antenna-read
    !NormOdd=sqrt(PowerScale*2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/100.  ! to undo the factor that was introduced in antenna-read
-   write(2,*) 'Amplitude NormEven,odd',NormEven,NormOdd,', ratio=',NormEven/NormOdd
+   If(FirstTimeInterf) write(2,*) 'Amplitude NormEven,odd',NormEven,NormOdd,', ratio=',NormEven/NormOdd
    Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
       Call AntFun_Inv(thet_d(j_IntFer),Phi_d(j_IntFer)) ! sets ,Ji_p0,Ji_t0,Ji_p1,Ji_t1; Inverse Jones; gives _p & _t polarized fields when contracted with (0.1) voltages
       Thet_r = Thet_d(j_IntFer)*pi/180  ! Zenith angle
@@ -538,12 +562,12 @@ Subroutine EISetupSpec(Nr_IntFer, IntfNuDim, CMCnu)
    !   , IntFer_ant(Nr_IntFer/2+1),CMCnu(Nr_IntFer/2+1,1,IntfNuDim/2)
    i_ant=IntFer_ant(1,1)
    t_shft=tShift_ms(CenLoc(:))/1000.d0 !  sqrt(SUM(CenLoc(:)*CenLoc(:)))*Refrac/c_mps ! in seconds due to signal travel distance
-   write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)),&
-      ', time difference with central pixel=',t_shft*1000.,'[ms]'
+   If(FirstTimeInterf) write(2,*) 'Nr_IntFer:',Nr_IntFer,', ref. ant.= ', Ant_IDs(i_ant,i_chunk), &
+      Statn_ID2Mnem(Ant_Stations(i_ant,i_chunk)), ', time difference with central pixel=',t_shft*1000.,'[ms]'
    !
    tMin=((StartT_sam(i_chunk)+SumStrt)*sample-t_shft)*1000.
    tMax=((StartT_sam(i_chunk)+SumStrt+SumWindw)*sample-t_shft)*1000.
-   write(2,*) 'Source time window start@', tMin, '[ms], end@', tMax
+   If(FirstTimeInterf) write(2,*) 'Source time window start@', tMin, '[ms], end@', tMax
    t_offsetPow=((StartT_sam(i_chunk)+SumStrt)*sample)*1000.d0-TimeBase
    !Flush(unit=2)
    !
@@ -610,22 +634,25 @@ End Subroutine EIEngine
 Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    ! Analyze the trace of this pixel
    !--------------------------------------------
-   use constants, only : dp, pi
-   Use Interferom_Pars, only : i_chunk, Nr_IntFerMx, IntfLead, PixLoc, polar, N_pix
-   Use Interferom_Pars, only : IntPowSpec, MaxSmPow, N_smth, smooth
-   Use Interferom_Pars, only : MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
+   use constants, only : dp, pi, sample
+   Use Interferom_Pars, only : Nr_IntFerMx, IntfLead, PixLoc, polar, N_pix  !i_chunk,
+   Use Interferom_Pars, only : IntPowSpec, MaxSmPow, N_smth, smooth, TIntens000
+   Use Interferom_Pars, only : MaxSmPowI12, MaxSmPowQ, MaxSmPowU, MaxSmPowV
+   Use Interferom_Pars, only : MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, MaxIntfIntenLoc
    Use Interferom_Pars, only : SlcInten, NrSlices, SliceLen, MaxSlcInten, MaxSlcIntenLoc
    Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RefSmPowTr
-   Use Interferom_Pars, only : SumStrt, CenLoc, StartTime_ms, t_shft, d_loc
-   Use Interferom_Pars, only : alpha, PolBasis, PixPowOpt
+   Use Interferom_Pars, only : SumStrt, CenLoc, t_shft, d_loc
+   Use Interferom_Pars, only : alpha, PolBasis, PixPowOpt, FirstTimeInterf
+   Use Interferom_Pars, only : N_best, Grd_best, Int_best
    use FitParams, only : AntennaRange
+   use Chunk_AntInfo, only : StartT_sam
    use DataConstants, only : DataFolder, OutFileLabel
    Implicit none
    Integer, intent(in) :: i_N, i_E, i_h, SumWindw, IntfNuDim
    Complex(dp), intent(in) :: CMTime_pix(1:2*IntfNuDim,1:3)
    integer :: i, j, i_s, i_eo, m, n  !_loc(1), i_ant, j_IntFer, MLoc, Mloc_all
-   Real(dp) :: IntfInten, SmPow, PixelPower(1:SumWindw)
+   Real(dp) :: IntfInten, SmPow, PixelPower(1:SumWindw), StartTime_ms
    Complex :: Stk(3,3)  !  3D Stokes
    !
    i_eo=0
@@ -653,14 +680,17 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    End Select
    !write(2,*) i_N, i_E, i_h, SMpow/SumWindw, PixLoc(:)
    If((i_N.eq.0) .and. (i_E.eq.0) .and. (i_h.eq.0)) Then
+      !write(2,*) '!EIAnalyzePixelTTrace;NrPixSmPowTr:', NrPixSmPowTr
       i_s=0
       If(polar) i_s=1
+      StartTime_ms=StartT_sam(1)*sample*1000.d0  ! in ms
+      TIntens000(1:SumWindw)=PixelPower(1:SumWindw)
       !write(2,*) 'SumStrt,SumWindw,',SumStrt,SumWindw,IntfLead
       OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpec.csv')
-         Write(29,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',F8.3,' !')") StartTime_ms, CenLoc/1000., AntennaRange, &
-            i_s, t_shft*1000.
-         write(29,"(g12.4,5(',',i5),',',i8,',',i5,6(',',f9.4),' !')") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
-            N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:2)*180./pi ,d_loc(3), d_loc(1:3)
+         Write(29,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',F8.3,',',I4,', ',A,' !')") StartTime_ms, CenLoc/1000., AntennaRange, &
+            i_s, t_shft*1000., N_smth, TRIM(OutFileLabel)
+         write(29,"(g12.4,5(',',i5),',',i8,',',i5,6(',',f9.4),',',I4,' !')") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
+            N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:2)*180./pi ,d_loc(3), d_loc(1:3), N_smth
          write(29,"('! Sample',T10,'I1+I2=I12',T22,'Q/I12%',T30,'U/I12%',T38,'V/I12%',T45,'I3/I12%  for central pixel')")
       Do i_s=1, SumWindw
          Do i=1,3
@@ -689,8 +719,9 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
             SmPow=SmPow+smooth(j)*PixelPower(i_s+j)
          Enddo
          !If( SmPow.gt. 0.6*RefSmPowTr(i) ) SmPow=0.
+         Call BestOnes(i_N, i_E, i_h, SmPow, Grd_best(1,1,i), Int_best(1,i), N_best)
          PixSmPowTr(i,i_N, i_E, i_h)=SmPow
-         If( SmPow.gt. MaxSmPow(i) ) Then
+         If( SmPow.gt. MaxSmPow(i) ) Then  ! store max for each slice
             MaxSmPow(i)=SmPow
             MaxSmPowGrd(1,i)=i_N
             MaxSmPowGrd(2,i)=i_E
@@ -705,6 +736,8 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
                   Enddo
                Enddo
             Enddo
+            SMpow=Real(Stk(1,1)+Stk(2,2))
+            MaxSmPowI12(i)=SMpow
             MaxSmPowQ(i)=Real(Stk(1,1)-Stk(2,2))/SMpow
             MaxSmPowU(i)= 2*Real(Stk(1,2))/SMpow
             MaxSmPowV(i)=  2*Imag(Stk(1,2))/SMpow
@@ -721,7 +754,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    IntfInten=0.
    i=0
    SlcInten(:)=0.
-   Do i_s=1,NrSlices
+   Do i_s=1,NrSlices ! in reality runs over full window (NrSlices=1)
       Do j=1,SliceLen
          i=i+1
          SlcInten(i_s)=SlcInten(i_s) + PixelPower(i)
@@ -748,7 +781,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    !
    i=0  ! Store totals information
    PixSmPowTr(i,i_N, i_E, i_h)=IntfInten
-   !write(2,*) i_N, i_E, i_h, IntfInten
+   !write(2,*) i_N, i_E, i_h, IntfInten, MaxSmPow(i)
    !stop
    If( IntfInten .gt. MaxSmPow(i) ) Then
       MaxSmPow(i)=IntfInten

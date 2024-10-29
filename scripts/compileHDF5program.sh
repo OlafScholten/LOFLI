@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 # 
 # 
 # Define some importants paths
