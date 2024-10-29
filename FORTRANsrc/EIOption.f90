@@ -667,7 +667,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    Select Case(PixPowOpt)
       Case (1)
          Do j=1,SumWindw
-         PixelPower(j)=SUM((ABS(CMTime_pix(IntfLead+j,:)))**2*alpha(:))
+         PixelPower(j)=SUM((ABS(CMTime_pix(IntfLead+j,:)))**2*alpha(:))/alpha(1)
          Enddo
       Case(2)
          Do j=1,SumWindw
