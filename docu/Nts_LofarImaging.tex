@@ -67,6 +67,7 @@
 \def\secref#1{Section~\ref{sec:#1}}
 \def\seclab#1{\label{sec:#1}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+\def\ATRID{ATRI-D}
 %%% Use color for marking
 \newcommand{\RED}{\color[named]{Red}}
 \newcommand{\blue}{\color[named]{Blue}}
@@ -155,12 +156,11 @@ Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
 \newpage
 
 \vspace{2ex}
-This guide is structured according to the chronological order of the main steps that are usually followed in converting LOFAR TBB data to an image of a lightning flash, with a chapter devoted to each subject. An outline of the basic imaging method can be found in \cite{Scholten:2021-init}.
-Edition later than v21 contains also the routines for full interferometry (TRI-D imager).
+This guide is structured chronologically to detail the main steps in converting LOFAR TBB data into an image of a lightning flash. Each chapter focuses on a specific part of the process. For an overview of the fundamental imaging methodology, refer to \cite{Scholten:2021-init}. Editions beyond version 21 also feature routines for complete interferometry (TRI-D imager).
 
-In each chapter contains a description of the essential ingredients of the code, examples of input lines, examples of generated output, as well as examples of shell commands for running the code in Linux.
+Each chapter includes a thorough explanation of the code's key components, along with examples of input commands, resulting output, and shell commands for running the code in a Linux environment.
 
-The code is free to be used, however it is requested to cite the publication where the features of the code are introduced and/or cite the software archive from where the code can be downloaded, \href{https://zenodo.org/records/4707495}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 github repository}.
+The code is available for free use, but users are encouraged to cite the publication introducing its features and/or reference the software archive where the code can be downloaded, either from \href{https://zenodo.org/records/4707495}{ZENODO} or the \href{https://github.com/OlafScholten/LOFLI/tree/LOFLI2.0}{LOFLI2.0 GitHub repository}.
 
 \newpage
 
@@ -183,6 +183,7 @@ The code is free to be used, however it is requested to cite the publication whe
 \input{Nt_TimCalibr}
 \input{Nt_PulsSelct}
 \input{Nt_Interferometry}
+\input{Nt_PkInt}
 \input{Nt_SimulateData}
 \chapter{Supplementary scripts}\seclab{supp}
 \input{Nt_DataSelect}
