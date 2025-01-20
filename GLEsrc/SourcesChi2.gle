@@ -1,0 +1,214 @@
+Z1=5
+Z=Z1
+! Z=0  ! if active, omit side panels
+!fontSz=1.2
+!fontSz=1.0
+fontSz=0.8
+bsh=2.5*fontSz    ! 1.5
+!HorOff=1.5+bsh
+HorOff=1.0+bsh
+VerOff=2.0+bsh
+B=14+Z1-Z
+!
+file$='BIy2'
+if(nargs() > 0 ) then 
+    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+end if
+filedat$=file$+'ATRIDSrc.dat'
+!
+fopen filedat$ inchan read
+freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
+freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot a1 chi_lim c1 a2 chi_mean chi_std d2
+!
+Data_lim=chi_mean+chi_std/2.
+!Data_lim=3.5
+H=B*(yMax-yMin)/(xMax-xMin)
+size   HorOff+B+Z+bsh-1.5 VerOff+H+Z+2*Z1+3*bsh ! ----------------------------
+!
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+include "IntfBox.gle"
+!
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+MinMSze=0.3
+if(EventNr > 900) then
+   MinMSze=MinMSze*30./sqrt(EventNr)
+end if
+MSze= .04/(xMax-xMin)  ! should be about 1 m on the scale of the plot
+If (MSze < MinMSze) then MSze=MinMSze
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+If AmplitudePlot <= 0 then  ! logical operation apparently does not work around subroutine definition
+   AmplitudePlot=10.
+End If
+
+sub 2Dtime dt$ ds$ dmin dmax dI$
+    local DDx = dmax-dmin
+    local cnt = 0
+    !local MaxInt = dmaxy(ds$)
+    for i = 1 to ndata(dt$)
+        local x = dataxvalue(ds$,i)
+        local y = datayvalue(ds$,i)
+        local F = AmplitudePlot/4
+        If (datayvalue(dI$,i) > Data_lim) then
+            !MSymb$='cross'
+            MSymb$='circle'
+            F=F*2.
+        Else
+            MSymb$='fcircle'
+            cnt = cnt+1
+        End If
+        MSzeI=MSze*(datayvalue(dI$,i)/dMaxInt)*F
+        If(MSzeI < 0.3) then 
+            MSzeI=0.3
+        End If
+        local Cscale = (dataxvalue(dt$,i)-dmin)/DDx
+        amove xg(x) yg(y)
+        Clr(Cscale)
+        !
+        marker MSymb$ MSzeI  ! 
+    next i
+    set color black
+    amove xg(xgmin)+0.2 yg(ygmin)+0.2
+    write "pass:" cnt
+end sub
+
+amove HorOff VerOff+h+Z+2*bsh+2.*Z1+fontSz
+write label$  "; ATRI-D," EventNr " sources, limiting \chi^2 to <" Data_lim
+
+amove HorOff VerOff+h+Z+bsh ! (time,h) ---------------------------------------------------
+begin graph
+   size B+Z Z1
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis min zMin max zMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
+      data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c9    ignore 2
+   ! d4 marker cross msize 0.2 color blue
+end graph
+dmax = dmaxx(d3)
+dmin = dminx(d3)
+dMinInt = dminy(d5)
+dmaxInt = dmaxy(d5)
+!write dMinInt dMaxInt
+IntCslOff = dMinInt/2.
+2Dtime(d3,d4,dmin,dmax,d5)
+
+if(Z>0) then   
+   amove HorOff VerOff+h  ! (E-W,h) -------------------------------
+   begin graph
+      size B Z
+      vscale 1
+      hscale 1
+      xaxis min xMin max xMax ! hei fontSz nofirst nolast ! dticks  1 dsubticks .2 hei fontSz nofirst ! length=7
+      yaxis min zMin max zMax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
+      xlabels off
+      data filedat$ d3=c2,c1 d4=c3,c5  d5=c2,c9    ignore 2
+   end graph
+   2Dtime(d3,d4,dmin,dmax,d5)
+    
+   amove HorOff+b VerOff   ! (h,N-S) -----------------------------
+   begin graph
+      size Z H
+      vscale 1
+      hscale 1
+      xaxis min zMin max zMax hei fontSz nofirst !  dticks  1 dsubticks .2  ! length=7
+      yaxis min yMin max yMax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
+      ylabels off
+      data filedat$ d3=c2,c1 d4=c5,c4  d5=c2,c9    ignore 2
+   end graph
+   2Dtime(d3,d4,dmin,dmax,d5)
+end if
+
+amove HorOff VerOff     ! (E-W,N-S) ---------------------------
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min xMin max xMax hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
+   yaxis min yMin max yMax hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
+   !  yaxis  min 0 max 2e-8  hei fontSz ! dticks 5 dsubticks 1
+   axis grid
+   ticks color grey40  lstyle 2
+   xticks length .3
+   yticks length .3
+   xsubticks length .1
+   ysubticks length .1
+   data filedat$ d3=c2,c1 d4=c3,c4  d5=c2,c9 ignore 2
+   !d5 smoothm  line lwidth 0.25 color green
+end graph
+2Dtime(d3,d4,dmin,dmax,d5)
+   
+if(Z>0) then   ! plot colorpalette
+    x0 = HorOff+0.2+B+fontSz/2.
+    y0 = VerOff+0.7+h
+    !x0 = 4.+B
+    !y0 = 5.+h
+    Leng = Z-1
+    ClrPltt(x0,y0,Leng,Dmin,Dmax)
+end if
+
+amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------------
+begin graph
+   size B+Z z1
+   vscale 1
+   hscale 1
+     data filedat$   d5=c2,c9 ignore 2
+   dMin = dMinInt
+   dMax = dmaxy(d5)+dMin
+   !If(dMax>1.E5) then dMin=1.0
+   If(dMin>1.) then 
+      dMin=dMinInt
+   Else If (dMin>=0.3) then
+      dMin=0.3
+   Else If (dMin>=0.1) then
+      dMin=0.1
+   Else If (dMin>=0.03) then
+      dMin=0.03
+   Else  dMin=0.01    
+   xaxis log min dMin max dMax ! hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
+   yaxis log min 0.8 hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
+   let d6 = hist d5 step dMin !!!dm [from x1] [to x2] [bins n] [step n]
+   d6 line hist
+end graph
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set hei fontSz
+set just CC 
+amove HorOff+0.5*b  VerOff-1.7*fontSz
+text Easting [km]
+if(Z>0) then   
+   amove HorOff+0.5*z+B  VerOff-1.7*fontSz
+   text Height [km]
+end if
+amove HorOff+0.5*(B+z)  VerOff+h+z+bsh-1.7*fontSz
+!text time [ms] (t_offst
+write "time [ms] (+" t_offst " [ms])"
+
+amove HorOff-bsh VerOff+0.5*h
+begin rotate 90
+   text Northing [km]
+   rmove 0.5*h+Z/2 0 
+   if(Z>0) then   
+       text Height [km]
+   end if
+   rmove Z/2+bsh+Z1/2 0
+   text Height [km]
+end rotate
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "SrcImg"   ! +"-"+file$
+translate 0 2
+!end rotate

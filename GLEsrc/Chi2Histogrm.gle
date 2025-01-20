@@ -1,0 +1,46 @@
+size 30 12
+set font pstr fontlwidth 0.1 hei 0.7 just CC  
+W=25 ! Width of panel
+H=8  ! Heigth of panel
+x_off=4
+y_off=3
+dy=2
+dx=1
+file$='files/Bb'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+filePreamb$=file$
+!--------------------------------------------------------------------
+
+
+amove x_off y_off
+begin graph
+   size W H
+   noBox
+   vscale 1
+   hscale 1  
+   xaxis !min 0. max 100 !dticks 20 dsubticks 5
+   !xlabels off
+   yaxis !min 0.7 max 1000 !dticks 5 dsubticks 1
+   data filePreamb$+'.dat' d1=c1,c7  ignore 2
+   let d2 = hist d1 step 0.1
+   d2 line lwidth 0.05   color blue
+   let d9=1
+   d9 line lstyle 1 lwidth 0.02 color black
+end graph
+begin key
+   nobox 
+   position tr
+   text "Source Quality" line color blue lstyle 1 lwidth 0.05
+End key
+set just CC 
+amove x_off-1.5 y_off+H/2
+begin rotate 90
+text Frequency
+end rotate
+
+!---------------------------------------------------------------------
+
+
+

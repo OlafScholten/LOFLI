@@ -49,7 +49,7 @@ begin graph
    hscale 1
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
    !xlabels off
-   yaxis log !min 0.3  !max +105 nofirst
+   yaxis log ! min 0.1  !max +105 nofirst
    data dfileang$ d1=c1,c7 d12=c1,c11 d13=c1,c15  ignore 1
    If N_slice > N_max Then
       d13 marker dot  msize DotSz color gold

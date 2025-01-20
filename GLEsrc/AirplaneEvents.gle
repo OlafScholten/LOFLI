@@ -1,0 +1,330 @@
+fontSz=5.0
+bsh=2.5*fontSz    ! 1.5
+HorOff=1.5+bsh
+VerOff=2.0+bsh
+B=80 ! size of picture
+!size   HorOff+B+bsh VerOff+B+6*bsh+B/2+B/2 ! ----------------------------
+size   HorOff+B+3*bsh+B VerOff+B+3*bsh ! ----------------------------
+!
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+include "IntfBox.gle"
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+!
+Lwidth_def=0.2
+set lwidth Lwidth_def
+set font pstr
+set hei fontSz
+set just cc
+!
+MinMSze=0.3
+AmplitudePlot=10  ! in units of fonsize
+MSymb$='otimes'
+FactAmp=AmplitudePlot/4.  ! to keep the size of the dot for amplitude=10 independent of AmplitudePlot
+!
+!Pitch is the angle that the nose (the longitudinal axis) forms with the horizon. If the nose is pointed at the horizon, the pitch is 0°; if it's pointed straight up, the pitch is 90°; and if it's pointed straight down, the pitch is -90°.
+! seems to be of order 1 or 2 degrees, not sure though.
+! 1 deg moves tail down w.r.t. engine by 0.7 m
+!Heading (sometimes called "yaw angle") is the horizontal direction that the nose is pointing, measured clockwise from true north.
+!Bank angle (sometimes called "roll angle") is the amount that the aircraft would have to roll (rotate around its longitudinal axis) in order to bring the wings level (which is to say, bring the lateral axis parallel with the horizon), with the top side of the aircraft facing above rather than below the horizon.
+!The bank angle required to conduct a turn at a specific rate is directly proportional to True Airspeed (TAS). The approximate bank angle required to accomplish a coordinated rate one turn (3°/second) can be calculated by dividing the TAS (in knots) by 10 and then adding 7.
+!  120knots= 222.2400km/h
+!  volgens plaatje zou dit 14 graad moeten zijn
+BankAng=0  !14*pi/180
+L_planeshift=-5  ! shift of the plane in the longitudinal direction {m} w.r.t. detected sources
+!
+labl$='All-sorted-'
+if(nargs() > 0 ) then 
+    labl$=arg$(1)
+end if
+DataFile$=labl$+"CorrectedSources.dat"    ! DLsIntfSpecPolrz_d.dat 
+   fopen DataFile$ inchanw read
+   freadln inchanw  N_sources x_cen y_cen z_cen Size_m
+!
+!Size_m=64.8  ! Wingspan
+!Size_m=73.9  ! Length plane
+!x_cen=37
+
+x_cen=x_cen-Size_m/2.
+PlaneDir$='..'   
+!
+sub 2Dtime dtI$ ds$ dmin dmax  dMaxInt
+   local DDx = dmax-dmin
+   for i = 1 to ndata(dtI$)
+      local x = dataxvalue(ds$,i)
+      local y = datayvalue(ds$,i)
+      If (AmplitudePlot=0) then
+         MSzeI=MSze
+      Else
+         MSzeI=sqrt(datayvalue(dtI$,i)/dMaxInt)*FactAmp ! dMinInt
+         If(MSzeI < 0.3) then 
+            MSzeI=0.3
+         End If
+      End If
+      local Cscale = (dataxvalue(dtI$,i)-dmin)/DDx
+      amove xg(x) yg(y)
+      Clr(Cscale)
+      marker MSymb$ MSzeI  ! 
+   next i
+   set color black
+   set lwidth Lwidth_def
+end sub
+!
+sub 2Dtimexy dtI$ dx$ dy$  dMaxInt dc$
+   local dmax=3
+   local dmin=-3
+   local DDx = dmax-dmin
+   for i = 1 to ndata(dtI$)
+      local x = datayvalue(dx$,i)
+      local y = datayvalue(dy$,i)
+!      local pos = datayvalue(dc$,i)
+      If (AmplitudePlot=0) then
+         MSzeI=MSze
+      Else
+         MSzeI=sqrt(datayvalue(dtI$,i)/dMaxInt)*FactAmp ! dMinInt
+         If(MSzeI < 0.3) then 
+            MSzeI=0.3
+         End If
+      End If
+      local Cscale = (datayvalue(dc$,i)-dmin)/DDx
+      amove xg(x) yg(y)
+      Clr(Cscale)
+      marker MSymb$ MSzeI  ! 
+   next i
+   set color black
+   set lwidth Lwidth_def
+end sub
+
+!Center picture, in airplane centered coordinates, with 0 at tail tip, in [m] at 
+!Coordinates of middle left side picture, in airplane centered coordinates, with 0 at tail tip, in [m] at 
+!x_cen=-5.5
+!y_cen=0
+!z_cen=0
+Size_plot=B
+!Size_m=10
+Plot_Scale=Size_plot/Size_m  ! convert m to plot-size
+!------------------------------     Top view
+! put the background picture of the airplane
+hOS=75.8  ! width of the picture in [m], plane= 73.9 m end of the tail wings is at 0.7, nose of the plane at hos-0.7
+! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove HorOff VerOff
+      Box Size_plot Size_plot
+   End Path
+   amove HorOff+(-x_cen-0.7+L_planeshift)*Plot_Scale VerOff+Size_plot/2+(-hos/2+4.75-y_cen)*Plot_Scale
+   postscript 'Boeing_777_top.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+End Clip ! -----------------
+
+!
+amove HorOff VerOff
+begin graph
+   size Size_plot Size_plot
+   vscale 1
+   hscale 1
+! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+   xaxis min x_cen max Size_m+x_cen hei fontSz !dticks  10 ! dsubticks .2  ! length=7
+   yaxis min y_cen-Size_m/2 max y_cen+Size_m/2 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   !data events.dat  d3=c2,c6 d4=c3,c4 
+   !data DataFile$ d3=c2,c6 d4=c3,c4 ignore 1
+   data DataFile$ d6=c2,c6 d1=c0,c3 d2=c0,c4 d3=c0,c5 d8=c0,c8 ignore 1
+   y2labels on
+   !x2labels on
+   let d9=0.
+   d9 line
+!   let d8=32.4
+!   d8 line
+end graph
+!dmax = dmaxx(d3)  ! time v.s. I
+!dmin = dminx(d3)  ! time
+dmaxInt = dmaxy(d6)
+2Dtimexy(d6, d1, d2, dmaxInt, d8)
+!2Dtime(d3, d4, dmin, dmax, dmaxInt)
+!     dt$ ds$ dmin dmax dI$
+!
+set just tl
+amove HorOff+fontSz  VerOff+Size_plot-fontSz
+text top view
+set just cc
+amove HorOff+B/2  VerOff-2*fontSz
+text Along [m]
+amove HorOff-2*fontSz  VerOff+B/2
+begin rotate 90
+   text Transverse [m]
+end rotate 
+!
+!------------------------------
+!
+set hei fontSz/3
+set just br
+set color darkmagenta
+amove HorOff+B-fontSz/5 VerOff+fontSz/5
+begin box fill lightyellow add 0.1 round .3
+   text https://commons.wikimedia.org/w/index.php?curid=17277417
+end box
+set hei fontSz
+set just cc
+set color black
+!---------------------------------------
+!
+amove HorOff VerOff+Size_plot+bsh*3/4
+begin graph
+   size Size_plot Size_plot/4
+   vscale 1
+   hscale 1
+   xaxis min -325 max -25 hei fontSz nolast !dticks  10 ! dsubticks .2  ! length=7
+   yaxis min -2.5 max 2.5 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   ylabels off
+   data DataFile$ d6=c2,c6  d2=c0,c2   d8=c0,c8 ignore 1
+end graph
+dmaxInt = dmaxy(d6)
+!
+set hei fontSz*3/4.
+set just cr
+amove xg(-325)-fontSz/3 yg(-2)
+write rE
+amove xg(-325)-fontSz/3 yg(-1)
+write rW
+amove xg(-325)-fontSz/3 yg(0)
+write T
+amove xg(-325)-fontSz/3 yg(1)
+write lW
+amove xg(-325)-fontSz/3 yg(2)
+write lE
+set just cl
+amove xg(-25)+fontSz/3 yg(-2)
+write rE
+amove xg(-25)+fontSz/3 yg(-1)
+write rW
+amove xg(-25)+fontSz/3 yg(0)
+write T
+amove xg(-25)+fontSz/3 yg(1)
+write lW
+amove xg(-25)+fontSz/3 yg(2)
+write lE
+set just cc
+2Dtimexy(d6, d2, d8, dmaxInt, d8)
+amove HorOff+Size_plot-fontSz  VerOff+Size_plot+bsh*3/4-fontSz*3/4
+   text t [ms]
+!
+!------------------------------
+VerOff=VerOff
+HorOff=HorOff+Size_Plot+2*bsh
+!------------------------------     Front view
+!
+! put the background picture of the airplane
+hOS=67.0  ! width of the picture in [m], wingspan plane= 64.8 m picture is about 66.0
+! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+!amove HorOff+((B-HOS)/2 VerOff+(B-hos)/2+4.25-5
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove HorOff VerOff
+      Box Size_plot Size_plot/2
+   End Path
+amove HorOff+((Size_m-HOS+0.4)/2-y_cen)*Plot_Scale VerOff+(Size_m/4-9)*Plot_Scale
+postscript 'Boeing_777_front.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+End Clip ! -----------------
+!
+amove HorOff VerOff
+begin graph
+   size Size_plot Size_plot/2
+   vscale 1
+   hscale 1
+! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+   !xaxis min hos-0.7-B max hos-0.7 hei fontSz*5 dticks  50 ! dsubticks .2  ! length=7
+   xaxis min y_cen-Size_m/2 max y_cen+Size_m/2 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   yaxis min -Size_m/4 max Size_m/4 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   data DataFile$ d6=c2,c6  d2=c0,c4 d3=c0,c5  d8=c0,c8 ignore 1
+   y2labels on
+   x2labels on
+ !  let d5=d2+d1*sin(BankAng)
+   let d5=d3+d2*sin(BankAng)  ! height, corrected for banking angle
+   let d9=0.
+   d9 line
+!   let d8=32.4
+!   d8 line
+end graph
+dmax = dmaxx(d6)  ! time v.s. I
+dmin = dminx(d6)  ! time
+dmaxInt = dmaxy(d6)
+2Dtimexy(d6, d2, d5, dmaxInt, d8)
+!
+set just tl
+amove HorOff+fontSz  VerOff+Size_plot/2-fontSz
+text front view
+set just cc
+amove HorOff+B-3*fontSz VerOff+fontSz
+   text \alpha_{bank}=14^o
+amove HorOff+B/2  VerOff-2*fontSz
+   text Transverse [m]
+amove HorOff-2*fontSz  VerOff+B/4
+begin rotate 90
+   text Upward [m]
+end rotate 
+!------------------------------
+!VerOff=VerOff+Size_Plot+2*bsh+Size_Plot/2+2*bsh
+VerOff=VerOff+Size_Plot/2+2*bsh
+HorOff=HorOff
+!------------------------------     Side view
+!
+! put the background picture of the airplane
+hOS=75.8  ! width of the picture in [m], plane= 73.9 m end of the tail wings is at 0.7, nose of the plane at hos-0.7
+Begin Clip  ! ----------------
+   Begin Path Clip stroke
+      Amove HorOff VerOff
+      Box Size_plot Size_plot/2
+   End Path
+amove HorOff+(-x_cen-0.7+L_planeshift)*Plot_Scale  VerOff+(Size_m/4-HOS/14)*Plot_Scale 
+postscript 'Boeing_777_side.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+End Clip ! -----------------
+!
+amove HorOff VerOff
+begin graph
+   size Size_plot Size_plot/2
+   vscale 1
+   hscale 1
+! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+   !xaxis min hos-0.7-B max hos-0.7 hei fontSz*5 dticks  50 ! dsubticks .2  ! length=7
+   xaxis min x_cen max Size_m+x_cen hei fontSz !dticks  10 ! dsubticks .2  ! length=7
+   yaxis min -Size_m/4 max Size_m/4 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   data DataFile$ d6=c2,c6 d1=c0,c3 d2=c0,c4 d3=c0,c5 d8=c0,c8 ignore 1
+   !d4 marker fcircle
+   ! d4 marker cross msize 0.2 color blue
+   y2labels on
+   x2labels on
+   let d5=d3+d2*sin(BankAng)  ! height, corrected for banking angle
+   let d9=0.
+   d9 line
+!   let d8=32.4
+!   d8 line
+end graph
+!dmax = dmaxx(d6)  ! time v.s. I
+!dmin = dminx(d6)  ! time
+!dmaxInt = dmaxy(d6)
+2Dtimexy(d6, d1, d5, dmaxInt, d8)
+!
+set just tl
+amove HorOff+fontSz  VerOff+Size_plot/2-fontSz
+text side view
+set just cc
+amove HorOff+B/2  VerOff-2*fontSz
+   text longitudinal [m]
+amove HorOff-2*fontSz  VerOff+B/4
+begin rotate 90
+   text Upward [m]
+end rotate 
+!------------------------------
+!
+!
+
+translate -0. -0.5
+include note.gle
+@note "Airplane"
+translate 0 2
+
