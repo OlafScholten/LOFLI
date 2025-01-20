@@ -35,7 +35,7 @@ Subroutine InterferometerRun
    character(len=5) :: txt
    character(Len=1) :: Mark
    Character(LEN=lnameLen) :: lname
-   Real(dp) :: StartTime_ms
+   Real(dp) :: StartTime_ms, GridVolume(1:3), BoxFineness
    Integer :: Date_T(8)
    Character*7 :: PreAmble
    Real(dp), external :: tShift_ms
@@ -49,27 +49,31 @@ Subroutine InterferometerRun
    ! Get grid:
    Call GetMarkedLine(Mark,lname)
    write(2,"(A)") 'Input line-2: "'//Mark//'|'//TRIM(lname)// &
-      '" !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing)'
-   Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
-   If(nxx.ne.0) then
-      write(2,*) 'reading error in 2nd line:'
-      stop 'Interferometry; reading error'
-   Endif
+      '" !  Q/Polar(Phi,Th,R)/D/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing); for Q&D option: Fineness, Volume'
+   GridVolume(1:3)=0.     ! used externally set voxel and grid size
+   BoxFineness=0.
    SELECT CASE (Mark(1:1))
       CASE("P")  ! polar option is selected
          Polar=.true.
+         Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
+      CASE("Q")  ! polar option is selected
+         Polar=.true.
+         Read(lname,*,iostat=nxx) BoxFineness, GridVolume(1:3)
       CASE("C")   ! Cartesian option
          Polar=.false.
+         Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
+      CASE("D")   ! Cartesian option
+         Polar=.false.
+         Read(lname,*,iostat=nxx) BoxFineness, GridVolume(1:3)
       CASE DEFAULT
          Polar=.true.
+         Read(lname,*,iostat=nxx) N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
          If(d_loc(1).gt.0.5) Polar=.false.
    End SELECT
-   !d_loc(1)=d_N  ;  d_loc(2)=d_E   ;  d_loc(3)=d_h
-   N_pix(:,1)=-N_pix(:,2)
-   If(polar) then
-      write(2,*) 'Polar coordinates used for grid!!'
-      d_loc(1)=d_loc(1)*pi/180.   ! convert to radian
-      d_loc(2)=d_loc(2)*pi/180.   ! convert to radian
+   write(2,*) 'Mark:',mark, ', Fineness:', BoxFineness, GridVolume(1:3), polar, N_pix(1,2), d_loc(1)
+   If(nxx.ne.0) then
+      write(2,*) 'reading error in 2nd line:'
+      stop 'Interferometry; reading error'
    Endif
    !
    ! Start with interferometry setup
@@ -97,7 +101,7 @@ Subroutine InterferometerRun
    EndIf
    !
    NrSlices=1  !  depreciated, Dec 2021; used in making summed traces in 'EIAnalyzePixelTTrace' and in 'OutputIntfSlices'
-   SliceLen=SumWindw/NrSlices ! same as NrSlices
+   SliceLen=SumWindw/NrSlices ! same as NrSlices, depreciated
    !
    !write(2,*) '!InterferometerRun;NrPixSmPowTr:', NrPixSmPowTr
    write(2,"(A,I5,A,I5,A,F6.3)") 'Adjusted TRI-D window, SumStrt=',SumStrt, ', SumWindw=', SumWindw, ', AmpltPlot=', AmpltPlot
@@ -127,36 +131,11 @@ Subroutine InterferometerRun
    !
    If(NoiseLevel.lt.0) NoiseLevel=0.2
    !
-   ! ----------------------------------------------------
-   ! Extract polar coordinates;  1=N=phi; 2=E=theta; 3=h=Radial distance
-   ! Check limits on ranges      N_hlow, N_Eup, N_Elow
-   write(2,*) 'Central Carthesian coordinates (N,E,h)=',CenLoc(:)
-   If(polar) then
-      Call Carth2Pol(CenLoc,CenLocPol)
-      !CenLocPol(3)=sqrt(SUM(CenLoc(:)*CenLoc(:)))  ! distance [m]    ;h
-      !CenLocPol(2)=asin(CenLoc(3)/CenLocPol(3))    ! elevation angle=theta [radian]  ;E range: 0^o< th <80^o
-      !CenLocPol(1)=atan2(CenLoc(2),CenLoc(1))      ! phi [radian]    ;N
-      write(2,*) 'Central polar coordinates (R,th,ph)=',CenLocPol(3),CenLocPol(2)*180./pi,CenLocPol(1)*180/pi
-      ! check ranges:
-      If(CenLocPol(3)+N_pix(3,1)*d_loc(3) .lt. 0) N_pix(3,1)= 1-CenLocPol(3)/d_loc(3) ! negative number generally ! 1-: not to have it ridiculously close
-      If(CenLocPol(2)+N_pix(2,1)*d_loc(2) .lt. 0) N_pix(2,1)= -CenLocPol(2)/d_loc(2) ! negative number generally
-      If(CenLocPol(2)+N_pix(2,2)*d_loc(2) .gt. pi*4/9.) N_pix(2,2)= (pi*4/9.-CenLocPol(2))/d_loc(2) ! pos number generally
-      write(2,*) 'distance range:',CenLocPol(3)+N_pix(3,1)*d_loc(3),CenLocPol(3)+N_pix(3,2)*d_loc(3)
-      write(2,*) 'Elevation angle range:', (CenLocPol(2)+N_pix(2,1)*d_loc(2))*180./pi , (CenLocPol(2)+N_pix(2,2)*d_loc(2))*180./pi
-      write(2,*) 'Azimuth angle range:', (CenLocPol(1)+N_pix(1,1)*d_loc(1))*180./pi, (CenLocPol(1)+N_pix(1,2)*d_loc(1))*180./pi
-   Else
-      If(CenLoc(3)+N_pix(3,1)*d_loc(3) .lt. 0) N_pix(3,1)= -CenLoc(3)/d_loc(3) ! negative number generally
-   Endif
-   !N_pix(2,1)=N_Elow   ;  N_pix(3,1)=N_hlow  ;  N_pix(2,2)=N_Eup
-   write(2,*) 'N_hlow, N_Eup, N_Elow',N_pix(:,1), N_pix(:,2)
-   !
-   !trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat'
-   !------------------------------------
    ! main loop over direction antennas
 !   If(Dual) Then
       Write(2,*) 'performing E-field Beamforming, TRI-D; Slicing length=', N_smth
       !write(2,*) '!InterferometerRun;NrPixSmPowTr2:', NrPixSmPowTr
-      Call EI_run
+      Call EI_run(GridVolume, BoxFineness)
       PreAmble='EI'
 !   Else
 !      Write(2,*) 'performing even/odd antenna-Signal Interferometry'
@@ -171,10 +150,10 @@ Subroutine InterferometerRun
    !
    !trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat'
    !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
-   write(2,*) '!PlotAllCurtainSpectra=', SumStrt,SumWindw, CurtainHalfWidth
-   If(CurtainHalfWidth.gt.0) then
-      !read(lname,*,iostat=nxx) StartTime_ms, SourceGuess(:,i_chunk), CurtainWidth !, PeakPos(1), PeakPos(2)  ! Start time offset = 1150[ms] for 2017 event
-      write(2,*) 'PlotAllCurtainSpectra:',CurtainHalfWidth
+   !write(2,*) '!PlotAllCurtainSpectra=', SumStrt,SumWindw, CurtainHalfWidth
+   If((CurtainHalfWidth.gt.0) .and. (NrPixSmPowTr.lt.10) ) then
+       write(2,*) 'PlotAllCurtainSpectra: for a CurtainHalfWidth of',CurtainHalfWidth, &
+            ' around the center of the windos;,', NrPixSmPowTr
       Flush(unit=2)
       PeakNrTotal=2
       Peak_eo(1)=0   ; Peak_eo(2)=1  ! only the i_eo=0 peaks are used for curtainplotting
@@ -190,9 +169,10 @@ Subroutine InterferometerRun
    If(NrSlices.gt.1 .and. Polar) Call GLEplotControl(PlotType=TRIM(PreAmble)//'Track', &
             PlotName=TRIM(PreAmble)//'Track'//TRIM(OutFileLabel), PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
    Call GLEplotControl(PlotType=TRIM(PreAmble)//'Contour', PlotName=TRIM(PreAmble)//'Contour'//TRIM(OutFileLabel), &
-            PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel), Submit=.true.)
+            PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel))
+   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecWin'//'*.csv')
    Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpec'//'*.csv')
-   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//'*.z')
+   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//'*.z', Submit=.true.)
    !
    write(2,*) 'NewCenLoc', NewCenLoc, ' , ChainRun=', ChainRun
    If(ChainRun.ne.0) Call ChainRuns(NewCenLoc)

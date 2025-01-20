@@ -1,10 +1,6 @@
-Subroutine LMA_Layout(DistLMA,LMAAnt) !
-! called from 'SourceFind' with peak nr set to 1 or 2 as well as parities
-!  Find an initial guess for the source position through a grid search.
-!  Works only in imaging mode since covariance matrix is stored in this mode only. For this
-!     the link " X(  XIndx(i,i_Peak) ) = SourcePos(FitPos(i),i_Peak)" is not implemented.
-   !use Chunk_AntInfo, only : CTime_spectr, Ant_pos, Time_dim, Ant_Stations, Ant_IDs, Ant_nr
-   !use ThisSource, only : T2_dim
+Subroutine LMA_Layout(DistLMA,LMAAnt, NoLMAantennas) !
+! Constructs layout of antennas to use in an LMA-like search for the initial guess of the peak positions.
+! Needs to be called once before call to LMA_Interfer where actual guess is made
    use ThisSource, only : PeakNrTotal, Peak_eo  ! Nr_Corr, PeakNrTotal, PeakPos, Peak_eo
    !use ThisSource, only : SourcePos
    use Chunk_AntInfo, only : Ant_IDs, Ant_nr, Ant_pos, RefAnt
@@ -13,6 +9,7 @@ Subroutine LMA_Layout(DistLMA,LMAAnt) !
    Implicit none
    Real(dp), Intent(out) :: DistLMA
    Integer, intent(out) :: LMAAnt(1:3,0:1)
+   Logical, intent(out) :: NoLMAantennas
    integer :: i_chunk, i_peak, i_eo, i_ant
    integer :: Peak_nr
    !Real(dp) :: RDist, D, D0=6.0d4, H0=1.0d4
@@ -29,6 +26,7 @@ Subroutine LMA_Layout(DistLMA,LMAAnt) !
    ! - really only a single source position is searched for, i.e. the same for all peaks
    !Production=.false.  ! produce printout & stop
    i_chunk=1
+   NoLMAantennas=.false.
    ! find three antennas that have largest sum distance, supposedly a best triangle
    ! other possibility: find largest spanned area
    !
@@ -37,7 +35,10 @@ Subroutine LMA_Layout(DistLMA,LMAAnt) !
    goto 8
  9 continue ! increase search distance for LMA antennas
    If(.not.production) Write(2,*) i_eo,', cos_LMA(i_eo):', cos_LMA(i_eo),D_LMA(i_eo),', antennas:',LMAAnt(1:3,i_eo)
-   If(i_sel.eq.i_sel_Max) stop '(i_sel = i_sel_Max)'
+   If(i_sel.eq.i_sel_Max) Then
+      NoLMAantennas=.true.
+      Return
+   EndIf
    DistLMA=DistLMA+10.  ! Keep antennas within LMA distance [m] only from reference antenna
    If(.not.production) Write(2,*) 'nr antennas=',i_sel,i_eo,', increase LMA-search distance to:',DistLMA
    flush(unit=2)
@@ -128,7 +129,7 @@ Subroutine LMA_Interfer(LMAAnt,Thet_LMA,Phi_LMA, NoSourceFound) ! (LMA_pos)
    !Real(dp) :: cos_LMA(0:1), D_LMA(0:1), Dist
    Real(dp) :: D_ab, D_ac, D_bc, x_ab, x_ac, x_bc, y_ab, y_ac, y_bc, cos_a, cos_b, cos_c, cos_max
    Integer :: i_a, i_b, i_c, i_LMA
-   real(dp) :: phi(1:2), thet(1:2), cos_th, dt_ab, dt_ac, dx, dy, scl
+   real(dp) :: phi(1:2), thet(1:2), cos_th, dt_ab, dt_ac, dx, dy, scl, Num, Denom
    !
    ! Basic assumptions:
    ! - really only a single source position is searched for, i.e. the same for all peaks
@@ -175,11 +176,14 @@ Subroutine LMA_Interfer(LMAAnt,Thet_LMA,Phi_LMA, NoSourceFound) ! (LMA_pos)
          dx=dt_ac*x_ab-dt_ab*x_ac
          dy=dt_ab*y_ac-dt_ac*y_ab
          Phi(i_Peak)=atan2(dy,dx)
-         cos_th=c_mps*sample*dt_ab/(x_ab*sin(phi(i_Peak))+y_ab*cos(phi(i_Peak)))
+         Num=c_mps*sample*dt_ab
+         Denom=x_ab*sin(phi(i_Peak))+y_ab*cos(phi(i_Peak))
+         cos_th=Num/Denom
          If(.not.production) write(2,*) 'LMA: phi, cos_th:',phi(i_Peak)*180./pi, cos_th &
             , ', direction:',H0*cos_th*sin(phi(i_Peak)), H0*cos_th*cos(phi(i_Peak)), H0*sqrt(1.d0-cos_th**2)
          !   write(2,*) 'dx,dy',dx,dy,dt_ac*x_ab, dt_ab*x_ac, dt_ab*y_ac, dt_ac*y_ab, x_ab*sin(phi(i_Peak)),y_ab*cos(phi(i_Peak))
-         If(cos_th .gt.  1.1 .or. cos_th .lt. -0.99) Then
+         !write(2,*) 'LMA_Interfer:',cos_th,Num,Denom
+         If((Abs(Denom) .lt. tiny(Denom)) .or. (cos_th .lt. -0.99) .or. (cos_th .gt. 1.1)) Then
             !D_ab=sqrt(x_ab**2+y_ab**2)  ! [m]
             !write(2,*) 'ab:',c_mps*sample*dt_ab,D_ab,x_ab*cos_th*sin(phi(i_Peak))+y_ab*cos_th*cos(phi(i_Peak))
             !D_ac=sqrt(x_ac**2+y_ac**2)  ! [m]
@@ -247,15 +251,17 @@ Subroutine SourceTryal_v2(DistMax,i_peakS, NoSourceFound)
    Real(dp) :: KalSource(0:3),KalCoVariance(0:3,0:3), ErrMax
    Real(dp) :: DistLMA,Thet_LMA,Phi_LMA,cth,sth,cph,sph,dD
    Integer, save :: cyc=0
+   Logical, save :: NoLMAantennas
    !Real(dp), external :: SubRelDist
    !        X(  XIndx(i,i_Peak) ) = SourcePos(FitPos(i),i_Peak)
    !Production=.false.  ! produce printout & stop
    !
-   NoSourceFound=0
+   NoSourceFound=1
    Do i_Peak=1,PeakNrTotal
       SourceTrPos(1:3,i_peak)=SourcePos(1:3,i_Peak)
    Enddo
-   If(i_peakS.eq.1) Call LMA_Layout(DistLMA,LMAAnt)
+   If(i_peakS.eq.1) Call LMA_Layout(DistLMA,LMAAnt, NoLMAantennas)
+   If(NoLMAantennas) return
    Call LMA_Interfer(LMAAnt,Thet_LMA,Phi_LMA, NoSourceFound)  ! changes SourcePos
    Do i_Peak=1,PeakNrTotal
       SourcePos(1:3,i_Peak)=SourceTrPos(1:3,i_peak)
@@ -336,6 +342,7 @@ End Subroutine SourceTryal_v2
 !=====================================
 !=====================================
 Subroutine SourceTryal_v1(DistMax,i_peakS, NoSourceFound)
+!  Obsolete ??
 !Subroutine SourceTryal(DistMax,i_peakS, NoSourceFound)
 !   Integer, intent(in) :: i_peakS
 !   Integer, Intent(out) :: NoSourceFound
@@ -557,6 +564,7 @@ End Subroutine SourceTryal_v1
 !=====================================
 !=====================================
 Subroutine SourceTryal_v0(DistMax,i_peakS, NoSourceFound)
+! Obsolete ??
 !   Integer, intent(in) :: i_peakS
 !   Integer, Intent(out) :: NoSourceFound
 !  Find an initial guess for the source position through a grid search.
@@ -915,6 +923,8 @@ Subroutine SearchWin(i_ref, i_ant, i_chunk, SrcPos, EEst)
    !   write(2,*) i_ref,i_ant,'SearchWin:',sqrt(EEst),MaxTimeWin,Da,Dr,Er1,Safety, Sigma_AntT
    !EndIf
    !EEst=sqrt(EEst)  ! Estimate of the error in [samples]
+   !write(2,*) 'SearchWin:', EEst,MaxTimeWin, da, dr, Er1, Jac(1:3)
+   !Flush(unit=2)
    EEst=MIN(sqrt(EEst),MaxTimeWin)  ! Reduction of MaxTimeWin due to the fact that the actual window is larger than SearchRange
 End Subroutine SearchWin
 !========================================

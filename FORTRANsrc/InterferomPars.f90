@@ -63,7 +63,8 @@ Module Interferom_Pars
    Real(dp),save :: StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
    Real(dp),save :: dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
    Complex, save :: Stk_NEh(1:3,1:3)  ! Not double; Stokes parameters in Cartesian frame
-   Real, save :: PolZen(3), PolAzi(3), PolMag(3), PoldOm(3) ! analyzed polarization direction, from "PolTestCath"
+   Real(dp), save :: PolZen(3), PolAzi(3), PolMag(3), PoldOm(3) ! analyzed polarization direction, from "PolTestCath"
+   !Real(dp), save :: rPolZen(1:3), rPolAzi(1:3), rPolMag(1:3), cPolZen, cPolAzi, cPolMag  ! obsolete
    Logical, save :: RefinePolarizObs ! Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.
    Real(dp),save ::  BoundingBox(1:2,1:4)
    !Real(dp) :: EleAng,AziAng  elevation & azimuth
@@ -128,8 +129,8 @@ Module Interferom_Pars
          Allocate( TIntens000(1:SumWindw) )  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
          Allocate( TIntens_pol(1:3,-N_smth:N_smth) )  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
          Call SetSmooth(N_Smth, ParabolicSmooth, Smooth)
-         Write(2,"(1x,A,I3,A,I3,I3,A,3F6.3)") 'Width smoothing fie=', N_smth, &
-            '; relative values in range (',N_smth/2-1,N_smth/2+1,') = ',Smooth(N_smth/2-1:N_smth/2+1)/Smooth(0)
+         !Write(2,"(1x,A,I3,A,I3,I3,A,3F6.3)") 'Width smoothing fie=', N_smth, &
+         !   '; relative values in range (',N_smth/2-1,N_smth/2+1,') = ',Smooth(N_smth/2-1:N_smth/2+1)/Smooth(0)
       EndIf
       Call RFTransform_su(IntfDim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
    End Subroutine Alloc_EInterfAll_Pars
@@ -186,10 +187,11 @@ Module Interferom_Pars
       If(FirstTimeInterf) write(2,"('Storing pixel traces takes ',F10.6,' Gbytes')")  &
             NrPixSmPowTr* (N_pix(1,2)-N_pix(1,1)+1.)* (N_pix(2,2)-N_pix(2,1)+1.)* (N_pix(3,2)-N_pix(3,1)+1.)*4./1.E9
       allocate(  RimSmPow(N_pix(3,1):N_pix(3,2)) )
+      Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
       If(NrPixSmPowTr_Previous .ne. NrPixSmPowTr) Then
          write(2,*) '!Reallocate arrays MaxSmPow..', NrPixSmPowTr_Previous, NrPixSmPowTr
-         If( Allocated( MaxSmPowGrd)) DeAllocate( MaxSmPowGrd )
-         Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
+         !If( Allocated( MaxSmPowGrd)) DeAllocate( MaxSmPowGrd )
+         !Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( MaxSmPow)) DeAllocate( MaxSmPow)
          Allocate( MaxSmPow(0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( MaxSmPowLoc)) DeAllocate( MaxSmPowLoc)
@@ -198,6 +200,7 @@ Module Interferom_Pars
          Allocate( Grd_best(1:3,1:N_best,0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( Int_best)) DeAllocate( Int_best)
          Allocate( Int_best(1:N_best,0:NrPixSmPowTr) )  ! keep for possible later use
+         NrPixSmPowTr_Previous=NrPixSmPowTr
       EndIf
    End Subroutine Alloc_EInterfImag_Pars
 ! -----------------------------

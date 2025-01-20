@@ -469,7 +469,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    Character(len=12) :: Lab1  !, Lab2, Lab3, Lab4  Station_name,
    !Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Time_Interval, Sources_TS, Sources_LocNEh(1:3), Sources_AmpNEh(1:3),t_shft
-   Integer :: NConstruct, nxx, i_src
+   Integer :: NConstruct, NCloud, nxx, i_src, i_rep
    Real(dp) :: D, Phi, Thet, Time_width, Space_width, PolSpread, R,Epsln=epsilon(Epsln)
    Character(LEN=180) :: lname
    Real :: x,y,z, RGV(1:3) ! Random Gaussian distributed Vector
@@ -488,30 +488,63 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
       If((Lab1(1:3) .eq. 'Rep') .or. (Lab1(1:3) .eq. 'rep')) Then  ! Repetitive
          Read(lname,*,IOSTAT=nxx) Lab1, Time_Interval, NConstruct
          If(nxx.ne.0) then
-            Write(2,*) 'Expected: "Lab1, Time_Interval, NConstruct" but got ',TRIM(lname)
+            Write(2,*) 'Expected: "Rep..., Time_Interval, NConstruct" but got ',TRIM(lname)
             stop
          Endif
+         !
          Call GetNonZeroLine(lname)
-         Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
-         If(nxx.ne.0) then
-            Write(2,*) 'Expected: "Sources_TS[samples], Sources_LocNEh(1:3)[m], Sources_AmpNEh(1:3)" but got ' ,TRIM(lname)
-            stop
-         Endif
-         Call Convert2m(Sources_LocNEh)
-         If(NConstruct.gt.(SrcNrMax-SrcNr)) NConstruct=(SrcNrMax-SrcNr)
-         Do i_src=0,NConstruct-1
-            SrcNr=SrcNr+1
-            SourcesListTS(SrcNr)=Sources_TS + i_src*Time_Interval
-            SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)
-            SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
-         EndDo
-         cycle
-      EndIf
+         Read(lname,*,IOSTAT=nxx) Lab1
+         If((Lab1(1:3) .eq. 'Clo') .or. (Lab1(1:3) .eq. 'clo')) Then ! Cloud
+            Read(lname,*,IOSTAT=nxx) Lab1, Time_width, Space_width, PolSpread, NCloud
+            If(nxx.ne.0) then
+               Write(2,*) 'Expected: "Clo..., Time_width[samples], Space_width, PolSpread, NConstruct" but got ',TRIM(lname)
+               stop
+            Endif
+            Call GetNonZeroLine(lname)
+            Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
+            If(nxx.ne.0) then
+               Write(2,*) 'Expected: "Sources_TS[samples], Sources_LocNEh(1:3)[m], Sources_AmpNEh(1:3)" but got ',TRIM(lname)
+               stop
+            Endif
+            Call Convert2m(Sources_LocNEh)
+            If(NCloud*NConstruct.gt.(SrcNrMax-SrcNr)) NCloud=(SrcNrMax-SrcNr)/NConstruct
+            write(2,"(A,I5,A, 3F9.3,A, 3F9.3)") 'Form a cloud of',NCloud,' sources around:', Sources_LocNEh(:)/1000., &
+               '[km] with strength=', Sources_AmpNEh(:)
+            write(2,*) 'Spread in time, pos, pol=',Time_width, Space_width, PolSpread
+            Do i_rep=0,NConstruct-1
+               Do i_src=0,NCloud-1
+                  SrcNr=SrcNr+1
+                  write(2,"(A,F9.1,A)") '   @ central time=',Sources_TS,' samples'
+                  SourcesListTS(SrcNr)=Sources_TS + random_stdnormal()*Time_width
+                  Call random_stdnormal3D(RGV)
+                  SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)+ Space_width*RGV(:)
+                  Call random_stdnormal3D(RGV)
+                  SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:) + PolSpread*RGV(:)
+                  ! write(3,*) i_src,D,SourcesListLocNEh(:,SrcNr) ! just for checking the cloud structure using  Sources_Plots.gle
+               EndDo
+               Sources_TS=Sources_TS + Time_Interval
+            EndDo
+         Else
+            Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
+            If(nxx.ne.0) then
+               Write(2,*) 'Expected: "Sources_TS[samples], Sources_LocNEh(1:3)[m], Sources_AmpNEh(1:3)" but got ' ,TRIM(lname)
+               stop
+            Endif
+            Call Convert2m(Sources_LocNEh)
+            If(NConstruct.gt.(SrcNrMax-SrcNr)) NConstruct=(SrcNrMax-SrcNr)
+            Do i_src=0,NConstruct-1
+               SrcNr=SrcNr+1
+               SourcesListTS(SrcNr)=Sources_TS + i_src*Time_Interval
+               SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)
+               SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
+            EndDo
+            cycle
+         EndIf
       ! check for source cloud
-      If((Lab1(1:3) .eq. 'Clo') .or. (Lab1(1:3) .eq. 'clo')) Then ! Cloud
+      ElseIf((Lab1(1:3) .eq. 'Clo') .or. (Lab1(1:3) .eq. 'clo')) Then ! Cloud
          Read(lname,*,IOSTAT=nxx) Lab1, Time_width, Space_width, PolSpread, NConstruct
          If(nxx.ne.0) then
-            Write(2,*) 'Expected: "Lab1, Time_width[samples], Space_width, PolSpread, NConstruct" but got ',TRIM(lname)
+            Write(2,*) 'Expected: "Clo..., Time_width[samples], Space_width, PolSpread, NConstruct" but got ',TRIM(lname)
             stop
          Endif
          Call GetNonZeroLine(lname)
@@ -536,7 +569,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
             SourcesListTS(SrcNr)=Sources_TS + random_stdnormal()*Time_width
             !SourcesListLocNEh(1,SrcNr)=Sources_LocNEh(1)+ D*(0.5-x)/R
             !SourcesListLocNEh(2,SrcNr)=Sources_LocNEh(2)+ D*(0.5-y)/R
-            SourcesListLocNEh(3,SrcNr)=Sources_LocNEh(3)+ D*(0.5-z)/R
+            !SourcesListLocNEh(3,SrcNr)=Sources_LocNEh(3)+ D*(0.5-z)/R
             Call random_stdnormal3D(RGV)
             SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)+ Space_width*RGV(:)
             Call random_stdnormal3D(RGV)
@@ -544,32 +577,33 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
             ! write(3,*) i_src,D,SourcesListLocNEh(:,SrcNr) ! just for checking the cloud structure using  Sources_Plots.gle
          EndDo
          cycle
+      Else
+         ! Check for single source, otherwise quit
+         Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
+         If(nxx.ne.0) Then
+            exit  ! terminate reading sequence
+         EndIf
+         Call Convert2m(Sources_LocNEh)
+         SrcNr=SrcNr+1
+         SourcesListTS(SrcNr)=Sources_TS
+         SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)
+         SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
       EndIf
-      ! Check for single source, otherwise quit
-      Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
-      If(nxx.ne.0) Then
-         exit  ! terminate reading sequence
-      EndIf
-      Call Convert2m(Sources_LocNEh)
-      SrcNr=SrcNr+1
-      SourcesListTS(SrcNr)=Sources_TS
-      SourcesListLocNEh(:,SrcNr)=Sources_LocNEh(:)
-      SourcesListAmpNEh(:,SrcNr)=Sources_AmpNEh(:)
       ! constants tunes as to have background (sum square freq. spectrum) =1.
       ! source at distance D [km] with intensity=D gives power per 20 samples = 1 = backgrnd
    EndDo
    If(SrcNr.le.0) Then
       write(2,*) 'No valid sources have been entered:',lname
    EndIf !
-   write(2,"(T4,'#',T7,'Dt[smpl]',T18,'t[smpl]',T30,'(N,E,h) [km]', T61,'Ampl(N,E,h)',T87,'I123_TRI-D')")
+   write(2,"(T4,'#',T7,'t_r[ms]',T18,'t[ms]',T30,'(N,E,h) [km]', T61,'Ampl(N,E,h)',T87,'I123_TRI-D')")
    Do i_src=1,SrcNr
       !t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*Refrac/c_mps ! in [ms] due to signal travel distance
       t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*RefracIndex(SourcesListLocNEh(3,i_src))/c_mps ! in [ms] due to signal travel distance
       !write(2,*) i_src,t_shft
       SourcesListTms(i_src)=SourcesListTS(i_src)*Sample_ms+t_shft  ! source time at core
       I123=SUM(SourcesListAmpNEh(:,i_src)*SourcesListAmpNEh(:,i_src))*NrmStI
-      write(2,"(I4,F9.2,F9.1,2x, 3F10.4,2x,3F8.2,2x,F12.2)") i_src,(SourcesListTms(i_src)-SourcesListTms(1))/Sample_ms, &
-         SourcesListTS(i_src), SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src), I123
+      write(2,"(I4,F11.5,F11.5,2x, 3F10.4,2x,3F8.2,2x,F12.2)") i_src,(SourcesListTms(i_src)-SourcesListTms(1)), &
+         SourcesListTS(i_src)*Sample_ms, SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src), I123
    Enddo
    write(2,*) 'Nr of sources=',SrcNr, ', time of first source pulse at the core=',SourcesListTms(1)
    Flush(unit=2)

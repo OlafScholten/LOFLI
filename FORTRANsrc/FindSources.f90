@@ -65,6 +65,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    !integer, external :: XIndx
    !       Initialize
    PulsPosCore=.false.  ! Pulse positions are on the ref. antenna
+   !production=.false.
    !
    Call Find_unique_StatAnt()
    Call GetRefAnt(i_chunk)
@@ -213,6 +214,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                   (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps, FitQual &
                   , Sigma(1:3), N_EffAnt, Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu
                !write(*,*) 'Wu,Wl',Peakpos_0,Wl,Wu
+               !write(2,*) 'before cleanpeak:', i_peakS
                Call CleanPeak(i_eo,Peakpos_0,SourcePos(1,1),Wl,Wu, OutOfRange) ! clean peak only when decent source location was obtained
                PeakNrFound=PeakNrFound+1
                Station_OutOfRange(1:Nr_UniqueStat)=Station_OutOfRange(1:Nr_UniqueStat)+ OutOfRange(1:Nr_UniqueStat)
@@ -312,6 +314,7 @@ Subroutine SourceFitCycle(StatMax,DistMax)
     !
     If(.not. Production) write(2,*) '=== New Round ============================================================'
     !write(2,*) 'Call BuildCC(StatMax,DistMax):',StatMax,DistMax
+    !Flush(unit=2)
     Call BuildCC(StatMax,DistMax)
     !
     FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=4
@@ -380,6 +383,7 @@ Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu, OutOfRange)
    integer, intent(out) :: OutOfRange(1:Station_nrMax)
    Integer :: j_corr, i_chunk=1, i_ant, i_Peak=1, StLoc, i, HW_size=5, Zero_dim, i_eo, i_eo_s,i_eo_f, Wi, i_stat
    Real(dp) :: Rdist,Hann(1:2*Tref_dim)
+   Integer, save :: ErrorCount=0
 
    !write(*,*) i_eo,PeakPos,SourcePos,Tref_dim
    Hann=1.
@@ -412,10 +416,11 @@ Subroutine CleanPeak(i_eo_in,PeakPos,SourcePos,Wl,Wu, OutOfRange)
          StLoc=PeakPos + INT(Rdist) - Peak_Offst(i_Peak) - Wi
          !write(*,*) j_corr,StLoc
          If((StLoc.lt.1).or.(StLoc.gt.Time_dim-Zero_dim)) then
-            write(2,*) 'ERROR, CleanPeak out of bounds',StLoc,Time_dim,', for:', &
-                  j_corr, Ant_Stations(i_Ant,i_chunk),RDist,'[samples]'
+            If(ErrorCount.lt.100) write(2,*) 'ERROR, CleanPeak out of bounds',StLoc,Time_dim,', for:', &
+                  j_corr, Ant_Stations(i_Ant,i_chunk),RDist,'[samples]',PeakPos,SourcePos
             Call Conv_Station_ID2i(Ant_Stations(i_Ant,i_chunk), i_stat)
             OutOfRange(i_stat)=1
+            ErrorCount=ErrorCount+1
             cycle
          Endif
          !If(PeakPos.eq.10657) write(*,*) i_eo,J_corr,i_ant,StLoc

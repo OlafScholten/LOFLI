@@ -45,10 +45,10 @@ Subroutine Carth2Pol(LocCth,LocPol)
    Return
 End Subroutine Carth2Pol
 !------------------------
-Subroutine PixBoundingBox()
+Subroutine GridPhaseChange(RMSW, IO_control)
+! Prepatory work for PixBoundingBox
    ! Check max time shift for neighboring pixels; should ideally differ by 1 sample for neighboring pixels
    ! Calculate approximate bounding box of pixel image
-   ! Setup arrays
    !  Needs
    !     call SelectIntfAntennas  first
    ! ------------------------------------
@@ -57,17 +57,18 @@ Subroutine PixBoundingBox()
    use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
    Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerMx, Nr_IntFerCh
    Use Interferom_Pars, only : CenLoc, CenLocPol, Polar, d_loc, Diff, N_pix
-   Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, FirstTimeInterf
-   Use Interferom_Pars, only : SumStrt, SumWindw, IntfDim, IntfNuDim, IntfLead, IntfBase
+   Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax
+   !Use Interferom_Pars, only : SumStrt, SumWindw, IntfDim, IntfNuDim, IntfLead, IntfBase
    Implicit none
-   !Integer, intent(in) :: i_chunk
+   Real(dp), intent(out) :: RMSW(1:3)
+   Logical, intent(in) :: IO_control
    Real(dp) :: PixLoc(1:3), PixLocPol(1:3), t_shft, RDist
-   Real(dp) :: t_n, t_p, mean, RMS, Err(3), meanW, RMSW, Weight, D
+   Real(dp) :: t_n, t_p, mean, RMS, Err(3), meanW, Weight, D
    Integer :: i, i_ant, j_IntFer, Nr_IntFer
    !
    PixLoc(:)=CenLoc(:)
    xMin=+99999 ; xMax=-99999; yMin=+99999; yMax=-99999; zMin=+99999; zMax=-99999 !; tMin, tMax,
-   Err(:)=0.
+   !Err(:)=0.
    Nr_IntFer=Nr_IntFerCh(i_chunk)
    Do i=1,3
       If(polar) then
@@ -81,11 +82,11 @@ Subroutine PixBoundingBox()
       !write(2,*) 'PixLoc-carthesian',PixLoc(:)
       t_n=0.   ; t_p=0
       Mean=0. ; RMS=0.
-      MeanW=0. ; RMSW=0. ; Weight=0
+      MeanW=0. ; RMSW(i)=0. ; Weight=0
       Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
          i_ant=IntFer_ant(j_IntFer,i_chunk)
          Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
-         t_shft=Rdist - Ant_RawSourceDist(i_ant,i_chunk)
+         t_shft=Rdist - Ant_RawSourceDist(i_ant,i_chunk)    ! units of samples
          Mean=Mean+t_shft
          RMS=RMS + t_shft*t_shft
          if(t_shft.lt.t_n) t_n=t_shft
@@ -93,7 +94,7 @@ Subroutine PixBoundingBox()
          D=sqrt(sum( (PixLoc(1:3)-Ant_pos(1:3,i_ant,i_chunk))**2 ))
          Weight=Weight + 1./D
          MeanW=MeanW+t_shft/D
-         RMSW=RMSW + t_shft*t_shft/(D*D)
+         RMSW(i)=RMSW(i) + t_shft*t_shft/(D*D)
          !write(2,*) i_ant,'t_shft',t_shft, Rdist, Mean/j_IntFer, RMS/j_IntFer, ';' &
          !   , D/1000., Weight/j_IntFer, MeanW/j_IntFer, RMSW/j_IntFer
       EndDo ! j_IntFer
@@ -102,20 +103,91 @@ Subroutine PixBoundingBox()
       RMS=sqrt(RMS-Mean*Mean)
       MeanW=MeanW/Nr_IntFer
       Weight=Weight/Nr_IntFer
-      RMSW=RMSW/Nr_IntFer
-      RMSW=sqrt(RMSW-MeanW*MeanW)/Weight
-      If(FirstTimeInterf) write(2,"(A,i2,2f7.2,A,f6.2,f7.3,A,f9.5,A,3f7.2,A)") 'min & max time shift [samples] per pixel',i, &
-         t_n, t_p,', RMS=', RMS, RMSW, ', for d(i)=',d_loc(i),', d(N,E,h)=',Pixloc(:)-CenLoc(:),'[m]'
-      diff(i) =t_p
-      Err(:)=Err(:) + (Pixloc(:)-CenLoc(:))**2/(RMS*RMS)
+      RMSW(i)=RMSW(i)/Nr_IntFer
+      RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)/Weight  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
+      If(IO_control) write(2,"(A,i2,2f7.2,A,f6.2,f7.3,A,f9.5,A,3f7.2,A)") 'min & max time shift [samples] per pixel',i, &
+         t_n, t_p,', RMS=', RMS, RMSW(i), '%, for d(i)=',d_loc(i),', d(N,E,h)=',Pixloc(:)-CenLoc(:),'[m]'
+      diff(i) =t_p      ! needed to calculate lead-time for complete grid
+      !Err(:)=Err(:) + (Pixloc(:)-CenLoc(:))**2/(RMS*RMS)
       xMin=min(xmin,CenLoc(2)+N_pix(i,1)*abs(CenLoc(2)-PixLoc(2))); xMax=max(xMax,CenLoc(2)+N_pix(i,2)*abs(CenLoc(2)-PixLoc(2)))
       yMin=min(ymin,CenLoc(1)+N_pix(i,1)*abs(CenLoc(1)-PixLoc(1))); yMax=max(yMax,CenLoc(1)+N_pix(i,2)*abs(CenLoc(1)-PixLoc(1)))
       zMin=min(zmin,CenLoc(3)+N_pix(i,1)*abs(CenLoc(3)-PixLoc(3))); zMax=max(zMax,CenLoc(3)+N_pix(i,2)*abs(CenLoc(3)-PixLoc(3)))
       If(-t_n.gt.t_p) diff(i) =-t_n
       PixLoc(i)=CenLoc(i)  ! set back to center for Cartesian coordinates
    Enddo ! i
-   !write(2,*) 'Error ellips (N,E,h)=',sqrt(Err(:)),' [m]'
    If(zMin.lt.0.) zMin=0.
+End Subroutine GridPhaseChange
+!------------------------
+Subroutine PixBoundingBox(GridVolume, BoxFineness)
+   ! Check max time shift for neighboring pixels; should ideally differ by 1 sample for neighboring pixels
+   ! Calculate approximate bounding box of pixel image
+   ! Setup arrays
+   !  Needs
+   !     call SelectIntfAntennas  first
+   ! ------------------------------------
+   use constants, only : dp,pi
+   use DataConstants, only : Time_Dim
+   use Chunk_AntInfo, only : Ant_pos, Ant_RawSourceDist  ! CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr,
+   Use Interferom_Pars, only : i_chunk, IntFer_ant, Nr_IntFerMx, Nr_IntFerCh
+   Use Interferom_Pars, only : CenLoc, CenLocPol, Polar, d_loc, Diff, N_pix
+   Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, FirstTimeInterf
+   Use Interferom_Pars, only : SumStrt, SumWindw, IntfDim, IntfNuDim, IntfLead, IntfBase
+   Implicit none
+   !Integer, intent(in) :: i_chunk
+   Real(dp), intent(in) :: GridVolume(1:3), BoxFineness
+   Real(dp) :: PixLoc(1:3), PixLocPol(1:3), t_shft, RDist
+   Real(dp) :: t_n, t_p, mean, RMS, Err(3), meanW, RMSW(1:3), Weight, D
+   Integer :: i, i_ant, j_IntFer, Nr_IntFer
+   logical :: IO_control
+   !
+   !write(2,*) 'Error ellips (N,E,h)=',sqrt(Err(:)),' [m]'
+   If((GridVolume(1)*GridVolume(2)*GridVolume(3) .gt. 0.1) .and. (BoxFineness .gt. 0.01)) Then
+      If(FirstTimeInterf) Write(2,*) 'Fineness=',BoxFineness,', for a grid volume of:',GridVolume(1:3)
+      IO_control=.false.
+      !IO_control=.true.
+      d_loc(1:3)=1.
+      Call GridPhaseChange(RMSW, IO_control)
+      d_loc(1:3)=BoxFineness/RMSW(1:3)
+      N_pix(1:3,2)=NINT(GridVolume(1:3)/d_loc(1:3))
+      !write(2,*) '!PixBoundingBox:', BoxFineness, GridVolume(:), d_loc(1:3), N_pix(1:3,1)
+      !Flush(unit=2)
+   EndIf
+   !
+   !d_loc(1)=d_N  ;  d_loc(2)=d_E   ;  d_loc(3)=d_h
+   N_pix(:,1)=-N_pix(:,2)
+   If(polar) then
+      write(2,*) 'Polar coordinates used for grid!!'
+      d_loc(1)=d_loc(1)*pi/180.   ! convert to radian
+      d_loc(2)=d_loc(2)*pi/180.   ! convert to radian
+   Endif
+   ! ----------------------------------------------------
+   ! Extract polar coordinates;  1=N=phi; 2=E=theta; 3=h=Radial distance
+   ! Check limits on ranges      N_hlow, N_Eup, N_Elow
+   If(FirstTimeInterf) write(2,*) 'Central Carthesian coordinates (N,E,h)=',CenLoc(:)
+   If(polar) then
+      Call Carth2Pol(CenLoc,CenLocPol)
+      !CenLocPol(3)=sqrt(SUM(CenLoc(:)*CenLoc(:)))  ! distance [m]    ;h
+      !CenLocPol(2)=asin(CenLoc(3)/CenLocPol(3))    ! elevation angle=theta [radian]  ;E range: 0^o< th <80^o
+      !CenLocPol(1)=atan2(CenLoc(2),CenLoc(1))      ! phi [radian]    ;N
+      If(FirstTimeInterf) write(2,*) 'Central polar coordinates (R,th,ph)=',CenLocPol(3),CenLocPol(2)*180./pi,CenLocPol(1)*180/pi
+      ! check ranges:
+      If(CenLocPol(3)+N_pix(3,1)*d_loc(3) .lt. 0) N_pix(3,1)= 1-CenLocPol(3)/d_loc(3) ! negative number generally ! 1-: not to have it ridiculously close
+      If(CenLocPol(2)+N_pix(2,1)*d_loc(2) .lt. 0) N_pix(2,1)= -CenLocPol(2)/d_loc(2) ! negative number generally
+      If(CenLocPol(2)+N_pix(2,2)*d_loc(2) .gt. pi*4/9.) N_pix(2,2)= (pi*4/9.-CenLocPol(2))/d_loc(2) ! pos number generally
+      If(FirstTimeInterf) Then
+         write(2,*) 'distance range:',CenLocPol(3)+N_pix(3,1)*d_loc(3),CenLocPol(3)+N_pix(3,2)*d_loc(3)
+         write(2,*) 'Elevation angle range:',(CenLocPol(2)+N_pix(2,1)*d_loc(2))*180./pi,(CenLocPol(2)+N_pix(2,2)*d_loc(2))*180./pi
+         write(2,*) 'Azimuth angle range:', (CenLocPol(1)+N_pix(1,1)*d_loc(1))*180./pi, (CenLocPol(1)+N_pix(1,2)*d_loc(1))*180./pi
+      EndIf
+   Else
+      If(CenLoc(3)+N_pix(3,1)*d_loc(3) .lt. 0) N_pix(3,1)= -CenLoc(3)/d_loc(3) ! negative number generally
+   Endif
+   !N_pix(2,1)=N_Elow   ;  N_pix(3,1)=N_hlow  ;  N_pix(2,2)=N_Eup
+   If(FirstTimeInterf) write(2,*) 'N_hlow, N_Eup, N_Elow',N_pix(:,1), N_pix(:,2)
+   !
+   !------------------------------------
+   !
+   Call GridPhaseChange(RMSW, FirstTimeInterf)
    !
    !-----------------------------------------------
    !  setup arrays
@@ -218,7 +290,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z')
       Write(30,"(10(A,I4))") '! nx ', N_pix(2,2)-N_pix(2,1)+1, ' ny ', N_pix(1,2)-N_pix(1,1)+1,  &
          ' xmin ', N_pix(2,1), ' xmax ', N_pix(2,2) , ' ymin ', N_pix(1,1) , ' ymax ', N_pix(1,2)
-      write(2,*) 'OutputIntfPowrTotal:', trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z'
+      If(FirstTimeInterf) write(2,*) 'OutputIntfPowrTotal:', trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//txt//'.z'
       Do i_N=N_pix(1,1),N_pix(1,2)   ! or Phi  ! Loop over pixels
          write(30,FMT) PixSmPowTr(0, i_N, N_pix(2,1):N_pix(2,2), i_h)
       Enddo
@@ -252,34 +324,37 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    i=0
    Call FindInterpolMx(i,d_Mx, SMPowMx,QualMx)
    !
-   If(SMPowMx.gt.0.) then  ! max not at rim
-      If(polar) then
-         PixLocPol(:)=CenLocPol(:)+d_Mx(:)*d_loc(:)
-         Call Pol2Carth(PixLocPol,PixLoc)
-      else
-         PixLoc(:)=CenLoc(:)+d_Mx(:)*d_loc(:)
-         Call Carth2Pol(PixLoc,PixLocPol)
-      Endif
-      NewCenLoc(:)=PixLoc(:)
-      write(2,"('(N,E,h)=',3(f11.5,','),' Mx=',g13.6,', Q=',3g13.6,', grid=',3F7.2)")   &
-         PixLoc(:)/1000., SMPowMx, QualMx(1:3), d_Mx(1:3) !, BarySet
-      !
-      ! Use the barycenter to interpolate in distance and use only those pixels that have a large intensity
-      Call FindBarycenter(i,d_Bar,SMPowBar,QualBar)
-      If(SMPowBar.gt.0.) then
+   If(FirstTimeInterf) Then
+      write(2,*) 'on first pass calculate bary center complete trace', FirstTimeInterf
+      If(SMPowMx.gt.0.) then  ! check max not at rim
          If(polar) then
-            PixLocPol(:)=CenLocPol(:)+d_Bar(:)*d_loc(:)
+            PixLocPol(:)=CenLocPol(:)+d_Mx(:)*d_loc(:)
             Call Pol2Carth(PixLocPol,PixLoc)
          else
-            PixLoc(:)=CenLoc(:)+d_Bar(:)*d_loc(:)
+            PixLoc(:)=CenLoc(:)+d_Mx(:)*d_loc(:)
             Call Carth2Pol(PixLoc,PixLocPol)
          Endif
+         NewCenLoc(:)=PixLoc(:)
+         write(2,"('(N,E,h)=',3(f11.5,','),' Mx=',g13.6,', Q=',3g13.6,', grid=',3F7.2)")   &
+            PixLoc(:)/1000., SMPowMx, QualMx(1:3), d_Mx(1:3) !, BarySet
          !
-         write(2,"('(N,E,h)=',3(f11.5,','),' Bar=',g13.6,', Q=',2g13.6,12x,', grid=',3F7.2)")   &
-            PixLoc(:)/1000., SMPowBar, QualBar(1), QualBar(2), d_Bar(1:3)
+         ! Use the barycenter to interpolate in distance and use only those pixels that have a large intensity
+         Call FindBarycenter(i,d_Bar,SMPowBar,QualBar)
+         If(SMPowBar.gt.0.) then
+            If(polar) then
+               PixLocPol(:)=CenLocPol(:)+d_Bar(:)*d_loc(:)
+               Call Pol2Carth(PixLocPol,PixLoc)
+            else
+               PixLoc(:)=CenLoc(:)+d_Bar(:)*d_loc(:)
+               Call Carth2Pol(PixLoc,PixLocPol)
+            Endif
+            !
+            write(2,"('(N,E,h)=',3(f11.5,','),' Bar=',g13.6,', Q=',2g13.6,12x,', grid=',3F7.2)")   &
+               PixLoc(:)/1000., SMPowBar, QualBar(1), QualBar(2), d_Bar(1:3)
+         EndIf
+      Else
+         Write(2,*) 'Borderline case, Max @',MaxSmPowGrd(:,i)
       EndIf
-   Else
-      Write(2,*) 'Borderline case, Max @',MaxSmPowGrd(:,i)
    EndIf
    ! =======================================================================
    !--------------------------------------------
@@ -291,7 +366,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    If(Dual) then
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpeceo.csv')
       Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,F9.2,I4, ' 0')") StartTime_ms, CenLoc/1000., AntennaRange, &
-         SSm, i, t_shft*1000., SMPowMx, N_smth
+         SSm, i, t_shft*1000., ABS(SMPowMx), N_smth
       Do i=0,Time_Dim/SSm-1
          Pref=0.
          Psum=0.
@@ -574,7 +649,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Else IF(.not. Dual) Then
       Close(Unit=28)
    EndIf
-   If (NGridInterpol.gt.0) Then
+   If ( (NGridInterpol.gt.0) .and. FirstTimeInterf) Then
       write(2,"(A,I5,A,3F5.2,A,I4,A)") 'GridInterpol:', NGridInterpol, ', RMS of interpolation [grid spacing]=' &
          ,sqrt(RMSGridInterpol(:)),'; ', NGridExtrapol &
          ,' interpolations beyond 3-D limit of 0.75; ideal interpolation distance=sqrt(1/12)=0.29'
@@ -633,7 +708,7 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    !write(2,*) '!FindInterpolMx; i_gr(:)',i, i_gr(:), MaxSmPow(0:i)
    !flush(unit=2)
    y0=(PixSmPowTr(i,i_gr(1),i_gr(2),i_gr(3)))
-   SMPow=-1.
+   SMPow=-y0
    !write(2,*) 'y0',i,y0,i_gr(:)
    !flush(unit=2)
    !
@@ -660,8 +735,15 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Do j=1,3  ! fit y=Ax^2/2+Bx+C; A=y"/d^2 & B=y'/2d & x_max= -B/A= -d y'/(2y")
       ! 3D case: y=Sum[A(i)X(i)^2/2 + R'(i,j)X(i)X(j)+B(i)x(i)+C]
       If((i_gr(j).eq.N_pix(j,1)) .or. (i_gr(j).eq.N_pix(j,2))) Then
-         Write(2,"(A,i5,A,F9.2,A,3(I5,','))") &
-            ' Bordercase',i,', Intensty=',y0,', Max @',MaxSmPowGrd(:,i)
+         If((N_pix(1,2)*N_pix(2,2)*N_pix(3,2)).gt.1) Then
+            If(i.eq.0) Then
+               Write(2,"(A,F9.2,A,3(I5,','))") &
+                  ' Bordercase full window, Intensty=',y0,', Max @',MaxSmPowGrd(:,i)
+            Else
+               Write(2,"(A,i5,A,F9.2,A,3(I5,','))") &
+                  ' Bordercase slice',i,', Intensty=',y0,', Max @',MaxSmPowGrd(:,i)
+            EndIf
+         EndIf
          d_gr(:)=i_gr(:) ! get rough position of the maximum on the border
          Return ! max pixel should not be at the edge of the hypercibe
       EndIf

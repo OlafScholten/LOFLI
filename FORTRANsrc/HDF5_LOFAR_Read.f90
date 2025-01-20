@@ -84,6 +84,8 @@ Subroutine ListGroups
   ! Begin iteration using H5Ovisit
   !
   WRITE(2,'(A,a)') "Objects infile:", trim(filename)
+  WRITE(*,'(A,a)') "Objects infile:", trim(filename)
+  write(2,*) 'ListGroups:Status', status
   !
   funptr = C_FUNLOC(op_func)
   CALL H5Ovisit_f(file_ID, H5_INDEX_NAME_F, H5_ITER_NATIVE_F, funptr, C_NULL_PTR, ret_value, status)

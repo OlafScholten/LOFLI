@@ -1,5 +1,5 @@
 ! ----------------------------------------------------------------------------------------
-Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
+Subroutine ApplyCorrelator(RA, SrcI20_r, SourcTotNr, Aweight, dD, Dnr, tauMax)
 !  In all distributions  an source-pair (i,j) carries a weight AmplWeight=(A_i*Aweight+1.)*(A_j*Aweight+1.)
 !     where A denotes the amplitude
 !  T_trace(i_t,i_d) is the sum of weights of source pairs at fine-binned relative time and coarse-binned distance
@@ -12,7 +12,8 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    IMPLICIT none
    Integer, parameter :: N_it=200, N_id=5  ! for the TD-trace plots
    real*8, intent(IN) :: RA(4,*)  ! 1=t [ms]  2-4= E,N,h in [km]
-   Integer, intent(in) :: Label(4,*)  ! (2,*) contains intensity
+   !Integer, intent(in) :: Label(4,*), Iperm(*)  ! (2,*) contains intensity
+   Real, intent(in) :: SrcI20_r(*)
    Integer, intent(IN) :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    real*8, intent(IN) :: AWeight  ! Determine the extent of amplitude weighting
    real*8, intent(IN) :: dD  ! bin width for fine-distance
@@ -52,7 +53,7 @@ Subroutine ApplyCorrelator(RA, Label, SourcTotNr, Aweight, dD, Dnr, tauMax)
    GrandNorm=0.
    Do i_src=1,SourcTotNr-1
       Do j_src=i_src+1,SourcTotNr
-         AmplWeight=sqrt((Label(2,i_src)*Aweight+1.)*(Label(2,j_src)*Aweight+1.) ) ! Amplitude determined weight of the new source
+         AmplWeight=sqrt((SrcI20_r(i_src)*Aweight+1.)*(SrcI20_r(j_src)*Aweight+1.) ) ! Amplitude determined weight of the new source
          GrandNorm=GrandNorm + AmplWeight   ! independent of later grid-cuts
          !
          ! Calculate <\tau^k>(d) for narrowly binned distances where \tau=t_ij

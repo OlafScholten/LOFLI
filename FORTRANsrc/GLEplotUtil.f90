@@ -11,6 +11,7 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
    character*100 :: shellin
    !Character(len=19), parameter :: CallGLE='call GLE -d pdf -o '  ! space at end is important
    !Character(len=5), parameter :: PJ='.pdf ' ! space at end is important
+   !Character(len=12), parameter :: CallGLE='call GLE -o '  ! space at end is important
    Character(len=26), parameter :: CallGLE='call GLE -d jpg -r 300 -o '  ! space at end is important
    Character(len=5), parameter :: PJ='.jpg ' ! space at end is important
    !
@@ -34,7 +35,7 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
          CASE(7)  ! InterfSelect; TRID imager
             BatchFile='Afig-FldCal'//trim(OutFileLabel)
          CASE(8)  ! PeakInterferometry
-            BatchFile='Afig-PkInt'//trim(OutFileLabel)
+            BatchFile='Afig-ATRID'//trim(OutFileLabel)
          CASE(9)  ! PeakInterferometry
             BatchFile='Afig-MDD'//trim(OutFileLabel)
          CASE DEFAULT
@@ -48,8 +49,9 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
       Else
          Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(BatchFile)//'.sh')   ! It is assumed that this scipt is launched in the FlashFolder
          Write(10,"(7(A,/) )") &
-            '#!/bin/bash', &   !  '#!/bin/bash -v', &
-            '#','#' , 'source  ${LL_Base}/ShortCuts.sh'     ! ,  'FlashFolder=$(pwd)',  'ProgramDir="/home/olaf/LMA-fit/LMA2019/program"'
+            '#!/bin/bash', &
+            !  '#!/bin/bash -v', &
+            '#','#' , 'source  ${LL_Base}/ShortCuts.sh', 'set -x'     ! ,  'FlashFolder=$(pwd)',  'ProgramDir="/home/olaf/LMA-fit/LMA2019/program"'
       EndIf
    EndIf
    If(BatchFile.eq. '') Return

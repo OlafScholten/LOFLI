@@ -6,13 +6,16 @@ Module DS_Select
    !Character*130 :: datfile
    Character*100, save :: WriDir
    !
-   integer, parameter :: maxd=123000
-   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
-   Integer, save :: Label(4,maxd)  ! Unique source label and amplitude and widths
-   real, save :: QualIndic(4,maxd)  ! Quality indicators
-   Complex, save :: Stk_NEh(1:6,maxd)
+   integer :: maxd=123000
+   real(dp), Allocatable :: RA(:,:)  ! 1=t [ms]  2-4= E,N,h in [km]
+   Integer, Allocatable :: Label(:,:)  ! Unique source label and amplitude and widths
+   real, Allocatable :: QualIndic(:,:)  ! Quality indicators
+   Complex, Allocatable :: Stk_NEh(:,:)  ! order: (1,1:3), (2,2:3), (3,3)
    Logical :: PolarAna
    Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
+   Integer, Allocatable :: SrcWidth(:), Iperm(:)  ! Unique source label and amplitude and widths
+   real, Allocatable :: SrcChi2(:), SrcI20(:), SrcI3(:), SrcUn(:), SrcLin(:), SrcCirc(:), SrcPZen(:), SrcPAzi(:)
+   real, Allocatable :: SrcI20_r(:)   ! Resorted
    !
    Integer, parameter :: Nmax_Ampl=5000
    Real(dp) :: MaxAmplFitPercent=100.
@@ -22,7 +25,7 @@ Module DS_Select
    Real(dp) :: Ampl(Nmax_Ampl)  ! Amplitude histogram filled out in "AmplitudeFitTracks"
    Integer :: i_AmplTh  ! Calculated in "AmplitudeFitTracks" to the index of the first amplitude for which the probability spectrum is fitted
    Real(dp) :: Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
-   Real*8 :: AmplScale=1.d3 ! Scaling factor for amplitude to convert from integer to unity-normalized real
+   !Real*8 :: AmplScale=1.d3 ! Scaling factor for amplitude to convert from integer to unity-normalized real
    !Real*8 :: d_AmplScale
    !
    Real(dp), save :: xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, SMPowCut ! RatMax=ratio (Max rim)/peak
@@ -44,6 +47,7 @@ contains
 !===========================================================
 Subroutine DS_ReadCntrl(Fini)
    Use constants, only : dp, CI, pi, c_l
+   use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use TrackConstruct, only : PreDefTrackNr, PreDefTrackFile, SrcDensTimeResol
    Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, NLongTracksMax, TrackLenMax, LongTrack_Min
    Use TrackConstruct, only : Wtr, Aweight, MaxTrackDist, TimeWin, HeightFact, dt_MTL, TrackENr, TrackE, TrackNrLim
@@ -72,7 +76,6 @@ Subroutine DS_ReadCntrl(Fini)
    NEhtBB(:)=Tiny
    TimeBase=tiny  ! to initialize it to a value that will not be put on input, to be able to check if set at all
    tCutl=0.; tCutu=0.
-   datafile(:)=''
    RunOption=''
    MaxAmplFitPercent=0.1
    SrcDensTimeResol=0.1 ! [ms]
@@ -108,15 +111,26 @@ Subroutine DS_ReadCntrl(Fini)
       Fini=1
       return
    EndIf
+   !
+   ! Automatic RunOption setting when not specified in input
    If(RunOption.eq. '') Then
-      INQUIRE(FILE = trim(datafile(1))//'.csv', exist=exist)
+      INQUIRE(FILE = trim(datafile(1))//'.csv', exist=exist)  ! in the main Fsash directory
       If(exist) Then
          RunOption='Impulsive'
       Else
          RunOption='TRI-D'
+         Do j=1,NDataFil  ! select one particular file (may be sequence)
+            If(datafile(j).eq."") exit
+            INQUIRE(FILE = TRIM(DataFolder)//trim(datafile(j))//'ATRID.csv', exist=exist)
+            If(exist) Then
+               RunOption='ATRID'
+               exit
+            EndIf
+         EndDo
       EndIf
       write(2,*) 'RunOption set to "', TRIM(RunOption), '"'
    EndIf
+   !
    j = iachar(RunOption(1:1))  ! convert to upper case if not already
    if (j>= iachar("a") .and. j<=iachar("z") ) then
       RunOption(1:1) = achar(j-32)
@@ -126,6 +140,7 @@ Subroutine DS_ReadCntrl(Fini)
    If(dt_MTL.eq.tiny) dt_MTL=TimeWin
    !
    write(2,*) 'RunOption:', RunOption
+   If(RunOption(1:1).eq.'P') RunOption(1:1)='A'
    SELECT CASE (RunOption(1:1))
    CASE("I")  ! Impulsive Imager
       Write(2,*) 'Image data from Impulsive Imager, PlotName=',TRIM(PlotName)
@@ -177,9 +192,49 @@ Subroutine DS_ReadCntrl(Fini)
       write(2,*) 'Source selection criteria:'
       Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (TRI_D).')  !
       Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  !
-      Call PrintValues(SMPowCut,'SMPowCut', 'Threshol Intensity.')  !
+      Call PrintValues(SMPowCut,'SMPowCut', 'Threshold Intensity.')  !
       !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  !
       Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  !
+      Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  !
+      Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  !
+      write(2,*) 'Image control:'
+      Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  !
+      Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayed as a grey background plot.')  !
+      Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  !
+      Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  !
+      Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  !
+      Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  !
+      Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
+      If(NLongTracksMax.gt.0) Then
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
+         Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  !
+         Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
+         Call PrintValues(LongTrack_Min,'LongTrack_Min', 'Minimum number of sources on a long track.')  !
+         Call PrintValues(PreDefTrackFile,'PreDefTrackFile', 'Label of file that contains a track to be included.')  !
+         Call PrintValues(dt_MTL,'dt_MTL', '[ms]. Time-step for constructing tracks.')  !
+         Call PrintValues(HeightFact,'HeightFact', 'Relative height scale for calculating distances.')  !
+         Call PrintValues(SrcDensTimeResol,'SrcDensTimeResol', '[ms]. Source Density Time Resolution.')  !
+      EndIf!(NLongTracksMax.gt.0)
+      If((Corr_dD.gt.0) .and. (Corr_Dnr .gt. 0)) Then
+         Call PrintValues(Corr_dD,'Corr_dD', '[km]. Distance step size for time-distance correlator.')  !
+         Call PrintValues(Corr_Dnr,'Corr_Dnr', 'max. number of distance bins for time-distance correlator.')  !
+         Call PrintValues(Corr_dtau,'Corr_dtau', '[ms]. Time step size for time-distance correlator.')  !
+      Else
+         Write(2,*) 'TD correlators require positive values for "Corr_dD" and "Corr_Dnr"'
+      EndIf
+   CASE("A")  ! Peak Interferometer, or TRI-D afterburner
+      Write(2,*) 'Image data from ATRID (Single Source Beamformer), PlotName extension=',TRIM(PlotName)
+      DS_Mode=3
+      If(AmplitudePlot.eq.tiny) AmplitudePlot=10.
+      If(Aweight.eq. tiny .and. AmplitudePlot.gt.0.) Aweight=1.
+      write(2,*) 'Source selection criteria:'
+      Call PrintValues(datafile,'datafile', 'Raw Imager data-file label (ATRID).')  !
+      Call PrintValues(TimeBase,'TimeBase', 'Time offset.')  !
+      Call PrintValues(RMS_ns,'RMS_ns', 'Condition: [Q < RMS_ns], unit [ns].')  !
+      Call PrintValues(SMPowCut,'SMPowCut', 'Threshold Intensity.')  !
+      !Call PrintValues(RatMaxCut,'RatMaxCut', 'ratio (Max rim)/peak.')  !
+      !Call PrintValues(StatNCut,'StatNCut', 'Keep only the "FileStatN" strongest sources per TRI-D image.')  !
       Call PrintValues(tCutl,'tCutl', 'Lower end of block filter in time.')  !
       Call PrintValues(tCutu,'tCutu', 'Upper end of block filter in time.')  !
       write(2,*) 'Image control:'
@@ -212,6 +267,7 @@ Subroutine DS_ReadCntrl(Fini)
       Write(*,*) 'specified RunOption: "',Trim(RunOption),'", however the possibilities are:'
       Write(*,*) '- "Impulsive" for the impulsive Imager'
       Write(*,*) '- "TRI-D" for the TRI-D imager with polarization observables, accounting for antenna function'
+      Write(*,*) '- "ATRID" for the Adaptive TRI-D imager with polarization observables'
       Stop 'No valid RunOption specified in namelist input'
    End SELECT
    If(NEhtBB(1).ne.Tiny) Then
@@ -294,9 +350,15 @@ Subroutine DS_ReadSelData
    If(DS_Mode .eq. 1) Then  ! Impulsive imager data
       Call DS_ReadSelData_Imp
       Image='I-'//TRIM(FlashName)//TRIM(PlotName)
-   Else  ! TRI-D Imager
+   ElseIf(DS_Mode .eq. 2) Then ! TRI-D Imager
       Call DS_ReadSelData_TRID
       Image='T-'//TRIM(datafile(1))//TRIM(PlotName)
+   ElseIf(DS_Mode .eq. 3) Then ! ATRID
+      Call DS_ReadSelData_PkInt
+      Image='A-'//TRIM(datafile(1))//TRIM(PlotName)
+   Else
+      write(2,*) 'Using an unknown file-read option, DS_Mode=',DS_Mode
+      Stop 'unknown DS_Mode'
    EndIf
    !write(2,*) 'basis Images naming:',TRIM(Image)
    Return
@@ -305,11 +367,18 @@ End Subroutine DS_ReadSelData
 !===========================================================
 Subroutine DS_ReadSelData_Imp
 !  Read Selected Data
+!   integer, parameter :: maxd=123000
+!   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
+!   Integer, save :: Label(4,maxd)  ! Unique source label and amplitude and widths
+!   real, save :: QualIndic(4,maxd)  ! Quality indicators
+!   Complex, save :: Stk_NEh(1:6,maxd)    ! order: (1,1:3), (2,2:3), (3,3)
+!   Logical :: PolarAna
+!   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    Use constants, only : dp
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, CutSigmaH, LinCutH, RMS_ns,  DelNEff
-   Use DS_Select, only : QualIndic, RA, Maxd, Label, SourcTotNr, xyztBB, t_offset, datafile
-   Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
+   Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, SourcTotNr, xyztBB, t_offset, datafile
+   !Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
    IMPLICIT none
    !Real(dp) ::
    !Integer ::
@@ -319,6 +388,8 @@ Subroutine DS_ReadSelData_Imp
    real*8 :: x,y,z,t, val, sigma(1:3), Q, Chi, t_start
    integer :: N_EffAnt, Max_EffAnt, Ampl, Wl, Wu
    !
+   Maxd=123000
+   Allocate( RA(1:4,1:maxd), Label(1,1:maxd), QualIndic(4,1:maxd), Iperm(1:maxd), SrcI20(1:maxd))
    SourcTotNr=0
       !If(.not. Windows) call system_mem_usage(valueRSS)
    OPEN(unit=28,FILE=trim(datafile(1))//'.csv', FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
@@ -367,6 +438,7 @@ Subroutine DS_ReadSelData_Imp
       if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
       if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
       !
+      !   write(2,*) 'pass box cuts:',Nxx,lineTXT
 !     CutSigma_h  <-- ICVal
 !     LinCutH <-- Height_1
 !     RMS_ns <-- Chi_max
@@ -378,17 +450,20 @@ Subroutine DS_ReadSelData_Imp
          Endif
          If(Q.gt. CutSigmaH .and. val.gt.CutSigmaH) cycle
       EndIf
+      !   write(2,*) 'pass sigma cuts:',Q
       Q=sqrt(val)
       If(DelNEff .lt. 0) then
          Q=Q - RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff
       else
          If( (Max_EffAnt - N_EffAnt) .gt. DelNEff) cycle
       Endif
+      !   write(2,*) 'RMS cuts:',Q,RMS_ns
       If(Q.gt. RMS_ns) cycle
       !
       j=j+1
       RA(1,j)=t ;  RA(2,j)=x ;  RA(3,j)=y ;  RA(4,j)=z   ! units [ms], [km], [km], [km]
-      Label(1,j)=i ;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
+      Label(1,j)=i !;Label(2,j)=Ampl ; Label(3,j)=Wl ; Label(4,j)=Wu
+      SrcI20(j)=Ampl
       QualIndic(1,j)=Chi ; QualIndic(2:4,j)=sigma(1:3)
       if(j.eq.maxd) then
          write(*,*) 'Max. dimension reached of', maxd,' at',i
@@ -408,15 +483,22 @@ End Subroutine DS_ReadSelData_Imp
 !===========================================================
 Subroutine DS_ReadSelData_TRID
 !  Read Selected Data
+!   integer, parameter :: maxd=123000
+!   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
+!   Integer, save :: Label(4,maxd)  ! Unique source label and amplitude and widths
+!   real, save :: QualIndic(4,maxd)  ! Quality indicators
+!   Complex, save :: Stk_NEh(1:6,maxd)   ! order: (1,1:3), (2,2:3), (3,3)
+!   Logical :: PolarAna
+!   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    Use constants, only : dp, CI, pi, c_l
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use DS_Select, only : tiny
    Use DS_Select, only : PolarAna, Stk_NEh
    Use DS_Select, only : NDataFil, datafile,  TimeBase, t_offset, AmplitudePlot, SMPowCut
    Use DS_Select, only : tCutl, tCutu, SourcTotNr, FileStatN, StatNCut
-   Use DS_Select, only : QualIndic, RA, Maxd, Label, AmplScale, xyztBB
+   Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, xyztBB
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
-   Use unque, only : Selection_sort
+   Use unque, only : sort
    IMPLICIT none
    Character*20 :: BoxOption !, Utility, release
    character*100 ::  FileMain, datfile
@@ -430,13 +512,16 @@ Subroutine DS_ReadSelData_TRID
    integer :: i_sequence, LastChar
 !   Logical :: ZoomClip=.false.
    Logical :: First28, First29, RepackData
-   Integer :: SourceNrIncr, ScalAmpl(1:4000), AmplMax, AmplStatN, FileStatNp, AmplStatNp, FileStatNm, AmplStatNm
+   Integer :: SourceNrIncr
+   real :: ScalAmpl(1:4000), AmplMax, AmplStatN !, FileStatNp, AmplStatNp ! , FileStatNm, AmplStatNm
    Real :: NoiseLevel,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx ! just for rewriting
    integer :: n_repack, PixPowOpt
    Real(dp) :: tp
-   Integer :: i_scr, i_slice
-   Complex :: Stks(1:6)
+   Integer :: i_src , i_slice
+   Complex :: Stks(1:6)    ! order: (1,1:3), (2,2:3), (3,3)
    !
+   Maxd=23000
+   Allocate( RA(1:4,1:maxd), Label(1,1:maxd), Iperm(1:maxd), SrcI20(1:maxd), Stk_NEh(1:6,1:maxd) )
    extension='IntfSpecPowMx_d.dat' ! For TRI-D (beamformed) source position data file
    PolExten ='IntfSpecCartStokes_d.dat' ! For TRI-D (beamformed) polarization data file
    PolarAna = .true.
@@ -556,9 +641,9 @@ Subroutine DS_ReadSelData_TRID
                exit
             Endif
             If(PolarAna) Then
-               read(27,*,iostat=nxx)  i_slice, i_scr,  tp, Stks(1:6)
+               read(27,*,iostat=nxx)  i_slice, i_src,  tp, Stks(1:6)
                If(nxx.ne.0) then
-                  write(2,*) '*******Read error polar data:', nxx,i,t,i_slice, i_scr,  tp
+                  write(2,*) '*******Read error polar data:', nxx,i,t,i_slice, i_src,  tp
 
                   write(2,*) Stks(1:6)
                   PolarAna=.false.
@@ -575,7 +660,7 @@ Subroutine DS_ReadSelData_TRID
                write(29,"(i8,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") n_repack+i,t,x,y,z,SMPow &
                   ,MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx
                If(PolarAna) Then
-                  write(30,"(i8,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") n_repack+i_slice, i_scr,  tp, Stks(1:6)
+                  write(30,"(i8,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") n_repack+i_slice, i_src,  tp, Stks(1:6)
                EndIf
             EndIf
             !
@@ -591,8 +676,9 @@ Subroutine DS_ReadSelData_TRID
             SourcTotNr=SourcTotNr+1
             RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=x ;  RA(3,SourcTotNr)=y ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
             Label(1,SourcTotNr)=i
-            Label(2,SourcTotNr)=SMPow*AmplScale
-            Label(3,SourcTotNr)=SourcTotNr  !  to keep track of the polorization observables after re-sorting
+            !Label(2,SourcTotNr)=SMPow*AmplScale
+            SrcI20(SourcTotNr)=SMPow
+            !Label(3,SourcTotNr)=SourcTotNr  !  to keep track of the polorization observables after re-sorting
             If(PolarAna) Stk_NEh(1:6,SourcTotNr) = Stks(1:6)
             if(SourcTotNr.eq.maxd) then
                write(*,*) 'Max. dimension reached of', maxd,' at',i
@@ -604,21 +690,21 @@ Subroutine DS_ReadSelData_TRID
          If(PolarAna) Close(Unit=27)
          SourceNrIncr=SourcTotNr-PrevSourcTotNr
          AmplMax=-1
-         AmplStatNm=-AmplScale
-         AmplStatNp=-AmplScale
-         AmplStatN =-AmplScale
+         !AmplStatNm=-1
+         !AmplStatNp=-1
+         AmplStatN =-1
          If((FileStatN.gt.1) .and. (SourceNrIncr.ge.1)) then ! determine max amplitude and cuts
             SourceNrIncr=SourcTotNr-PrevSourcTotNr
-            ScalAmpl(1:SourceNrIncr)=Label(2,PrevSourcTotNr+1:SourcTotNr)
-            Call Selection_sort(ScalAmpl(1:SourceNrIncr))
+            ScalAmpl(1:SourceNrIncr)=SrcI20(PrevSourcTotNr+1:SourcTotNr)
+            Call sort(SourceNrIncr, ScalAmpl(1:SourceNrIncr))  ! sort(n, a)
             AmplMax=ScalAmpl(SourceNrIncr)
-            If(FileStatNm.lt.SourceNrIncr) AmplStatNm=ScalAmpl(SourceNrIncr-FileStatNm)
-            If(FileStatNp.lt.SourceNrIncr) AmplStatNp=ScalAmpl(SourceNrIncr-FileStatNp)
+            !If(FileStatNm.lt.SourceNrIncr) AmplStatNm=ScalAmpl(SourceNrIncr-FileStatNm)
+            !If(FileStatNp.lt.SourceNrIncr) AmplStatNp=ScalAmpl(SourceNrIncr-FileStatNp)
             If(FileStatN.lt.SourceNrIncr)  AmplStatN =ScalAmpl(SourceNrIncr-FileStatN)
             If(StatNCut) Then
                j=PrevSourcTotNr
                Do i=PrevSourcTotNr+1,SourcTotNr
-                  If(Label(2,i) .gt. AmplStatN) Then
+                  If(SrcI20(i) .gt. AmplStatN) Then
                   j=j+1
                   RA(1:4,j)=RA(1:4,i)
                   Label(1:2,j)=Label(1:2,i)
@@ -628,8 +714,8 @@ Subroutine DS_ReadSelData_TRID
             EndIf
          EndIf
          Write(2,"(A, A15,A,I6,A,I6, 4(1pg11.3))") 'After file: ',trim(FileMain), ', SourcTotNr=',SourcTotNr, &
-               ', increment=',SourceNrIncr &
-               , AmplStatNp/AmplScale, AmplStatN/AmplScale, AmplStatNm/AmplScale, AmplMax/AmplScale
+               ', increment=',SourceNrIncr, AmplStatN, AmplMax
+               !, AmplStatNp, AmplStatN, AmplStatNm, AmplMax
          PrevSourcTotNr=SourcTotNr
          First29=.false.  ! for repack option
          If(i_sequence.eq.0) exit ! to exit sequence loop
@@ -644,6 +730,134 @@ Subroutine DS_ReadSelData_TRID
    !
     Return
 End Subroutine DS_ReadSelData_TRID
+!===========================================================
+Subroutine DS_ReadSelData_PkInt
+!  Read Selected Data
+!   integer, parameter :: maxd=123000
+!   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
+!   Integer, save :: Label(4,maxd)  ! Unique source label and amplitude and widths
+!   real, save :: QualIndic(4,maxd)  ! Quality indicators
+!   Complex, save :: Stk_NEh(1:6,maxd)    ! order: (1,1:3), (2,2:3), (3,3)
+!   Logical :: PolarAna
+!   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
+   Use constants, only : dp
+   use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
+   Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, RMS_ns, SMPowCut,  TimeBase, t_offset
+   Use DS_Select, only : RA, Label, Maxd, SourcTotNr, xyztBB, t_offset, NDataFil, datafile, PolarAna
+   Use DS_Select, only : SrcWidth, Iperm, SrcChi2, SrcI20, SrcI3, SrcUn, SrcLin, SrcCirc, SrcPZen, SrcPAzi, Stk_NEh
+!   Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
+   IMPLICIT none
+   Character*1 :: Marker !
+   character*100 ::  FileMain, datfile
+   character*25 ::  extension, PolExten !, OutFileLabel, SelFileName, PlotName, shellin
+   Character(len=180) :: lineTXT !, OS
+   integer :: i,j, nxx, i_datfil, PrevSourcTotNr
+   Real*8 :: t_start
+   Real(dp) :: t,x,y,z, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi
+   !Real(dp) :: Q, AmpltPlotRead
+   Real(dp) :: xMinR,xMaxR,yMinR,yMaxR,zMinR,zMaxR,tMinR,tMaxR, chi2cut
+!   Logical :: ZoomClip=.false.
+   Integer :: SourceNrIncr
+   !integer :: PixPowOpt
+   Real(dp) :: tp
+   Integer :: Width
+   Complex :: Stks(1:6)    ! order: (1,1:3), (2,2:3), (3,3)
+   !
+!         i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), &
+!         Chi2(i_Peak), I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
+!         SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak),  Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
+   maxd=3000
+   Allocate( RA(1:4,1:maxd), Label(1,1:maxd), SrcWidth(1:maxd), Iperm(1:maxd), SrcChi2(1:maxd), SrcI20(1:maxd), SrcI3(1:maxd), &
+      SrcUn(1:maxd), SrcLin(1:maxd), SrcCirc(1:maxd), SrcPZen(1:maxd), SrcPAzi(1:maxd), Stk_NEh(1:6,1:maxd) )
+   !
+   PolarAna = .true.
+   chi2cut=RMS_ns
+   extension='ATRID.csv' ! For ATRID (beamformed) source position data file
+   SourcTotNr=0
+   PrevSourcTotNr=0
+   Do i_datfil=1,NDataFil  ! select one particular file (may be sequence)
+      If((i_datfil.gt.1).and. (datafile(i_datfil).eq."")) exit
+      nxx=0
+      !   write(2,*) 'RepackData-1', RepackData, First29
+      !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar)
+      datfile=datafile(i_datfil)
+      FileMain=datfile  ! Base for output file
+      datfile=TRIM(DataFolder)//trim(datfile)
+      OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
+      If(nxx.ne.0) then   ! check weather this particular file can be opened
+         Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
+         Close(Unit=28)
+         cycle
+      endif
+      !
+!            t_offset=TimeBase
+!      If(AmplitudePlot.eq.Tiny) AmplitudePlot=AmpltPlotRead
+!      t_start = t_start-t_offset
+      !
+      ! Start actual reading
+      j=0
+      read(28,*,iostat=nxx) t_start
+      If(TimeBase.eq.tiny) then
+         TimeBase=t_start
+      EndIf
+      t_offset=TimeBase
+      read(28,*,iostat=nxx) Marker  ! skip first comment line
+      do    ! loop over all source points in this file
+         nxx=0
+         read(28,*,iostat=nxx) Marker, i,t,y,x,z,width, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+         If(nxx.gt.0) then
+            write(2,*) 'Read error:',i,t,x,y,z
+         ElseIf (nxx.lt.0) Then
+            !Write(2,*) 'EOF reached'
+            exit
+         Endif
+         !write(2,*) 'no problem yet(1): ',Marker, i,t,x,y,z,width, chi2,  Stks(1:6)
+         If(marker.eq.'!') Then
+            cycle
+         ElseIf(marker.ne.'S') Then
+            write(2,*) 'problem: ',Marker, i,t,x,y,z,width, chi2
+            cycle
+         EndIf
+         !
+         if(x.le.xyztBB(1) .or. x.ge.xyztBB(2)) cycle
+         if(y.le.xyztBB(3) .or. y.ge.xyztBB(4)) cycle   ! [km]
+         if(z.le.xyztBB(5) .or. z.ge.xyztBB(6)) cycle
+         if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
+         if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
+         !
+         !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,SMPow, SMPowCut  ! already in proper units for plotting
+         If( I20 .lt. SMPowCut) cycle
+         If( chi2 .gt. chi2Cut) cycle
+         !write(2,*) 'Passed: ',Marker, i,I20, SMPowCut,chi2, chi2Cut
+         SourcTotNr=SourcTotNr+1
+         RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=x ;  RA(3,SourcTotNr)=y ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
+         Label(1,SourcTotNr)=i
+         SrcWidth(SourcTotNr)= Width
+         SrcChi2(SourcTotNr)= Chi2
+         SrcI20(SourcTotNr)= I20
+         SrcI3(SourcTotNr)= I3
+         SrcUn(SourcTotNr)= Un
+         SrcLin(SourcTotNr)= Lin
+         SrcCirc(SourcTotNr)= Circ
+         SrcPZen(SourcTotNr)= Zen
+         SrcPAzi(SourcTotNr)= Azi
+         Stk_NEh(1:6,SourcTotNr)= Stks(1:6)
+         if(SourcTotNr.eq.maxd) then
+            write(*,*) 'Max. dimension reached of', maxd,' at',i
+            write(2,*) 'Max. dimension reached of', maxd,' at',i,t
+            exit
+         EndIf
+      enddo     ! loop over all source points in this file
+      Close(Unit=28)  ! following is mainly important for multiple files-reads
+      SourceNrIncr=SourcTotNr-PrevSourcTotNr
+      Write(2,"(A, A15,A,I6,A,I6, 4(1pg11.3))") 'After file: ',trim(FileMain), ', SourcTotNr=',SourcTotNr, &
+            ', increment=',SourceNrIncr
+      PrevSourcTotNr=SourcTotNr
+   Enddo
+   write(2,*) 'Last event read:',i,' @ t=',t,'[s]'
+   !
+    Return
+End Subroutine DS_ReadSelData_PkInt
 !=========================================
 Module AmpFit
 contains
@@ -695,15 +909,16 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    ! i_AmplTh: Index of first bin in scaled amplitude histogram that is fitted.
    ! Ampl_Hist: actual histogram of amplitudes
    ! FitFunc: Function that is used
-   Use DS_Select, only : Label, MaxAmplFitPercent, Nmax_Ampl, Ampl_Hist, Ampl_Hist_W, AmplScale, FitFunc
+   Use DS_Select, only : Label, Iperm, SrcI20_r, MaxAmplFitPercent, Nmax_Ampl, Ampl_Hist, Ampl_Hist_W, FitFunc
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
    Use DS_Select, only : i_AmplTh, Ampl
-   Use unque, only : Selection_sort
+   Use unque, only : sort
    IMPLICIT none
    Integer, intent(in) :: NrSources
    Integer, intent(in), optional :: SourceNrs(1:NrSources)
    character(len=*), intent(inout), optional :: SelFileName
-   Integer :: SourceAmp(1:NrSources)  !  Amplitudes of sources in the i^th track
+   !Integer :: SourceAmp(1:NrSources)  !  Amplitudes of sources in the i^th track
+   real :: SourceAmp(1:NrSources)  !  Amplitudes of sources in the i^th track
    !
    Integer :: i,k, i_Ampl, i_AmplMax, i_cut, i_MaxFit,N_bins
    Integer ( kind = 4 ) :: meqn, nvar  ! Number of data points to fit & number of parameters
@@ -723,28 +938,29 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndIf
    If(present(SourceNrs)) Then
       Do i=1,NrSources
-         SourceAmp(i)=Label(2,SourceNrs(i))
+         SourceAmp(i)=SrcI20_r(SourceNrs(i))
       Enddo
    Else
-      SourceAmp(1:NrSources)=Label(2,1:NrSources)
+      SourceAmp(1:NrSources)=SrcI20_r(1:NrSources)
       write(2,"(A,I6,A)") 'Fit amplitude spectrum of all',NrSources,' sources'
    EndIf
-   CALL Selection_sort(SourceAmp)  ! Re-order  sources according to pulse amplitude
+   !CALL Selection_sort(SourceAmp)  ! Re-order  sources according to pulse amplitude
+   CALL sort(NrSources, SourceAmp)  ! Re-order  sources according to pulse amplitude
    !
    Fit_exp(:)=0.0
    Fit_pow(:)=0.0
    N_bins=-1
    !
    If(MaxAmplFitPercent.lt.0.) MaxAmplFitPercent=0.1
-   Max_Ampl=SourceAmp(NrSources)/AmplScale
-   Ampl10=SourceAmp(NrSources*9/10)/AmplScale  ! 10 percentile amplitude
+   Max_Ampl=SourceAmp(NrSources)
+   Ampl10=SourceAmp(NrSources*9/10) ! 10 percentile amplitude
    write(2,"(A,I8,A,F9.1,A,F10.2,A,F9.2,A,I4)") 'Amplitudes (#=',NrSources,'), max@', Max_Ampl, &
-      ', 5-pctile@', SourceAmp(NrSources*95/100)/AmplScale, ', 10-pctile@', Ampl10
+      ', 5-pctile@', SourceAmp(NrSources*95/100), ', 10-pctile@', Ampl10
    i_cut=NrSources*(1.-MaxAmplFitPercent/100)
    If(i_cut.ge.0) then
       If(i_cut.eq.0) i_cut=1
       write(2,"(A,F7.3,A,F10.2,A,I4,F8.2)") 'Amplitude with ', MaxAmplFitPercent, &
-         'pctile as included in fit @', SourceAmp(i_cut)/AmplScale,', i_cut=', i_cut, SourceAmp(1)/AmplScale
+         'pctile as included in fit @', SourceAmp(i_cut),', i_cut=', i_cut, SourceAmp(1)
    Else
       i_cut=NrSources  !  No sources in fit
    Endif
@@ -770,11 +986,11 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    !write(2,*) 'AmplitudeFit: SourceAmp(1)', SourceAmp(1), AmplBin, i_cut
    Do k=1,NrSources
       Do While( SourceAmp(k) .gt. AmplBin)  ! start from the smallest amplitude and fill up bins
-         Counts2BinValue=(AmplBin*(d_AmplScale-1.)/AmplScale)
+         Counts2BinValue=(AmplBin*(d_AmplScale-1.))
          Ampl_Hist_W(i_Ampl)= Counts2BinValue/sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
-         Ampl(i_Ampl)=AmplBin*(1.+d_AmplScale)/(AmplScale*2.)  ! In true units
+         Ampl(i_Ampl)=AmplBin*(1.+d_AmplScale)/2.  ! In true units
          Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/Counts2BinValue
-         HistNrm=HistNrm + Ampl_Hist(i_Ampl)*Ampl(i_Ampl)*AmplBin*(d_AmplScale-1.)/AmplScale
+         HistNrm=HistNrm + Ampl_Hist(i_Ampl)*Ampl(i_Ampl)*AmplBin*(d_AmplScale-1.)
          !Ampl10=Ampl10 + Ampl_Hist(i_Ampl)/AmplScale*AmplBin*(d_AmplScale-1.)  ! equals tot nr of sources, as it should
          ! chi^2 = sum_i (Ampl_Hist(i) - model) * Ampl_Hist_W(i)
          !write(2,*) k, i_Ampl, AmplBin,Ampl(i_Ampl), Ampl_Hist(i_Ampl)*Counts2BinValue, Ampl_Hist_W(i_Ampl)/Counts2BinValue
@@ -788,9 +1004,9 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndDo
 9  Continue
    !write(2,*) NrSources, SourceAmp(NrSources) , AmplBin, Ampl_Hist(i_Ampl), i_Ampl, Ampl10, HistNrm
-   Counts2BinValue=(AmplBin*(d_AmplScale-1.)/AmplScale)
+   Counts2BinValue=(AmplBin*(d_AmplScale-1.))
    Ampl_Hist_W(i_Ampl)= Counts2BinValue/sqrt(Ampl_Hist(i_Ampl)+ZeroErr)   ! Calculate fitting weight for previous bin
-   Ampl(i_Ampl)=AmplBin*(1.+d_AmplScale)/(2.*AmplScale)  ! In true units
+   Ampl(i_Ampl)=AmplBin*(1.+d_AmplScale)/2.  ! In true units
    Ampl_Hist(i_Ampl)=Ampl_Hist(i_Ampl)/Counts2BinValue
    !write(2,*) N_bins, i_Ampl, Ampl(i_Ampl), Ampl_Hist(i_Ampl), Ampl_Hist_W(i_Ampl)
    i_AmplMax=i_Ampl
@@ -996,7 +1212,7 @@ End Subroutine AmplitudeFit
 !===============================================
 Subroutine FitAmpl(Meqn, nvar, X,ChiSQDF, BestFit)
    !Use AmpFit, only :  jacobianampl
-   Use DS_Select,  only : i_AmplTh, Nmax_Ampl, AmplScale, Ampl_Hist, FitFunc
+   Use DS_Select,  only : i_AmplTh, Nmax_Ampl, Ampl_Hist, FitFunc
    ! i_AmplTh=first entry that will be included in the fit
     Implicit none
     Integer( kind = 4 ), intent(inout) :: Meqn

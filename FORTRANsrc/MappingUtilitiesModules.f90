@@ -3,13 +3,17 @@ Module unque
 
    INTERFACE GenSort ! sorts according to ascending values
       MODULE PROCEDURE Selection_sort  ! [1d integer array]
+                           ! sort(n, a)
       MODULE PROCEDURE Double_sort     ! the first column (*,1) of a [2d integer array] and rearrange the others accordingly
       MODULE PROCEDURE Double_IR_sort  ! [N] elements of [1d integer] and also a [1d real(dp)] array
+                           ! Double_IR_sort(N,a,R)
+                           !  sorts integer array a according to the first dimension & reorders the additional real array
       MODULE PROCEDURE Double_RI_sort  ! N elements of 1d real(dp) and also a 1d integer array
+                           !  sorts Real array a (min first) and reorders the additional Integer array in the same way
       MODULE PROCEDURE sort            ! N elements of 1r real
       MODULE PROCEDURE Double_dp_sort  ! the first column of a [2d real(dp) array] and rearrange the others accordingly
-      MODULE PROCEDURE HPSORT_mult_RI  ! RA(1,1:N)	  table to be sorted, real values                                    *
-                              !*          RA(*,1:N) [real] and IA(*,1:N) [integer]	 rearranged like  RA(1,1:N)            *
+      MODULE PROCEDURE HPSORT_mult_RI  ! HPSORT_mult_RI(RA,IA,N); RA(*,1:N) [real] and IA(*,1:N) [integer]	 rearranged like  RA(1,1:N)
+      MODULE PROCEDURE SortPerm        ! SortPerm(RA(*,1:N),N,IA)  ;  keeps track of the permutations such that RA(IA(j)) =original RA(j)
 
    END INTERFACE GenSort
 
@@ -236,6 +240,78 @@ SUBROUTINE HPSORT_mult_RI(RA,IA,N)  ! should move elsewhere at some point
   IA(:,I)=RIA(:)
   goto 10
 END SUBROUTINE HPSORT_mult_RI
+!-------------------------------------
+Subroutine SortPerm(RA,N,IA)
+!*****************************************************
+!*  Sorts an array RA of length N in ascending order *
+!*                by the Heapsort method             *
+!* ------------------------------------------------- *
+!* INPUTS:                                           *
+!*	    N	  size of table RA                                                                  *
+!*          RA(1:N)	  table to be sorted, real values                                    *
+!*          IA(1:N) [real] and IA(*,1:N) [integer]	 rearranged like  RA(1,1:N)            *
+!* OUTPUT:                                                                                   *
+!*	    RA    table sorted in ascending order                                                 *
+!*	    IA    table rearranged following order RA                                             *
+!*                                                   *
+!* NOTE: The Heapsort method is a N Log2 N routine,  *
+!*       and can be used for very large arrays.      *
+!*****************************************************
+   use constants, only : dp
+   implicit none
+   INTEGER, INTENT(IN) :: N  ! length of arrays a and R that should be sorted, actual size may be larger
+   Real(dp), INTENT(IN OUT) :: RA(:,:)
+   Integer, INTENT(OUT) :: IA(:)  ! keeps track of the permutations such that RA(IA(j)) =original RA(j)
+   real(dp) :: RRA(SIZE(RA,1))
+   integer :: d1,L,IR,I,J
+   Integer SI
+   d1=SIZE(RA,1)
+   Do i=1,N
+      IA(i)=i
+   EndDo
+   L=N/2+1
+   IR=N
+   !The index L will be decremented from its initial value during the
+   !"hiring" (heap creation) phase. Once it reaches 1, the index IR
+   !will be decremented from its initial value down to 1 during the
+   !"retirement-and-promotion" (heap selection) phase.
+10 continue
+   if(L > 1)then
+      L=L-1
+      RRA(1:d1)=RA(1:d1,L)
+      SI=IA(L)
+   else
+      RRA(1:d1)  =RA(1:d1,IR)
+      RA(1:d1,IR)=RA(1:d1,1)
+      SI  =IA(IR)
+      IA(IR)=IA(1)
+      IR=IR-1
+      if(IR.eq.1)then
+         RA(1:d1,1)=RRA(1:d1)
+         IA(1)=SI
+         return
+      end if
+   end if
+   I=L
+   J=L+L
+20 if(J.le.IR)then
+      if(J < IR)then
+         if(RA(1,J) < RA(1,J+1))  J=J+1
+      end if
+      if(RRA(1) < RA(1,J))then
+         RA(1:d1,I)=RA(1:d1,J)
+         IA(I)=IA(J)
+         I=J; J=J+J
+      else
+         J=IR+1
+      end if
+      goto 20
+   end if
+   RA(1:d1,I)=RRA(1:d1)
+   IA(I)=SI
+   goto 10
+!
+End Subroutine SortPerm
 !=================================
 End Module unque
 !=================================
