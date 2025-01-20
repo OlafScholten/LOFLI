@@ -1,0 +1,47 @@
+&Parameters 
+ RunOption='ATRID'
+ Chi2_Lim=9, Spread_Lim=30., BoxFineness_coarse=4.5, BoxSize_coarse=80.
+ AntennaRange=100
+ IntfSmoothWin= 40 !19     ! Width (in samples) of the slices for TRI-D imaging.
+ PixPowOpt= 1     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
+ !  
+ NoiseLevel=0.1
+ SaturatedSamplesMax= 100 
+ BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+             181055, 106063, 130049, 130063, 130091, 145048, 145054, 145084, 146072, 169072
+             188049, 188091, 189054, 189084, !130054, 
+ SignFlp_SAI=   161072, 161073, ! 130085  !, 130054, 130084
+ !PolFlp_SAI=    130084 ! 150090 ! 
+ ExcludedStat= 'RS210', 'RS509', 'RS508'  ! Too large distance to give a consistent calubration, pulse shape in RS210 is often different.
+ ! These stations are about 50km away from the flash, a height of 5 km thus corresponds to 5.7 deg off horizon
+ Calibrations="Fld19A-1plane-202408220925.cal" ! FldCal  T  2.27  
+ !
+! Simulation="simulation/Discr"
+! HeightCorrectIndxRef=.false.
+! TimeBase=  0.
+ TimeBase=  850.
+ PixPowOpt= 0     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
+! -------------------------------------   nohup ./ATRID.sh  >ATRIDB.log 2>&1  &
+ OutFileLabel="-Bc" &end  ! 
+   "T-Ba1.dat"
+   "BbATRID.csv"
+S    1,  274.670117,    -4.78794  -31.71991    6.83932,   73,  2,  601.6  3.61  84.7 ,    3762.    ,  83.97,-104.41,   1.44 ,    379.8    ,  82.08, 164.34,  15.79 ,    212.1    ,  10.03,  22.42,  15.86
+! Note: Similar position as source #   1
+S    2,  274.670053,    -4.78702  -31.71435    6.83511,   37,  2,  600.4  3.14  78.8 ,    2489.    ,  88.24,-101.59,   4.53 ,    340.8    ,  67.40, -11.27,  11.97 ,    215.9    ,  22.58, 162.02,  11.38
+S    3,  274.669929,    -4.77896  -31.66879    6.82085,   74,  2,  929.6  3.49  57.6 ,    1664.    ,  73.12,  86.31,  10.37 ,    402.0    ,  49.31,-171.70,  28.91 ,    184.6    ,  45.56, -28.90,  27.31
+! Note: Similar position as source #   1
+S    4,  274.670007,    -4.79528  -31.77678    6.85029,   41,  2,  640.2  3.12  82.8 ,    3296.    ,  89.67, -95.98,   6.69 ,    353.3    ,  89.05, 174.88,  12.92 ,    122.9    ,   1.54,  65.10,  12.43
+S    5,  274.670642,    -4.78218  -31.66575    6.82083,   59,  2,  936.3  3.14  28.5 ,    783.9    ,  75.73,  15.68,  28.54 ,    347.3    ,  48.36, 111.21,   9.83 ,    196.3    ,  43.26, -90.51,  30.46
+! Note: Similar position as source #   5
+S    6,  274.670550,    -4.78730  -31.70963    6.83274,   32,  2,  905.4  2.31  31.9 ,    741.3    ,  89.16, -41.13,  21.08 ,    399.8    ,  21.37,  93.19,  32.15 ,    195.3    ,  80.83,-135.39,  39.62
+S    7,  274.670975,    -4.78969  -31.70791    6.83030,   51,  2, 1640.2  4.07  38.8 ,    1374.    ,  68.24,  99.15,  20.69 ,    793.8    ,  76.71,   6.30,  27.24 ,    550.9    ,  21.55,-129.40,  18.23
+S    8,  274.670825,    -4.80497  -31.81238    6.85487,   39,  2,  943.5  5.65  36.9 ,    974.0    ,  75.81, -14.22,  31.85 ,    452.0    ,  77.99,-102.96,  35.22 ,    137.5    ,  16.46,  91.43,  15.13
+S    9,  274.670918,    -4.78109  -31.65810    6.82020,   41,  2, 1018.1  3.58  42.9 ,    856.0    ,  76.86,-121.82,  11.89 ,    525.0    ,  43.57, 136.00,  22.71 ,    465.7    ,  49.34, -14.50,  19.66
+! Note: Similar position as source #   9
+S   10,  274.670779,    -4.78724  -31.70577    6.82991,   78,  2, 1238.4  3.67  36.9 ,    1048.    ,  66.80,  78.57,  25.78 ,    667.1    ,  70.01,-173.05,  40.98 ,    282.4    ,  53.85, -55.01,  30.21
+S   11,  274.671603,    -4.79736  -31.69802    6.83192,  115,  2, 1769.5  9.40  16.8 ,    1410.    ,  86.44, 173.33,   2.65 ,    418.9    ,  57.78,  81.74,  33.79 ,    279.6    ,  32.51, -87.90,  33.68
+! Note: Similar position as source #  11
+
+- - - - - --- !    #, t_src [ms] ,    north=y ,   east=x , height[km], Width, Q, Inten, Chi^2, I3%
+- - - - - --- !    #, t_src [ms] ,    north=y ,   east=x , height[km], Width, Q, Inten, Chi^2, I3%
+
