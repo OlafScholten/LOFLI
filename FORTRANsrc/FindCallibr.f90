@@ -1,6 +1,6 @@
 !================================
 !=================================
-Subroutine FindCallibr(SourceGuess)
+Subroutine FindCallibr(SourceGuess, XcorelationPlot)
 !   Fine-callibrate the timing of the LOFAR stations by fitting a few lightning sources.
 !   This should be done for even as well as odd numbered antennas.
 !
@@ -38,6 +38,7 @@ Subroutine FindCallibr(SourceGuess)
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp), intent(in) :: SourceGuess(3,*)
+   Logical, intent(in) :: XcorelationPlot
    !
    integer :: i, j, k, i_ant, j_corr, i_eo, i_chunk, i_dist, MinFitAntD_nr
    logical, save :: Fitfirst=.true.
@@ -223,7 +224,7 @@ Subroutine FindCallibr(SourceGuess)
     !  MeanCircPol=.true.
     !EndIf
     MeanCircPol=.false.
-    PlotCCPhase=.true.
+    PlotCCPhase=XcorelationPlot
     Call BuildCC(StatMax,DistMax)
    !
    If(MeanCircPol) Then  ! Obsolete option

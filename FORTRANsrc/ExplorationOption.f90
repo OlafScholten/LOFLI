@@ -18,6 +18,7 @@ Subroutine ExplorationRun
    Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
    Integer :: ir_file,ir_grp,ir_dst, DATA_LENGTH, SAMPLE_NUMBER_first, i_dist, i_guess, TimeFr
    Real*8 :: LFRAnt_crdnts(3), powr, T_Offset !,StatAnt_Calib !,StartTime_ms
+   Logical :: XcorelationPlot
 !
    i_chunk=1
    SourceGuess(:,1)=(/40000.,40000.,5000./)
@@ -43,6 +44,7 @@ Subroutine ExplorationRun
    !StoppingTime=2000
    N_ExplTimes=  INT((StoppingTime - StartTime_ms)/dt_ms)
    StartTime_ms=StartTime_ms - dt_ms*2/3.
+   XcorelationPlot=.false.
    Call Alloc_Explore_Pars
    Do i_expl=1,N_ExplTimes
       write(2,"(50('= '))")
@@ -58,7 +60,7 @@ Subroutine ExplorationRun
          Call AntennaRead(i_chunk,SourceGuess(:,i_chunk))
          Call DAssignFFT()
          !Call Find_unique_StatAnt()
-         Call FindCallibr(SourceGuess)
+         Call FindCallibr(SourceGuess, XcorelationPlot)
          !Write(2,*) 'number of close peaks in even&odd:',PeakD_nr
          !Call SourceFind(TimeFrame,SourceGuess,units)
       Enddo !  i_guess=1,4

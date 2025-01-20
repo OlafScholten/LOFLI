@@ -1,4 +1,3 @@
-!size   23 38
 Z1=5
 Z=Z1
 ! Z=0  ! if active, omit side panels
@@ -10,14 +9,6 @@ bsh=2.5*fontSz    ! 1.5
 HorOff=1.0+bsh
 VerOff=2.0+bsh
 B=14+Z1-Z
-size   HorOff+B+Z+bsh-1.5 VerOff+B+Z+2*Z1+3*bsh ! ----------------------------
-!
-declare sub Clr Cscale
-include "RdYlBl.gle"
-include "ClrOld.gle"
-include "MaxMin.gle"
-include "ColorLegenda.gle"
-include "IntfBox.gle"
 !
 file$='../20A-7/files/IntfSpecSelSE20A7-E3IMMx_0'
 if(nargs() > 0 ) then 
@@ -27,11 +18,20 @@ filedat$=file$+'.dat'
 !filedat$='../files/'+file$+'.dat'
 fopen filedat$ inchan read
 freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
-ErrX=0
-ErrY=0
-ErrZ=0
-freadln inchan NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+!
+H=B*(yMax-yMin)/(xMax-xMin)
+size   HorOff+B+Z+bsh-1.5 VerOff+H+Z+2*Z1+3*bsh ! ----------------------------
+!
 !NTracks=0   !  omit plotting leader tracks
+!
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+include "IntfBox.gle"
+!
 NIgn=2
 if(ZmBx$ = 'NoBox') then
     bbx=-1
@@ -45,7 +45,6 @@ else
     bbx=+1
 end if 
 
-H=B*(yMax-yMin)/(xMax-xMin)
 set lwidth 0.04
 set font pstr
 set hei fontSz
@@ -145,7 +144,8 @@ End If
 
 ! Start plotting
 amove HorOff top 
-write label$  "; Q="  Q "ns, "  EventNr " sources"
+!write label$  "; Q="  Q "ns, "  EventNr " sources"
+write label$  "; "  Qual$+','   EventNr " sources"
 
 amove HorOff VerOff+h+Z+bsh ! (time,h) ---------------------------------------------------
 begin graph

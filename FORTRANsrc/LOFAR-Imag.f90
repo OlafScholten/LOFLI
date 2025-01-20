@@ -306,7 +306,7 @@ Program LOFAR_Imaging
     use constants, only : dp,pi,ci,sample, HeightCorrectIndxRef
     use LOFLI_Input
     use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
-    use DataConstants, only : Time_dim, Cnu_dim, Production, RunMode, Utility, release
+    use DataConstants, only : Time_dim, Production, RunMode, Utility, release
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, Diagnostics, EdgeOffset, Calibrations, OutFileLabel
     use DataConstants, only : Interferometry ! Polariz
     use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth, StStdDevMax_ns
@@ -325,8 +325,9 @@ Program LOFAR_Imaging
     Implicit none
     !
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
-    Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
-    Real*8 :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Real(dp) :: StartTime_ms, StartingTime, StoppingTime, D
+    Real(dp) :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Real(dp) :: Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
@@ -346,10 +347,11 @@ Program LOFAR_Imaging
          , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
          , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel &
-         , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk    !  ChunkNr_dim,
+         , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk &     !  ChunkNr_dim,
+         , Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Version='v23.11'
-   release='23.11 (Nov, 2023)'
+   Version='v25.11'
+   release='25.1 (Jan, 2025)'
    Utility='LOFLi-Imaging'
    CALL get_environment_variable("LIBRARY", lname)
    !WRITE (*,*) "LIBRARY=",TRIM(lname)
@@ -372,7 +374,11 @@ Program LOFAR_Imaging
    SaturatedSamplesMax=5
    Simulation=""
    CalibratedOnly=.true.
-   RefinePolarizObs=.false.
+   RefinePolarizObs=.true.
+   Chi2_Lim=-1.
+   Spread_Lim=-1.
+   BoxFineness_coarse=4.
+   BoxSize_coarse=70.
    !reshape((/ -1.D-10,0.d0,0.d0,0.d0,-1.D-10,0.d0,0.d0,0.d0,-1.D-10 /), shape(array))
    !AntennaRange_km=AntennaRange
    read(*,NML = Parameters,iostat=nxx)
@@ -380,7 +386,8 @@ Program LOFAR_Imaging
    if (j>= iachar("a") .and. j<=iachar("z") ) then
       RunOption(1:1) = achar(j-32)
    end if
-      SELECT CASE (RunOption(1:1))
+   If(RunOption(1:1) .eq. 'P') RunOption(1:1)='A'
+   SELECT CASE (RunOption(1:1))
    ! Explore
    ! Calibrate
    ! SelectData
@@ -414,24 +421,24 @@ Program LOFAR_Imaging
          Write(2,*) 'This option has been discontinued, use "T" instead.'
          Stop 'Discontinued option'
          Sources1='XY- TRI-D Imager (Interferometry)'
-      CASE("T")  ! TRI-D imager==PolInterferometry
-         Write(*,*) 'Interferometry, OutFileLabel=',TRIM(OutFileLabel)
-         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='Interferometer'//TRIM(OutFileLabel)//'.out')
+      CASE("T")  ! TRI-D imager==PolInterferometry ; Time Resolved Interferometric 3-Dimensional (TRI-D)
+         Write(*,*) 'TRI-D Imager, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='TRID'//TRIM(OutFileLabel)//'.out')
          RunMode=24
-         Sources1='Polarimetric TRI-D Imager (Interferometry)'
+         Sources1='Time Resolved Interferometric 3-Dimensional (TRI-D) Imager'
       CASE("F")  ! FieldCalibrate for TRI-D imager
          Write(*,*) 'Interferometric Calibration for TRI-D mode, OutFileLabel=',TRIM(OutFileLabel)
          OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='FC'//TRIM(OutFileLabel)//'.out')
          RunMode=7
          Sources1='Field Calibration for TRI-D Imager (Interferometry)'
-      CASE("P")  ! PeakInterferometry
-         Write(*,*) 'PeakInterferometry, OutFileLabel=',TRIM(OutFileLabel)
-         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='PkInt'//TRIM(OutFileLabel)//'.out')
+      CASE("A")  ! ATRID, formerly known as PeakInterferometry
+         Write(*,*) 'Adaptive TRI-D, OutFileLabel=',TRIM(OutFileLabel)
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='ATRID'//TRIM(OutFileLabel)//'.out')
          RunMode=8
-         Sources1='PeakInterferometry (Interferometry)'
+         Sources1='Adaptive TRI-D (ATRI-D)'
       CASE("M")  ! MultiplePointSourcesInterferometry
          Write(*,*) 'MultiplePointsources-Interferometry, OutFileLabel=',TRIM(OutFileLabel)
-         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MSInt'//TRIM(OutFileLabel)//'.out')
+         OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='MPS'//TRIM(OutFileLabel)//'.out')
          RunMode=9
          Sources1='MultiplePointSources (Interferometry)'
       CASE DEFAULT  ! Help
@@ -467,6 +474,8 @@ Program LOFAR_Imaging
    ! SelectData         0, same as for RFI-Mitigate
    ! FieldCalibrate     7
    ! TRI-D imager       4
+   ! ATRI-D imager      8
+   ! Mult-Point imager  9
    ! ImpulsiveImager    3
    ! Other, TrackScatt  5
    ! Other, InterfSelct 6
@@ -630,7 +639,7 @@ Program LOFAR_Imaging
             'Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.'//&
             ' & possibly produce curtain plots' ) !
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
-      CASE("P")  ! PeakInterferometry            RunMode=8
+      CASE("A")  ! ATRI-D run, formerly known as PeakInterferometry            RunMode=8
          ! Pre-process inputdata for sources to be used in calibration
          ChunkNr_dim=N_Chunk_max
          PeakNr_dim=50
@@ -639,18 +648,32 @@ Program LOFAR_Imaging
          FitRange_Samples=7
          Dual=.false.
          CurtainHalfWidth=-1
+         RefinePolarizObs=.false.
          !Polariz=Dual  !
          CalibratedOnly=.true.
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
-         !Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
-         !Call PrintValues(XcorelationPlot,'XcorelationPlot', &
-         !   'Produce a plot of the cross-correlation functions (real or absolute).')
+         If(BoxFineness_coarse.lt.0.1) Then
+            write(2,*) 'BoxFineness_coarse', BoxFineness_coarse, ' is set to a positive value'
+            BoxFineness_coarse=3
+         EndIf
+         If(BoxSize_coarse.lt.0.1) Then
+            write(2,*) 'BoxSize_coarse', BoxSize_coarse, ' is set to a positive value'
+            BoxSize_coarse=70.
+         EndIf
+         Call PrintValues(BoxFineness_coarse,'BoxFineness_coarse', 'Grid Fineness factor for intitial TRI-D runs.')  ! width of plot?
+         Call PrintValues(BoxSize_coarse,'BoxSize_coarse', &
+            'Grid-expanse [m] from each initial source position for intitial TRI-D runs.')  ! width of plot?
+         Call PrintValues(Chi2_Lim,'Chi2_Lim', &
+            'Sources with larger chi^2 will be marked for de-selection; When negative set =(mean+StDev).')
+         Call PrintValues(Spread_Lim,'Spread_Lim', 'Sources with larger spreading length in intensity profile'//&
+            ' will be marked for de-selection; When negative set =(mean+StDev).')
          Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
-         Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
-         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Width (in samples) of the slices for TRI-D imaging.')
+         Call PrintValues(IntfSmoothWin,'IntfSmoothWin', 'Default window size when not specified, max window size is twice.')
+         Call PrintValues(TimeBase,'TimeBase', &
+            'Time-offset, not used when reading sources from a .dat (TRI-D or DataSelect) or .csv (ATRID) file')
          Call PrintValues(ParabolicSmooth,'ParabolicSmooth', 'Use a parabolic-like smmoothing window.')
          Call PrintValues(PixPowOpt,'PixPowOpt', &
             '=0=default: Intensity=sum two transverse polarizations only; '//&
@@ -659,8 +682,6 @@ Program LOFAR_Imaging
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
-         Call PrintValues(RefinePolarizObs,'RefinePolarizObs', &
-            'Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.' ) !
          !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'
@@ -684,10 +705,10 @@ Program LOFAR_Imaging
    If(FitRange_Samples.lt.5) FitRange_Samples=5
    Safety=FitRange_Samples
    Call Alloc_Chunk_AntInfo !  uses ChunkNr_dim
-   Call Alloc_ThisSource    !  uses ChunkNr_dim
-   Do i=-Safety,Safety
-     t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
-   Enddo
+!   Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
+!   Do i=-Safety,Safety
+!     t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
+!   Enddo
    !write(2,*)'refractivity=',Refrac-1.
    SgnFlp_nr=count(SignFlp_SAI.gt.0)
    PolFlp_nr=count(PolFlp_SAI.gt.0)  !first pole-flip, then bad antenna
@@ -702,7 +723,7 @@ Program LOFAR_Imaging
    Do j=1,ExcludedStat_max
       If(ExcludedStat(j).eq.'     ') exit
       ExcludedStatID(j)=Statn_Mnem2ID(ExcludedStat(j))
-      write(2,*) j,ExcludedStatID(j),ExcludedStat(j)
+      write(2,*) 'Excluded:',j,ExcludedStatID(j),ExcludedStat(j)
    enddo
    !
    Do i_dist=1,MaxFitAntD_nr  ! set the maximal distance to be fitted to AntennaRange
@@ -719,6 +740,7 @@ Program LOFAR_Imaging
       ! ========0 0 0 0 0 0 0 0 0 0 0 0 0
       CASE(0)  ! SelectData                          RunMode=0
          i_chunk=1
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call ReadSourceTimeLoc(StartTime_ms, SourceGuess(:,i_chunk))
          !Read(lname,*) StartTime_ms, SourceGuess(:,1), StartingTime, StoppingTime  ! Start time offset = 1150[ms] for 2017 event
          !Call Convert2m(SourceGuess(:,1))
@@ -752,22 +774,26 @@ Program LOFAR_Imaging
          Stop 'SelectData'
       ! ========1 1 1 1 1 1 1 1 1 1 1
       CASE(1)  ! Explore                          RunMode=1
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
          Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
          Call ExplorationRun
          stop 'Normal exploration end'
     ! ========4 4 4 4 4 4 4 4 4 4 4
       CASE(4)  ! PTRI-D imager         RunMode=14 & 24
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call InterferometerRun
       ! =============3 3 3 3 3 3 3 3 3
       CASE(3)  ! ImpulsiveImager                          RunMode=3
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call ImpulsImagRun
        ! =====2 2 2 2 2 2 2 2
       CASE(2)  ! Calibrate                          RunMode=2
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call ReadPeakFitInfo(SourceGuess)
          !
          write(*,*) 'start fitting'
-         Call FindCallibr(SourceGuess) ! Find Station Callibrations
+         Call FindCallibr(SourceGuess, XcorelationPlot) ! Find Station Callibrations
          !
          i_chunk=0 ! scratch
          If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
@@ -780,6 +806,7 @@ Program LOFAR_Imaging
          !
       ! =====7 7 7 7 7 7 7 7 7
       CASE(7)  ! Field Calibrate                          RunMode=7
+         Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call E_Callibr()
          !
          !
@@ -787,8 +814,8 @@ Program LOFAR_Imaging
          !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
          !
-      CASE(8)
-         Call PeakInterferoOption
+      CASE(8)   ! ATRID
+         Call PeakInterferoOption(Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse)
          !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
   End SELECT

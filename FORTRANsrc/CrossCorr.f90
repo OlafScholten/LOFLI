@@ -57,6 +57,8 @@ Subroutine BuildCC(StatMax,DistMax)
             j_corr=0
             ReferenceAnt=RefAnt(i_chunk,i_eo)
             If(PlotCCPhase) then
+               Write(2,*) 'BuildCC; PlotCCPhase=',PlotCCPhase,trim(DataFolder)//'CCPeakPhase-'//txt//'.dat', i_chunk,i_eo
+               Flush(Unit=2)
                write(txt,"(I1,I1)") i_chunk,i_eo
                Open(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'CCPeakPhase-'//txt//'.dat')
             endif
@@ -298,7 +300,7 @@ Subroutine GetCorrSingAnt( i_ant, J_Corr, i_eo, i_chunk)
          !EndIf
         !
         Call SearchWin(Peak_IRef(i_Peak), i_ant, i_chunk, SourcePos(1,i_Peak), SearchRange)
-        ! write(2,*) 'Before  CrossCorr_Max', SearchRange, Polariz, Ant_nrMax, j_corr,Safety
+        ! write(2,*) 'Before  CrossCorr_Max', SearchRange, Ant_nrMax, j_corr,Safety
         !    flush(unit=2)
    !call cpu_time(CPUCC)
    !TotSW=TotSW+CPUCC
@@ -710,6 +712,10 @@ Subroutine CrossCorr_Max(i_ant,i_chunk, i_Peak, CrCor, TrueCC, RtMax, CCval, CCP
    EndIf
    !
 !   Call spline_cubic_set( 2*Safety+1, t_ccorr(-Safety), TrueCC(-Safety), TrueCC_pp(-Safety) )
+   If(Range.le.0) Then
+      write(2,*) 'CrossCorr_Max; pline_cubic_set, Range problems', Range, SearchRange
+      Flush(unit=2)
+   EndIf
    Call spline_cubic_set( 2*Range+1, t_ccorr(-Range), TrueCC(-Range), TrueCC_pp(-Range) )
    !
    !

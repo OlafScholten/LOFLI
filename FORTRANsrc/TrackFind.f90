@@ -27,7 +27,7 @@ contains
 !===============================================
 !  Contains
 !===============================================
-Subroutine Assign2Tracks(RA, Label, SourcTotNr)
+Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
 ! version 17a, use reverse time order
    !  On return:
    ! TrackE(k,i)=j :  Source TrackE(k,i) is the k^th source assigned to track i
@@ -41,7 +41,8 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
    !Use TrackConstruct, only : Wtr, MaxTrackDist, HeightFact, NLongTracksMax, TrackENr, TrackE, TrackTimeLim, TrackNrLim
    IMPLICIT none
    Real(dp), Intent(in) :: RA(4,*)
-   Integer, intent(in) :: SourcTotNr, Label(4,*)
+   Real, intent(in) :: SrcI20_r(*)
+   Integer, intent(in) :: SourcTotNr ! , Label(4,*)
    Real*8 :: TrackPos(1:3,TrackNrLim)  !  TrackPos(1:3,i): position of the head of the i^th track
    Real*8 :: TrackWeight(TrackNrLim), AmplWeight
    Integer :: i_cls(1), n_cls, Cls_track(3)
@@ -92,7 +93,7 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
          If(n_cls.eq.3) exit
          !goto 10
       enddo
-      AmplWeight=(Label(2,j)*Aweight+1.)  ! Amplitude determined weight of the new source
+      AmplWeight=(SrcI20_r(j)*Aweight+1.)  ! Amplitude determined weight of the new source
       !write(2,*) 'Assign2Tracks: Source=',j,n_cls,dist,TrackNr, TrackNrLim
       !
       If(n_cls.eq.0) then  ! no close-lying track, start a new one
@@ -167,7 +168,7 @@ Subroutine Assign2Tracks(RA, Label, SourcTotNr)
    Return
 End Subroutine Assign2Tracks
 !===============================================
-Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
+Subroutine ConstructTracks(RA, SrcI20_r, IPerm, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    ! Construct mean, smooth, tracks from assigned source locations on return in  LeaderPos
    ! Calculate lateral deviations of source locations from mean track
    ! Used:
@@ -180,7 +181,8 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    Use constants, only : dp, pi
    IMPLICIT none
    Real(dp), Intent(in) :: RA(4,*)
-   Integer, intent(in) :: SourcTotNr, Label(4,*)
+   Real, intent(in) :: SrcI20_r(*)
+   Integer, intent(in) :: SourcTotNr, IPerm(*) ! , Label(4,*)
    Logical, intent(in) :: PolarAna
    Complex, intent(in) :: Stk_NEh(1:6,*)
    Character(len=*) :: PlotFile
@@ -191,7 +193,7 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    Real*8 :: Xsq, Ysq, Zsq, tw, w, Pos(1:3), dt
    Real*8 :: RadDev, HorDev, HDist, Velocity, TW2, V_n, V_E, V_h, V_hor, V_th, V_ph
    complex  :: LeaderStks(1:6), AveStks(1:3,1:3) !  ,TrackLenMax)
-   Real :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3), Thet1, Phi1
+   Real(dp) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3), Thet1, Phi1
    logical :: prin
    !Integer, Parameter :: bin_max=30
    !Integer :: i_bin
@@ -204,6 +206,7 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
    !Call Flush(2)
    !    Hist1=0.000001 ; Hist2=0.000001
    prin=.false.   !  Do not print polarization observables
+   !prin=.true.   !  Do not print polarization observables
    PolZen(1:3)=0. ; PolAzi(1:3)=0. ; PolMag(1:3)=0. ; PoldOm(1:3)=0.
    do i=1,TrackNr
       !write(2,*) 'ConstructTracks',i,TrackENr(i), LongTrack_Min, PolarAna
@@ -237,10 +240,10 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
                 jk=TrackE(kk,i) ! jk= rank-number of other sources on track i
                 dt=(RA(1,j)-RA(1,jk))**2        ! dt has units of t^2 !!!
                 If(dt.gt.8.*Tw2) cycle
-                w=exp(-dt/Tw2)*(Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
+                w=exp(-dt/Tw2)*(SrcI20_r(j)*Aweight+1.)  ! Include intensity in weight factor
                 tw=tw+w
                 Pos(1:3)=Pos(1:3)+w*RA(2:4,jk)
-                If(PolarAna) LeaderStks(1:6)=LeaderStks(1:6)+w*Stk_NEh(1:6,Label(3,jk))
+                If(PolarAna) LeaderStks(1:6)=LeaderStks(1:6)+w*Stk_NEh(1:6,Iperm(jk))
             enddo
             LeaderPos(1,k,i)=RA(1,j)         ! Time of the leader head = the time of the last source
             LeaderPos(2:4,k,i)=Pos(1:3)/tw  ! position of the leader head
@@ -248,8 +251,8 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
                AveStks(1,1:3)=LeaderStks(1:3)/tw
                AveStks(2,2:3)=LeaderStks(4:5)/tw
                AveStks(3,3)=LeaderStks(6)/tw
-               AveStks(2:3,1)=AveStks(1,2:3)
-               AveStks(3,2)=AveStks(2,3)
+               AveStks(2:3,1)=conjg(AveStks(1,2:3))
+               AveStks(3,2)=conjg(AveStks(2,3))
                !write(2,*) 'ConstructTracks',k,LeaderStks(:)
                Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)
             EndIf
@@ -301,6 +304,8 @@ Subroutine ConstructTracks(RA, Label, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
                     ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, tw*1000.
                If(PolarAna) write(30,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
                     LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3)  !V_hor, V_N, V_E, V_h!
+               !If(PolarAna) write(2,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
+               !     LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3)  !V_hor, V_N, V_E, V_h!
                !write(2,*) 'ConstructTracks', PolMag(:), PolZen(:)
             EndIf
             !write(29,"(1x,3i4,4(2x,g14.8),3x,f8.6)")  i,k,j, RA(1:4,j)
@@ -428,7 +433,7 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
    Return
 End Subroutine BinTracks
 !===============================================
-Subroutine AnalyzeBurst(RA, Label, SourcTotNr, PlotFile)
+Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
    ! Make a histogram of the source times in a track where each pulse is smeared with a gaussian
    ! with half width of t_resol, where this resolution changes. The histogram is stored in TBurst_trace(T)
    ! Then check how often >3.5 (N1) or >2.5 (N2) sources are within the t_resol
@@ -437,7 +442,8 @@ Subroutine AnalyzeBurst(RA, Label, SourcTotNr, PlotFile)
    use FFT, only : RFTransform_su, DAssignFFT, RFTransform_CF
    IMPLICIT none
    Real(dp), Intent(in) :: RA(4,*)
-   Integer, intent(in) :: SourcTotNr, Label(4,*)  !  (Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
+   Integer, intent(in) :: SourcTotNr !, Label(4,*)  !  SrcI20_r(Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
+   real, intent(in) :: SrcI20_r(*)  !  SrcI20_r = (Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
    Character(len=*) :: PlotFile
    integer, parameter :: TB_max=131072, N_nu=TB_max/2  ! 65536 ! 65536=2^16 ; 32768=2^15 ! 2048=2^11 ! 262144=2^18 ! 131072=2^17
    real*8 :: t_resol,T_max, T_min, TimeDur, A, B, Norm
@@ -478,14 +484,14 @@ Subroutine AnalyzeBurst(RA, Label, SourcTotNr, PlotFile)
          Do k=1,TrackENr(i) ! loop over all events in track i
              j=TrackE(k,i)   ! get event number of k-th track member
              T_C=Int((RA(1,j)-T_min)/t_resol)  ! central time for this averaging period
-             norm=norm + (Label(2,j)*Aweight+1.) ! Use intensity weighting
+             norm=norm + (SrcI20_r(j)*Aweight+1.) ! Use intensity weighting
              T1=T_C-8
              if(T1.lt.0) T1=0
              T2=T_C+8
              if(T2.gt.NTSampl) T2=NTSampl
              If(T1.ge.T2) exit
              Do T=T1,T2 ! update the +/- 8 time bins around the central
-                 TBurst_trace(T)=TBurst_trace(T)+ exp(-(T-(RA(1,j)-T_min)/t_resol)**2)*(Label(2,j)*Aweight+1.)
+                 TBurst_trace(T)=TBurst_trace(T)+ exp(-(T-(RA(1,j)-T_min)/t_resol)**2)*(SrcI20_r(j)*Aweight+1.)
              Enddo
          enddo
          TBurst_trace(:)=TBurst_trace(:)*TrackENr(i)/(norm)  !  /(t_resol*norm)

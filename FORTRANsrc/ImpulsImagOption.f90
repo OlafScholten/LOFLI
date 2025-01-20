@@ -167,20 +167,20 @@ Subroutine ImpulsImagRun
    lname='AFlashImage.in'  ! temporary name holder
    Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(lname))
    If(Dual) then
-      write(10,"(' ',A,' 6. 2. 5.0 55  ',A,'-all ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-            '"'//TRIM(Sources1)//'"', TRIM(FlashName)//'d'//TRIM(OutFileLabel), &
-            Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-      write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0.  ! no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="d", ', &
+         'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
+      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+            NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"('======================================================')")
    Else
-      write(10,"(' ',A,' 6. 2. 5.0 55  ',A,' ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-            '"'//TRIM(Sources1)//'"', TRIM(FlashName)//'e'//TRIM(OutFileLabel), &
-            Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-      write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0. !     no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
-      write(10,"(' ',A,' 6. 2. 5.0 55  ',A,' ',4f5.0,' 0.0 12. ',2f7.1,' NoBox')") &
-            '"'//TRIM(Sources2)//'"', TRIM(FlashName)//'o'//TRIM(OutFileLabel), &
-            Emin, EMax, NMin, NMax, StartingTime, StoppingTime !  plotting command
-      write(10,*) ' 0.1 0.5 0.01 " " 1.  1.   0   0. !   no plots, MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]'
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="e", ', &
+         'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
+      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+            NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources2)//'", PlotName="o", ', &
+         'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
+      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+            NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"('======================================================')")
    EndIf
    Close(unit=10)

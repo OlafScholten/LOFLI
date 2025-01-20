@@ -1,0 +1,47 @@
+&Parameters 
+ RunOption='PeakInterferometry'
+ AntennaRange=100
+ IntfSmoothWin= 50 !19     ! Width (in samples) of the slices for TRI-D imaging.
+ PixPowOpt= 1     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
+ !IntfSmoothWin= 15 !19     ! Width (in samples) of the slices for TRI-D imaging.
+ !  
+ NoiseLevel=0.1
+ SaturatedSamplesMax= 100 
+ BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+             181055, 106063, 130049, 130063, 130091, 145048, 145054, 145084, 146072, 169072
+             188049, 188091, 189054, 189084, !130054, 
+ SignFlp_SAI=   161072, 161073, ! 130085  !, 130054, 130084
+ !PolFlp_SAI=    130084 ! 150090 ! 
+ ExcludedStat= 'RS210', 'RS509', 'RS508'  ! Too large distance to give a consistent calubration, pulse shape in RS210 is often different.
+ ! These stations are about 50km away from the flash, a height of 5 km thus corresponds to 5.7 deg off horizon
+ Calibrations="Fld19A-1plane-202408220925.cal" ! FldCal  T  2.27  
+ !
+ Simulation="simulation/Discr"
+! HeightCorrectIndxRef=.false.
+ TimeBase=  0.
+! TimeBase=  850.
+ PixPowOpt= 0     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
+ OutFileLabel="planeSim2" &end  ! 
+ -2. 2.5 25. 
+ "planeSimPkInt.csv"
+ --- --
+ 1111 0.0065    -41.86376  23.22366   8.05660,  -1 ! 
+ 1111 0.0070    -41.86376  23.22366   8.05660, -1 !  23223.66  -41863.76    8056.60
+ 1111 0.0075    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0080    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0085    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0090    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0095    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0100    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0105    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0110    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+ 1111 0.0115    -41.86376  23.22366   8.05660, -1  !  23223.66  -41863.76    8056.60
+-! SourceLab   time          x=East           y=North        z=h                Ampl   nohup ./PkIntf.sh  >PkIntf.log 2>&1  &
+S 1111 0.0050   23.22366  -41.86376  8.05660, -100 !  23223.66  -41863.76    8056.60
+S 1111 0.0056   23.22366  -41.86376  8.05660, -100  ! 
+S 1111 0.0062   23.22366  -41.86376  8.05660, -100  ! 
+ 1111 0.0059    -41.86376  23.22366   8.05660,  ! 
+ 1111 0.0062    -41.86376  23.22366   8.05660,  ! 
+ 1111 0.0065    -41.86376  23.22366   8.05660,  -1 ! 
+ 1111 0.0070    -41.86376  23.22366   8.05660, -1 !  23223.66  -41863.76    8056.60
+  -41.950  -41.800   23.150   23.300    7.950    8.200 -330. -50.  "I-19A-1plane.trc"

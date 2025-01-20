@@ -1,7 +1,7 @@
 Subroutine AntennaRead(i_chunk,SourceGuess)
 !  v18 : Normalization is changed
-   use constants, only : dp,sample, HeightCorrectIndxRef
-   use DataConstants, only : Time_dim, Cnu_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
+   use constants, only : dp,sample, sample_ms, HeightCorrectIndxRef
+   use DataConstants, only : Time_dim, Diagnostics, Production, OutFileLabel, RunMode  ! , ChunkNr_dim
    use Chunk_AntInfo, only : ExcludedStatID, StartT_sam, BadAnt_nr, BadAnt_SAI, DataReadError, AntennaNrError
    use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos, CalibratedOnly
@@ -23,10 +23,10 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim)
-   Complex(dp) :: CNu_s(0:Cnu_dim), CTime_s(1:Time_dim)
-   integer :: Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
+   Complex(dp) :: CNu_s(0:Time_dim/2), CTime_s(1:Time_dim/2)
+   integer :: Cnu_dim, Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
    Real*8 :: Powr, Powr_eo(0:1), NormEvenOdd=1.d2
-   Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
+   Real(dp) :: nu_Fltr(0:Time_dim/2) !, Av, Bv, FiltFact
    Integer, save :: WallCount
    Real,save :: CPUstartTime, CPUstopTime=-1., WallstartTime=0, WallstopTime=-1.
    Real,save :: TotCPURead=0., TotCPUFit=0., TotWallRead=0., TotWallFit=0.
@@ -38,6 +38,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    Logical, save :: FirstPass=.true.
    !character*80 :: lname
    !
+   Cnu_dim=Time_dim/2
    ! time recording
    call cpu_time(CPUstartTime)
    CALL SYSTEM_CLOCK(WallCount, powr)  !  Wallcount_rate)
@@ -50,10 +51,10 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !WRITE(*,"(A,F9.3,F12.6,A)") 'Totals Fit, Wall & CPU:',TotCPUFit, TotWallFit, '[s]'  ! count_rate, count_max
    !
    !Source_Crdnts= (/ 10000 , 16000 , 4000 /)    ! 1=North, 2=East, 3=vertical(plumbline)
-   Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',StartT_sam(i_chunk)*1000.d0*sample &
-      ,' [ms] =',StartT_sam(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
+   If(FirstPass) Write(2,"(A,F12.6,A,I11,A,3F10.1,A)") 'Start time for this chunk is set at ',StartT_sam(i_chunk)*sample_ms &
+      ,' [ms] =',StartT_sam(i_chunk),'Samples, SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline@core)'
    !Write(2,*) 'SourceGuess=',SourceGuess,';  1=North, 2=East, 3=vertical(plumbline)'
-   write(*,"(A,i3,A,f8.2,A)") achar(27)//'[33m',i_chunk,' @',StartT_sam(i_chunk)*1000.d0*sample,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
+   write(*,"(A,i3,A,f8.2,A)") achar(27)//'[33m',i_chunk,' @',StartT_sam(i_chunk)*sample_ms,'[ms]'//achar(27)//'[0m'  ! [1000D    !  //achar(27)//'[0m.'
    ! In main program, after option selection:
    Inquire(unit=14, opened=file14open)
    If((Simulation.eq."")) WriteSimulation(2)=-1
@@ -92,10 +93,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !i_file=1 ; rewind(unit=14)
       read(14,*,IOSTAT=nxx)  Group_nr, filename
       If(nxx.ne.0) exit
-      If(FirstPass) Then
-         FirstPass=.false.
-         write(2,*) 'First data file #=',i_file,', name=',filename
-      EndIf
+      If(FirstPass .and. (i_file.eq.1))  write(2,*) 'First data file name=',filename
       !If(Production) write(2,*) 'file #=',i_file,', name=',filename
       If(.not. Production) write(*,"(A,i3)", ADVANCE='NO') achar(27)//'[100D'//'file#=',i_file  ! [1000D    !  //achar(27)//'[0m.'
       Do i_grp=1,Group_nr
@@ -130,7 +128,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
               !
               Do while((i_file .gt. ir_file) .or. (i_grp .gt. ir_grp) .or. (i_dst .gt. ir_dst) )
               !    Write(2,*) 'reading Filter data',i_file,i_grp,i_dst,ir_file,ir_grp,ir_dst
-                  Read (12) ir_file,ir_grp,ir_dst, LFRAnt_crdnts, powr,&
+                  Read(12) ir_file,ir_grp,ir_dst, LFRAnt_crdnts, powr,&
                   DATA_LENGTH, SAMPLE_NUMBER_first, Absolute_TIME, DIPOLE_CALIBRATION_DELAY,nu_fltr !nu_fltr
               enddo
               if(powr.lt.1.d-6) cycle
@@ -365,10 +363,13 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
 9  Continue  ! entry after simulation read
    NormEven=sqrt(2.*Powr_eo(0)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor 100 (and more) that was introduced in antenna-read
    NormOdd=sqrt(2.*Powr_eo(1)/(Powr_eo(0)+Powr_eo(1)))/NormEvenOdd  ! to undo the factor that was introduced in antenna-read
-   write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd,Powr
-   !write(2,*) sum(ABS(CTime_spectr(:,10,1))**2),Time_dim,Powr
-   write(2,*) 'Height-Corrected Index of Refraction=', HeightCorrectIndxRef
-   !write(2,*) 'NAnt_eo:',NAnt_eo(:)
+   If(FirstPass) Then
+      write(2,*) 'ratio of average background amplitude for all even/odd antennas',NormEven/NormOdd,Powr
+      !write(2,*) sum(ABS(CTime_spectr(:,10,1))**2),Time_dim,Powr
+      write(2,*) 'Height-Corrected Index of Refraction=', HeightCorrectIndxRef
+      !write(2,*) 'NAnt_eo:',NAnt_eo(:)
+      FirstPass=.false.
+   EndIf
    !
    ! time recording
    call cpu_time(CPUstopTime)
@@ -391,7 +392,7 @@ End Subroutine AntennaRead
 ! ========================
 Subroutine PlotSpectra(i_chunk)
    use constants, only : dp,sample
-   use DataConstants, only : Time_dim, Cnu_dim, DataFolder, Diagnostics ! , ChunkNr_dim
+   use DataConstants, only : Time_dim, DataFolder, Diagnostics ! , ChunkNr_dim
    use Chunk_AntInfo, only : Ant_nr, CTime_spectr
    !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    Implicit none
@@ -564,7 +565,7 @@ Subroutine SimulationRead(SourceGuess)
 !  and so on.
 !
    use constants, only : dp,sample
-   use DataConstants, only : Time_dim, Cnu_dim, Station_nrMax
+   use DataConstants, only : Time_dim, Station_nrMax
    Use Chunk_AntInfo, only : Station_name, Station_number, Simulation
    use Chunk_AntInfo, only : StartT_sam
    use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_NrMax, Ant_pos
@@ -577,12 +578,12 @@ Subroutine SimulationRead(SourceGuess)
    !
    Real(dp) :: RTime_s(1:Time_dim)
    Real*4, allocatable :: RTime_read(:)
-   Complex(dp) :: CNu_s(0:Cnu_dim)  !,  CTime_s(1:Time_dim),
-   Real(dp) :: nu_Fltr(0:Cnu_dim) !, Av, Bv, FiltFact
+   Complex(dp) :: CNu_s(0:Time_dim/2)  !,  CTime_s(1:Time_dim),
+   Real(dp) :: nu_Fltr(0:Time_dim/2) !, Av, Bv, FiltFact
    Character(len=12) :: Lab1, Lab2, Lab3, Lab4
    Integer :: i_file, i_ant, j_ant, i_sample, k,  AntNr_lw, AntNr_up
    Integer,save :: i_chunk=1, EvenOdd=-1
-   Integer :: inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, NrAnt, NrSamples, nxx, NrAntLine
+   Integer :: Cnu_dim, inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, NrAnt, NrSamples, nxx, NrAntLine
    Real*8 :: dnu, StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr !,StatAnt_Calib !,StartTime_ms
    Real(dp) :: Spec(64)
    Character(len=4),save :: Signature='----'
@@ -592,6 +593,7 @@ Subroutine SimulationRead(SourceGuess)
    !
    !Open(unit=14,STATUS='old',ACTION='read', FILE = TRIM(Simulation)//'_Structure.dat')
    !
+   Cnu_dim=Time_dim/2
    dnu=100./Cnu_dim   ! [MHz] Jones matrix is stored on 1MHz grid
    inu1=Int(Freq_min/dnu)+1
    !inu2=Int(Freq_max/dnu-0.5)+1  ! set integration regime to frequencies within filter band

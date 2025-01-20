@@ -1,0 +1,107 @@
+\section{Adaptive TRI-D (ATRI-D) imaging}\seclab{PkInt}
+
+The working-placeholder for this option was ``Peak Interferometry (PkInt)'' so do not be surprised if you see this still mentioned
+
+Using the TRI-D imager causes a spread in source location because the time trace for each voxel is sliced into regular segments, typically 100~ns, and for each slice, the voxel with the highest intensity is identified. This slicing process can introduce imaging artifacts.
+This issue is addressed in the adaptive time resolved interferometric 3-dimensional (\ATRID) imaging procedure by selecting the slicing window in such a way that it captures the entire peak of the pulse, or, alternatively, by slicing at points where the intensity of the beam-formed time trace reaches a minimum. This adaptive windowing ensures that the optimal intensity for each source is less affected by parts of the pulse shifting in and out of the window (used for calculating the intensity) as the search for the maximum intensity voxel is conducted.
+
+In summary, the implemented procedure for the \ATRID\ imager starts with a reasonable accurate guess for the source location and consists of the following steps
+\begin{enumerate}
+\item {\bf Windowing} Use the beam-formed time trace at the initial position to construct the correct imaging window, i.e.\ $t_e$ \& $t_l$. \item {\bf Coarse TRI-D} Run the TRI-D imager, centered at the guessed position, over a volume that is large enough to contain the true source position with a grid that is sufficiently fine to capture the intensity maximum.
+\item {\bf Fine TRI-D} Run the TRI-D imager, centered at the newly-found position, using a sufficiently fine grid to be able to find an accurate source position.
+\item {\bf Quality \& Polarization} Compare the time traces in all antennas with that of a modeled time-dependent dipole source at the source position and determine the source quality, $Q$.
+\end{enumerate}
+This procedure may be iterated more times to achieve a stable result. Sources that have a quality $Q$ worse than a certain level should be omitted.
+
+This option is run using by the script \verb!"PkIntf.sh"! residing in the FlashFolder. The running of the script is controlled by \verb!"PkIntf.in"!, which typically resembles:
+
+\begin{linenumbers}
+\resetlinenumber
+\tiny
+\begin{verbatim}
+&Parameters
+ RunOption='PeakInterferometry'
+ AntennaRange=100
+ IntfSmoothWin= 40     ! Width (in samples) of the slices for TRI-D imaging.
+ NoiseLevel=1.
+ SaturatedSamplesMax= 100
+ BadAnt_SAI=   3048,   3054,   3055,  13090,  21049,  24062,  26054,  32049,  32072, 161084
+             181055, 106063, 130049, 130063, 130091, 145048, 145054, 145084, 146072, 169072
+             188049, 188091, 189054, 189084, !130054,
+ SignFlp_SAI=   161072, 161073, ! 130085  !, 130054, 130084
+ !PolFlp_SAI=    130084 ! 150090 !
+ ExcludedStat= 'RS210', 'RS509', 'RS508'
+ Calibrations="Fld19A-1plane-202408220925.cal" ! FldCal  T  2.27
+ TimeBase=  850.  ! not used when reading sources from a .dat or .csv file
+ OutFileLabel="plane2" &end  !
+ -2. 4.0 70.            ! Chi2_Lim, BoxFineness_coarse, BoxSize_coarse
+ "planePkInt.csv"
+\end{verbatim}
+\end{linenumbers}
+
+The lines in the namelist \verb!"&Parameters"! input specify:
+\begin{enumerate*}
+\item \verb!RunOption= "ATRID"!: Run the \ATRID\ Imager
+\item \verb!OutFileLabel="XYZ"!: Additional label used for the output files, including the plots.
+\item \verb!AntennaRange=100.!: The maximal distance (in [km]) from the reference station of the antenna stations that are included in imaging.
+\item \verb!TimeBase=850.!: This time is added to the relative time specified in the input.
+\item \verb# Simulation= ""#: No simulated data are used if blank, otherwise the simulated data are read from these files and should have the same value as used when generating the simulated data, see \secref{Sim}.
+\item \verb!IntfSmoothWin=40! (Integer, default=20): the default width of the window in case the window is not specified explicitly (as is the case when using a .dat file for the original source locations.
+\item \verb!PixPowOpt=! (Integer, 0): selects how the intensity of a pixel is calcula
+   \\\verb!PixPowOpt =0! (default): sum two transverse (as seen from the core) polarizations only.
+   \\\verb!PixPowOpt =1! : sum all polarizations weighted with alpha to compensate $A^{-1}$ thus intensity =  $|\vec{F}|$, see \eqref{F_as}.
+   \\\verb!PixPowOpt =2! : Sum all three polarizations, thus including longitudinal with the full weight.
+\item \verb!CalibratedOnly= T! (logical, .true.): use only antennas that have been calibrated.
+\item \verb!NoiseLevel=!: only sources with a coherent intensity exceeding this value will be imaged.
+\item \verb!Calibrations =""!: The name of the file containing calibration data.
+\item \verb!"BadAnt_SAI="!: These antennas are excluded from the analysis.
+\item \verb!"SignFlp_SAI="!: The amplitude for this antenna is multiplied by minus unity.
+\item \verb!"ExcludedStat="!: Mnemonics of the stations that will be excluded from interferometry. The exclusion is usually based on unexpected phases.
+\end{enumerate*}
+
+
+The following line specifies:
+\begin{enumerate*}
+\item[line +1:]   ``\verb#   -2. 2.5 25. #''
+   \begin{enumerate*}
+   \item[1] $-2.$; Maximal allowed value for the $\chi^2$ for the sources. When negative: value is set to (mean plus one standard deviation) of all investigated sources.
+   \item[2] $4.0$, the Fineness factor when performing the coarse TRI-D search.
+   \item[3] $70.$, The extent of the coarse-grid box from the initial source position.
+   \end{enumerate*}
+\end{enumerate*}
+For the lines thereafter (there can be several) there are a few possibilities and this input sequence should end with a line that does not follow the prescribed format, such as ``\verb# ------  #''.  Any line starting with an exclamation sign, !, will be treated as a comment and skipped over.
+\begin{enumerate*}
+\item[.csv:]  as in ``\verb# "planeATRID.csv"  #''; The initial sources are read from this file which was created in a previous run of the \ATRID\ imager and should reside in the /files/ subfolder for this flash. The first part of the name is taken equal to the `OutFileLabel' for the run that generated it, the second part is hardwired to be `ATRID.csv'. The initial window size, different for each source, is encoded in this data-file.
+\item[.dat:] as in ``\verb# "PlaneHIntfSpecPowMx_d.dat"  #'', \\or ``\verb# "T-Bc.dat"  #''; The initial sources are read from this file which was created in a previous run of the TRI-D imager or, the second possibility, the DataSelect program (see \secref{DataSelect})  and should reside in the /files/ subfolder for this flash. for the TRI-D imager the first part of the name is taken equal to the `OutFileLabel' for the run that generated it, the second part is hardwired to be `\verb# IntfSpecPowMx_d.dat #'. The initial window size, is NOT encoded in this data-file and the value set by `IntfSmoothWin' is used instead.
+\item[line:] as in ``\verb#S 1111 0.0062   23.22366  -41.86376  8.05660, -100   #'', \\or ``\verb#  1111 0.0062    -41.86376  23.22366   8.05660  #''; where the first character on the line is a mark to determine the reading option,
+    \begin{itemize}
+      \item mark=` ' then: Label, t[ms], x,y,z ; i.e.\  plot-file notation for  coordinates.
+      \item  mark=`R' then: Label, $t_r$[ms], N,E,h, Width; where $t_r$ is the time the pulse arrives at the reference station, the core.
+      \item  mark=`S' then: Label, $t_s$[ms], N,E,h, Width; where $t_s$ is the time at the source position.
+   \end{itemize}
+   Also for the Width there are different options:
+   \begin{itemize}
+      \item Width $<$ 0 : window=$|Width|$ and is kept fixed in the \ATRID\ calculation.
+      \item Width =0 : window=IntfSmoothWin and length is optimized.
+      \item Width $>$ 0 : window=Width and length is optimized following the \ATRID\ procedure.
+   \end{itemize}
+   The two example lines thus specify the same source where for the first the window is fixed to 100 samples, and for the second it is set to the value of `IntfSmoothWin'.
+\end{enumerate*}
+
+
+The script produces TRI-D-like images (see \secref{TRID} for the procedures followed)
+and puts the results in data files ``\verb# "xxxATRID.csv"  #'' and ``\verb# "xxxATRIDSrc.dat"  #'' in the subdirectory \verb!"files"! where `OutFileLabel' is substituted for xxx. In the .csv file the sources are de-selected when two of them are considered the same or when the $\chi^2$ is worse than the set criterion. In the summary output, as well as in the .csv file a short reason is given. The .dat file contains all sources and is used for making a plot.  It also prepares the commands in a file with name starting with ( \verb!"Afig-ATRID"!) for running the GLE scripts \cite{GLE} to produce the plots discussed in \secref{PkInt-output}.
+
+It is recommended to subsequently run the script \verb!"DataSelect.sh"! using \verb!"DataSelect.in"! as input to produce the plots that are zoomed in on the region of interest, see \secref{DataSelect}
+
+\subsection{Output}\seclab{PkInt-output}
+
+For each source a relatively verbose output is produced (see the .out file) from which it can be reconstructed what happened to the position, time, and window size for each source. Also the polarization observables are printed. At the end of the .out file a summary for all sources is given.
+
+When the number of sources is below 10 an intensity contour is plotted for each source, similar to the one discussed in \secref{TRID-contour}
+
+The located sources are given in a figure similar to what is discussed in \seclab{TRID-locate}. This are all sources, including the de-selected ones.
+
+A plot of polarization observables is as yet disabled.
+
+ %---------------------------------------------------------------------

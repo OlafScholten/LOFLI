@@ -67,6 +67,12 @@ The following lines specify:
    \item[2, 4, 6] Number of grid points, counting from the center.
    \item[3, 5, 7] Grid spacing in degrees or meter.
    \end{enumerate}
+   or
+   \begin{enumerate}
+   \item[1] Option, "Q" or "D" (capital, the very first character on this line): determines if a Polar or Cartesian grid is used for the tesseract. The polar grid is taken as a wedge, focussed ar the reference antenna. A Polar grid is specified in the order: Azimuth angle $\phi$, elevation angle $\theta_e$, and distance to reference antenna $R$. A Cartesian grid as: Northing $N$, Easting $E$, and altitude $h$.
+   \item[2] Fineness coefficient.
+   \item[3, 4, 5] Box size in 3D.
+   \end{enumerate}
 \item[line +3]:   ``\verb#F  25000  15000 10.#''
    \item[1] Option, ``F" or ``M" (capital, the very first character on this line): determines if the time is set at the First or the Middle sample of the time window.
    \item[2] (integer): Time-offset of the tesseract from the start of the data chunk, in samples of 5 ns. Care should be taken that the start of the tesseract is at least 1000 samples from the beginning of the data chunk to avoid antennas from dropping out. Error messages are generated and image is truncated when the value is too small. If option ``F" (``M") is specified the value is pointing to the First (Middle) time sample of tesseract.
@@ -76,7 +82,7 @@ The following lines specify:
 
 
 This script produces TRI-D images (see \secref{TRID} for the procedures followed)
-and puts the results in several data files in the subdirectory \verb!"files"!. It also prepares the command files (in \verb!"GLE-plotsXYZ.sh"!) for running the GLE scripts \cite{GLE} to produce \verb!"InterfContourXYZ.pdf"!, \verb!"XYZInfImgBar_0.pdf"!, \verb!"XYZInfImaMx_0.pdf"!, \verb!"InterfTrackXYZ.pdf"!. The interferometric hypercube is also shown in the plot of the source locations.
+and puts the results in several data files in the subdirectory \verb!"files"!. It also prepares the commands in a file with name starting with ( \verb!"Afig-Intf"!) for running the GLE scripts \cite{GLE} to produce the plots discussed in \secref{Interf}.
 
 It is recommended to subsequently run the script \verb!"DataSelect.sh"! using \verb!"DataSelect.in"! as input to produce the plots that are zoomed in on the region of interest, see \secref{DataSelect}
 
@@ -97,11 +103,11 @@ Typically [line +1] may read:  ``\verb#S  825.15   "I-19A-1b-D3a.trc" #'' where 
 }
 where the bulk of the file was generated using the 'longtrack' option in utility \verb!DataSelect! as described in \secref{DataSelect}. Each line gives the coordinates of the track as (time, N, E, h). The file may also be a .dat file (in stead of .trc),  having the same format at image-source files, i.e.\ (label, t, x, y, z). The program will construct a cube of size as specified in [line +2] centered at the the position on the track at time $t_t$=825.15 for the present example. At the end of the run an input for a following job is created where the time on the track is increased by the time duration of the tesseract. \verb# ChainRun# will be decreased by one and a new job is submitted. This proceeds till \verb# ChainRun# is reduced to zero, or the end of the track is reached. The present value of \verb!"ChainRun"! is worked into \verb!"OutFileLabel"! as well as the naming of the spawned scripts.
 
-When \verb# ChainRun# is negative, the time of the next run will be decreased and \verb# ChainRun# is increased, i.e.\ the track is scanned in the opposite direction as before. 
+When \verb# ChainRun# is negative, the time of the next run will be decreased and \verb# ChainRun# is increased, i.e.\ the track is scanned in the opposite direction as before.
 
 In case not a track, but coordinates are given, the program will center the new image cube at the center of intensity of the present image. This option sounds fancy but in practice does not really perform up to expectation.
 
-If the track file name is followed by a positive real, this is interpreted at the time on the track. The tesseracts will follow the track in space coordinates, but are all taken at the same fixed time given by $t_t$. The next image box is now taken such that the side touches that of the previous, independent of the time duration of the tesseract, but following the track. This option is used in Ref.~\cite{Scholten:2023PL}. 
+If the track file name is followed by a positive real, this is interpreted at the time on the track. The tesseracts will follow the track in space coordinates, but are all taken at the same fixed time given by $t_t$. The next image box is now taken such that the side touches that of the previous, independent of the time duration of the tesseract, but following the track. This option is used in Ref.~\cite{Scholten:2023PL}.
 
 \subsection{Output}\seclab{Interf}
 
@@ -109,25 +115,46 @@ The produced .dat files are plain text files and contain some header lines with 
 This file also contains the coordinates of the corners of the hypercube used in the interferometry calculation.
 
 
-\subsubsection{Intensity plot}
+\subsubsection{TRI-D Intensity Contour plot}\seclab{TRID-contour}
 
 \begin{figure}[th]
-\centering{\includegraphics[width=0.99\textwidth]{Figs/InterfContourSE20A7-Np-} }
+\centering{\includegraphics[width=0.6\textwidth]{Figs/EIContourb-D3+05} }
+%\centering{\includegraphics[width=0.99\textwidth]{Figs/InterfContourSE20A7-Np-} }
 %\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
-	\caption{Typical image for the TRID Imager as created by running ``InterfSrcSel.sh".}	 \figlab{TRIDIntImg}
+	\caption{Typical beamforming-intensity plot (name starting with `EIContour') as generated by running the TRI-D Imager.}	 \figlab{TRIDIntImg}
 \end{figure}
 
-A typical interferometric Intensity plot is shown in \figref{TRIDIntImg}. These are produced separately for even- (left side of \figref{TRIDIntImg}) and odd- (right side) numbered antennas. The top shows in red the spectrum in the reference antenna while green shows the coherent sum of all antennas in the field, beamed towards the central pixel of the hypercube. The green spectrum is normalized by the number of antennas ($N_a$, i.e.\ the geen and red should fall on top of each other if the signal would be completely coherent for this direction. If the signal is random noise it should be at a fraction of 1/$N_a$. This signal power is rebinned over 5 samples. With black lines the zoom-in window is indicated. The zoomed-in spectrum is shown below it, using the same convention but without re-sampling. The other figures show the intensity along a plane through the hypercube, top left at dR=0, the bottom two at $d\theta=0$ and $d\phi=0$. Step sizes and ranges are specified in the input line starting with `P'.
+A typical interferometric Intensity plot is shown in \figref{TRIDIntImg}. The data used for producing this plot are not saved.
+\\Top panel: The time trace for the complete chunk of data in the reference antenna for the two dipoles. The selected time window for TRI-D imaging is indicated by the black triangles. For the case of \figref{TRIDIntImg} [line +3] reads `\verb!F   2000   1995 10.000 !' implying that the time window starts lies between sample 2000 or 10~$\mu$s and sample 3995 or about 20~$\mu$s. The time offset is written as the offset in the reference antenna plus the time difference with that at the center voxel.
+\\middle left panel: The beamforming-intensity for the voxels at the central height. The axes in this plot give Easying and Northing with respect to the central voxel and the voxel size is shown on the axes. The intensity is integrated over the complete time window, listed on top of this panel.
+\\middle central panel: The beamforming-intensity time trace for the central voxel summing the transverse (1+2) polarizations as seen from the core.
+\\middle right panel: Showing (for the central voxel) the time trace for the transverse Stokes parameters, Q, U, V, normalized by the intensity. For a time trace with much background this plot is messy.
+\\bottom left \& right panels: same as middle left panel for different cuts through the image cube.
+
+\subsubsection{TRI-D Source position plot}\seclab{TRID-locate}
 
 \begin{figure}[th]
-\centering{\includegraphics[width=0.49\textwidth]{Figs/SE20A7-Np--InfImaMx_1} }
+\setlength{\unitlength}{.49\textwidth} % .43\textwidth}
+   \subfloat[`IntfMx\_']{ \centering{\includegraphics[width=0.43\textwidth]{Figs/IntfMx_db-D3+05} } \figlab{TRIDSrcsImg}}
+   \subfloat[`IntfPol\_']{ \centering{\includegraphics[bb=0.0cm 0cm 23cm 39cm,clip,width=0.43\textwidth]{Figs/IntfPol_db-D3+05} } \figlab{TRIDPolImg} }
+%\centering{\includegraphics[width=0.49\textwidth]{Figs/SE20A7-Np--InfImaMx_1} }
 %\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
-	\caption{Typical image for the TRID Imager as created by running ``InterfSrcSel.sh".}	 \figlab{TRIDSrcsImg}
+	\caption{Plots generated by running the TRI-D imager where \figref{TRIDSrcsImg} shows a typical beamforming image plot (name starting with `IntfMx\_') and \figref{TRIDPolImg} a typical source polarization plot (name starting with `IntfPol\_').}	
 \end{figure}
 
-The located sources are given in \figref{TRIDSrcsImg} as well as the hypercube that was used for imaging. Sources close to the borders of this hypercube should not be trusted. An image like this is made for even and odd antennas, as well as for the Max and Barycenter methods for the position of the interferometric maximum.
+The located sources are given in \figref{TRIDSrcsImg} as well as the hypercube that was used for imaging. Sources close to the borders of this hypercube should not be trusted. The size of the wagon-wheels are a proxy for the relative intensities of the sources, where the size for the largest wagon-wheel is set by the 4$^{th}$ parameter on [line +3]. If negative, only dots are plotted and also the intensity plot (top panel) will be omitted.
 
-In case \verb!"Dual=.true."! the Intensity plot will contain a single half of \figref{TRIDIntImg} only.
+The interferometric hypercube is also shown.
+
+\subsubsection{TRI-D Source polarization plot}
+
+A quick overview is presented of a variety of source-polarization observables. All are listed for each slice where the source obeyed the imaging conditions (not too close to the edge of the image cube, intensity above some threshold).
+\\Top or 7$^{th}$ panel: the percentages of the linear, circular and unpolarized intensity.
+\\6$^{th}$ panel: The $\chi^2$ of the fit to the time traces in all antennas for this slice. The $\chi^2$ tends to be large for strong peaks, implying that the error estimates on the trace amplitudes is not well under control and needs further scrutiny.
+\\5$^{th}$ panel: The ratio of the intensity in the longitudinal (I3, as seen from the reference) direction compared to the total beamforming intensity as reconstructed by the imager. This ratio tends to be large for poorly reconstructed sources.
+\\4$^{th}$ \& 3$^{rd}$ panels: The angular orientation of the dipole density per slice. For each slice a principal component analysis (PCA) is performed of the polarization directions per sample in the slice. Shown are the directions of the main (in red) and that of the secondary axes (in green) of the distribution. The error bars denote the amount of circular polarization. This is given as an error bar as one would expect that for a very long time trace the circular polarization should average to zero as there is -physics wise, because of symmetries- no reason for a net circular polarization. For short time traces the circular polarization will be non-zero due to random fluctuations. Note that the three axes are perpendicular.
+\\2$^{nd}$ panel: Length of the three axes (red, green and yellow) if they are above a certain threshold.
+\\bottom panel: The red line shows the summed transverse intensity for the reference antenna. The magenta dots give the transverse intensity for the slice at the source location. This should always be larger than that for the reference station in the default imaging conditions are used. The black dots show the total intensity, transverse + longitudinal, for the source.
 
 \subsection{Selective plotting}\seclab{InterfSrcSel}
 

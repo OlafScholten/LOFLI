@@ -1,4 +1,5 @@
 ! Interferometry Sources Selction
+!Obsolete Program; No longer in use !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
    Include 'TrackModule.f90'
    Include 'Fitter_Ampl.f90'

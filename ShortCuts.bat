@@ -17,11 +17,12 @@ echo Define LOFLI system variables and PATH extensions
 ::  pointing to        "C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"
 ::  The quotes are needed is the base path contains spaces
 :: Set LL_BaseDir="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"\
+:: On windows a shorthand notation is possible, use >dir /x  to find out, should give something like OLAFSC~1
 Set LL_BaseDir=%LL_Base%\
 
 :: Directory containing the antenna function as a table
 :: Apparently in windows  \"  unfolds to only "  while "\ stays
-set AntenFun="C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\Imaging\LMA\LMA2019\AntenFunct"
+set "AntennaFun=C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\Imaging\LMA\LMA2019\AntenFunct\v2-"
 
 :: Directory with the coordinates of the LOFAR antennas (needed by the RFI-Mitigation program)
 set AntennaFieldsDir=%LL_Base%\AntennaFields

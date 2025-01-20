@@ -141,6 +141,7 @@ Module ThisSource
 ! --------------
     Subroutine Alloc_ThisSource
        Implicit none
+       Integer :: i
        T2_dim = Tref_dim + Safety*2
        Allocate( CorrAntNrs(1:Ant_nrMax,0:1,1:ChunkNr_dim))
        Allocate( Nr_Corr(0:1,1:ChunkNr_dim))
@@ -180,6 +181,9 @@ Module ThisSource
        Allocate( CC_WidRef(1:PeakNr_dim) ) ! Estimate of the width of the cross correlation
        Allocate( CC_Qual(1:Ant_nrMax,1:PeakNr_dim) ) ! Quality of the cross correlation
        !write(2,"(A,o10,i7)") 'from Alloc_ThisSource, T2_dim:', T2_dim, T2_dim
+       Do i=-Safety,Safety
+           t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
+       Enddo
     End Subroutine Alloc_ThisSource
 End Module ThisSource
 !=================================

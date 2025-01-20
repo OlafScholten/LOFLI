@@ -440,6 +440,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Vec_p(1)=sin(Phi_r)              ; Vec_p(2)=-cos(Phi_r)        ; Vec_p(3)=0.
       Vec_t(1)=-cos(Thet_r)*Vec_p(2)  ; Vec_t(2)=cos(Thet_r)*Vec_p(1) ; Vec_t(3)=-sin(Thet_r)
       !
+      !First index in NEh2PB is the old (NEh) basis, second the new (alpha_i) one
       Do i=1,3  ! convert t&p orientations from (NEh) to polar base
          wap_PB(i,j_IntFer)=SUM( NEh2PB(:,i)*Vec_p(:) )*sw/D
          wat_PB(i,j_IntFer)=SUM( NEh2PB(:,i)*Vec_t(:) )*sw/D
@@ -648,7 +649,6 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       ! testing linear polarisation
       !write(2,*) 'EI_PolGridDel:PolTestCath(NEh2PB, Stk)', StI, STI12
       Call PolTestCath(NEh2PB, Stk)
-      !Call PolTestCath(NEh2PB, Stk, VoxLoc)
       W=ATAN2(StU,StQ)/2.*180./pi
       If(W.lt.-90.) W=W+180.
       j_IntFer=Nr_IntFer-12
@@ -658,7 +658,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       !write(2,*) 't, DelChi(j,2*j_IntFer):', dChi_at(J_IntFer), DelChi(-N_fit:N_fit,2*j_IntFer)
       write(2,"(A,2(A,G12.4),10(A,F7.2))") Label,': I123=',StI,', I12=',StI12, ', Q/I=',StQ/StI, &
             ', U/I=',StU/StI, ', V/I=',StV/StI, ', I3/I=',StI3/StI,', angle=',W,', chi^2=',Chi2pDF &
-            ,', P_unpol=',P_un, ', P_lin=',P_lin, ', P_circ=',P_circ
+            ,', P_unpol=',P_un*100, '%, P_lin=',P_lin*100, '%, P_circ=',P_circ*100, '%'
       If(TestCh2 .and. Outpt.lt.1) then  !  i.e. always skip this part
          SumSq=SumSq/(2.*Nr_IntFer)
          !txt(1:2)=Label(7:8) !  write(txt,"(I2.2)") i_sample
@@ -697,25 +697,19 @@ Subroutine PolTestCath(NEh2PB, Stk)
    Implicit none
    Real(dp), intent(in) :: NEh2PB(1:3,1:3)
    Complex, intent(in) :: Stk(3,3)
-!   Real(dp), intent(in) :: VoxLoc(1:3)
-   Complex :: Amat(3,3), Bmat(3,3)
    Integer :: i
-   !logical :: prin=.true.
-   logical :: prin=.false.
+   logical :: prin=.true.
+   !logical :: prin=.false.
    !
    !
-   Bmat(:,:)=Stk(:,:)
+   !Bmat(:,:)=Stk(:,:)
    !Bmat(3,:)=Bmat(3,:)/sqrt(2.)
    !Bmat(:,3)=Bmat(:,3)/sqrt(2.)
-   If(prin) Write(2,*) 'Polarization angle analysis in (1=(Rxz)xR, 2=Rx(h=vertical up), 3=R=Radial-out); 3 reduced'
-   Call PolPCACath(Bmat, PolZen, PolAzi, PolMag, PoldOm, prin)
+   !If(prin) Write(2,*) 'Polarization angle analysis in (1=(Rxz)xR, 2=Rx(h=vertical up), 3=R=Radial-out); 3 reduced'
+   !If(prin) Call PolPCACath(Bmat, PolZen, PolAzi, PolMag, PoldOm, prin)
    !
    !  Transform Polarization tensor form PB (polarisation base=core radial) to Cartesian (N,E,h) frame
-   Amat(:,:)=NEh2PB(:,:)
-   Do i=1,3
-      Amat(i,:)=(NEh2PB(:,i))
-   EndDo !i=1,3
-   Call RotTensor(Bmat, Amat, Stk_NEh)
+   Call rRotcTensor(Stk_NEh, NEh2PB, Stk)
    !
    If(prin) Write(2,*) 'Polarization angle analysis in (1=North, 2=East, 3=height)'
    Call PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
@@ -735,19 +729,19 @@ Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
    !  and where Stk_NEh(x,y)= sum_i( p^x_i p^y_i)
    ! Note that performing a  Pricipal Component Analysis on the polarization vector is
    !  identical to finding the eigenvector for the largest eigenvalue of the Stokes matrix.
-   use constants, only : pi
+   use constants, only : dp,pi
    Implicit none
    Complex, intent(in) :: Stk_NEh(1:3,1:3)
-   Real, intent(out) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
+   Real(dp), intent(out) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
    Logical, intent(in) :: prin
 !   Real(dp), intent(in) :: VoxLoc(1:3)
-   Real :: A, theta, phi, N, E, h, dOmg
+   Real(dp) :: A, theta, phi, N, E, h, dOmg, cPolVec(1:3), I_circ, I_lin
    Complex :: C, EigVec(3,3)
-   Integer :: i ! ,j,k,m
+   Integer :: i ,j,k,m
    Character(len=1) :: JOBZ= 'V'   !  Compute eigenvalues and eigenvectors.,
    Character(len=1) :: UPLO= 'L'   !  Lower triangle of A is stored., a(1,1),(2,1),(3,1)
    Integer :: Adim=3   ! = 'L':  Lower triangle of A is stored.,
-   Complex :: Amat(3,3)
+   Complex :: Amat(3,3), Rmat(3,3)
    Integer :: LDA=3
    Real :: WW(3) ! is REAL array, dimension (N),          If INFO = 0, the eigenvalues in ascending order.,
    Complex :: WORK(99)  ! is COMPLEX array, dimension (MAX(1,LWORK))  On exit, if INFO = 0, WORK(1) returns the optimal
@@ -767,6 +761,8 @@ Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
    !write(2,*) 'Work(1)',Work(1), WW
    !Amat(:,:)=NEh2PB(:,:)
    !Call RotTensor(Stk_NEh, Amat, Stk_ev) ! just a test
+   I_circ=0.
+   I_lin=0.
    Do i=1,3
       !j=MAXLOC(ABS(Amat(:,i)),1)
       !C=CONJG(Amat(j,i))/ABS(Amat(j,i))  ! make the largest component real
@@ -785,39 +781,63 @@ Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
       EigVec(:,i)=Amat(:,i)*C
       ! get angle mean polarization direction
       N=Real(EigVec(1,i))  ; E=Real(EigVec(2,i))  ; h=Real(EigVec(3,i))
-      If(h.lt.0) Then
-         N=-N  ; E=-E  ; h=-h
-      EndIf
-      A=N*N + E*E
-      Theta=atan2(sqrt(A),h)*180./pi  ; Phi=atan2(E,N)*180./pi ! The real part corresponds to lin polarized
-      dOmg=acos(sqrt(A+h*h))*180./pi  ! the angle between the real and the complex vector
-      If(prin) write(2,*) 'max Real(Vec(i))', WW(i), ' ; ', EigVec(:,i), ' ; th(3),ph(1),dO=', theta, Phi, dOmg
+      Call Carth2Angle(N,E,h,Theta, Phi, dOmg)
       PolZen(4-i)=Theta  ; PolAzi(4-i)=Phi  ; PolMag(4-i)=WW(i)  ; PoldOm(4-i)=dOmg
       !
+      If(prin) Then
+         A=cos(2*dOmg*pi/180.)
+         I_circ=I_circ+(WW(i)*sin(2*dOmg*pi/180.))**2
+         I_lin=I_lin + (WW(i)*A)**2
+         write(2,"(A,F10.2,A,F10.2, A, 3F7.1)") 'max Real(Vec(i)); I_circ=', &
+            WW(i)*sin(2*dOmg*pi/180.), ' ; I_lin=', WW(i)*A, & !' ; ', EigVec(:,i),
+            ' ; th(3),ph(1),dO=', theta, Phi, dOmg
+      EndIf
    EndDo !i=1,3
+   If(prin) Then
+      A=(sum(WW(1:3)))**2
+      write(2,*) 'total intensity_PCA=',sqrt(A), ', % lin=', 75.*I_lin/A, ', % circ=', 75.*I_circ/A
+   EndIf
+   !
+   Return
 End Subroutine PolPCACath
+!--------------------------------
+Subroutine Carth2Angle(N,E,h,Theta, Phi, dOmg)
+   use constants, only : dp,pi
+   Implicit none
+   Real(dp), intent(in) :: N, E, h
+   Real(dp), intent(out) :: Theta, Phi, dOmg
+   Real(dp) :: A
+   A=N*N + E*E
+   If(h.lt.0) Then
+      Theta=atan2(sqrt(A),-h)*180./pi  ;
+      Phi=atan2(-E,-N)*180./pi ! The real part corresponds to lin polarized
+   Else
+      Theta=atan2(sqrt(A),h)*180./pi  ;
+      Phi=atan2(E,N)*180./pi ! The real part corresponds to lin polarized
+   EndIf
+   dOmg=acos(sqrt(A+h*h))*180./pi  ! the angle between the real and the complex vector
+End Subroutine Carth2Angle
 ! ----------------------------------
-Subroutine RotTensor(Stk_PB, NEh2PB, Stk_NEh)
-   ! B=Rot^T A rot
-   !First index in NEh2PB is the old basis, second the new one
+! ----------------------------------
+Subroutine RRotCTensor(Stk_NEh, NEh2PB, Stk_PB)
+   ! Stk_NEh=NEh2PB^T Stk_PB NEh2PB
+   !First index in NEh2PB is the old (NEh) basis, second the new PB one
+   use constants, only : dp
    Implicit none
    Complex, intent(in) :: Stk_PB(3,3)
-   Complex, intent(in) :: NEh2PB(3,3)
+   Real(dp), intent(in) :: NEh2PB(3,3)
    Complex, intent(out) :: Stk_NEh(3,3)
-   Complex :: C,Rot_T(3,3)
+   Complex :: C
    Integer :: i,j,k !,m
    Stk_NEh(:,:)=0
    Do i=1,3
-      Rot_T(i,:)=Conjg(NEh2PB(:,i))
-   EndDo !i=1,3
-   Do i=1,3
       Do j=1,3
          Do k=1,3
-            Stk_NEh(i,j)=Stk_NEh(i,j)+ Sum(Rot_T(i,:)*Stk_PB(:,k))*NEh2PB(k,j)
+            Stk_NEh(i,j)=Stk_NEh(i,j)+ Sum(NEh2PB(i,:)*Stk_PB(:,k))*NEh2PB(j,k)
          EndDo !k=1,3
       EndDo !j=1,3
    EndDo !i=1,3
-End Subroutine RotTensor
+End Subroutine RRotCTensor
 !-----------------------------------------------
 Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1)
    !--------------------------------------------

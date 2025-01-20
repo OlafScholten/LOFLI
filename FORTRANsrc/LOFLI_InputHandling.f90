@@ -181,7 +181,6 @@ End Subroutine ReadSourceTimeLoc
 Subroutine PreReadPeakFitInfo(ChunkNr_dim,i_peak)
    use constants, only : dp
    use DataConstants, only : RunMode
-   use ThisSource, only : PeakNrTotal ! , PeakPos
    use Chunk_AntInfo, only : N_Chunk_max
  !  Use Interferom_Pars, only :  N_fit
    Implicit none
@@ -319,6 +318,12 @@ Subroutine ReadPeakFitInfo(NEh)
             ElseIf(i_eoa .ne. i_eo) then
                 If(i_eo.eq. 0) i_chunk=i_chunk+1
             Endif
+            If(i_Peak.gt. PeakNr_dim) Then
+               Write(2,*) 'Reading problem for Calibrations sources; ', &
+                  'Probably the chunk-label cards are not conmensurate with chucks specified for the sources.'
+               Write(2,*) 'Probably too many lines like "  2109.129840      -7.80     -32.67       9.31  3764001"'
+               Stop 'Calibration reading problem'
+            EndIf
             i_eoa=i_eo
             i_ca=i_c
             If(i_eo.eq.2) then
@@ -359,6 +364,7 @@ Subroutine ReadPeakFitInfo(NEh)
             TotPeakNr(i_eo,i_chunk)=i_peak ! last peak# for this (i_eo,i_chunk)
             PeakNrTotal=i_peak
             !write(2,*) 'i_peak,i_eo,i_c',i_peak,i_eo,i_c,i_eoa,i_ca,';',PeakNr
+            !Flush(unit=2)
          EndIf
          Call GetNonZeroLine(lname)
          ExclStMnem='     '
@@ -432,6 +438,12 @@ Subroutine DualReadPeakInfo(i_eo,i_chunk)
        PeakNr(1,i_chunk)=PeakNr(0,i_chunk)                        ! number of peaks for this (i_eo,i_chunk)
        TotPeakNr(1,i_chunk)=TotPeakNr(0,i_chunk)+PeakNr(1,i_chunk) ! last peak# for this (i_eo,i_chunk)
        Do i=0,PeakNr(0,i_chunk)-1 ! copy
+         If((TotPeakNr(1,i_chunk)-i).gt. PeakNr_dim) Then
+            Write(2,*) 'Reading problem for Calibrations sources', &
+               '; probably the chunk-label cards are not conmensurate with chucks specified for the sources.'
+            Write(2,*) 'Probably too many lines like "  2109.129840      -7.80     -32.67       9.31  3764001"'
+            Stop 'Calibration reading problem'
+         EndIf
          Peakpos(TotPeakNr(1,i_chunk)-i) = Peakpos(TotPeakNr(0,i_chunk)-i)
          SourcePos(:,TotPeakNr(1,i_chunk)-i) = SourcePos(:,TotPeakNr(0,i_chunk)-i)
          RefAntErr(TotPeakNr(1,i_chunk)-i) = RefAntErr(TotPeakNr(0,i_chunk)-i)

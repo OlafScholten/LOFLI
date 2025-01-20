@@ -11,7 +11,7 @@
 !-----------------------------------------
 Module RFI_MitPars
     use constants, only : dp
-    use DataConstants, only : DataFolder, Time_dim, Cnu_dim, Ant_nrMax
+    use DataConstants, only : DataFolder, Time_dim, Cnu_dim, Ant_nrMax  !!
     Implicit none
     integer :: NBackgr ! Number of chunck used for frequency filter determination
     Integer :: Filtring ! number of filtered frequencies
@@ -47,6 +47,7 @@ program RFI_mitigation
     Character(len=5) :: txt
     Logical :: AllBckgrSpec=.false.  ! produce data files for plotting the backgroung frequency spectra for the reference antennas only
     !Logical :: AllBckgrSpec=.true. ! produce data files for plotting the backgroung frequency spectra for all antennas.
+    Logical :: exists
     !
     Integer :: nxx, NFail=0 ! number of antennas for which RFI-determination failed
     Integer :: i_even=0, i_odd=0, MinAmp_Ant(Ant_nrMax), Powr_Ant(Ant_nrMax)
@@ -116,7 +117,14 @@ program RFI_mitigation
          i_file=i_fil
       Endif
       Call GetFileName(i_file, nxx)
+      INQUIRE(FILE = trim(filename), exist=exists)  ! in the main Fsash directory
       If(nxx .ne. 0) exit
+      If(exists) Then
+         write(2,*) 'Start working on i_file=',i_file,' ,"',trim(filename), '"'
+      Else
+         write(2,*) 'Not existing: i_file=',i_file,' ,"',trim(filename), '"'
+         cycle
+      EndIf
       write(*,"(A,I0,': ',A)") 'i_file=',i_file,trim(filename)
       !write(14,"(I3,A)") i_file, trim(filename)
       Call ListGroups ! >>>>>>>>>>>>>>>>>>>> opens HDF5 file & extracts group-structure
@@ -127,7 +135,7 @@ program RFI_mitigation
          write(14,"(i3,1x,A)") DSet_nr, trim(Group_Names(i_grp))
          Do i_dst=1,DSet_nr
             Call ListDataAtt(Group_Names(i_grp),DSet_Names(i_dst)) ! >>>>>>>>>>>>>>>>>>>>
-            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID 
+            write(14,"(1x,A,I6,I6)")  trim(DSet_Names(i_dst)), STATION_ID, Ant_ID
             !
             If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
             !
