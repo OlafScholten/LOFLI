@@ -15,7 +15,7 @@ else
    # Main directory of the LOFLI installation
    export LL_BaseDir="LL_Base"   
    
-   ###### User installation dependent settings ###############################
+   ###### User installation dependent settings for 'ApP01' ###############################
    # Preambule for the files "LBA_Vout_theta.txt" and "LBA_Vout_phi.txt" containing the antenna function as a table
    export AntennaFun="${LL_Base}/AntenFunct/v2-"
    
