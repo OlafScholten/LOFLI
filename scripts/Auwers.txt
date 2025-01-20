@@ -1,0 +1,51 @@
+file#= 34HDF5-DIAG: Error detected in HDF5 (1.12.1) thread 0:
+  #000: ../../src/H5F.c line 620 in H5Fopen(): unable to open file
+    major: File accessibility
+    minor: Unable to open file
+  #001: ../../src/H5VLcallback.c line 3501 in H5VL_file_open(): failed to iterate over available VOL connector plugins
+    major: Virtual Object Layer
+    minor: Iteration failed
+  #002: ../../src/H5PLpath.c line 578 in H5PL__path_table_iterate(): can't iterate over plugins in plugin path '(null)'
+    major: Plugin for dynamically loaded library
+    minor: Iteration failed
+  #003: ../../src/H5PLpath.c line 620 in H5PL__path_table_iterate_process_path(): can't open directory: /usr/local/hdf5/lib/plugin
+    major: Plugin for dynamically loaded library
+    minor: Can't open directory or file
+  #004: ../../src/H5VLcallback.c line 3351 in H5VL__file_open(): open failed
+    major: Virtual Object Layer
+    minor: Can't open object
+  #005: ../../src/H5VLnative_file.c line 97 in H5VL__native_file_open(): unable to open file
+    major: File accessibility
+    minor: Unable to open file
+  #006: ../../src/H5Fint.c line 1834 in H5F_open(): unable to open file: name = '/Users/users/scholten/DATA/LOFARdata/lightning_data/lightning_data/2019/D20190424T194432.504Z/L703974_D20190424T194432.504Z_RS503_R000_tbb.h', tent_flags = 0
+    major: File accessibility
+    minor: Unable to open file
+  #007: ../../src/H5FD.c line 723 in H5FD_open(): open failed
+    major: Virtual File Layer
+    minor: Unable to initialize object
+  #008: ../../src/H5FDsec2.c line 352 in H5FD__sec2_open(): unable to open file: name = '/Users/users/scholten/DATA/LOFARdata/lightning_data/lightning_data/2019/D20190424T194432.504Z/L703974_D20190424T194432.504Z_RS503_R000_tbb.h', errno = 2, error message = 'No such file or directory', flags = 0, o_flags = 0
+    major: File accessibility
+    minor: Unable to open file
+HDF5-DIAG: Error detected in HDF5 (1.12.1) thread 0:
+  #000: ../../src/H5G.c line 502 in H5Gopen2(): invalid location identifier
+    major: Invalid arguments to routine
+    minor: Inappropriate type
+ Non-existing file????
+STOP GetDataChunk: file-open problem
+
+
+On App01:
+gfortran  -g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1+docs=. -fstack-protector-strong -I/usr/include/hdf5/serial -I/home/olaf/LOFLI/FORTRANsrc/modules -c LOFAR-Imag.f90 -fcheck=bounds
+
+gfortran -g -O2 -fdebug-prefix-map=/build/hdf5-X9JKIg/hdf5-1.10.0-patch1+docs=. -fstack-protector-strong -I/usr/include/hdf5/serial LOFAR-Imag.o -o /home/olaf/LOFLI/bin/LOFAR-Imag -lm /home/olaf/LOFLI/bin/libLOFLI.a -lm /home/olaf/NumLib/bin/libfftpack5.1d.a /usr/lib/x86_64-linux-gnu/lapack/liblapack.a /usr/lib/x86_64-linux-gnu/blas/libblas.a -fcheck=bounds -L/usr/lib/x86_64-linux-gnu/hdf5/serial /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5hl_fortran.a /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_hl.a /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5_fortran.a /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.a -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,/usr/lib/x86_64-linux-gnu/hdf5/serial
+
+On Kapteyn:
+/Users/users/scholten/LOFLI/scripts/compileHDF5program.sh: line 17: make: command not found
+/ss
+On Auwers:
+gfortran  -g -O2 -fstack-protector-strong -I/usr/lib64/gfortran/modules/ -I/Users/users/scholten/LOFLI/FORTRANsrc/modules -c LOFAR-Imag.f90 -fcheck=bounds
+gfortran -g -O2 -fstack-protector-strong -I/usr/lib64/gfortran/modules/ LOFAR-Imag.o -o /Users/users/scholten/LOFLI/bin/LOFAR-Imag -lm /Users/users/scholten/LOFLI/bin/libLOFLI.a -lm /Users/users/scholten/NumLib/bin/libfftpack5.1d.a /usr/lib64/liblapack.so /usr/lib64/libblas.so -fcheck=bounds -L/usr/lib64 /usr/lib64/libhdf5hl_fortran.so /usr/lib64/libhdf5_hl.so /usr/lib64/libhdf5_fortran.so /usr/lib64/libhdf5.so  -Wl,-Bsymbolic-functions -Wl,-z,relro -lpthread -lsz -lz -ldl -lm -Wl,-rpath -Wl,/usr/lib64
+
+Also working:
+gfortran  -g -O2 -fstack-protector-strong -I/usr/lib64/gfortran/modules/ -I/Users/users/scholten/LOFLI/FORTRANsrc/modules -c LOFAR-Imag.f90 -fcheck=bounds
+gfortran -g -O2 -fstack-protector-strong -I/usr/lib64/gfortran/modules/ LOFAR-Imag.o -o /Users/users/scholten/LOFLI/bin/LOFAR-Imag -lm /Users/users/scholten/LOFLI/bin/libLOFLI.a -lm /Users/users/scholten/NumLib/bin/libfftpack5.1d.a /usr/lib64/liblapack.so /usr/lib64/libblas.so -fcheck=bounds -L/usr/lib64 /usr/lib64/libhdf5hl_fortran.so /usr/lib64/libhdf5_hl.so /usr/lib64/libhdf5_fortran.so /usr/lib64/libhdf5.so

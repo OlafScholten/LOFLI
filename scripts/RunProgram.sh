@@ -17,7 +17,7 @@ if test -f $2; then
    echo "executing command: ${LL_bin}/${Prog}  ${input} "
    ${LL_bin}/${Prog}  <$2   # This is apparently very different from    ${LL_bin}/${Prog}  ${input}
 else
-   echo "arguments ${input} is not an existing file"
+   echo "arguments $2 is not an existing file"
    export input=$2
    echo "executing command: ${LL_bin}/${Prog}  ${input} "
    ${LL_bin}/${Prog}  $2
