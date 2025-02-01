@@ -65,12 +65,12 @@ end sub
 
 Sub EIPlots 
    gsave
-   dwfile$=dir$+"_EISpec.csv"
+   dwfile$=dir$+"_EISpec.dat"
    fopen dwfile$ inchanw read
    freadln inchanw StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus name$
    freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h 
    !
-   dfile$=dir$+"_EISpeceo.csv"
+   dfile$=dir$+"_EISpeceo.dat"
    fopen dfile$ inchan read
    freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus cc_max N_smth
    !

@@ -1,0 +1,246 @@
+!size   26 54
+verSz=5
+horSz=19
+fontSz=0.7
+bsh=2*fontSz
+HorOff=3.
+VerOff=3.
+dB=bsh+horSz
+dH=bsh+verSz
+DotSz=0.3*fontSz
+size  HorOff+dB VerOff+5*verSz+dH
+! ======================================
+file$='files/T-4b-D1-Z1a'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+dfileang$=file$+'Angls1.plt'
+filedat$=file$+'.plt'
+fopen filedat$ inchan read
+freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$
+freadln inchan NTracks EventNr Q t_start label$
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+
+!amove HorOff VerOff+5*verSz+dH-1.5*fontSz 
+amove HorOff VerOff*0.5
+write label$
+
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+N_slice=2
+N_max=1
+
+amove HorOff VerOff
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xlabels off
+   yaxis log ! min 0.1  !max +105 nofirst
+   data dfileang$ d1=c1,c7 d12=c1,c11 d13=c1,c15  ignore 1
+   If N_slice > N_max Then
+      d13 marker dot  msize DotSz color gold
+      d12 marker dot  msize DotSz color coral
+      d1 marker dot  msize DotSz color crimson
+   Else
+      d13 marker circle msize MarkSz  lstyle 2 color gold
+      d12 marker circle msize MarkSz  lstyle 2 color coral
+      d1 marker circle msize MarkSz  lstyle 3 color crimson
+   End If
+end graph
+set just CR
+amove HorOff+horSz-fontSz  HorOff+verSz-fontSz
+write 'I'
+
+
+amove HorOff VerOff+verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0 max +180 nofirst
+   y2axis min 0 max 1 nofirst
+   data dfileang$ d1=c1,c8  d2=c1,c10 d12=c1,c12  d22=c1,c14 ignore 1
+   !let d3=cos(d1*pi/180.)
+   !let d4=d3-cos((d1-d2)*pi/180.)
+   !let d32=cos(d12*pi/180.)
+   !let d42=d32-cos((d12-d22)*pi/180.)
+   !let d8=cos(80.*pi/180.)  ! 80 deg
+   !d8 line lstyle 1 lwidth 0.01 color magenta
+   !let d9=cos(pi/4.)
+   !d9 line lstyle 1 lwidth 0.01 color blue
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
+   If N_slice > N_max Then
+      d12 marker dot  msize DotSz err d22 errwidth .1  color coral
+      d1 marker dot  msize DotSz err d2 errwidth .1  color crimson
+      !d32 marker dot  msize DotSz err d42 errwidth .1  color coral
+      !d3 marker dot  msize DotSz err d4 errwidth .1  color crimson
+   Else
+      d12 marker circle msize MarkSz  err d22 errwidth .1 lstyle 2 color green
+      !d32 marker circle msize MarkSz  err d42 errwidth .1 lstyle 2 color green
+      d1 marker circle msize MarkSz  err d2 errwidth .1 lstyle 3 color red
+      !d3 marker circle msize MarkSz  err d4 errwidth .1  lstyle 3 color red
+   End If
+end graph
+!set just TR
+amove HorOff+horSz-0.7  VerOff+2*verSz-fontSz
+!amove xg(s_Max)-0.3 yg(1)-0.3
+write 'Zenith'
+!write 'cos(Zenith)'
+!set just Cl
+!amove xg(s_Max)+0.3 yg(cos(pi/4.))
+!write '45^o'
+!amove xg(s_Max)+0.3 yg(cos(80.*pi/180.))
+!write '80^o'
+
+amove HorOff VerOff+2*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min -180 max +180 nofirst
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
+   let d8=0
+   d8 line lstyle 1 lwidth 0.01 color red
+   let d7=-90
+   d7 line lstyle 1 lwidth 0.01 color blue
+   data dfileang$ d1=c1,c9  d2=c1,c10 d12=c1,c13  d22=c1,c14 ignore 1
+   If N_slice > N_max Then
+      d12 marker dot  msize DotSz err d22 errwidth .1  color coral
+      d1 marker dot  msize DotSz err d2 errwidth .1  color crimson
+   Else
+      d12 marker circle  msize MarkSz   err d22 errwidth .1 lstyle 2 color green
+      d1 marker circle  msize MarkSz   err d2 errwidth .1 lstyle 3 color red
+   End If
+end graph
+!set just TR
+amove HorOff+horSz-0.7  VerOff+3*verSz-fontSz
+write 'Azimuth (N)'
+
+
+
+
+
+!================================================
+set color black
+
+amove HorOff VerOff+3*verSz
+begin graph
+   size horSz verSz
+  vscale 1
+  hscale 1
+  xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+  !yaxis min 0 max 25 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  ! yaxis min 0 ! max 1.6 hei fontSz ! dticks  1 dsubticks .2        ! length=9
+  data file$+'1.plt' d1=c1,c12   ignore 1
+  d1 svg_smooth 5 marker cross msize 0.1 color blue
+  data file$+'_bin_1.plt' d2=c10,c9   ignore 1
+  d2 line lwidth 0.05 color red
+end graph
+begin key
+    pos tc nobox
+    line lwidth 0.05 text "binned" color red
+    line lwidth 0.05 text "running mean" color  blue
+end key
+set just CR
+amove  HorOff+horSz-fontsz VerOff+4*verSz-fontsz
+text Velocity [10^6 m/s]
+
+
+amove HorOff VerOff+4*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0 max +180 nofirst
+   y2axis min 0 max 1 nofirst
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
+   data dfileang$ d41=c1,c8  d42=c1,c10 
+   d41 marker dot  msize DotSz err d42 errwidth .1  color crimson
+   let d43=180.-d41
+   data dfileang$ d1=c1,c5  
+   d43 marker dot  msize DotSz err d42 errwidth .1  color green
+   If N_slice > N_max Then
+      d1 marker dot msize DotSz line lstyle 1 lwidth 0.02 color blue
+      !d3 marker dot  msize DotSz err d4 errwidth .1  color red
+   Else
+      d1 marker circle msize MarkSz   lstyle 3 color blue
+      !d3 marker circle msize MarkSz  err d4 errwidth .1  lstyle 3 color red
+   End If
+end graph
+!set just TR
+amove HorOff+horSz-0.7  VerOff+5*verSz-fontSz
+write 'Zenith'
+!write 'cos(Zenith)'
+!set just Cl
+!amove xg(s_Max)+0.3 yg(cos(pi/4.))
+!write '45^o'
+!amove xg(s_Max)+0.3 yg(cos(80.*pi/180.))
+!write '80^o'
+
+amove HorOff VerOff+5*verSz
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   x2labels on
+   yaxis min -180 max +180 nofirst
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
+   let d8=0
+   d8 line lstyle 1 lwidth 0.01 color red
+   let d7=-90
+   d7 line lstyle 1 lwidth 0.01 color blue
+   data dfileang$ d41=c1,c9  d42=c1,c10 
+   d41 marker dot  msize DotSz err d42 errwidth .1  color crimson
+   let d43=d41+180.
+   let d44=d41-180.
+   data dfileang$ d1=c1,c5  
+   d43 marker dot  msize DotSz err d42 errwidth .1  color green
+   d44 marker dot  msize DotSz err d42 errwidth .1  color green
+   data dfileang$ d1=c1,c6
+   If N_slice > N_max Then
+      d1 marker dot  msize DotSz  color blue
+   Else
+      d1 marker circle  msize MarkSz   lstyle 3 color red
+   End If
+end graph
+!set just TR
+amove HorOff+horSz-0.7  VerOff+6*verSz-fontSz
+write 'Azimuth (N)'
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "TrScat" ! +"-"+file$
+translate 0 2
+!end rotate

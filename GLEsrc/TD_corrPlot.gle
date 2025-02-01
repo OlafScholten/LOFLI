@@ -14,12 +14,12 @@ if(nargs() > 0 ) then
     file$=arg$(1)
 end if
 
-filedat$=file$+'TDcorr.dat'  
+filedat$=file$+'TDcorr.plt'  
 fopen filedat$ inchan read
 freadln inchan label$ NrSrcs dD Dnr
 Dmax=dD*Dnr
 
-fileTr$=file$+'TDtrace.dat'  
+fileTr$=file$+'TDtrace.plt'  
 
 !declare sub Clr Cscale
 !include "RdYlBl.gle"
@@ -148,7 +148,7 @@ begin key
     text "IV"
 end key
 
-fileTrCC$=file$+'TtrCC.dat'  
+fileTrCC$=file$+'TtrCC.plt'  
 !fopen fileTr$ inchan read
 !freadln inchan label$ T_span dBin_size N_id
 
