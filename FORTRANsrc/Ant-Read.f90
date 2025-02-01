@@ -23,7 +23,7 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
    !
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim)
-   Complex(dp) :: CNu_s(0:Time_dim/2), CTime_s(1:Time_dim/2)
+   Complex(dp) :: CNu_s(0:Time_dim/2), CTime_s(1:Time_dim)
    integer :: Cnu_dim, Dset_offset, Sample_Offset, DataReadErr, NAnt_eo(0:1)
    Real*8 :: Powr, Powr_eo(0:1), NormEvenOdd=1.d2
    Real(dp) :: nu_Fltr(0:Time_dim/2) !, Av, Bv, FiltFact

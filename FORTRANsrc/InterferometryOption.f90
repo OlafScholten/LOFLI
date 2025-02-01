@@ -170,9 +170,9 @@ Subroutine InterferometerRun
             PlotName=TRIM(PreAmble)//'Track'//TRIM(OutFileLabel), PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
    Call GLEplotControl(PlotType=TRIM(PreAmble)//'Contour', PlotName=TRIM(PreAmble)//'Contour'//TRIM(OutFileLabel), &
             PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel))
-   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecWin'//'*.csv')
-   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpec'//'*.csv')
-   Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'Interferometer'//'*.z', Submit=.true.)
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin'//'*.csv')
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'_EISpec'//'*.dat')
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer'//'*.z', Submit=.true.)
    !
    write(2,*) 'NewCenLoc', NewCenLoc, ' , ChainRun=', ChainRun
    If(ChainRun.ne.0) Call ChainRuns(NewCenLoc)

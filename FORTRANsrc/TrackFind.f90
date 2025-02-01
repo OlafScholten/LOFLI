@@ -214,16 +214,16 @@ Subroutine ConstructTracks(RA, SrcI20_r, IPerm, SourcTotNr, PlotFile, PolarAna, 
       i_LongTr=i_LongTr+1
       if(i_LongTr.ge.10) exit
       !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
-      write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
+      write(extension,"(i1,A4)") i_LongTr,'.plt' !,&
       OPEN(unit=29,FILE=TRIM(PlotFile)//trim(extension),FORM='FORMATTED',STATUS='unknown')
       write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
-      write(29,"('!',T7,'time',T22,'x=East',T38,'y=North',T53,'z=height',T73,'x=East',T89,'y=North',T104,'z=height', &
+      write(29,"('!',T7,'time',T22,'North=y',T38,'East=x',T53,'height=z',T73,'North=y',T89,'East=x',T104,'z=height', &
          T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
       If(PolarAna) Then
          OPEN(unit=30,FILE=TRIM(PlotFile)//'Angls'//trim(extension),FORM='FORMATTED',STATUS='unknown')
          write(30,"('!',T10,'Running Average Leader Head position',T47,'Velocity angle',T77,&
             'Polarization amplitudes & angles')")
-         write(30,"('!',T5,'time',T17,'x=East',T28,'y=North',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
+         write(30,"('!',T5,'time',T17,'North=y',T28,'East=x',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
             T82,'Th(Zen), Azim(N), d(omga)',T116,'Repeated twice more')")
       EndIf
       !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
@@ -282,8 +282,8 @@ Subroutine ConstructTracks(RA, SrcI20_r, IPerm, SourcTotNr, PlotFile, PolarAna, 
                   EndIf
                Else
                   Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))  ! units: 10^6 m/s
-                  v_E=(LeaderPos(2,k,i)-LeaderPos(2,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
-                  v_N=(LeaderPos(3,k,i)-LeaderPos(3,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  v_N=(LeaderPos(2,k,i)-LeaderPos(2,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  v_E=(LeaderPos(3,k,i)-LeaderPos(3,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
                   v_h=(LeaderPos(4,k,i)-LeaderPos(4,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
                   V_hor=sqrt(V_N*V_N + V_E*V_E)
                   V_th=atan2(V_hor,V_h)*180./pi  ; V_ph=atan2(V_E,V_N)*180./pi
@@ -356,9 +356,9 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
       i_LongTr=i_LongTr+1
       if(i_LongTr.ge.10) exit
       !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
-      write(extension,"(i1,A4)") i_LongTr,'.dat' !,&
+      write(extension,"(i1,A4)") i_LongTr,'.plt' !,&
       OPEN(unit=27,FILE=TRIM(PlotFile)//'_bin_'//trim(extension),FORM='FORMATTED',STATUS='unknown')
-      write(27,"('!',F5.3,'Binned, t [ms]',T24,'E [km]',T39,'N',T53,'h',T73,'v_E',T86,'v_N',T99,'v_h',T110,'v[km/ms]', &
+      write(27,"('!',F5.3,'Binned, t [ms]',T24,'N [km]',T39,'E',T53,'h',T73,'v_N',T86,'v_E',T99,'v_h',T110,'v[km/ms]', &
          T124,'Ave_t[ms]')")   dt_MTL
 1     Continue
       t_old=-99
@@ -419,10 +419,10 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
          Do k=1,i_MTL
             If(TOrder.gt.0) Then  ! order in increasing time in tNEh notation
                write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,k), &
-                  MeanTrackLoc(3,k), MeanTrackLoc(2,k), MeanTrackLoc(4,k)
+                  MeanTrackLoc(2:4,k)
             Else
                write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,i_MTL-k+1), &
-                  MeanTrackLoc(3,i_MTL-k+1),MeanTrackLoc(2,i_MTL-k+1),MeanTrackLoc(4,i_MTL-k+1)
+                  MeanTrackLoc(2:4,i_MTL-k+1)
             EndIf
          Enddo
          close(unit=27)
@@ -509,7 +509,7 @@ Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
          NM2=COUNT(TBurst_trace .gt. A/2.)
          NM3=COUNT(TBurst_trace .gt. A/3.)
          !
-         write(extension,"(i2.2,A4)") tr,'.dat' !,& SourceTimeDistribution (STD)
+         write(extension,"(i2.2,A4)") tr,'.plt' !,& SourceTimeDistribution (STD)
          OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-'//trim(extension),FORM='FORMATTED',STATUS='unknown')
          write(27,*) t_resol*1000., A1, A
          write(27,"('! ', T8,'time[ms]',T33,'PulseDensity',T49,'resol[ms]=',F9.6)") t_resol
@@ -534,7 +534,7 @@ Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
       Call RFTransform_su(NTSampl+1)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       !
       Call RFTransform_CF(TBurst_trace,Cnu)
-      OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-nu.dat',FORM='FORMATTED',STATUS='unknown')
+      OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-nu.plt',FORM='FORMATTED',STATUS='unknown')
       write(27,"('! ',T6,'freq[1/ms]',T31,'Ampl',T57,'Not rebinned')")
       d_nu=2./(t_resol*(NTSampl+1))
       F_Th=d_nu/2
@@ -560,13 +560,13 @@ Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
          !write(27,*) T*d_nu,ABS(Cnu(T))
       enddo
       Close(unit=27)
-      Write(2,*) 'AnalyzeBurst; File:',TRIM(PlotFile)//'_STD-nu.dat',' with <',(NTSampl+1)/2, ' data lines'
+      Write(2,*) 'AnalyzeBurst; File:',TRIM(PlotFile)//'_STD-nu.plt',' with <',(NTSampl+1)/2, ' data lines'
       Call DAssignFFT()         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       !
     enddo ! i, track number
 end Subroutine AnalyzeBurst
 !===================================================================
-Subroutine ReadPreDefTr(PreDefTrackFile)
+Subroutine xxxReadPreDefTr(PreDefTrackFile)
    !Use TrackConstruct, only : PreDefTrack, tNrS_max, PreDefTrackNr, PreDefTrackNr_Max, NrPreDefTrackPoints_Max, tNrS
    IMPLICIT none
    Character(len=100), Intent(IN) :: PreDefTrackFile
@@ -577,7 +577,7 @@ Subroutine ReadPreDefTr(PreDefTrackFile)
    PreDefTrackNr=0
    tNrS(1:PreDefTrackNr_Max)=1  ! needed in GetPreDefTrPos
    Do i_track=1,PreDefTrackNr_Max
-      write(Extension,"(i1,A4)") i_track,'.dat' !,&
+      write(Extension,"(i1,A4)") i_track,'.plt' !,&
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile)//trim(extension),IOSTAT=nxx)
       If(nxx .ne. 0) then
          write(2,*) 'No predefined track file:',trim(PreDefTrackFile)//trim(extension)
@@ -601,7 +601,7 @@ Subroutine ReadPreDefTr(PreDefTrackFile)
    Enddo
    !
    Return
-End Subroutine ReadPreDefTr
+End Subroutine xxxReadPreDefTr
 
 !=========================================
 Subroutine GetPreDefTrPos(t_source,TrackPos)

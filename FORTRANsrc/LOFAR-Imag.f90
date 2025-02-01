@@ -350,7 +350,7 @@ Program LOFAR_Imaging
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk &     !  ChunkNr_dim,
          , Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Version='v25.11'
+   Version='v25.1'
    release='25.1 (Jan, 2025)'
    Utility='LOFLi-Imaging'
    CALL get_environment_variable("LIBRARY", lname)

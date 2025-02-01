@@ -1,0 +1,247 @@
+Z1=5
+Z=Z1
+! Z=0  ! if active, omit side panels
+!fontSz=1.2
+!fontSz=1.0
+fontSz=0.8
+bsh=2.5*fontSz    ! 1.5
+!HorOff=1.5+bsh
+HorOff=1.0+bsh
+VerOff=2.0+bsh
+B=14+Z1-Z
+!
+file$='../../Imaging/LMA/LMA2019/20A-9/SimATRID'
+if(nargs() > 0 ) then 
+    file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
+end if
+DataFile$=file$+".plt"    ! DLsIntfSpecPolrz_d.plt 
+
+fopen DataFile$ inchan read
+freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
+freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
+!
+H=B*(NMax-NMin)/(EMax-EMin)
+top=VerOff+h+Z+bsh+Z1+fontSz
+!
+size   HorOff+B+Z+bsh/2 top+bsh/2 ! ----------------------------
+!
+!
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+include "IntfBox.gle"
+!
+NIgn=2
+if(ZmBx$ = 'NoBox') then
+    bbx=-1
+else if(ZmBx$ = 'IntfBox') then
+    bbx=-2
+    IntfBox_def(NIgn)
+    NIgn=10
+else
+    fopen ZmBx$+'.plt' inbox read
+    freadln inbox bEMin bEMax bNMin bNMax bhMin bhMax btMin btMax
+    bbx=+1
+end if 
+
+set font pstr
+set hei fontSz
+MinMSze=0.3
+if(EventNr > 900) then
+   MinMSze=MinMSze*30./sqrt(EventNr)
+end if
+MSze= .04/(EMax-EMin)  ! should be about 1 m on the scale of the plot
+If (MSze < MinMSze) then MSze=MinMSze
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+FactAmp=0.5  ! to keep the size of the dot for amplitude=10 independent of AmplitudePlot
+Lwidth_def = 0.04
+set lwidth Lwidth_def
+Pol_Scale=1
+
+sub 2Dpolxy dxy$ cmin cmax dc$ Wmax dw$ dpol$
+!  dxy$=(x,y) cmin cmax dc$=(i,color) Wmax dw$=(i,w)  dpol$=(px,py)
+!
+   local DDx = cmax-cmin
+   for i = 1 to ndata(dpol$)
+      local x = dataxvalue(dxy$,i)
+      local y = datayvalue(dxy$,i)
+      local polx = dataxvalue(dpol$,i)*Pol_Scale
+      local poly = datayvalue(dpol$,i)*Pol_Scale
+      If (AmplitudePlot=0) then
+         MSzeI=MSze
+      Else
+         MSzeI=sqrt(datayvalue(dw$,i)/Wmax)*FactAmp ! dMinInt
+         If(MSzeI < 0.02) then 
+            MSzeI=0.02
+         End If
+      End If
+      local Cscale = (datayvalue(dc$,i)-cmin)/DDx
+      Clr(Cscale)
+!      MSzeI = 0.1
+      set lwidth MSzeI
+      amove xg(x)+polx yg(y)+poly
+      aline xg(x)-polx yg(y)-poly 
+   next i
+   set color black
+   set lwidth Lwidth_def
+end sub
+!
+
+! Start plotting
+amove HorOff-bsh top 
+write label$  "; "  Qual$+','   EventNr " sources"
+
+amove HorOff VerOff+h+Z+bsh ! (time,h) ---------------------------------------------------
+begin graph
+   size B+Z Z1
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   yaxis min hMin max hMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
+   If NIgn=2 then
+      data DataFile$ d1=c2,c5 d2=c1,c2 d3=c1,c13 d4=c12,c11 ignore 2
+   Else
+      data DataFile$ d1=c2,c5 d2=c1,c2 d3=c1,c13 d4=c12,c11  ignore 10
+   End If
+end graph
+if(bbx>0) then
+   amove xg(btMin) yg(bhMin)
+   box (xg(btMax)-xg(btMin)) (yg(bhMax)-yg(bhMin)) 
+end if
+cmax = dmaxy(d2)  ! time v.s. I
+cmin = dminy(d2)  ! time
+Wmax = dmaxy(d3)
+Pol_Scale=0.01
+2Dpolxy(d1, cmin, cmax, d2, Wmax, d3, d4)
+Pol_Scale=1
+
+if(Z>0) then   
+   amove HorOff VerOff+h  ! (E-W,h) -------------------------------
+   begin graph
+      size B Z
+      vscale 1
+      hscale 1
+      xaxis min EMin max EMax ! hei fontSz nofirst nolast ! dticks  1 dsubticks .2 hei fontSz nofirst ! length=7
+      yaxis min hMin max hMax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
+      xlabels off
+      If NIgn=2 then
+         data DataFile$ d1=c4,c5 d2=c1,c2 d3=c1,c13 d4=c15,c16 ignore 2
+      Else
+         data DataFile$ d1=c4,c5 d2=c1,c2 d3=c1,c13 d4=c15,c16   ignore 10
+      End If
+      ! d4 marker cross msize 0.1 color blue
+   end graph
+   if(bbx=-2) then  IntfBox_Eh
+   if(bbx>0) then
+      amove xg(bEMin) yg(bhMin)
+      box (xg(bEMax)-xg(bEMin)) (yg(bhMax)-yg(bhMin)) 
+   end if
+2Dpolxy(d1, cmin, cmax, d2, Wmax, d3, d4)
+    
+   amove HorOff+b VerOff   ! (h,N-S) -----------------------------
+   begin graph
+      size Z H
+      vscale 1
+      hscale 1
+      xaxis min hMin max hMax hei fontSz nofirst !  dticks  1 dsubticks .2  ! length=7
+      yaxis min NMin max NMax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
+      ylabels off
+      If NIgn=2 then
+         data DataFile$ d1=c5,c3 d2=c1,c2 d3=c1,c13 d4=c16,c14  ignore 2
+      Else
+         data DataFile$ d1=c5,c3 d2=c1,c2 d3=c1,c13 d4=c16,c14 ignore 10
+      End If
+      ! d4 marker cross msize 0.3 color blue
+   end graph
+   if(bbx=-2) then  IntfBox_hN
+   if(bbx>0) then
+      amove xg(bhMin) yg(bNMin)
+      box (xg(bhMax)-xg(bhMin)) (yg(bNMax)-yg(bNMin)) 
+   end if
+   if(ErrZ>0) then
+      amove xg(hMin+2*ErrZ) yg(NMin+2*Erry)
+      Ellipse (2*ErrZ) (2*Erry) 
+   end if
+   2Dpolxy(d1, cmin, cmax, d2, Wmax, d3, d4)
+end if
+
+amove HorOff VerOff     ! (E-W,N-S) ---------------------------
+begin graph
+   size B H
+   vscale 1
+   hscale 1
+   xaxis min EMin max EMax hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
+   yaxis min NMin max NMax hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
+   !  yaxis  min 0 max 2e-8  hei fontSz ! dticks 5 dsubticks 1
+   axis grid
+   ticks color grey40  lstyle 2
+   xticks length .3
+   yticks length .3
+   xsubticks length .1
+   ysubticks length .1
+   If NIgn=2 then
+      data DataFile$ d1=c4,c3 d2=c1,c2 d3=c1,c13 d4=c15,c14 ignore 2
+   Else
+      data DataFile$ d1=c4,c3 d2=c1,c2 d3=c1,c13 d4=c15,c14  ignore 10
+   End If
+end graph
+if(bbx=-2) then  IntfBox_EN
+if(bbx>0) then
+    amove xg(bEMin) yg(bNMin)
+    box (xg(bEMax)-xg(bEMin)) (yg(bNMax)-yg(bNMin)) 
+end if
+!cmax = dmaxy(d2)  ! time v.s. I
+!cmin = dminy(d2)  ! time
+!Wmax = dmaxy(d3)
+2Dpolxy(d1, cmin, cmax, d2, Wmax, d3, d4)
+! 2Dpolxy [ dxy$=(x,y) cmin cmax dc$=(i,color) Wmax dw$=(i,w)  dpol$=(px,py) ]
+
+   
+if(Z>0) then   ! plot colorpalette
+    x0 = HorOff+0.2+B+fontSz/2.
+    y0 = VerOff+0.7+h
+    !x0 = 4.+B
+    !y0 = 5.+h
+    Leng = Z-1
+    ClrPltt(x0,y0,Leng,cmin,cmax)
+end if
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set hei fontSz
+set just CC 
+amove HorOff+0.5*b  VerOff-1.7*fontSz
+text Easting [km]
+if(Z>0) then   
+   amove HorOff+0.5*z+B  VerOff-1.7*fontSz
+    text Height [km]
+end if
+amove HorOff+0.5*(B+z)  VerOff+h+z+bsh-1.7*fontSz
+!text time [ms] (t_offst
+write "time [ms] (+" t_offst " [ms])"
+
+amove HorOff-bsh VerOff+0.5*h
+begin rotate 90
+   text Northing [km]
+   rmove 0.5*h+Z/2 0 
+   if(Z>0) then   
+       text Height [km]
+   end if
+   rmove Z/2+bsh+Z1/2 0
+   text Height [km]
+end rotate
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "SrcImg"   ! +"-"+file$
+translate 0 2
+!end rotate

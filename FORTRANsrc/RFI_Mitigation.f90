@@ -11,7 +11,7 @@
 !-----------------------------------------
 Module RFI_MitPars
     use constants, only : dp
-    use DataConstants, only : DataFolder, Time_dim, Cnu_dim, Ant_nrMax  !!
+    use DataConstants, only : DataFolder, Time_dim, Ant_nrMax  !!
     Implicit none
     integer :: NBackgr ! Number of chunck used for frequency filter determination
     Integer :: Filtring ! number of filtered frequencies
@@ -22,8 +22,8 @@ Module RFI_MitPars
     Integer :: MinAmp ! Amplitude for determining background
     Integer :: N_zeroChunk  ! number of chunks with too many zeros
     Real(dp) :: Powr
-    Real(dp) :: nu_Fltr(0:Cnu_dim) ! RFI filter
-    Real(dp) :: Freq_s(0:Cnu_dim) ! Average frequency spectrum for background
+    Real(dp) :: nu_Fltr(0:Time_dim/2) ! RFI filter
+    Real(dp) :: Freq_s(0:Time_dim/2) ! Average frequency spectrum for background
     Logical :: MakePlots
 End Module RFI_MitPars
 ! ---------------------------------------------
@@ -455,7 +455,7 @@ Subroutine AccumulateBackgrFreq()
 ! Since only chuncks for which the (max amplitude) was determined (below above saturation limit),
 !      no checks for missing data needs to be done.
    use constants, only : dp,pi,ci, sample
-   use DataConstants, only : Time_dim, Cnu_dim
+   use DataConstants, only : Time_dim
    use HDF5_LOFAR_Read, only : GetData
    use FFT, only : RFTransform_CF, Hann
    Use RFI_MitPars, only : i_chunkMax, MaxAmpChunk, NBackgr, Freq_s, MinAmp
@@ -463,14 +463,14 @@ Subroutine AccumulateBackgrFreq()
    Integer, parameter :: NBackgrMax=50 !200  ! Important for background
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: RTime_s(1:Time_dim), q
-   Complex(dp) :: CNu_s(0:Cnu_dim)
+   Complex(dp) :: CNu_s(0:Time_dim/2)
    Integer :: j, i_chunk, Dset_offset
    Integer :: nu_i, nu_f
    !
    Freq_s(:)=0.
    NBackgr=0
-   nu_i=25*Cnu_dim/100
-   nu_f=79*Cnu_dim/100
+   nu_i=25*Time_dim/2/100
+   nu_f=79*Time_dim/2/100
    MinAmp=MinVal(MaxAmpChunk)
    If(MinAmp.gt.3000.) then
       write(2,*) '!!!! Noisy natennas, MinAmp=',MinAmp
@@ -522,7 +522,7 @@ Subroutine BuildRFIFilter()
 !     increased by a factor of about 1.12 = sqrt(4/pi) since Freq_s(:)=Freq_s(:) + abs(Cnu_s(:))
 !
    use constants, only : dp,pi ! ,ci, sample
-   use DataConstants, only : Time_dim, Cnu_dim
+   use DataConstants, only : Time_dim
    Use RFI_MitPars, only : NBackgr, Freq_s, nu_Fltr, powr, Filtring, FiltringRef
    Implicit none
    Real(dp) :: Av, Bv, FiltFact !, FiltPwr
@@ -532,12 +532,12 @@ Subroutine BuildRFIFilter()
       write(2,*) '****Insufficient nr of non-zero background blocks****'
       Return
    endif
-   nu_i=25*Cnu_dim/100
-   nu_f=79*Cnu_dim/100
-   dnu=2*Cnu_dim/100
+   nu_i=25*(Time_dim/2)/100
+   nu_f=79*(Time_dim/2)/100
+   dnu=2*Time_dim/2/100
    nu_Fltr(0:nu_i)=0.
    nu_Fltr(nu_i:nu_f)=1.
-   nu_Fltr(nu_f:Cnu_dim)=0.
+   nu_Fltr(nu_f:Time_dim/2)=0.
    FiltFact=1.6   ! important for workings of filtering
    Filtring=0
    Powr=0.
@@ -575,7 +575,7 @@ End Subroutine BuildRFIFilter
 ! -----------------------------------------------
 Subroutine PlotFreqFilt(i_dst)
    use constants, only : dp !,pi,ci, sample
-   use DataConstants, only : DataFolder, Time_dim, Cnu_dim
+   use DataConstants, only : DataFolder, Time_dim
    use HDF5_LOFAR_Read, only : DSet_names
    Use RFI_MitPars, only : Freq_s, nu_Fltr
    Implicit none
@@ -593,8 +593,8 @@ Subroutine PlotFreqFilt(i_dst)
       FILE=trim(DataFolder)//'RFI_AntF'//trim(DSet_Names(i_dst))//'.dat')
    !write(2,*) 'output file:',trim(DataFolder)//'RFI_AntF'//trim(DSet_Names(i_dst))//'.dat'
    Bin_size=10
-   Do i=0,Cnu_dim/Bin_size-1
-      freq=Bin_size*(i+0.5)*100./Cnu_dim
+   Do i=0,(Time_dim/2)/Bin_size-1
+      freq=Bin_size*(i+0.5)*100./(Time_dim/2)
       Bin=0.
       Do j=1,Bin_size
           Bin=Bin+Freq_s(i*Bin_size+j)
@@ -607,7 +607,7 @@ End Subroutine PlotFreqFilt
 !  ---------------------------------
 Subroutine TestFilter(i_dst)
    use constants, only : dp,pi, sample
-   use DataConstants, only : DataFolder, Time_dim, Cnu_dim
+   use DataConstants, only : DataFolder, Time_dim
    use HDF5_LOFAR_Read, only : DSet_names
    use HDF5_LOFAR_Read, only : SAMPLE_NUMBER_first, DIPOLE_CALIBRATION_DELAY
    use HDF5_LOFAR_Read, only : GetData
@@ -618,11 +618,11 @@ Subroutine TestFilter(i_dst)
    !
    Integer*2 :: Chunk(1:Time_dim)
    Real(dp) :: time, p, pw, RTime_s(1:Time_dim), SubSample_Offset, AmpNrm, ChMax, ChMin
-   Complex(dp) :: Cnu_s(0:Cnu_dim), CTime_s(1:Time_dim)
+   Complex(dp) :: Cnu_s(0:Time_dim/2), CTime_s(1:Time_dim)
    integer :: Dset_offset, i_chunk
    !Integer :: j,NZero, Ntwo
    !Integer :: nc
-   !Real(dp) :: Freq_sum(0:Cnu_dim), p1,p2, AvAmpl
+   !Real(dp) :: Freq_sum(0:Time_dim/2), p1,p2, AvAmpl
    !
    SubSample_Offset=0.
    AmpNrm=sqrt(1./powr) ! To normalize the complex power per sample to unity

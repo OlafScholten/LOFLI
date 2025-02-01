@@ -62,8 +62,10 @@ Subroutine ReadPreDefTr( i_track)
       read(22,*,iostat=nxx) t_ms
    Elseif((PreDefTrackFile(Len-3:Len) .eq. '.trc')) Then ! Use a specila track file
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
+   Elseif((PreDefTrackFile(Len-3:Len) .eq. '.plt')) Then ! Use a more modern plot file
+      OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
    ElseIf(present(i_track)) Then
-      write(Extension,"(i1,A4)") i_track,'.dat' !,&
+      write(Extension,"(i1,A4)") i_track,'.plt' !,&
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile)//trim(extension),IOSTAT=nxx)
    Else
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)

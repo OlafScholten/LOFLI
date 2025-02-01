@@ -1,0 +1,272 @@
+size 23 43+3
+set font pstr fontlwidth 0.08 hei 1.2 just CC
+fontSz=0.8
+
+verSz=5
+horSz=19
+set lwidth 0.04
+set font pstr
+set hei .6
+set hei 0.7
+MarkSz = 0.1
+curveW=0.05
+N_max=50
+DotSz=3*MarkSz
+
+scl_th=0.5
+scl_ph=0.05
+
+labl$='../Simulation/files/HAtst'
+WinLength=400
+if(nargs() > 0 ) then 
+    labl$=arg$(1)
+end if
+DataFile$=labl$+"TRID.plt"    ! DLsIntfSpecPolrz_d.dat 
+   fopen DataFile$ inchanw read
+freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
+freadln inchan NTracks N_slice Qual$ N_smth Name$ 
+   
+dfile$=labl$+"_EISpeceo.dat"   ! resummed hilbert transform over   SSm  samples for complete trace of the chunck
+   fopen dfile$ inchan read
+   freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus
+dwfile$=labl$+"_EISpec.dat"
+   fopen dwfile$ inchanw read
+   freadln inchanw cc_max 
+   freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h
+!dfileang$=labl$+"IntfSpecPolAng_d.dat"
+   
+s_min=1 !(1+N_smth)
+s_max=WinLength !(1+N_slice*N_smth)   
+s_Med = (s_max+s_min)/2
+K=1
+Markers = N_slice
+while Markers > 5
+   K = K*2
+   Markers = N_slice/K
+next
+K = K/2
+
+
+set just TL
+amove 1.0  0.9
+write "tmin=" tmin "(" CenLoc1/1000. "," CenLoc2/1000. "," CenLoc3/1000. ")"
+amove 15.5  0.9
+text slice time [samples]
+!write "k,Markers,N_smth: " K Markers N_smth  
+!amove 10.  11
+!write "s_min   s_max: "   s_min   s_max
+!amove 10.  12
+!write "s_Med N_slice: "   s_Med N_slice
+
+N_plots=7
+
+amove 2.  4.+N_plots*verSz
+write "power @( "+format$(CenLoc1,"fix 3")+", "+format$(CenLoc2,"fix 3")+", "+format$(CenLoc3,"fix 3")+")km"
+amove 2.  3.+N_plots*verSz
+write "t [\mu s] +"+format$(StartTime_ms,"fix 3")+" [ms] - "+format$(tshft_mus,"fix 3")+" [ms]"
+
+amove 2.  2
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_min max s_max !nticks 4
+   !yaxis min Ymin max Ymax
+   yaxis log min 1.e-2
+   !title "power spectrum [arb]"
+   !xtitle "t [samples]+"+OS$
+   x1ticks length -.2
+   x2ticks length +.2
+   y1axis off
+   y2labels on
+   !ytitle "power"
+   data dwfile$ d1=c1,c2  ignore 2
+      d1 line color red lwidth curveW
+end graph
+begin key
+    nobox
+    position tl
+    set color black
+    line color red lwidth curveW text "(1+2) Ref Ant"
+    marker circle  msize MarkSz  lstyle 2 text "I_{tot} img"
+    marker circle  msize MarkSz  lstyle 2 color magenta text "I_{12} img"
+end key
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xaxis hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xaxis off
+   yaxis log min 1.e-2 ! max +100 ! log ! min scl_min max scl log
+   y2axis off
+   !y1axis on
+   data DataFile$ d1=c8,c9 d2=c8,c10  ignore 10 !
+   let d3=d2*d1/100
+   If N_slice > N_max Then
+      d1 marker dot  msize DotSz   ! lwidth 0.05
+      d3 marker dot  msize DotSz  color magenta
+   Else
+      d1 marker circle  msize MarkSz  lstyle 2 ! lwidth 0.05
+      d3 marker circle  msize MarkSz  lstyle 2 color magenta
+   End If
+end graph
+!        plot vertical grid
+set lwidth 0.01
+i=0
+   amove xg(s_Med+i*K*N_smth) 2
+   aline xg(s_Med+i*K*N_smth) 2+N_plots*verSz
+while i < Markers-1
+   i = i + 1
+   amove xg(s_Med+i*K*N_smth) 2
+   aline xg(s_Med+i*K*N_smth) 2+N_plots*verSz
+   amove xg(s_Med-i*K*N_smth) 2
+   aline xg(s_Med-i*K*N_smth) 2+N_plots*verSz
+   !amove 10.  15+i
+   !write "i: " i
+Next
+set just TL
+set lwidth 0.04
+
+amove 2.  2.+verSz
+begin graph    ! PCA magnitudes
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis log min 0.3  !max +105 nofirst
+   data DataFile$ d1=c8,c16 d12=c8,c20 d13=c8,c24  ignore 10
+   If N_slice > N_max Then
+      d13 marker dot  msize DotSz color yellow
+      d12 marker dot  msize DotSz color green
+      d1 marker dot  msize DotSz color red
+   Else
+      d13 marker circle msize MarkSz  lstyle 2 color yellow
+      d12 marker circle msize MarkSz  lstyle 2 color green
+      d1 marker circle msize MarkSz  lstyle 3 color red
+   End If
+end graph
+set just TR
+amove 2.+horSz-0.7  2.+2*verSz-0.7
+write 'I'
+
+amove 2.  2.+2*verSz
+begin graph    ! Zenith
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   !y2axis min 0 max +90 nofirst
+   yaxis min 0 max 1 nofirst
+   data DataFile$ d1=c8,c17  d2=c8,c19 d12=c8,c21  d22=c8,c23 ignore 10
+   let d3=cos(d1*pi/180.)
+   let d4=d3-cos((d1-d2)*pi/180.)
+   let d32=cos(d12*pi/180.)
+   let d42=d32-cos((d12-d22)*pi/180.)
+   let d8=cos(80.*pi/180.)  ! 80 deg
+   d8 line lstyle 1 lwidth 0.01 color magenta
+   let d9=cos(pi/4.)
+   d9 line lstyle 1 lwidth 0.01 color blue
+   If N_slice > N_max Then
+      !d12 marker dot  msize DotSz err d22 errwidth .1  color green
+      !d1 marker dot  msize DotSz err d2 errwidth .1  color red
+      d32 marker dot  msize DotSz err d42 errwidth .1  color green
+      d3 marker dot  msize DotSz err d4 errwidth .1  color red
+   Else
+      !d12 marker circle msize MarkSz  err d22 errwidth .1 lstyle 2 color green
+      d32 marker circle msize MarkSz  err d42 errwidth .1 lstyle 2 color green
+      !d1 y2axis marker circle msize MarkSz  err d2 errwidth .1 lstyle 3 color red
+      d3 marker circle msize MarkSz  err d4 errwidth .1  lstyle 3 color red
+   End If
+end graph
+set just TR
+amove xg(s_Max)-0.3 yg(1)-0.3
+write 'cos(Zenith)'
+set just Cl
+amove xg(s_Max)+0.3 yg(cos(pi/4.))
+write '45^o'
+amove xg(s_Max)+0.3 yg(cos(80.*pi/180.))
+write '80^o'
+
+amove 2.  2.+3*verSz
+begin graph          ! Azimuth
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min -180 max +180 nofirst
+   let d9=90
+   d9 line lstyle 1 lwidth 0.01 color blue
+   let d8=0
+   d8 line lstyle 1 lwidth 0.01 color red
+   let d7=-90
+   d7 line lstyle 1 lwidth 0.01 color blue
+   data DataFile$ d1=c8,c18  d2=c8,c19 d12=c8,c22  d22=c8,c23  ignore 10
+   If N_slice > N_max Then
+      d12 marker dot  msize DotSz err d22 errwidth .1  color green
+      d1 marker dot  msize DotSz err d2 errwidth .1  color red
+   Else
+      d12 marker circle  msize MarkSz   err d22 errwidth .1 lstyle 2 color green
+      d1 marker circle  msize MarkSz   err d2 errwidth .1 lstyle 3 color red
+   End If
+end graph
+set just TR
+amove xg(s_Max)-0.3 yg(150)-0.3
+write 'Azimuth (N)'
+
+amove 2.  2.+4*verSz
+begin graph       !   I3
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0 max +100 nofirst
+   data DataFile$ d1=c8,c11 d2=c8,c12  ignore 10
+   d1 marker circle  msize MarkSz   err d2 errwidth .1 lstyle 2
+end graph
+set just TR
+amove xg(s_Max)-0.3 yg(100)-0.3
+write 'I3/I [%]'
+
+amove 2.  2.+5*verSz
+begin graph       ! chi^2
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis log
+   data DataFile$ d1=c8,c7  ignore 10
+   d1 marker circle  msize MarkSz   lstyle 2
+end graph
+set just TR
+amove xg(s_Max)-0.3 2.+6*verSz-0.3
+write 'Chi^2/DoF'
+
+amove 2.  2.+6*verSz
+begin graph       ! fractions
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min s_Min max s_Max hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0 
+   data DataFile$ d1=c8,c13  d2=c8,c14  d3=c8,c15  ignore 10
+   d1 marker fsquare  msize MarkSz  color green lstyle 2
+   d2 marker cross  msize MarkSz  color red lstyle 2
+   d3 marker fcircle  msize MarkSz  color blue lstyle 2
+end graph
+begin key
+   position tl
+   marker fsquare  msize MarkSz  color green text "UnPol"
+   marker cross  msize MarkSz  color red text "LinPol"
+   marker fcircle  msize MarkSz  color blue text "CirPol"
+end key
+
+
+
+

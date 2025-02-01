@@ -15,7 +15,7 @@ labl$='AmplFitSE20A7-NPNla_166Mx_1'
 if(nargs() > 0 ) then 
     labl$=arg$(1)
 end if
-DataFile$=labl$+".dat"
+DataFile$=labl$+".plt"
    fopen DataFile$ inchan read
    freadln inchan a b c d e f g h i j name$
 
