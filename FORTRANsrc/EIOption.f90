@@ -619,7 +619,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
       StartTime_ms=StartT_sam(1)*sample*1000.d0  ! in ms
       TIntens000(1:SumWindw)=PixelPower(1:SumWindw)
       !write(2,*) 'SumStrt,SumWindw,',SumStrt,SumWindw,IntfLead
-      OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpec.csv')
+      OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpec.dat')
       Write(29,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',F8.3,',',I4,', ',A,' !')") StartTime_ms, CenLoc/1000., AntennaRange, &
          i_s, t_shft*1000., N_smth, TRIM(OutFileLabel)
       write(29,"(g12.4,5(',',i5),',',i8,',',i5,6(',',f9.4),',',I4,' !')") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
