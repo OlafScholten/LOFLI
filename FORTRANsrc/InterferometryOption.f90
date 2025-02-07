@@ -24,7 +24,7 @@ Subroutine InterferometerRun
    Use Interferom_Pars, only : N_smth, NrPixSmPowTr
    use DataConstants, only : OutFileLabel, DataFolder, Time_Dim !, Cnu_dim,
    use Chunk_AntInfo, only : StartT_sam, TimeFrame,   NoiseLevel, RefAnt, Simulation
-   use ThisSource, only : CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos
+   use ThisSource, only : CurtainHalfWidth, PeakNrTotal, Peak_eo, ChunkNr, Peakpos, SourcePos, TotPeakNr, PeakNr
    use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
    use HDF5_LOFAR_Read, only : CloseDataFiles
    use GLEplots, only : GLEplotControl
@@ -110,8 +110,10 @@ Subroutine InterferometerRun
       Stop 'Window starting sample should be sufficiently large'
    EndIf
 
-   If(PreDefTrackFile.ne.'') Then  ! time was mid-time on track
+   If(PreDefTrackFile.ne.'') Then  ! time specified was mid-time on track, not the begin to the wanted chunk
+      write(2,*) 'Specified starting time was',StartTime_ms
       StartTime_ms=StartTime_ms-sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
+      write(2,*) 'Shifted by',-sample_ms*(SumStrt+SumWindw/2),', to point to middle of the track'
    EndIf
 
    write(2,"(20(1x,'='))")
@@ -159,11 +161,13 @@ Subroutine InterferometerRun
       Peak_eo(1)=0   ; Peak_eo(2)=1  ! only the i_eo=0 peaks are used for curtainplotting
       ChunkNr(1)=1   ; ChunkNr(2)=1 ! chunk nr
       RefAnt(1,0)=IntFer_ant(1,1)
+      TotPeakNr(0,1)=1
+      PeakNr(0,1)=1
       !RefAnt(i_chunk,i_eo)
       !Unique_StatID(i_stat)  ! stations that will be used ???
       PeakPos(1)=SumStrt+SumWindw/2  ; PeakPos(2)=SumStrt+SumWindw/2  ! take a single peak at the center of the window
       !SourcePos(1,i_Peak)
-      Call PlotAllCurtainSpectra(CurtainHalfWidth)
+      Call PlotAllCurtainSpectra(CurtainHalfWidth)  ! uses TotPeakNr(0,i_chunk), PeakNr(0,i_chunk)
    EndIf
    !
    If(NrSlices.gt.1 .and. Polar) Call GLEplotControl(PlotType=TRIM(PreAmble)//'Track', &
@@ -217,11 +221,17 @@ Subroutine ChainRuns(NewCenLoc)
          , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
    !
    If(ChainRun.eq.0) Return
-   StartTime_ms=StartT_sam(1)*sample*1000.d0  ! in ms
-   write(2,*) StartTime_ms, t_track
+   !NOTE!!!! On input for tracks time specified was mid-time on track, not the begin to the wanted chunk, undo this
+   StartTime_ms=StartT_sam(1)*sample*1000.d0-TimeBase  ! in ms
+   If(PreDefTrackFile.ne.'') Then  ! undo: time specified was mid-time on track, not the begin to the wanted chunk
+      write(2,*) 'Track starting time was',StartTime_ms
+      StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
+      write(2,*) 'Track is defined and starting time is in fact on the middle of the track time',sample_ms*(SumStrt+SumWindw/2)
+   EndIf
    t_shft=tShift_ms(CenLoc(:)) ! sqrt(SUM(CenLoc(:)*CenLoc(:)))*1000.*Refrac/c_mps ! in mili seconds due to signal travel distance
-   StartTime_ms=StartTime_ms-t_shft-TimeBase
-   StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
+   write(2,*) 'Old Ref st time=', StartTime_ms, t_track, ', soure time=', StartTime_ms-t_shft, ', shift by',sample_ms*SumWindw
+   StartTime_ms=StartTime_ms-t_shft
+!   StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
    If(t_track.le.0.) Then  ! Move along a track when present
       If(ChainRun.gt.0) Then
          ChainRun=ChainRun-1
@@ -236,7 +246,7 @@ Subroutine ChainRuns(NewCenLoc)
       EndIf
       If(PreDefTrackFile.ne.'') Then  ! With a track defined StartTime_ms is actually midtime
          Call  GetTrPos(StartTime_ms, NewCenLoc)
-         write(2,*) 'NewCenLoc from track', StartTime_ms, NewCenLoc
+         write(2,*) 'NewCenLoc from track', StartTime_ms, NewCenLoc, ', center window shift=', +sample_ms*(SumStrt+SumWindw/2)
       Else If(.not.  FollowCenterIntensity) Then
          NewCenLoc(:)=CenLoc(:) ! Stick to the old position
          write(2,*) 'old position for image cube kept @',CenLoc(:)
@@ -253,6 +263,7 @@ Subroutine ChainRuns(NewCenLoc)
       txt='#+01'
    EndIf
    !
+   write(2,*) 'New sartt time @ old source pos=', StartTime_ms, t_track
    !
    If(NewCenLoc(1).ne.0.d0) then
       !write(2,*) 'txt1',txt,ChainRun
@@ -276,10 +287,13 @@ Subroutine ChainRuns(NewCenLoc)
       write(10,NML = Parameters)
       !
       StartTime_ms=StartTime_ms + t_shft - tShift_ms(NewCenLoc(:))  ! correct for local time shift, keeping same time in the core
+      write(2,*) 'New sartt time @ new source pos=', StartTime_ms, t_track
       If(PreDefTrackFile.ne.'') Then
          Write(10,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
+         Write(2,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
       Else
          Write(10,"('S',F12.6, 3F10.4, F6.1)") StartTime_ms, NewCenLoc/1000. ! Start time at the source location
+         Write(2,"('S',F12.6, 3F10.4, F6.1)") StartTime_ms, NewCenLoc/1000. ! Start time at the source location
          !  239.7 , -25.42  37.28   5.54,  50 !-i- PID=25216;  StartTime_ms, (N,E,h)CenLoc, DistMax[km]
       EndIf
       lname(1:1)="C"
@@ -289,8 +303,10 @@ Subroutine ChainRuns(NewCenLoc)
          d_loc(2)=d_loc(2)*180./pi   ! convert to degree
       EndIf
       write(10,"(A,3(I5,F9.5))") lname(1:1),N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
+      write(2,"(A,3(I5,F9.5))") lname(1:1),N_pix(1,2), d_loc(1), N_pix(2,2), d_loc(2), N_pix(3,2), d_loc(3)
 !P  40 .003, 15 .01 , 20 10. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]  ; VeryFine resolution extended grid(vfe)
       Write(10,"('F',2I7,F7.3,F9.4)")  SumStrt, SumWindw,  AmpltPlot
+      Write(2,"('F',2I7,F7.3,F9.4)")  SumStrt, SumWindw,  AmpltPlot
 !   2000  60040 10 0.01 0.1 ! Ini [samples] starting loc & window for summing power & slice number & powerthresh & PlotAmplitude
       Close(Unit=10)
       Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(IntfRun_file)//'.sh' )

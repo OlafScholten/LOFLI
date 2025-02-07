@@ -36,7 +36,7 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
    ! MaxTrackDist = maximal distance for a source to be removed from the track-head to be assigned to a track
    ! wtr = weigth for new found source position to determine position update of track-head
     Use constants, only : dp
-   !Use TrackConstruct, only : PreDefTrackNr, PreDefTrackFile, TOrder
+   !Use PredefinedTracks, only : ReadPreDefTr
    !Use TrackConstruct, only : TrackNr, LongTrackNr, LongTrack_Min, TrackNrMax, TrackLenMax
    !Use TrackConstruct, only : Wtr, MaxTrackDist, HeightFact, NLongTracksMax, TrackENr, TrackE, TrackTimeLim, TrackNrLim
    IMPLICIT none
@@ -52,7 +52,7 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
    !
    !-- Get predefined tracks (if any)
    If(TrackNrLim.gt.TrackNrMax) TrackNrLim=TrackNrMax
-   Call ReadPreDefTr(PreDefTrackFile)
+   Call ReadPreDefTrFile(PreDefTrackFile)
     ! Reconstruct TrackPosition at time of source i
     !
    TrackNr=PreDefTrackNr
@@ -566,7 +566,7 @@ Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
     enddo ! i, track number
 end Subroutine AnalyzeBurst
 !===================================================================
-Subroutine xxxReadPreDefTr(PreDefTrackFile)
+Subroutine ReadPreDefTrFile(PreDefTrackFile)
    !Use TrackConstruct, only : PreDefTrack, tNrS_max, PreDefTrackNr, PreDefTrackNr_Max, NrPreDefTrackPoints_Max, tNrS
    IMPLICIT none
    Character(len=100), Intent(IN) :: PreDefTrackFile
@@ -601,7 +601,7 @@ Subroutine xxxReadPreDefTr(PreDefTrackFile)
    Enddo
    !
    Return
-End Subroutine xxxReadPreDefTr
+End Subroutine ReadPreDefTrFile
 
 !=========================================
 Subroutine GetPreDefTrPos(t_source,TrackPos)
