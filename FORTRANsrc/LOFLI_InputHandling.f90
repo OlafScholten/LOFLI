@@ -596,21 +596,16 @@ Subroutine PrntCompactSource(i_Peak,ZeroCalOffset, OutUnit)
 End Subroutine PrntCompactSource
 !==========================================
 Pure Integer Function SourceNr(i_Peak)
+!Integer Function SourceNr(i_Peak)
 !   Integer, external :: SourceNr
-   !use constants, only : dp,Sample_ms
-   !use FitParams, only : station_nrMax
-   !use DataConstants, only : RunMode
-   !use ThisSource, only : PeakPos, Peak_eo, RefAntErr, PeakNrTotal, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped, SourcePos
    use ThisSource, only : Dual, PeakNr, TotPeakNr, ChunkNr, PeakPos, Peak_eo
-   !use Chunk_AntInfo, only : Unique_StatID, Ant_pos, Ant_RawSourceDist, RefAnt, StartT_sam
-   !use StationMnemonics, only : Statn_ID2Mnem
    Implicit none
    Integer, intent(in) :: i_Peak
    integer ( kind = 4 ) :: i, i_chunk
    !Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
    !
    SourceNr=i_Peak
-   !write(2,*)'SourceNr',SourceNr,Dual,Peak_eo(i_Peak)
+   !write(2,*)'! SourceNr',SourceNr,Dual,Peak_eo(i_Peak), ChunkNr(i_Peak), TotPeakNr(0,1),PeakNr(0,1),TotPeakNr(0,1)
    If(Dual .and. (Peak_eo(i_Peak).eq.1) ) then
       i_chunk=ChunkNr(i_Peak)
       Do i=TotPeakNr(0,i_chunk)-PeakNr(0,i_chunk)+1,TotPeakNr(0,i_chunk)

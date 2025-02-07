@@ -66,6 +66,7 @@ Module Interferom_Pars
    Real(dp), save :: PolZen(3), PolAzi(3), PolMag(3), PoldOm(3) ! analyzed polarization direction, from "PolTestCath"
    !Real(dp), save :: rPolZen(1:3), rPolAzi(1:3), rPolMag(1:3), cPolZen, cPolAzi, cPolMag  ! obsolete
    Logical, save :: RefinePolarizObs ! Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.
+   Logical, save :: TRIDFile=.True. ! Write .csv and .plt files when running TRI-D
    Real(dp),save ::  BoundingBox(1:2,1:4)
    !Real(dp) :: EleAng,AziAng  elevation & azimuth
    !

@@ -364,7 +364,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    half=(SSm+1.)/2.
    StartTime_ms=StartT_sam(1)*sample*1000.d0  ! in ms
    If(Dual) then
-      OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpeceo.csv')
+      OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpeceo.dat')
       Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,F9.2,I4, ' 0')") StartTime_ms, CenLoc/1000., AntennaRange, &
          SSm, i, t_shft*1000., ABS(SMPowMx), N_smth
       Do i=0,Time_Dim/SSm-1
@@ -411,7 +411,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Use Interferom_Pars, only : PixLoc, PixelPower, MaxSmPow, MaxSmPowLoc, N_smth, Nr_IntFerMx, Nr_IntFerCh, i_chunk, IntfNuDim
    Use Interferom_Pars, only : MaxSmPowI12, MaxSmPowQ, MaxSmPowU, MaxSmPowV
    Use Interferom_Pars, only : MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
-   Use Interferom_Pars, only : PolBasis  ,    NGridInterpol, RMSGridInterpol, NGridExtrapol, RefinePolarizObs
+   Use Interferom_Pars, only : PolBasis, NGridInterpol, RMSGridInterpol, NGridExtrapol, RefinePolarizObs, TRIDFile
    Use Interferom_Pars, only : xMin, xMax, yMin, yMax, zMin, zMax, tMin, tMax, AmpltPlot, t_offsetPow
    Use Interferom_Pars, only : NrPixSmPowTr, MaxSmPowGrd, PixSmPowTr, RatMax, PixPowOpt, FirstTimeInterf
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ
@@ -431,10 +431,11 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    Real(dp) :: HorVec(1:3), VerVec(1:3)
    !Complex(dp), allocatable :: CMTime_Pix(:,:)
    Real(dp), external :: tShift_ms   !
+   Character(len=30) :: Qual
    !
    Write(txt,"('_',i1)") i_eo
    If(Dual) Then
-      txt='_d'
+      txt=''
       !Allocate( CMTime_pix(1:2*IntfNuDim,1:3) )
    EndIf
    !  Calculate boundingBox
@@ -449,55 +450,66 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    EndIf
    !write(2,*) xMin/1000.-.05, xMax/1000.+.05, yMin/1000.-.05, yMax/1000.+.05, zMin/1000.-.05, zMax/1000.+.05
    !
-   If(Dual .and. RefinePolarizObs) Then
-      OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat')
-      write(28,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,I5,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
-         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth, NrPixSmPowTr  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+   !If(Dual .and. RefinePolarizObs) Then
+   !
+   If(TRIDFile) Then
+   !  Storing data for later processing in DataSelect:
+      OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'TRIDsrcs'//TRIM(txt)//'.csv')
+      write(28,"(2F11.3,4F10.2,1x,A,I3,L2,I3,I5,F7.2' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
+         TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, RefinePolarizObs, N_smth, NrPixSmPowTr,NoiseLevel  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      Write(28,"(A,20x,A )") '!   nr, Src_time[ms] ;       Location (N,E,h) [km]            Intens  ; chi^2    StI ', &
+         'Stk_NEh(1,1:3), Stk_NEh(2,2:3), Stk_NEh(3,3)'
+ !   nr, Src_time[ms] ;       Location (N,E,h) [km]            Intens  ; chi^2    StI  Stk_NEh(1,1:3), Stk_NEh(2,2:3), Stk_NEh(3,3)
+!    1,  690.710076,   -7.66095,  -32.94734,    7.82216,         21.6,   1.40,   37.98     , (   4.904    ,  1.1848E-08) , (  -2.853    ,   4.850    ) , (   1.146    ,  0.6805    ) , (   24.08    , -1.7859E-08) , (   6.393    ,  -8.329    ) , (   9.000    , -5.3593E-08)
+!               i_slice, t_ms-t_shft, PixLoc(1:3)/1000., SMPowMx, Chi2pDF, StI,   Stk_NEh(1,1:3), Stk_NEh(2,2:3), Stk_NEh(3,3)
       Write(2,*) 'In OutputIntfPowrMxPos, data written to file:', &
             trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolrz'//TRIM(txt)//'.dat'
       write(2,*) 'Header:tMin-.0005-TimeBase, tMax+.0005-TimeBase,  TimeBase,  CenLoc(:), ', &
             'TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth; data range=', 1, (1+NrPixSmPowTr)*N_smth
       write(2,"(2F11.3,4F10.2,1x,A,I3,F7.1,I3,' 0')") tMin-.0005-TimeBase, tMax+.0005-TimeBase, &
          TimeBase,  CenLoc(:),TRIM(OutFileLabel)//TRIM(txt), PixPowOpt, 0.0, N_smth  ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-      Write(28,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
-         '!   nr,  time[ms] ;','StI','StI12', '  StQ','  StU','  StV',' StI3',' StU1',' StV1',' StU2',' StV2', &
-         'Chi^2/DoF, P_un, P_lin, P_circ [%]'
-      OPEN(UNIT=27,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolAng'//TRIM(txt)//'.dat')
-      Write(27,"(A,T19,A,T30,A,T38,A,T48,A, T60,A,T132,A)") '! slice#, samp# ;', &
-         'Intensty','Zenith', 'Azimuth','domg','Twice repeated','time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
-      OPEN(UNIT=26,STATUS='unknown',ACTION='WRITE', &
-         FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecCartStokes'//TRIM(txt)//'.dat')
-      Write(26,"(A,T19,A)") '! slice#, samp# ;', 'time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
-   Else IF(.not. Dual) Then
-      OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt)//'.dat')
-      write(28,"(6F8.2,2F9.3,A,F7.1,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
-         zMin/1000.-.05, zMax/1000.+.05, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase         ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-      Write(28,"(A,I7,A,A,F8.3,A,F6.3)") &
-         '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
-   EndIf
-   OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat')
-   write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
-      zMin/1000.-.005, zMax/1000.+.005, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-   Write(29,*) '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel,  '1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
-   ! True bounding Box
-   Do i_1=1,2   ! or azimuth Phi
-      Do i_2=1,2   ! or elevation angle theta
-         Do i_3=1,2   ! or Distance R
-            i_gr(1)=N_pix(1,i_1) ; i_gr(2)=N_pix(2,i_2) ; i_gr(3)=N_pix(3,i_3)
-            If(polar) then
-               PixLocPol(:)=CenLocPol(:)+i_gr(:)*d_loc(:)
-               Call Pol2Carth(PixLocPol,PixLoc)
-            Else
-               PixLoc(:)=CenLoc(:)+i_gr(:)*d_loc(:)
-            Endif
-            If(.not.Dual) Then  ! write frame
-               Write(28,"(1x,3F9.3,2x,3I3,' ;')") PixLoc(2)/1000.,PixLoc(1)/1000.,PixLoc(3)/1000.,i_1,i_2,i_3 ! (E,N,h)=(x,y,z)
-            EndIf
-            Write(29,"(1x,3F9.3,2x,3I3,' ;')") PixLoc(2)/1000.,PixLoc(1)/1000.,PixLoc(3)/1000.,i_1,i_2,i_3 ! (E,N,h)=(x,y,z)
+     ! OPEN(UNIT=27,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPolAng'//TRIM(txt)//'.dat')
+     ! Write(27,"(A,T19,A,T30,A,T38,A,T48,A, T60,A,T132,A)") '! slice#, samp# ;', &
+     !    'Intensty','Zenith', 'Azimuth','domg','Twice repeated','time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
+     ! OPEN(UNIT=26,STATUS='unknown',ACTION='WRITE', &
+     !    FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecCartStokes'//TRIM(txt)//'.dat')
+     ! Write(26,"(A,T19,A)") '! slice#, samp# ;', 'time[ms] ;, Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
+  ! Else IF(.not. Dual) Then
+  !    OPEN(UNIT=28,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt)//'.dat')
+  !    write(28,"(6F8.2,2F9.3,A,F7.1,' 0')") xMin/1000.-.005, xMax/1000.+.005, yMin/1000.-.005, yMax/1000.+.005, &
+  !       zMin/1000.-.05, zMax/1000.+.05, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase         ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+  !    Write(28,"(A,I7,A,A,F8.3,A,F6.3)") &
+  !       '0 ',NrPixSmPowTr,' 0 0 ',TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+  ! EndIf
+  ! OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)//'.dat')
+   ! Data for results plots of this imager run
+      write(Qual,"(A,F6.2,A)") '"I>',NoiseLevel,'"'
+      OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'TRID'//TRIM(txt)//'.plt')
+      write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") yMin/1000.-.005, yMax/1000.+.005, xMin/1000.-.005, xMax/1000.+.005, &
+         zMin/1000.-.005, zMax/1000.+.005, tMin-.0005-TimeBase, tMax+.0005-TimeBase, ' IntfBox ', TimeBase, PixPowOpt ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      Write(29,*) '0 ',NrPixSmPowTr,TRIM(Qual),N_smth,TRIM(OutFileLabel)//TRIM(txt),AmpltPlot,' 0 0 0 0 0 0 0 ',NoiseLevel,  '1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+      ! True bounding Box
+      Do i_1=1,2   ! or azimuth Phi
+         Do i_2=1,2   ! or elevation angle theta
+            Do i_3=1,2   ! or Distance R
+               i_gr(1)=N_pix(1,i_1) ; i_gr(2)=N_pix(2,i_2) ; i_gr(3)=N_pix(3,i_3)
+               If(polar) then
+                  PixLocPol(:)=CenLocPol(:)+i_gr(:)*d_loc(:)
+                  Call Pol2Carth(PixLocPol,PixLoc)
+               Else
+                  PixLoc(:)=CenLoc(:)+i_gr(:)*d_loc(:)
+               Endif
+               Write(29,"(1x,3F9.3,2x,3I3,' ;')") PixLoc(1:3)/1000.,i_1,i_2,i_3 ! (N,E,h)=(x,y,z)
+            Enddo
          Enddo
       Enddo
-   Enddo
-   !
+     !    Write(29,"(A,9x,A,13x,';   ', 9(A,'/I [%]   ;   '),A )") &
+     !       '!   nr,  time[ms] ;','StI','StI12', '  StQ','  StU','  StV',' StI3',' StU1',' StV1',' StU2',' StV2', &
+     !       'Chi^2/DoF, P_un, P_lin, P_circ [%]'
+      Write(29,"(A,7x,A )") '!   nr, Src_time[ms] ;       Location (N,E,h) [km]           Intens; chi^2 sampl    StI', &
+         'I12[%], I3    dI3, P_Un P_Lin P_Circ    (Magn(k),    Zen(k), Azi(k), dOm(k),    k=1,3)'
+      !
+   EndIf
    !
    ! Analyze Smoothed-power positions
    NMx=0
@@ -559,67 +571,112 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       EndIf
       !write(2,*) 'd_Mx', i_slice, d_Mx(:), SMPowMx,QualMx(1:3)
       NMx=NMx+1
-      If(Dual) Then
+      If(.not. Dual) Then
+         write(2,*) '!!!!!!!!!!!!!! Obsolete option, dual=.false. !!!!!!!!!!!!!'
+      EndIf
          s=sqrt(MaxSmPowQ(i_slice)*MaxSmPowQ(i_slice)+MaxSmPowU(i_slice)*MaxSmPowU(i_slice))
          X=(ATAN2(MaxSmPowU(i_slice),MaxSmPowQ(i_slice))/2.+AngOff)*180./pi
          Y=t_ms-t_shft
-         write(29,"(i6,',',4(f12.6,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
-         PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., MaxSmPowI12(i_slice), &   ! MaxPowPix(:,i)
-         MaxSmPowQ(i_slice), MaxSmPowU(i_slice), MaxSmPowV(i_slice), MaxSmPowI3(i_slice) ,s,X
-      !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_Mx(:) !, BarySet
-         !
+   !      write(29,"(i6,',',4(f12.6,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
+   !      PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., MaxSmPowI12(i_slice), &   ! MaxPowPix(:,i)
+   !      MaxSmPowQ(i_slice), MaxSmPowU(i_slice), MaxSmPowV(i_slice), MaxSmPowI3(i_slice) ,s,X
+   !   !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_Mx(:) !, BarySet
+   !      !
+   !      If(RefinePolarizObs) Then
+   !         !
+   !         MaxSmPow(i_slice)=SMPowMx
+   !         Call EI_PolarizSlice(i_slice)   ! Refine polarization analysis by calculating observables at interpolated position
+   !         !write(2,*) '================================ test-Interpolated voxel position values'
+   !         !write(2,"(i6,',',g13.6,',',3f6.2,',',5g13.3)") i_slice,  StI12, &   ! MaxPowPix(:,i)
+   !         !   StQ/StI12, StU/StI12, StV/StI12, StI3 ,StI, dStI
+   !         !
+   !         ! write(2,*) 'OutputIntfPowrMxPos: Call EI_PolarizSlice(i_slice)', i_slice, PolMag
+   !         Write(28,"(i6,',',f11.5,',', 2(g12.4,','), 22(f8.3,',') )") (1+i_slice*N_smth), t_ms-t_shft, &
+   !            StI, dStI, 100*StI12/StI, 100*dStI12/StI, 100*StQ/StI, 100*dStQ/StI, &
+   !            100*StU/StI, 100*dStU/StI, 100*StV/StI, 100*dStV/StI, &
+   !            100*StI3/StI, 100*dStI3/StI, 100*StU1/StI, 100*dStU1/StI, 100*StV1/StI, 100*dStV1/StI, &
+   !            100*StU2/StI, 100*dStU2/StI, 100*StV2/StI , 100*dStV2/StI, &
+   !            Chi2pDF, 100.*P_un, 100.*P_lin, 100.*P_circ
+   !         Write(27,"(i5,',',i6, 3(' , ',g12.4, 3(',',f7.2)) ,',',f12.6, 6(',',2g12.4) )") &
+   !            i_slice, (1+i_slice*N_smth), (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3), &
+   !            t_ms-t_shft ! , Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
+   !         Write(26,"(i5,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") i_slice, (1+i_slice*N_smth), t_ms-t_shft, &
+   !            Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
+
+
+
+
+
+
+
+      If(TRIDFile) Then
          If(RefinePolarizObs) Then
             !
             MaxSmPow(i_slice)=SMPowMx
             Call EI_PolarizSlice(i_slice)   ! Refine polarization analysis by calculating observables at interpolated position
-            !write(2,*) '================================ test-Interpolated voxel position values'
-            !write(2,"(i6,',',g13.6,',',3f6.2,',',5g13.3)") i_slice,  StI12, &   ! MaxPowPix(:,i)
-            !   StQ/StI12, StU/StI12, StV/StI12, StI3 ,StI, dStI
             !
-            ! write(2,*) 'OutputIntfPowrMxPos: Call EI_PolarizSlice(i_slice)', i_slice, PolMag
-            Write(28,"(i6,',',f11.5,',', 2(g12.4,','), 22(f8.3,',') )") (1+i_slice*N_smth), t_ms-t_shft, &
-               StI, dStI, 100*StI12/StI, 100*dStI12/StI, 100*StQ/StI, 100*dStQ/StI, &
-               100*StU/StI, 100*dStU/StI, 100*StV/StI, 100*dStV/StI, &
-               100*StI3/StI, 100*dStI3/StI, 100*StU1/StI, 100*dStU1/StI, 100*StV1/StI, 100*dStV1/StI, &
-               100*StU2/StI, 100*dStU2/StI, 100*StV2/StI , 100*dStV2/StI, &
-               Chi2pDF, 100.*P_un, 100.*P_lin, 100.*P_circ
-            Write(27,"(i5,',',i6, 3(' , ',g12.4, 3(',',f7.2)) ,',',f12.6, 6(',',2g12.4) )") &
-               i_slice, (1+i_slice*N_smth), (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3), &
-               t_ms-t_shft ! , Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
-            Write(26,"(i5,',',i6,',',f12.6, 6(' , (',g12.4,',',g12.4,')') )") i_slice, (1+i_slice*N_smth), t_ms-t_shft, &
-               Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
-         Else
-            write(2,"(1x,A,i4,A,f12.6,A,2(F9.4,','),F9.4,A ,g13.6,A,3f6.2,A,5g13.3)") 'Slice#',i_slice,  &
-               ', time=', t_ms-t_shft, '[ms], Max Intensity @ (N,E,h)=(',PixLoc(:)/1000.,') [km], I12_center=', &
-               MaxSmPowI12(i_slice),', Q,U,V=',MaxSmPowQ(i_slice)*100., MaxSmPowU(i_slice)*100., MaxSmPowV(i_slice)*100., &
-               '%, I3=', MaxSmPowI3(i_slice)
+            !  For storing data for later processing in DataSelect:
+            write(28,"(I5, ','F12.6,3(','F11.5),', ',F12.1, ',', F7.2,',', 1pg12.4, 6(' , (',g12.4','g12.4,')' ))")  &
+               i_slice, t_ms-t_shft, PixLoc(1:3)/1000., SMPowMx, Chi2pDF, StI,   Stk_NEh(1,1:3), Stk_NEh(2,2:3), Stk_NEh(3,3)
             !
-         EndIf
-         !
-      Else
-         ! =======================================================================
-         write(29,"(i6,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
-         PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowMx
-         ! Use the barycenter to interpolate in distance and use only those pixels that have a large intensity
-         Call FindBarycenter(i_slice,d_Bar,SMPowBar,QualBar)
-         If(SMPowBar.gt.0.) then
-            NBar=NBar+1
-            If(polar) then
-               PixLocPol(:)=CenLocPol(:)+d_Bar(:)*d_loc(:)
-               Call Pol2Carth(PixLocPol,PixLoc)
-            else
-               PixLoc(:)=CenLoc(:)+d_Bar(:)*d_loc(:)
-               Call Carth2Pol(PixLoc,PixLocPol)
-            Endif
+            ! For making a plot of the just analyzed sources:
+            !Lin1= StI* P_Lin
+            !polN=sin(PolZen(1)*pi/180.) * cos(PolAzi(1)*pi/180.)
+            !PolE=sin(PolZen(1)*pi/180.) * sin(PolAzi(1)*pi/180.)
+            !Polh=cos(PolZen(1)*pi/180.)
+            write(29,"(I5,F13.6, 3F12.5, F13.1, F7.2, I6, g13.4, 3F6.1, ',' 3F6.1, 3(' , ',g12.4, 3(',',f7.2))  )") &
+               i_slice, t_ms-t_shft, PixLoc(1:3)/1000.,  SMPowMx, &
+               Chi2pDF, (1+i_slice*N_smth), StI, 100.*StI12/StI, 100*StI3/StI, 100*dStI3/StI, &
+               P_Un*100., P_Lin*100., P_Circ*100., (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3)
+        Else
+            !  For storing data for later processing in whatever way:
+            write(28,"(I5, ','F12.6,3(','F11.5),', ',F12.1, ',',  1pg12.4, 4(','g12.4) )")  &
+               i_slice, t_ms-t_shft, PixLoc(1:3)/1000.,  SMPowMx, MaxSmPowI12(i_slice), &
+               MaxSmPowQ(i_slice), MaxSmPowU(i_slice), MaxSmPowV(i_slice), MaxSmPowI3(i_slice)
             !
-            t_shft=tShift_ms(PixLoc(:)) ! sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
-            write(28,"(i6,',',4(f12.6,','),4(f11.5,','),4g13.6,',',3g13.5)") i_slice, t_ms-t_shft, &
-               PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowBar, QualBar(1)
-            !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_gr(:)
-         Else
-            d_Bar(:)=9999.
+            ! For making a plot of the just analyzed sources:
+            write(29,"(I7,F13.6, 3F12.5, F13.1  )") &
+               (1+i_slice*N_smth), t_ms-t_shft, PixLoc(1:3)/1000.,  SMPowMx
          EndIf
       EndIf
+
+
+
+
+
+
+    !     Else
+      write(2,"(1x,A,i4,A,f12.6,A,2(F9.4,','),F9.4,A ,g13.6,A,3f6.2,A,5g13.3)") 'Slice#',i_slice,  &
+         ', time=', t_ms-t_shft, '[ms], Max Intensity @ (N,E,h)=(',PixLoc(:)/1000.,') [km], I12_center=', &
+         MaxSmPowI12(i_slice),', Q,U,V=',MaxSmPowQ(i_slice)*100., MaxSmPowU(i_slice)*100., MaxSmPowV(i_slice)*100., &
+         '%, I3=', MaxSmPowI3(i_slice)
+    !        !
+    !     EndIf
+    !     !
+    !  Else  ! not dual; considered obsolete
+    !     ! =======================================================================
+    !     write(29,"(i6,',',4(f11.5,','),g13.6,',',3f6.2,',',5g13.3)") i_slice, t_ms-t_shft, &
+    !     PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowMx
+    !     ! Use the barycenter to interpolate in distance and use only those pixels that have a large intensity
+    !     Call FindBarycenter(i_slice,d_Bar,SMPowBar,QualBar)
+    !     If(SMPowBar.gt.0.) then
+    !        NBar=NBar+1
+    !        If(polar) then
+    !           PixLocPol(:)=CenLocPol(:)+d_Bar(:)*d_loc(:)
+    !           Call Pol2Carth(PixLocPol,PixLoc)
+    !        else
+    !           PixLoc(:)=CenLoc(:)+d_Bar(:)*d_loc(:)
+    !           Call Carth2Pol(PixLoc,PixLocPol)
+    !        Endif
+    !        !
+    !        t_shft=tShift_ms(PixLoc(:)) ! sqrt(SUM(PixLoc(:)*PixLoc(:)))*1000.*Refrac/c_mps ! in seconds due to signal travel distance
+    !        write(28,"(i6,',',4(f12.6,','),4(f11.5,','),4g13.6,',',3g13.5)") i_slice, t_ms-t_shft, &
+    !           PixLoc(2)/1000., PixLoc(1)/1000., PixLoc(3)/1000., SMPowBar, QualBar(1)
+    !        !   PixLocPol(3)/1000.,PixLocPol(2)*180./pi,PixLocPol(1)*180/pi, d_gr(:)
+    !     Else
+    !        d_Bar(:)=9999.
+    !     EndIf
+    !  EndIf
       !
       !i_gr(:)=MaxSmPowGrd(:,i)
       !y0=PixSmPowTr(i,i_gr(1),i_gr(2),i_gr(3))
@@ -640,14 +697,16 @@ Subroutine OutputIntfPowrMxPos(i_eo)
       EndIf
       flush(unit=2)
    EndDo
-   Close(Unit=29)
-   If(Dual .and. RefinePolarizObs) Then
-      !DeAllocate( CMTime_pix )
-      Close(Unit=28)
-      Close(Unit=27)
-      Close(Unit=26)
-   Else IF(.not. Dual) Then
-      Close(Unit=28)
+   If(TRIDFile) Then
+      Close(Unit=29)
+      If(Dual .and. RefinePolarizObs) Then
+         !DeAllocate( CMTime_pix )
+         Close(Unit=28)
+      !   Close(Unit=27)
+      !   Close(Unit=26)
+      Else IF(.not. Dual) Then
+         Close(Unit=28)
+      EndIf
    EndIf
    If ( (NGridInterpol.gt.0) .and. FirstTimeInterf) Then
       write(2,"(A,I5,A,3F5.2,A,I4,A)") 'GridInterpol:', NGridInterpol, ', RMS of interpolation [grid spacing]=' &
@@ -656,17 +715,17 @@ Subroutine OutputIntfPowrMxPos(i_eo)
    EndIf
    If(FirstTimeInterf) write(2,"(A,2I6,2F6.3,A,3F7.3,A,I7,A,F9.1)") 'number of sources in plots:',NMx,NBar, NoiseLevel, RatMax
    If(NMx.gt.1) then
-      Call GLEplotControl(PlotType='SourcesPlot', PlotName='IntfMx'//TRIM(txt)//TRIM(OutFileLabel), &
-         PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt) )
+      Call GLEplotControl(PlotType='SrcsPltLoc', PlotName='TRID'//TRIM(txt)//TRIM(OutFileLabel), &
+         PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'TRID'//TRIM(txt) )
       ! write(10,"('gle -d pdf -o ',A,'-InfImaMx_',I1,'.pdf ${UtilDir}/SourcesPlot.gle ${FlashFolder}/files/',A)") &!
       !   TRIM(OutFileLabel), i_eo, TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)
-      If(Dual) Then
-         Call GLEplotControl(PlotType='EIPolariz', PlotName='IntfPol'//TRIM(txt)//TRIM(OutFileLabel), &
+      If(RefinePolarizObs) Then
+         Call GLEplotControl(PlotType='TRIDPol', PlotName='TRIDPol'//TRIM(txt)//TRIM(OutFileLabel), &
             PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
-      Else
-         If(NBar.gt.1) &
-            Call GLEplotControl(PlotType='SourcesPlot', PlotName='IntfBar'//TRIM(txt)//TRIM(OutFileLabel), &
-               PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt) )
+      !Else
+      !   If(NBar.gt.1) &
+      !      Call GLEplotControl(PlotType='SourcesPlot', PlotName='IntfBar'//TRIM(txt)//TRIM(OutFileLabel), &
+      !         PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt) )
          ! write(10,"('gle -d pdf -o ',A,'-InfImgBar_',I1,'.pdf ${UtilDir}/SourcesPlot.gle ${FlashFolder}/files/',A)") &!
          !   TRIM(OutFileLabel), i_eo, TRIM(OutFileLabel)//'IntfSpecPowBar'//TRIM(txt)
          !--------------------------------------------------------------
@@ -983,26 +1042,26 @@ Subroutine OutputIntfSlices(i_eo)
    ! write windowed spectra to file
    Write(txt,"('_',i1)") i_eo
    If(Dual) txt='_d'
-   OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecWin'//TRIM(txt)//'.csv')
-   If(polar) Then
-      write(29,"(g12.4,5(',',i4),',',i8,',',i5,3(',',f9.4))") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
-         N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:2)*180./pi ,d_loc(3)
-   Else
-      write(29,"(g12.4,5(',',i4),',',i8,',',i5,3(',',f9.4))") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
-         N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:3)
-   EndIf
-   Do i=0, SumWindw
-      j=i+SumStrt
-      write(29,"(i6,',',g12.4,',',g12.4)") i, (ABS(CTime_spectr(j,IntFer_ant(1,i_chunk),i_chunk)) )**2, ABS(CTime_sum(j))**2
-   Enddo
-   Close(Unit=29)
+!   OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfSpecWin'//TRIM(txt)//'.csv')
+!   If(polar) Then
+!      write(29,"(g12.4,5(',',i4),',',i8,',',i5,3(',',f9.4))") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
+!         N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:2)*180./pi ,d_loc(3)
+!   Else
+!      write(29,"(g12.4,5(',',i4),',',i8,',',i5,3(',',f9.4))") MaxIntfInten, N_pix(1,2), N_pix(2,1), N_pix(2,2), &
+!         N_pix(3,1), N_pix(3,2), SumStrt,SumWindw, d_loc(1:3)
+!   EndIf
+!   Do i=0, SumWindw
+!      j=i+SumStrt
+!      write(29,"(i6,',',g12.4,',',g12.4)") i, (ABS(CTime_spectr(j,IntFer_ant(1,i_chunk),i_chunk)) )**2, ABS(CTime_sum(j))**2
+!   Enddo
+!   Close(Unit=29)
    !
    !--------------------------------------------------------------
    ! Write general info for this picture
    If(FirstTimeInterf) write(2,"(A,G11.3,A,3f9.4,A)", ADVANCE='NO') 'Maximum ',MaxIntfInten, &
          ' @ (N,E,h)=(',MaxIntfIntenLoc(:)/1000.,') [km]'
    Call Carth2Pol(MaxIntfIntenLoc(:),PixLocPol)
-   If(CurtainHalfWidth.gt.0) SourcePos(:,i_eo+1)=MaxIntfIntenLoc(:)  ! for curtainplot but interferes with otheer usages of SourcesPos
+   If(CurtainHalfWidth.gt.0) SourcePos(:,i_eo+1)=MaxIntfIntenLoc(:)  ! for curtainplot but interferes with other usages of SourcesPos
    If(FirstTimeInterf) write(2,"(A,f9.4,f8.2,f7.2)") ' = (ph,th,R)=',PixLocPol(1)*180/pi,PixLocPol(2)*180./pi,PixLocPol(3)/1000.
    ! Info per slice
    AveIntenN(:,:)=AveIntenN(:,:)*d_loc(1)/AveInten(:,:)
