@@ -1009,6 +1009,7 @@ Subroutine DS_ReadSelData_PkInt
          read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
          If(nxx.gt.0) then
             read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+            ISpr=0.
             If(nxx.gt.0) then
                write(2,*) 'Read error:',i,t,x,y,z
                cycle
@@ -1028,11 +1029,11 @@ Subroutine DS_ReadSelData_PkInt
          if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
          if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
          !
-         !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,SMPow, SMPowCut  ! already in proper units for plotting
+         !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,I20, SMPowCut,ISpr  ! already in proper units for plotting
          If( I20 .lt. SMPowCut) cycle
          If( chi2 .gt. chi2Cut) cycle
          If( ISpr .gt. IntensSpread) cycle
-         !write(2,*) 'Passed: ',Marker, i,I20, SMPowCut,chi2, chi2Cut
+         !write(2,*) 'Passed: ',Marker, i,ISpr, SMPowCut,chi2, chi2Cut
          SourcTotNr=SourcTotNr+1
       ! Jan '25' chnged to NEh notatiom
          RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=y ;  RA(3,SourcTotNr)=x ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]

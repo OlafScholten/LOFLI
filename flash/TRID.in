@@ -1,0 +1,48 @@
+&Parameters 
+ RunOption='TRI-D' ,
+ IntfSmoothWin= 20  ! 20 5
+ !ParabolicSmooth= T     ! Use a parabolic-like smmoothing window.
+ RefinePolarizObs= .false.     ! Calculate polarization observables in cartesian coordinates at interpolated location & write pol. obs.
+ CurtainHalfWidth=50
+
+ TimeBase=  1271.
+! AntennaRange= 50.  ! [km]
+ SaturatedSamplesMax= 100     ! Maximum number of saturates time-samples per chunk of data
+ ExcludedStat=  "RS409" ,"RS208" !, "RS406", "RS407", "RS508"! 
+ BadAnt_SAI=   5046,   5047,   5078,   5079,   5094,   5095,   6078,   6079,  21014,  21015
+              21078,  21079,  21094,  21095,  24094,  24095,  28094,  28095,  32094,  32095
+             121078, 121079, 121094, 121095, 141078, 141079, 106094, 106095, 125062, 125063
+             128094, 128095, 130030, 130031, 130094, 130095, 145014, 145015, 145030, 145031
+             146046, 146047, 146078, 146079, 147078, 166014, 166078, 166079, 169014, 169015, 169046, 169078, 169094, 169095, 183014, 183015
+             183046, 183047, 188094, 188095, 189014, 189030, 189031, 189062, 189063, 189078
+             189094,
+NoiseLevel=0.1,   
+
+  Calibrations="Calibrations202103211138.dat" 
+
+ IntfSmoothWin=20
+ ChainRun=0, NoiseLevel=0.1, OutFileLabel="ix"  &end  !  nohup ./TRID.sh  >TRID-ix.log 2>&1  & 
+S   0.6 , -6.14,  -28.51,    6.27  !  StartTime_ms, CenLoc, DistMax[km]                                                                                                              
+D   2 40, 40 100 !                                                                                               
+F  2000  20001 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot; iz1
+
+P   20 .003, 30 .01, 20 5. ! N_phi, d_N, N_theta, d_E, N_R, d_h[m]                                                                                                                 
+S   0.638 , -6.14,  -28.475,    6.27 , 0.005 !  StartTime_ms, CenLoc, DistMax[km]                                                                                                              
+
+
+
+
+S  1.2   -2.985  -33.886  5.104,   !    Reference/Source-| time, & position
+D 1. 12 12 30   !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing)
+F  9500  501 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot; iz1
+
+ ChainRun=0, NoiseLevel=0.5, OutFileLabel="inib2"  &end   ! nohup ./TRID.sh  >TRID-ini.log 2>&1  & 
+S  1.4   -2.985  -33.89  5.08,  !    Reference/Source-| time, & position
+D 4 40 40 80   !  Polar(Phi,Th,R)/Carthesian(N,E,h) | 3x(#gridpoints, grid spacing)
+F  2000  60000 10.   !  First/Median| SumStrt, SumWindw, AmpltPlot
+
+
+
+
+
+#sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata

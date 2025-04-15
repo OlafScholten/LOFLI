@@ -650,16 +650,15 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       ! testing linear polarisation
       !write(2,*) 'EI_PolGridDel:PolTestCath(NEh2PB, Stk)', StI, STI12
       Call PolTestCath(NEh2PB, Stk)
-      W=ATAN2(StU,StQ)/2.*180./pi
-      If(W.lt.-90.) W=W+180.
+      !W=ATAN2(StU,StQ)/2.*180./pi
+      !If(W.lt.-90.) W=W+180.
       j_IntFer=Nr_IntFer-12
       !write(2,*) 'dChi_ap(1:Nr_IntFer):', dChi_ap(1:Nr_IntFer)
       !write(2,*) 'p, DelChi(j,2*j_IntFer-1):', dChi_ap(J_IntFer), DelChi(-N_fit:N_fit,2*j_IntFer-1)
       !write(2,*) 'dChi_at(1:Nr_IntFer):', dChi_at(1:Nr_IntFer)
       !write(2,*) 't, DelChi(j,2*j_IntFer):', dChi_at(J_IntFer), DelChi(-N_fit:N_fit,2*j_IntFer)
-      write(2,"(A,2(A,G12.4),10(A,F7.2))") Label,': I123=',StI,', I12=',StI12, ', Q/I=',StQ/StI, &
-            ', U/I=',StU/StI, ', V/I=',StV/StI, ', I3/I=',StI3/StI,', angle=',W,', chi^2=',Chi2pDF &
-            ,', P_unpol=',P_un*100, '%, P_lin=',P_lin*100, '%, P_circ=',P_circ*100, '%'
+      write(2,"(A,2(A,G12.4),10(A,F7.2))") Label,': I123=',StI,', I12=',StI12, ', I3/I=',StI3/StI,', chi^2=',Chi2pDF &
+            ,', P_unpol=',P_un*100, '%, P_lin=',P_lin*100, '%, P_circ=',P_circ*100, '%'  ! , dStI3/StI,',', dStI/StI
       If(TestCh2 .and. Outpt.lt.1) then  !  i.e. always skip this part
          SumSq=SumSq/(2.*Nr_IntFer)
          !txt(1:2)=Label(7:8) !  write(txt,"(I2.2)") i_sample
@@ -717,6 +716,25 @@ Subroutine PolTestCath(NEh2PB, Stk)
    !
    Return
 End Subroutine PolTestCath
+!-----------------------------------------------
+Subroutine PolPCACathCon(Stk_NEh_Con, PolZen, PolAzi, PolMag, PoldOm, prin)
+   !Perform PolPCACath on the stokes matrix given in condensed form
+   !NOTE: The Stokes matrix is single precision complex
+   use constants, only : dp,pi
+   Implicit none
+   Complex, intent(in) :: Stk_NEh_Con(1:6)
+   Real(dp), intent(out) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
+   Logical, intent(in) :: prin
+   complex  :: Stk_NEh(1:3,1:3) !  ,TrackLenMax)
+   !
+   Stk_NEh(1,1:3)=Stk_NEh_Con(1:3)
+   Stk_NEh(2,2:3)=Stk_NEh_Con(4:5)
+   Stk_NEh(3,3)=Stk_NEh_Con(6)
+   Stk_NEh(2:3,1)=conjg(Stk_NEh(1,2:3))
+   Stk_NEh(3,2)=conjg(Stk_NEh(2,3))
+   Call PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
+   Return
+End Subroutine PolPCACathCon
 !-----------------------------------------------
 Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
    ! Here we use the full complex Stokes matrix, however one expects that for
@@ -789,14 +807,35 @@ Subroutine PolPCACath(Stk_NEh, PolZen, PolAzi, PolMag, PoldOm, prin)
          A=cos(2*dOmg*pi/180.)
          I_circ=I_circ+(WW(i)*sin(2*dOmg*pi/180.))**2
          I_lin=I_lin + (WW(i)*A)**2
-         write(2,"(A,F10.2,A,F10.2, A, 3F7.1)") 'max Real(Vec(i)); I_circ=', &
-            WW(i)*sin(2*dOmg*pi/180.), ' ; I_lin=', WW(i)*A, & !' ; ', EigVec(:,i),
-            ' ; th(3),ph(1),dO=', theta, Phi, dOmg
+         write(2,"(A,F10.2,A,F10.2, A, 3F7.1)") 'Vec: I_lin=', abs(WW(i)*A), ' ; I_circ=', &
+            abs(WW(i)*sin(2*dOmg*pi/180.)), ' ; th(3),ph(1),dO=', theta, Phi, dOmg
       EndIf
    EndDo !i=1,3
    If(prin) Then
-      A=(sum(WW(1:3)))**2
-      write(2,*) 'total intensity_PCA=',sqrt(A), ', % lin=', 75.*I_lin/A, ', % circ=', 75.*I_circ/A
+
+
+!   StI = Real(Stk(1,1) + Stk(2,2) + Stk(3,3))  ! =\Lambda_0  from  PHYSICAL REVIEW E 66, 016615 ~2002!
+!   StI12=Real(Stk(1,1) + Stk(2,2))             ! =
+!   StI3 =  Real(Stk(3,3))                      ! =>\Lambda_8 = StI12 *sq(3)/2 - StI3 *sq(3)
+!   StQ = Real(Stk(1,1)-Stk(2,2))               ! =\Lambda_3 *2/3
+!   StU = 2*Real(Stk(1,2))                      ! =\Lambda_1 *2/3
+!   StV =  2*Imag(Stk(1,2))                     ! =\Lambda_2 *2/3
+!   StU2 = 2*Real(Stk(3,1))                     ! =\Lambda_4 *2/3
+!   StV2 =  2*Imag(Stk(3,1))                    ! =\Lambda_5 *2/3
+!   StU1 = 2*Real(Stk(2,3))                     ! =\Lambda_6 *2/3
+!   StV1 =  2*Imag(Stk(2,3))                    ! =\Lambda_7 *2/3
+!   St8 = (StI12  - 2* StI3)/sqrt(3.)           ! =\Lambda_8 *2/3
+!   P_un = 1.- (3./4.)*(StQ**2+StU**2+StV**2+StU1**2+StV1**2+StU2**2+StV2**2+St8**2)/(StI**2)
+!   P_lin = (3./4.)*(StQ**2+StU**2+StU1**2+StU2**2+St8**2)/(StI**2)
+!      write(2,*) Stk_NEh(1,1), Stk_NEh(1,2), Stk_NEh(1,3), Stk_NEh(2,2), Stk_NEh(2,3), Stk_NEh(3,3)
+
+
+      I_Circ=3.*( (IMAG(Stk_NEh(1,2)))**2 +(IMAG(Stk_NEh(1,3)))**2 + (IMAG(Stk_NEh(2,3)))**2 )
+      I_Lin =3.*( (REAL(Stk_NEh(1,2)))**2 +(REAL(Stk_NEh(1,3)))**2 + (REAL(Stk_NEh(2,3)))**2 ) &
+         + (3.*(Real(Stk_NEh(1,1)-Stk_NEh(2,2)) )**2 + (Real(Stk_NEh(1,1) + Stk_NEh(2,2) -2*Stk_NEh(3,3)))**2)/4.
+      A=( Real( Stk_NEh(1,1) + Stk_NEh(2,2) + Stk_NEh(3,3) ) )**2
+      !SourceUn(i_Peak)=1.-SourceLin(i_Peak)-SourceCirc(i_Peak)
+      write(2,"(A,G12.4,2(A,F6.2))") 'total intensity_PCA=',sqrt(A), ', % lin=', 100.*I_lin/A, ', % circ=', 100.*I_circ/A
    EndIf
    !
    Return

@@ -559,11 +559,6 @@ Subroutine PolarCorrect(i_peak, FlightAngle, SourceTime, SourcePos, Rot, Cath)  
    !      PeakWidth, SourcePolMag, SourcePolZen, SourcePolAzi, SourcePoldOm, SourceUn, SourceLin, SourceCirc, I3, DataUnit )
    use Constants, only : dp, pi !,sample,c_mps, pi, sample_ms
    use DataConstants, only : DataFolder, OutFileLabel
-   !use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
-   !use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1, IntfNuDim, AntPeak_OffSt
-   !Use Interferom_Pars, only : N_smth, N_fit, i_chunk
-   !Use Interferom_Pars, only : dStI, dStI12, dStQ, dStU, dStV, dStI3, dStU1, dStV1, dStU2, dStV2, Chi2pDF
-   !Use Interferom_Pars, only : Alloc_EInterfImag_Pars, DeAlloc_EInterfImag_Pars
    Implicit none
    Integer, intent(in) :: i_Peak
    real(dp), intent(out) :: Rot(1:3)  ! rotated coordinates

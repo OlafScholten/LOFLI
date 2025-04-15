@@ -24,7 +24,7 @@ Module Chunk_AntInfo
     Real(dp), save, allocatable :: Ant_pos(:,:,:)
     Complex(dp), save, allocatable :: CTime_spectr(:,:,:)
     Integer, parameter :: ExcludedStat_max=35
-    integer, parameter :: N_Chunk_max=40
+    integer, parameter :: N_Chunk_max=40    !  Make this dynamic, a pretty large number
     Integer, save :: Unique_StatID(1:Station_nrMax), Nr_UniqueStat=0
     Integer, save :: Unique_SAI(1:Ant_nrMax), Nr_UniqueAnt=0
     Integer, save :: Tot_UniqueAnt(0:Station_nrMax)      ! highest ranknr in Unique_SAI of unique_antenna for station Unique_StatID(i_stat)
@@ -60,6 +60,8 @@ Module Chunk_AntInfo
 ! --------------
     Subroutine Alloc_Chunk_AntInfo
     Implicit none
+    write(2,*) 'Assign array space with (Time_dim, Ant_nrMax, ChunkNr_dim)=', Time_dim, Ant_nrMax, ChunkNr_dim
+    Flush(unit=2)
     Allocate( Ant_Stations(1:Ant_nrMax,1:ChunkNr_dim) )
     Allocate( Ant_IDs(1:Ant_nrMax,1:ChunkNr_dim) )
     Allocate( Ant_nr(1:ChunkNr_dim) )

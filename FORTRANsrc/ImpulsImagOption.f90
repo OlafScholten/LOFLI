@@ -128,6 +128,7 @@ Subroutine ImpulsImagRun
       If(DataReadError.ne.0) cycle  !  set in AntennaRead
       If(AntennaNrError.gt.0) cycle  !  set in AntennaRead
       !
+      !write(18,*) '5star: processing chunk nr',TimeFrame
       Call SourceFind(TimeFrame,SourceGuess,units)
       !
       flush(unit=2)

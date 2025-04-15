@@ -108,9 +108,9 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
       If(Submit) Then
          If(windows) then
             If(RunMode.eq.5) Then
-              write(10,"('del files\*_STD-*.dat')")
-              write(10,"('del files\AmplFit*.dat')")
-              write(10,"('del files\*_bin_1.dat')")
+              write(10,"('del files\*_STD-*.plt')")
+              write(10,"('del files\AmplFit*.plt')")
+              write(10,"('del files\*_bin_1.plt')")
             EndIf
             Close(unit=10)
             shellin = 'RunGLEplots.bat'
@@ -122,9 +122,9 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
               write(10,"('rm ',A,'{LOFAR_Corr*.dat,CCPeakPhase*.dat}')") TRIM(DataFolder)
       !!         write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
             ElseIf(RunMode.eq.5) Then
-              write(10,"('rm ',A,'*_STD-*.dat')") TRIM(DataFolder)
-              write(10,"('rm ',A,'AmplFit*.dat')") TRIM(DataFolder)
-              write(10,"('rm ',A,'*_bin_1.dat')") TRIM(DataFolder)
+              write(10,"('rm ',A,'*_STD-*.plt')") TRIM(DataFolder)
+              write(10,"('rm ',A,'AmplFit*.plt')") TRIM(DataFolder)
+              write(10,"('rm ',A,'*_bin_1.plt')") TRIM(DataFolder)
             EndIf
             Close(unit=10)
             shellin = 'chmod 755 '//TRIM(BatchFile)//'.sh'

@@ -21,7 +21,7 @@ Module DataConstants
     !nteger, parameter :: EdgeOffset=7000 !=5km/c /sample=5 10^3 /(3 10^8 5 10^-9)=5 10^3/1.5=7000
     !Integer :: Cnu_dim=Time_dim/2
     !Integer, parameter :: Cnu_dim=Time_dim/2
-    Integer, parameter :: Ant_nrMax=1500
+    Integer, parameter :: Ant_nrMax=1500    !  Make this dynamic, a pretty large number
     Integer, parameter :: Station_nrMax=40
     Integer, save :: PeakNr_dim=25 ! number of peaks while calibrating (set on input)
     Integer, save :: ChunkNr_dim=1 ! Number of starting times for blocks of data that are used

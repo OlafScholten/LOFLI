@@ -1,6 +1,3 @@
-Z1=5
-Z=Z1
-! Z=0  ! if active, omit side panels
 !fontSz=1.2
 !fontSz=1.0
 fontSz=0.8
@@ -8,7 +5,6 @@ bsh=2.5*fontSz    ! 1.5
 !HorOff=1.5+bsh
 HorOff=1.0+bsh
 VerOff=2.0+bsh
-B=14+Z1-Z
 !
 file$='../20A-7/files/IntfSpecSelSE20A7-E3IMMx_0'
 if(nargs() > 0 ) then 
@@ -20,7 +16,12 @@ freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there ne
 !freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
 freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
 !
+B=14     ! abcissa of nirthing v.s. Easting plot
+Z1=5     ! ordinate of height v.s. time plot
+!Z=5 ! Z1     ! ordinate of height v.s. easting plot
+! Z=0  ! if active, omit side panels
 H=B*(Nmax-Nmin)/(Emax-Emin)
+Z=B*(hmax-hmin)/(Emax-Emin)
 !
 If AmplitudePlot <= 0 then  ! logical operation apparently does not work around subroutine definition
    top=VerOff+h+Z+bsh+Z1+fontSz
@@ -313,11 +314,9 @@ dmin = dminx(d3)
 2Dtime(d3,d4,dmin,dmax,d5)
    
 if(Z>0) then   ! plot colorpalette
-    x0 = HorOff+0.2+B+fontSz/2.
-    y0 = VerOff+0.7+h
-    !x0 = 4.+B
-    !y0 = 5.+h
-    Leng = Z-1
+    x0 = HorOff+B+0.1*Z+fontSz/2.
+    y0 = VerOff+0.1*Z+h
+    Leng = 0.8*Z
     ClrPltt(x0,y0,Leng,Dmin,Dmax)
 end if
 
@@ -329,12 +328,12 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
       vscale 1
       hscale 1
       If NIgn=2 then
-        data filedat$   d5=c2,c6 ignore 2
+        data filedat$   d4=c2,c6 ignore 2
       Else
-        data filedat$   d5=c2,c6 ignore 10
+        data filedat$   d4=c2,c6 ignore 10
       End If
       dMin = dMinInt
-      dMax = dmaxy(d5)+dMin
+      dMax = dmaxy(d4)+dMin
       !If(dMax>1.E5) then dMin=1.0
       If(dMin>1.) then 
          dMin=dMinInt
@@ -345,15 +344,18 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
       Else If (dMin>=0.03) then
          dMin=0.03
       Else  dMin=0.01    
+      let d5 = d4*11.  ! to convert from I20 (Integrated intensity divided by 20 [to make it compattible to default TRID])  to pJ/MHz
+      dmin=dmin*10
+      dmax=dmax*11.
       xaxis log min dMin max dMax ! hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
       yaxis log min 0.8 hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
       let d6 = hist d5 step dMin !!!dm [from x1] [to x2] [bins n] [step n]
       d6 line hist
-      If(xa1>0) then
+      If ((xa1>0) and (EventNr > 900)) then
          let d7 = dMin*xb1*exp(-xa1*x-xc1/(x*x)) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n
          d7 line color red
       end If
-      If(xa2>0) then
+      If ((xa2>0) and (EventNr > 900)) then
          !let d8 = b2*exp(-a2*x-c2/(x*sqrt(x))) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n
          let d8 = dMin*xb2*(x)^(-xa2)*exp(-xc2/x-xd2/x^2) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
          d8 line color blue
@@ -361,13 +363,15 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
    end graph
    set just TR 
    rmove B+Z-fontSz/2 Z1-fontSz/2
-   set color blue
-   If(xa1>0) then
+   write "[pJ/MHz]"
+   If ((xa2>0) and (EventNr > 900)) then
+      set color blue
+      rmove -2 0
       write xa2
    End If
-   rmove -2 0
-   set color red
-   If(xa1>0) then
+   If ((xa1>0) and (EventNr > 900)) then
+      rmove -2 0
+      set color red
       write xa1 
    End If
    set color black
@@ -401,6 +405,6 @@ end rotate
 translate -0. -0.5
 ! include feyn.gle
 include note.gle
-@note "SrcImg"   ! +"-"+file$
+@note "SrcsPltLoc"   ! +"-"+file$
 translate 0 2
 !end rotate

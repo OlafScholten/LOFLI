@@ -1,6 +1,3 @@
-Z1=5
-Z=Z1
-! Z=0  ! if active, omit side panels
 !fontSz=1.2
 !fontSz=1.0
 fontSz=0.8
@@ -8,23 +5,37 @@ bsh=2.5*fontSz    ! 1.5
 !HorOff=1.5+bsh
 HorOff=1.0+bsh
 VerOff=2.0+bsh
-B=14+Z1-Z
 !
 file$='../../Imaging/LMA/LMA2019/20A-9/SimATRID'
 if(nargs() > 0 ) then 
     file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
 end if
 DataFile$=file$+".plt"    ! DLsIntfSpecPolrz_d.plt 
+option=0
+if(nargs() > 1 ) then 
+    option=arg(2)
+end if
 
 fopen DataFile$ inchan read
 freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
 freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
 !
-H=B*(NMax-NMin)/(EMax-EMin)
+B=14     ! abcissa of nirthing v.s. Easting plot
+Z1=5     ! ordinate of height v.s. time plot
+H=B*(Nmax-Nmin)/(Emax-Emin)
+Z=B*(hmax-hmin)/(Emax-Emin)
+If(option = 0) Then
+   Z=5      ! ordinate of height v.s. easting plot
+Else If(option = 0) Then
+   Z=0      !  omit side panels
+End If
+!
 top=VerOff+h+Z+bsh+Z1+fontSz
 !
 size   HorOff+B+Z+bsh/2 top+bsh/2 ! ----------------------------
 !
+!amove 2 2
+!write Z  option
 !
 declare sub Clr Cscale
 include "RdYlBl.gle"
@@ -63,28 +74,35 @@ end sub
 FactAmp=0.5  ! to keep the size of the dot for amplitude=10 independent of AmplitudePlot
 Lwidth_def = 0.04
 set lwidth Lwidth_def
+Lwidth_min=Lwidth_def/2
 Pol_Scale=1
 
 sub 2Dpolxy dxy$ cmin cmax dc$ Wmax dw$ dpol$
 !  dxy$=(x,y) cmin cmax dc$=(i,color) Wmax dw$=(i,w)  dpol$=(px,py)
 !
    local DDx = cmax-cmin
+   set lwidth Lwidth_min
+   local markx = xg(xgmin)+1.3*Pol_Scale
+   local marky = yg(ygmax)-1.3*Pol_Scale
+   amove markx+Pol_Scale marky
+   aline markx-Pol_Scale marky
+   amove markx marky+Pol_Scale
+   aline markx marky-Pol_Scale
    for i = 1 to ndata(dpol$)
       local x = dataxvalue(dxy$,i)
       local y = datayvalue(dxy$,i)
       local polx = dataxvalue(dpol$,i)*Pol_Scale
       local poly = datayvalue(dpol$,i)*Pol_Scale
       If (AmplitudePlot=0) then
-         MSzeI=MSze
+         MSzeI=Lwidth_min
       Else
          MSzeI=sqrt(datayvalue(dw$,i)/Wmax)*FactAmp ! dMinInt
-         If(MSzeI < 0.02) then 
-            MSzeI=0.02
+         If(MSzeI < Lwidth_min) then 
+            MSzeI=Lwidth_min
          End If
       End If
       local Cscale = (datayvalue(dc$,i)-cmin)/DDx
       Clr(Cscale)
-!      MSzeI = 0.1
       set lwidth MSzeI
       amove xg(x)+polx yg(y)+poly
       aline xg(x)-polx yg(y)-poly 
@@ -118,9 +136,13 @@ end if
 cmax = dmaxy(d2)  ! time v.s. I
 cmin = dminy(d2)  ! time
 Wmax = dmaxy(d3)
-Pol_Scale=0.01
+set just RT 
+amove xg(xgmin)+1.2*Pol_Scale yg(ygmax)-0.3*Pol_Scale
+write 'L'
+amove xg(xgmin)+2.3*Pol_Scale yg(ygmax)-1.4*Pol_Scale
+write 'C'
+set just LB 
 2Dpolxy(d1, cmin, cmax, d2, Wmax, d3, d4)
-Pol_Scale=1
 
 if(Z>0) then   
    amove HorOff VerOff+h  ! (E-W,h) -------------------------------
@@ -205,11 +227,9 @@ end if
 
    
 if(Z>0) then   ! plot colorpalette
-    x0 = HorOff+0.2+B+fontSz/2.
-    y0 = VerOff+0.7+h
-    !x0 = 4.+B
-    !y0 = 5.+h
-    Leng = Z-1
+    x0 = HorOff+B+0.1*Z+fontSz/2.
+    y0 = VerOff+0.1*Z+h
+    Leng = 0.8*Z
     ClrPltt(x0,y0,Leng,cmin,cmax)
 end if
 
@@ -242,6 +262,6 @@ end rotate
 translate -0. -0.5
 ! include feyn.gle
 include note.gle
-@note "SrcImg"   ! +"-"+file$
+@note "SrcsPltPol"   ! +"-"+file$
 translate 0 2
 !end rotate

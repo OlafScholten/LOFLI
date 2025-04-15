@@ -18,7 +18,7 @@ filedat$=file$+'ATRID.plt'
 !
 fopen filedat$ inchan read
 freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
-freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 chi_lim xc1 xa2 chi_mean chi_std xd2
+freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 Spr_mean Spr_std xa2 chi_mean chi_std xd2
 !freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
 !freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot a1 chi_lim c1 a2 chi_mean chi_std d2
 !
@@ -95,7 +95,7 @@ begin graph
    hscale 1
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
    yaxis min hMin max hMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
-      data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c9    ignore 2
+      data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c8    ignore 2
    ! d4 marker cross msize 0.2 color blue
 end graph
 dmax = dmaxx(d3)
@@ -115,7 +115,7 @@ if(Z>0) then
       xaxis min EMin max EMax ! hei fontSz nofirst nolast ! dticks  1 dsubticks .2 hei fontSz nofirst ! length=7
       yaxis min hMin max hMax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
       xlabels off
-      data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c9    ignore 2
+      data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c8    ignore 2
    end graph
    2Dtime(d3,d4,dmin,dmax,d5)
     
@@ -127,7 +127,7 @@ if(Z>0) then
       xaxis min hMin max hMax hei fontSz nofirst !  dticks  1 dsubticks .2  ! length=7
       yaxis min NMin max NMax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
       ylabels off
-      data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c9    ignore 2
+      data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c8    ignore 2
    end graph
    2Dtime(d3,d4,dmin,dmax,d5)
 end if
@@ -146,7 +146,7 @@ begin graph
    yticks length .3
    xsubticks length .1
    ysubticks length .1
-   data filedat$ d3=c2,c1 d4=c4,c3  d5=c2,c9 ignore 2
+   data filedat$ d3=c2,c1 d4=c4,c3  d5=c2,c8 ignore 2
    !d5 smoothm  line lwidth 0.25 color green
 end graph
 2Dtime(d3,d4,dmin,dmax,d5)
@@ -165,7 +165,7 @@ begin graph
    size B+Z z1
    vscale 1
    hscale 1
-     data filedat$   d5=c2,c9 ignore 2
+     data filedat$   d5=c2,c8 ignore 2
    dMin = dMinInt
    dMax = dmaxy(d5)+dMin
    !If(dMax>1.E5) then dMin=1.0

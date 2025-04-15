@@ -23,7 +23,7 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, SumWindw !, MaxIntfIntenLoc
    Use Interferom_Pars, only : MaxSlcInten, MaxSmPow, IntPowSpec !
    Use Interferom_Pars, only : i_chunk
-   Use Interferom_Pars, only : PixPowOpt, FirstTimeInterf, Int_best
+   Use Interferom_Pars, only : PixPowOpt, FirstTimeInterf, Int_best !                       , NrPixSmPowTr
    use constants, only : dp, ci, pi
    use StationMnemonics, only : Statn_ID2Mnem
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
@@ -130,11 +130,13 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    i_eo=0
    Call OutputIntfPowrTotal(IntFer_ant(1,1), i_eo)  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)  ! main one for analyzing slices
-   If(FirstTimeInterf) Call OutputIntfSlices(i_eo)
+   If(FirstTimeInterf) Call OutputIntfSlices(i_eo)   ! Needed only for automatically following max intensity with ChainRun, not completely sure (23 Febr 2025)
    !
    CALL DATE_AND_TIME (Values=DATE_T)
    If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' end Interferometry'
+   !
    Call DeAlloc_EInterfImag_Pars
+   !
    call cpu_time(CPUTime)
    CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
    WallTime=WallCount/WallRate - WallstartTime
@@ -282,14 +284,16 @@ Subroutine EISelectAntennas(i_chunk)
       IntFer_ant(j_IntFer,i_chunk)=i_ant  ! keep track of the even ones only
       !write(2,*) j_IntFer, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
       If(j_IntFer .ge. Nmax_IntFer) then
-         Write(2,*) 'max nr of interferometry-antennas reached, station=',Station, Ant_IDs(i_ant,i_chunk),', at distance ', Dist
+         Write(2,*) '**** max nr of interferometry-antennas (=',Nmax_IntFer,') reached, station=',Station, &
+               Ant_IDs(i_ant,i_chunk), ', at distance ', Dist
          exit
       Endif
    EndDo
    Nr_IntferCh(i_chunk)=j_IntFer
    If(j_IntFer .gt. Nr_IntFerMx) Nr_IntFerMx=j_IntFer  ! =max number for all chunks
    If(FirstTimeInterf) &
-      write(2,*) 'first antenna pair in station',Ant_Stations(IntFer_ant(1,i_chunk),i_chunk),' for chunk=',i_chunk
+      write(2,"(A,I3, A,I2, A,I4)") 'first antenna pair in station',Ant_Stations(IntFer_ant(1,i_chunk),i_chunk), &
+      ' for chunk=',i_chunk, ', where total number of antenna pairs=', Nr_IntFerMx
    !EndDo
    !
     vec(:)=0
@@ -568,6 +572,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    use constants, only : dp, pi, sample
    Use Interferom_Pars, only : Nr_IntFerMx, IntfLead, PixLoc, polar, N_pix  !i_chunk,
    Use Interferom_Pars, only : IntPowSpec, MaxSmPow, N_smth, smooth, TIntens000
+   Use Interferom_Pars, only :  SlicePnts, PulsePos, PulseWidth
    Use Interferom_Pars, only : MaxSmPowI12, MaxSmPowQ, MaxSmPowU, MaxSmPowV
    Use Interferom_Pars, only : MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2
    Use Interferom_Pars, only : AveInten, AveIntenE, AveIntenN, RimInten, MaxIntfInten, MaxIntfIntenLoc
@@ -582,7 +587,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    Implicit none
    Integer, intent(in) :: i_N, i_E, i_h, SumWindw, IntfNuDim
    Complex(dp), intent(in) :: CMTime_pix(1:2*IntfNuDim,1:3)
-   integer :: i, j, i_s, i_eo, m, n  !_loc(1), i_ant, j_IntFer, MLoc, Mloc_all
+   integer :: i, j, i_s, i_s1, i_s2, i_eo, m, n  !_loc(1), i_ant, j_IntFer, MLoc, Mloc_all
    Real(dp) :: IntfInten, SmPow, PixelPower(1:SumWindw), StartTime_ms
    Complex :: Stk(3,3), Stk_NEh(3,3)  !  3D Stokes
    Real(dp) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3), St_I
@@ -661,14 +666,25 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
    ! Fold intensity with smooth function and determine sequential positions at the peaks of the smoothing function
    If(IntPowSpec) Then
       Do i=1,NrPixSmPowTr ! N_smth+1,SumWindw-N_smth,N_smth
-         i_s=1+i*N_smth
          SmPow=0.
-         Do j=-N_smth,N_smth ! fold with smoothing function
-            SmPow=SmPow+smooth(j)*PixelPower(i_s+j)
-         Enddo
+         If(SlicePnts) Then
+            i_s=PulsePos(i)-(PulseWidth(i)-1)/2   ! Assume symetric window around P(i) when W=odd else around P(i)+0.5
+            i_s2=PulsePos(i)+(PulseWidth(i))/2     ! Assume symetric window around P(i) when W=odd else around P(i)+0.5
+            !write(2,*) 'EIAnalyzePixelTTrace;SlicingPoints:',i,i_s, i_s2, NrPixSmPowTr
+            !flush(unit=2)
+            Do j=i_s,i_s2
+               SmPow=SmPow+PixelPower(j)
+            Enddo
+            SmPow=SmPow/(i_s2-i_s)
+         Else
+            i_s=1+i*N_smth       ! central time-sample
+            Do j=-N_smth,N_smth ! fold with smoothing function
+               SmPow=SmPow+smooth(j)*PixelPower(i_s+j)
+            Enddo
+         EndIf
          !If( SmPow.gt. 0.6*RefSmPowTr(i) ) SmPow=0.
          Call BestOnes(i_N, i_E, i_h, SmPow, Grd_best(1,1,i), Int_best(1,i), N_best)
-         PixSmPowTr(i,i_N, i_E, i_h)=SmPow
+         PixSmPowTr(i,i_N, i_E, i_h)=SmPow  !  needed for intensity interpolation around the maximal intensity pixel
          If( SmPow.gt. MaxSmPow(i) ) Then  ! store max for each slice
             MaxSmPow(i)=SmPow
             MaxSmPowGrd(1,i)=i_N
@@ -676,14 +692,24 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
             MaxSmPowGrd(3,i)=i_h
             ! Calculate and store stokes parameters for the maximum
             Stk(:,:)=0.
-            Do j=-N_smth,N_smth ! fold with smoothing function
-               !SmPow=SmPow+smooth(j)*PixelPower(i_s+j)
-               Do m=1,3
-                  Do n=1,3
-                     Stk(m,n)= Stk(m,n) + smooth(j)*CMTime_pix(IntfLead+i_s+j,m)*Conjg(CMTime_pix(IntfLead+i_s+j,n))
+            If(SlicePnts) Then
+               Do j=i_s,i_s2
+                  Do m=1,3
+                     Do n=1,3
+                        Stk(m,n)= Stk(m,n) + CMTime_pix(IntfLead+j,m)*Conjg(CMTime_pix(IntfLead+j,n))
+                     Enddo
                   Enddo
                Enddo
-            Enddo
+               Stk(1:3,1:3)=Stk(1:3,1:3)/(i_s2-i_s)
+            Else
+                Do j=-N_smth,N_smth ! fold with smoothing function
+                  Do m=1,3
+                     Do n=1,3
+                        Stk(m,n)= Stk(m,n) + smooth(j)*CMTime_pix(IntfLead+i_s+j,m)*Conjg(CMTime_pix(IntfLead+i_s+j,n))
+                     Enddo
+                  Enddo
+               Enddo
+            EndIf
             SMpow=Real(Stk(1,1)+Stk(2,2))
             MaxSmPowI12(i)=SMpow
             MaxSmPowQ(i)=Real(Stk(1,1)-Stk(2,2))/SMpow
@@ -696,15 +722,25 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
             MaxSmPowV2(i)=  2*Imag(Stk(2,3))/SMpow
       !write(2,*) 'MaxSmPow(i)',i, i_N, i_E, i_h, SmPow, N_smth, i_s
          EndIf
+         !write(2,*) 'EIAnalyzePixelTTrace;SmPow:',i,SmPow,MaxSmPow(i), MaxSmPowGrd(1:3,i)
       Enddo
    EndIf
    ! Extract interesting numbers such as pixel intensity
    IntfInten=0.
    i=0
    SlcInten(:)=0.
+   !write(2,*) 'EIAnalyzePixelTTrace;NrSlices:',NrSlices, SumWindw, N_smth,SumWindw-N_smth/2
+   If(SlicePnts) Then
+      i_s1=PulsePos(i)-(PulseWidth(i)-1)/2   ! Assume symetric window around P(i) when W=odd else around P(i)+0.5
+      i_s2=PulsePos(i)+(PulseWidth(i))/2     ! Assume symetric window around P(i) when W=odd else around P(i)+0.5
+      !write(2,*) 'i_s1,i_s2',i_s1, i_s2
+   Else
+      i_s1=N_smth/2
+      i_s2=SumWindw-N_smth/2
+   EndIf
    Do i_s=1,NrSlices ! in reality runs over full window (NrSlices=1)
       If(NrSlices.eq. 1) Then
-         Do j=N_smth/2,SumWindw-N_smth/2 ! over full window (NrSlices=1) except the initial and final tails
+         Do j=i_s1, i_s2 ! over full window (NrSlices=1) except the initial and final tails
             SlcInten(i_s)=SlcInten(i_s) + PixelPower(j)
          EndDo
          SlcInten(i_s)=SlcInten(i_s)/(SumWindw-N_smth)

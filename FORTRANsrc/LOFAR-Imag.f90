@@ -327,7 +327,7 @@ Program LOFAR_Imaging
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real(dp) :: StartTime_ms, StartingTime, StoppingTime, D
     Real(dp) :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
-    Real(dp) :: Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse
+    Real(dp) :: Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
@@ -348,7 +348,7 @@ Program LOFAR_Imaging
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
          , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk &     !  ChunkNr_dim,
-         , Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse
+         , Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    Version='v25.1'
    release='25.1 (Jan, 2025)'
@@ -376,7 +376,7 @@ Program LOFAR_Imaging
    CalibratedOnly=.true.
    RefinePolarizObs=.true.
    Chi2_Lim=-1.
-   Spread_Lim=-1.
+   IVol_Lim=-1.
    BoxFineness_coarse=4.
    BoxSize_coarse=70.
    !reshape((/ -1.D-10,0.d0,0.d0,0.d0,-1.D-10,0.d0,0.d0,0.d0,-1.D-10 /), shape(array))
@@ -641,7 +641,7 @@ Program LOFAR_Imaging
          Call PrintValues(CurtainHalfWidth,'CurtainHalfWidth', 'Produce a "Curtain" plot when positive.')  ! width of plot?
       CASE("A")  ! ATRI-D run, formerly known as PeakInterferometry            RunMode=8
          ! Pre-process inputdata for sources to be used in calibration
-         ChunkNr_dim=N_Chunk_max
+         ChunkNr_dim=1   !  N_Chunk_max
          PeakNr_dim=50
          PeakNrTotal=50  ! one of these is obsolete now
          Interferometry=.true.
@@ -661,12 +661,12 @@ Program LOFAR_Imaging
             write(2,*) 'BoxSize_coarse', BoxSize_coarse, ' is set to a positive value'
             BoxSize_coarse=70.
          EndIf
-         Call PrintValues(BoxFineness_coarse,'BoxFineness_coarse', 'Grid Fineness factor for intitial TRI-D runs.')  ! width of plot?
+         Call PrintValues(BoxFineness_coarse,'BoxFineness_coarse', 'Grid Fineness factor for initial TRI-D runs.')  ! width of plot?
          Call PrintValues(BoxSize_coarse,'BoxSize_coarse', &
-            'Grid-expanse [m] from each initial source position for intitial TRI-D runs.')  ! width of plot?
+            'Grid-expanse [m] from each initial source position for initial TRI-D runs.')  ! width of plot?
          Call PrintValues(Chi2_Lim,'Chi2_Lim', &
             'Sources with larger chi^2 will be marked for de-selection; When negative set =(mean+StDev).')
-         Call PrintValues(Spread_Lim,'Spread_Lim', 'Sources with larger spreading length in intensity profile'//&
+         Call PrintValues(IVol_Lim,'IVol_Lim', 'Sources with larger spreading length in intensity profile'//&
             ' will be marked for de-selection; When negative set =(mean+StDev).')
          Call PrintValues(Diagnostics,'Diagnostics', 'Print diagnostics information, creates much output.')
          Call PrintValues(AntennaRange,'AntennaRange', &
@@ -780,7 +780,7 @@ Program LOFAR_Imaging
          Call ExplorationRun
          stop 'Normal exploration end'
     ! ========4 4 4 4 4 4 4 4 4 4 4
-      CASE(4)  ! PTRI-D imager         RunMode=14 & 24
+      CASE(4)  ! TRI-D imager         RunMode=14 & 24
          Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
          Call InterferometerRun
       ! =============3 3 3 3 3 3 3 3 3
@@ -815,7 +815,7 @@ Program LOFAR_Imaging
          Call GLEplotControl( Submit=.true.)
          !
       CASE(8)   ! ATRID
-         Call PeakInterferoOption(Chi2_Lim, Spread_Lim, BoxFineness_coarse, BoxSize_coarse)
+         Call PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse)
          !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
   End SELECT

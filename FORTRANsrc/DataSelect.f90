@@ -13,7 +13,7 @@
 !        - to run "Utilities/TrackScatt.gle"
 !
 !
-!    Include 'DTrackFind.f90'
+    Include 'TrackFind.f90'
     Include 'DS_SbRtns.f90'
     Include 'DS_Correlator.f90'
 !===========================================================
@@ -32,7 +32,7 @@ PROGRAM DataSelect
    Use DS_Select, only : DS_Mode, MaxAmplFitPercent, SMPowCut
    Use DS_Select, only : Corr_dD, Corr_Dnr, Corr_dtau, QualPlot,  AmplitudePlot
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
-   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows, RunMode
+   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashName, FlashFolder, DataFolder, FlashName, Windows, RunMode
    use GLEplots, only : GLEplotControl
    Use DS_Select, only : DS_ReadCntrl
    Use unque, only : SortPerm !, HPSORT_mult_RI, sort
@@ -115,7 +115,8 @@ PROGRAM DataSelect
             PlotFile=TRIM(DataFolder)//trim(Image)
             Write(2,"(A,A,A,I6)") 'PlotFile: ',trim(PlotFile)
             Flush(unit=2)
-            Call ConstructTracks(RA, SrcI20_r, IPerm, SourcTotNr, PlotFile, PolarAna, Stk_NEh)
+            Call ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IPerm, &
+                  SourcTotNr, PlotFile, PolarAna, Stk_NEh)
             !
             Call AmplitudeFitTracks(TrackNr,TrackLenMax,TrackNrMax,TrackENR,TrackE)
             write(2,*) 'AmplitudeFitTracks(AmplitudeFit) was called!!!!!!'
@@ -128,13 +129,18 @@ PROGRAM DataSelect
                Call AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile) ! Analyze how many sources occur within a certain time-resolution
                Call GLEplotControl(PlotType='SrcsTrScatt', PlotName=TRIM(Image)//'TrSc', &
                   PlotDataFile=TRIM(PlotFile), Submit=.false.)
-               If(PolarAna) Call GLEplotControl(PlotType='SrcsTrAngles', PlotName=TRIM(Image)//'Angl', &
-                  PlotDataFile=TRIM(PlotFile), Submit=.false.)
+               If(PolarAna) Then
+                  Call GLEplotControl(PlotType='SrcsTrAngles', PlotName=TRIM(Image)//'TrAngl', &
+                     PlotDataFile=TRIM(PlotFile), Submit=.false.)
+                  Call GLEplotControl(PlotType='SrcsTrDprd', PlotName=TRIM(Image)//'TrDprd', &
+                     PlotDataFile=TRIM(PlotFile), Submit=.false.)
+               EndIf
                !SystemCommand="call GLE -d pdf -o TrSc_"//trim(datfile)//".pdf ../Utilities/TrackScatt.gle "//trim(pars)
                !      CALL SYSTEM(SystemCommand,stat)
             EndIf
          EndIf
       EndIf  ! (NLongTracksMax.Gt.0)
+  !    If(PolarAna .and. (LongTrackNr.gt.0)) Call GLEplotControl(CleanPlotFile=TRIM(Image)//'Angls*.plt')
       !
       If(PolarAna) Call PolarizationAna()
       !
@@ -162,7 +168,7 @@ PROGRAM DataSelect
          write(Qual,"(A,F8.1,A)") '"I_{12}>',SMPowCut,',"'
          ! like  H2f#+Mx_dHIntfSpecSel.pdf  -->  H2f#+HIntfSpecSel.pdf  -->  H2f#+H_ISS.pdf
       Else  ! ATRI-D Imager
-         write(Qual,"(A,F5.2,'ns & I>',F8.1,' & ISpr<',F8.1,A)") '"Q<',RMS_ns, SMPowCut, IntensSpread,',"'
+         write(Qual,"(A,F5.2,'ns & I>',F8.1,' & I_V<',F8.1,A)") '"Q<',RMS_ns, SMPowCut, IntensSpread,',"'
          ! like  H2f#+Mx_dHIntfSpecSel.pdf  -->  H2f#+HIntfSpecSel.pdf  -->  H2f#+H_ISS.pdf
       EndIf
       write(2,"(A,2f12.5,A,A)") 'Time span data=', RA(1,1), RA(1,SourcTotNr), ', QualityCut:', trim(Qual)
@@ -171,25 +177,27 @@ PROGRAM DataSelect
          OPEN(unit=28,FILE=TRIM(SelFileName)//'.plt', FORM='FORMATTED',STATUS='unknown',ACTION='write') ! space separated values
          write(28,"(6F9.3,2F9.3,1x,A,1x,F7.1,' 0 ')") NEhtBB(:), trim(ZoomBox), t_offset         ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
          write(28,"(1x,I2,I8,1x,A, ' 0 ',2x,A,1x,F6.2, 6(1x,g10.4),f7.3,1x,A)")  &
-            LongTrackNr, SourcTotNr, Trim(Qual), trim(Image), AmplitudePlot,  &
+            LongTrackNr, SourcTotNr, Trim(Qual), TRIM(FlashName)//':'//trim(Image), AmplitudePlot,  &
             a1,b1,c1,a2,b2,c2,d2, ' ! by DataSelect' ! gleRead:  NTracks SourcTotNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
          write(28,"(2A)") '! Src_lab  t_src[ms]          Position (N,E,h)[km]           Int  Width  Chi^2  Sprd', &
-            ' %Un- %lin- %circpol  I_lin   Pol_direction(NEh)'
+            ' PUn- Plin- Pcircpol  I_lin   Pol_direction(NEh)'
          !
          Do j=1,SourcTotNr  !  finally write all accepted source to file
             Lin1= SrcI20_r(j)* SrcLin(Iperm(j))/100.
             polN=sin(SrcPZen(Iperm(j))*pi/180.) * cos(SrcPAzi(Iperm(j))*pi/180.)
             PolE=sin(SrcPZen(Iperm(j))*pi/180.) * sin(SrcPAzi(Iperm(j))*pi/180.)
             Polh=cos(SrcPZen(Iperm(j))*pi/180.)
-            write(28,"(I4,F14.6, 3F12.5, F12.1, I5, 2F7.2,  3F6.1, F10.1, 3f7.3)") &
+            write(28,"(I4,F14.6, 3F12.5, F12.1, I5, 2F7.2,  3F6.3, F10.1, 3f7.3)") &
 !               i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  ABS(SourceIntensity(i_Peak)), &
                Label(1,Iperm(j)),RA(1:4,j), SrcI20_r(j), &
                SrcWidth(Iperm(j)), SrcChi2(Iperm(j)), SrcISpr(Iperm(j)), &
-               SrcUn(Iperm(j)), SrcLin(Iperm(j)), SrcCirc(Iperm(j)), Lin1, PolN, PolE, Polh
+               SrcUn(Iperm(j))/100., SrcLin(Iperm(j))/100., SrcCirc(Iperm(j))/100., Lin1, PolN, PolE, Polh
          enddo
          close(unit=28)
          Call GLEplotControl(PlotType='SrcsPltPol', PlotName=trim(PlotFile)//'IPol', &
                PlotDataFile=trim(SelFileName), Submit=.false.)
+         Call GLEplotControl(PlotType='SrcsPltPol', PlotName=trim(PlotFile)//'IPolEA', &
+               PlotDataFile=trim(SelFileName)//' 1', Submit=.false.)
          Call GLEplotControl(PlotType='SrcsPltLoc', PlotName=trim(PlotFile), &
                PlotDataFile=trim(SelFileName), Submit=.false.)
       Else
@@ -238,7 +246,7 @@ PROGRAM DataSelect
          if(j.gt.LongTrackNr) exit
          write(extension,"(i1,A4)") j,'.plt' !,&
          Call GLEplotControl(CleanPlotFile=TRIM(Image)//trim(extension))
-         If(PolarAna) Call GLEplotControl(CleanPlotFile=TRIM(Image)//'Angls'//trim(extension))
+  !       If(PolarAna) Call GLEplotControl(CleanPlotFile=TRIM(Image)//'Angls'//trim(extension))
       EndDo
       !
       DeAllocate( SrcI20_r )
@@ -292,24 +300,30 @@ Subroutine PolarizationAna()  ! du -sh  directory size
    Use DS_Select, only : Stk_NEh,SourcTotNr, Label, Iperm
    IMPLICIT none
    Integer :: i, i_src
-   Complex :: AveStks(1:3,1:3)
-   Real :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
+ !  Complex :: AveStks(1:3,1:3)
+   Complex :: AveStks(1:6)
+   Real(dp) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3)
    logical :: prin=.true.
    !
    !
    !OPEN(unit=29,FILE=TRIM(DataFolder)//trim(Image)//'QuAna.dat',FORM='FORMATTED',STATUS='unknown')  ! will contain all accepted sources
   ! write(29,"(2x,A,1x,I6,1x,F6.3,i5,' !')") trim(Image), SourcTotNr
-   Write(2,*) 'Polarization analysis,  ', SourcTotNr
-   AveStks(:,:)=0
+   Write(2,*) 'Polarization analysis for', SourcTotNr,', by averaging the (Stokes/sample) matrices'
+   AveStks(:)=0
    Do i_src=1,SourcTotNr ! Add all stokes matrices
-      AveStks(1,1:3)=AveStks(1,1:3)+ Stk_NEh(1:3,Iperm(i_src))
-      AveStks(2,2:3)=AveStks(2,2:3)+ Stk_NEh(4:5,Iperm(i_src))
-      AveStks(3,3)=AveStks(3,3)+ Stk_NEh(6,Iperm(i_src))
+      AveStks(1:6)=AveStks(1:6)+ Stk_NEh(1:6,Iperm(i_src))
    EndDo ! i_src=1,SourcTotNr
-   AveStks(2:3,1)=AveStks(1,2:3)
-   AveStks(3,2)=AveStks(2,3)
+   AveStks(1:6)=AveStks(1:6)/SourcTotNr
+!   AveStks(:,:)=0
+!   Do i_src=1,SourcTotNr ! Add all stokes matrices
+!      AveStks(1,1:3)=AveStks(1,1:3)+ Stk_NEh(1:3,Iperm(i_src))
+!      AveStks(2,2:3)=AveStks(2,2:3)+ Stk_NEh(4:5,Iperm(i_src))
+!      AveStks(3,3)=AveStks(3,3)+ Stk_NEh(6,Iperm(i_src))
+!   EndDo ! i_src=1,SourcTotNr
+!   AveStks(2:3,1)=conjg(AveStks(1,2:3))
+!   AveStks(3,2)=conjg(AveStks(2,3))
    !
-   Call PolPCACath(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)  ! in EIFitter
+   Call PolPCACathCon(AveStks, PolZen, PolAzi, PolMag, PoldOm, prin)  ! in EIFitter
    !Write(2,*) 'PolarizationAna:'
    !
    !Call GLEplotControl(PlotType='QualContrPlot', PlotName=TRIM(Image)//'QC', &

@@ -1,0 +1,282 @@
+!size   26 54
+verSz=5
+horSz=19
+fontSz=0.7
+bsh=2*fontSz
+HorOff=3.
+VerOff=3.
+dB=bsh+horSz
+dH=bsh+verSz
+DotSz=0.6*fontSz
+BDotSz=0.9*fontSz
+MarkSz=1.*fontSz
+size  HorOff+dB VerOff+6*verSz+dH
+! ======================================
+file$='files/T-4b-D1-Z1a'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+dfileang$=file$+'Angls1.plt'
+filedat$=file$+'.plt'
+fopen filedat$ inchan read
+freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$
+freadln inchan NTracks EventNr Q t_start label$
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+
+!amove HorOff VerOff+5*verSz+dH-1.5*fontSz 
+amove HorOff VerOff*0.5
+write label$
+
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+N_slice=2
+N_max=1
+
+
+amove HorOff VerOff
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   !xlabels off
+   yaxis log ! min 0.1  !max +105 nofirst
+   data dfileang$ d1=c1,c7 d12=c1,c11 d13=c1,c15  ignore 1
+   If N_slice > N_max Then
+      d13 marker dot  msize DotSz color gold
+      d12 marker dot  msize DotSz color coral
+      d1 marker dot  msize DotSz color crimson
+   Else
+      d13 marker circle msize MarkSz  lstyle 2 color gold
+      d12 marker circle msize MarkSz  lstyle 2 color coral
+      d1 marker circle msize MarkSz  lstyle 3 color crimson
+   End If
+end graph
+set just TR
+amove HorOff-2*fontSz  HorOff+verSz-fontSz
+write 'I'
+
+V_plot=VerOff+verSz
+amove HorOff V_plot
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0  max 1.  dticks 0.2 nolast !nofirst
+   let d9=0.5
+   d9 line lstyle 1 lwidth 0.01 color black
+   data dfileang$ d1=c1,c19 d2=c1,c20 d3=c1,c27 ignore 1
+   If N_slice > N_max Then
+      d1 marker dot  msize BDotSz color red
+      d2 marker dot  msize DotSz color blue
+      d3 marker dot  msize DotSz color cyan
+   Else
+      d1 marker circle msize MarkSz  lstyle 3 color crimson
+      d2 marker dot  msize MarkSz color blue
+   End If
+end graph
+set color red
+amove HorOff-2*fontSz  V_plot-fontSz+verSz
+write 'p.v'
+set color blue
+amove HorOff-2*fontSz  V_plot-2*fontSz+verSz
+write 'p.R'
+set color cyan
+amove HorOff-2*fontSz  V_plot-3*fontSz+verSz
+write 'p.h'
+!tex '$(\hat{p}\cdot\hat{v})$'
+set color black
+
+V_plot=VerOff+2*verSz
+amove HorOff V_plot
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0  max 1.  dticks 0.2 nolast
+   let d9=0.5
+   d9 line lstyle 1 lwidth 0.01 color black
+   data dfileang$ d1=c1,c22 d2=c1,c24 d3=c1,c26  ignore 1
+   If N_slice > N_max Then
+      d1 marker dot  msize BDotSz color red
+      d2 marker dot  msize DotSz color blue
+      d3 marker dot  msize DotSz color cyan
+   Else
+      d1 marker circle msize MarkSz  lstyle 3 color crimson
+      d2 marker dot  msize MarkSz color blue
+   End If
+end graph
+amove HorOff-2*fontSz  V_plot-fontSz+verSz
+set color red
+write 'p.d'
+set color blue
+amove HorOff-2*fontSz  V_plot-2*fontSz+verSz
+write 'p.T'
+set color cyan
+amove HorOff-2*fontSz  V_plot-3*fontSz+verSz
+write 'p.Q'
+!tex '$(\hat{p}\cdot\hat{d})$'
+set color black
+
+
+V_plot=VerOff+3*verSz
+amove HorOff V_plot
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
+   xlabels off
+   yaxis min 0.0  max 5. dticks 1.
+!   let d9=0.5
+!   d9 line lstyle 1 lwidth 0.01 color black
+   data dfileang$ d1=c1,c21 d2=c1,c23  ignore 1
+   If N_slice > N_max Then
+      d1 marker dot  msize BDotSz color red
+      d2 marker dot  msize DotSz color blue
+   Else
+      d1 marker circle msize DotSz  lstyle 3 color crimson
+      d2 marker dot  msize DotSz color blue
+   End If
+end graph
+begin key
+    nobox
+    position tr
+    row +.4
+    set color black
+    line color red lwidth 0.02 text "distance"
+    line color blue lwidth 0.02 text "transv-D"
+end key
+amove HorOff-3*fontSz  V_plot+verSz-fontSz
+write "[m]"
+
+V_plot=VerOff+4*verSz+bsh
+amove HorOff V_plot
+begin graph
+   size horSz verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max 5 dticks 1.
+   !xlabels off
+   yaxis min 0 max 1. dticks 0.2
+!   let d9=1.*x
+!   d9 line lstyle 1 lwidth 0.01 color black
+   let d8=0.5
+   d8 line lstyle 1 lwidth 0.01 color blue
+!   let d7=-90
+!   d7 line lstyle 1 lwidth 0.01 color blue
+   data dfileang$ d1=c21,c22  d2=c23,c24 d3=c25,c26 ignore 1
+      d1 marker dot  msize BDotSz   color red
+      d3 marker dot  msize DotSz  color cyan
+      d2 marker dot  msize DotSz  color blue
+end graph
+!set just TR
+begin key
+    nobox
+    position tr
+    row +.4
+    set color black
+    line color red lwidth 0.02 text "distance"
+    line color blue lwidth 0.02 text "transv-D"
+end key
+amove HorOff+horSz-4*fontSz  V_plot-fontSz
+write 'Dist [m]'
+amove HorOff-4*fontSz  V_plot-fontSz+verSz
+write 'p.d'
+!tex '$(\hat{p}\cdot\hat{d})$'
+
+
+V_plot=VerOff+5*verSz+2*bsh
+amove HorOff V_plot
+begin graph
+   size 1.5*verSz 1.5*verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max 1 hei fontSz  dticks  0.5 dsubticks .1  ! length=7
+   !xlabels off
+   yaxis  min 0 max 20
+   data dfileang$ d1=c1,c19 d2=c1,c20 d3=c1,c27  ignore 1
+   let d11 = hist d1 step 0.1
+   let d12 = hist d2 step 0.1
+   let d13 = hist d3 step 0.1
+   If N_slice > N_max Then
+      d11 marker dot  msize BDotSz color red
+      d12 marker dot  msize DotSz color blue
+      d13 marker dot  msize DotSz color cyan
+   Else
+      d11 marker circle msize DotSz  lstyle 3 color crimson
+      d12 marker dot  msize DotSz color blue
+   End If
+end graph
+begin key
+    nobox
+    position tr
+    set color black
+    text "p.v"
+end key
+
+V_plot=VerOff+5*verSz+2*bsh
+amove HorOff+2*verSz V_plot
+begin graph
+   size 1.5*verSz 1.5*verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max 1 hei fontSz  dticks  0.5 dsubticks .1  ! length=7
+   !xlabels off
+   yaxis min 0 max 20
+   data dfileang$ d1=c1,c22 d2=c1,c24 d3=c1,c26  ignore 1
+   let d11 = hist d1 step 0.1
+   let d12 = hist d2 step 0.1
+   let d13 = hist d3 step 0.1
+   If N_slice > N_max Then
+      d11 marker dot  msize BDotSz color red
+      d12 marker dot  msize DotSz color blue
+      d13 marker dot  msize DotSz color cyan
+   Else
+      d11 marker circle msize DotSz  lstyle 3 color crimson
+      d12 marker dot  msize DotSz color blue
+      d13 marker dot  msize DotSz color cyan
+   End If
+end graph
+set just CR
+begin key
+    nobox
+    position tr
+    set color black
+    text "p.d"
+end key
+
+
+
+
+
+!================================================
+set color black
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "SrcsTrDprd" ! +"-"+file$
+translate 0 2
+!end rotate

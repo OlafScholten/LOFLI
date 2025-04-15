@@ -1,0 +1,254 @@
+dir$=''
+if(nargs() > 0 ) then 
+    dir$=arg$(1)
+end if
+B1=5.
+H1=5.
+fontSz=0.6
+Bsh=3*fontSz
+xOffset=Bsh
+yOffset=Bsh
+
+dwfile$=dir$+"_EISpec.dat"
+fopen dwfile$ inchanw read
+freadln inchanw StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus name$
+freadln inchanw cc_max N_N N_Elow N_Eup N_hlow N_hup OffSet WinLength d_N d_E d_h 
+!
+dfile$=dir$+"_EISpeceo.dat"
+fopen dfile$ inchan read
+freadln inchan StartTime_ms CenLoc1 CenLoc2 CenLoc3 DistMax SSm ipol tshft_mus cc_max N_smth
+!
+N_marks=WinLength/N_smth
+
+Xo=xOffset 
+Yo=yOffset+(N_marks-1)*H1
+size x0+3*B1+3.5*Bsh yo+2*H1+3*Bsh
+
+set font texcmr
+set lwidth .03
+
+include "color.gle"
+
+sub contour_labels file$ fmt$
+   ! draws the labels on a contour plot
+   ! file$ = filename of file with label data
+   ! fmt$ = format string used to format labels
+   set just cc hei 0.25 color blue
+   fopen file$+"-clabels.dat" f1 read
+   until feof(f1)
+      fread f1 x y i v
+      amove xg(x) yg(y)
+      s$ = format$(v, fmt$)
+      begin box add 0.05 fill white
+         write s$
+      end box
+   next
+   fclose f1
+end sub
+   
+sub HeightPanel file$ 
+   cc_min=0
+   cc_Stp=   (cc_max-cc_min)/10
+   !
+   begin graph
+      size B1 H1
+      vscale 1
+      hscale 1
+      !title "power"+"/"+format$(N_smth,"fix 0")+" "+Titl$
+      xtitle xLab$
+      ytitle yLab$
+      xticks length -.1 ! color white
+      yticks length -.1 ! color white
+      If (xLab$ = "") Then
+         Xlabels off
+      End If
+      colormap file$+".z" 500 500 color zmin cc_min zmax cc_max
+      !data file$+"-cdata.dat"  ! for the actual drawing of the contours (made by Contour)
+      d1 line color white lwidth 0.02
+   end graph
+   !
+end sub
+
+!+++++++++++++++++++++++++++++++++++++++++++++++++
+set hei fontSz
+amove xo yo+fontSz/2
+write name$+", power"+"/"+format$(N_smth,"fix 0")+" "+"@N=0"
+amove xo+2*B1-Bsh yo+fontSz/2
+write "@h=0"
+amove xo+3*B1 yo+fontSz/2
+write "@E=0"
+
+
+amove xo yo+H1+2*Bsh
+begin graph
+   size 3*B1+2*Bsh H1
+   vscale 1
+   hscale 1
+   xaxis min 0 max 328
+   yaxis log min 1.e-2
+   title "power @( "+format$(CenLoc1,"fix 4")+", "+format$(CenLoc2,"fix 4")+", "+format$(CenLoc3,"fix 4")+")km"
+   xtitle "t [\mu s] +"+format$(StartTime_ms,"fix 4")+" [ms] - "+format$(tshft_mus,"fix 4")+" [ms]"
+   x1ticks length -.2
+   x2ticks length +.2
+   ytitle "power"
+   data dfile$ d1=c1,c2 d2=c1,c3   ignore 1
+   d1 line color green lwidth 0.02
+   d2 line color red lwidth 0.02
+end graph
+begin key
+    nobox
+    position tr
+    set color black
+    line color green lwidth 0.02 text "Y-ref, even"
+    line color red lwidth 0.02 text "X-ref, odd"
+end key
+amove xg(offset/200.) yg(0.7e-2) 
+marker ftriangle 0.5
+aline xg(offset/200.) yg(10)
+amove xg((offset+WinLength)/200.) yg(0.7e-2) 
+marker ftriangle 0.5
+aline xg((offset+WinLength)/200.) yg(10)
+
+amove xo yo+Bsh
+cc_max=100.
+cc_min=0
+cc_Stp=   (cc_max-cc_min)/10
+cale=10./cc_max
+!amove xg(xgmax)+1.0 yg(ygmin)
+! write cc_stp cc_max
+color_range_vertical zmin cc_min*cale zmax 10. zstep cc_Stp*cale pixels 1500 format "fix 1" !"eng 2 append GB"
+!contour_labels file$  "fix 0"
+
+
+!OS$ = format$(OffSet,"fix 0")
+amove xo+2*Bsh yo+Bsh+H1/2
+begin graph
+   size 3*B1 H1/2
+   vscale 1
+   hscale 1
+   xaxis !nticks 4
+   !yaxis min Ymin max Ymax
+   yaxis log min 1.e-2 nofirst
+!   title "power spectrum [arb]"
+   x1labels off
+   x2ticks length +.2
+   data dwfile$ d1=c1,c2  ignore 2
+   d1 line color red lwidth 0.03
+end graph
+begin key
+    nobox
+    position tl
+    row +.6
+    set color black
+    line color red lwidth 0.03 text "I"
+  !  line color blue lwidth 0.02 text "\theta"
+  !  line color green lwidth 0.02 text "\phi"
+end key
+begin key
+    nobox
+    position tr
+    row +.4
+    set color black
+  !  line color brown lwidth 0.02 text "%lin"
+  !  line color magenta lwidth 0.02 text "%circ"
+    line color blue lwidth 0.02 text "\theta"
+    line color green lwidth 0.02 text "\phi"
+end key
+                                                                                 
+amove xo+2*Bsh yo+Bsh
+begin graph
+   size 3*B1 H1/2
+   vscale 1
+   hscale 1
+   xaxis !nticks 4
+   yaxis min 0 max 180 nticks 4 !nolast
+!    y2axis min 0 max 100 nticks 4 nolast
+!    xtitle "t [samples]+"+OS$
+   x1ticks length -.2
+   data dwfile$ d3=c1,c7 d1=c1,c8 d2=c1,c9 d4=c1,c10 ignore 2
+!    d3 y2axis line color brown lwidth 0.02
+   d1 line color blue lwidth 0.02
+   d2 line color green lwidth 0.02
+!    d4 y2axis line color magenta lwidth 0.02
+end graph
+set lwidth 0.02
+set lstyle 4
+i=0.5
+while i < N_marks
+   amove xg(i*N_smth) yg(0)
+   aline xg(i*N_smth) yg(0)+H1
+   i = i + 1
+Next
+set lstyle 0
+set lwidth 0.03
+
+                                                                                 
+if ipol=1 then
+   EastLab$="d\theta= "+format$(d_E,"fix 3")+"^o" 
+   NorthLab$="d\phi= "+format$(d_N,"fix 3")+"^o"
+   hLab$="dR= "+format$(d_h,"fix 1")+" [m]"
+else
+   NorthLab$="dNorth= "+format$(d_N*pi/180.,"fix 1")+" [m]"
+   EastLab$="dEast= "+format$(d_E*pi/180.,"fix 1")+" [m]"
+   hLab$="dh= "+format$(d_h,"fix 1")+" [m]"
+end if
+   
+Sub CPlots Xo Yo i
+   local Slice$=format$(i,"prefix 2b fix 0")
+   amove Xo-Bsh Yo+H1-Bsh
+   write Slice$
+   !
+   topTxt$="@N=0"
+   amove xo+2*B1+2*bsh yo
+   NxL=N_Elow
+   NxU=N_Eup
+   If (i = 1) Then
+      xLab$=EastLab$
+   else
+      xLab$=""
+   End If
+   NyL=N_hlow
+   NyU=N_hup
+   yLab$=hLab$
+   HeightPanel dir$+"Interferometer"+Slice$+"Eh" 
+
+   topTxt$="@h=0"
+   amove xo yo
+   NxL=N_Elow
+   NxU=N_Eup
+   NyL=-N_N
+   NyU=N_N
+   yLab$=NorthLab$
+   HeightPanel dir$+"Interferometer"+Slice$+"EN" 
+   !
+   topTxt$="@E=0"
+   amove xo+B1+bsh yo
+   NxL=N_hlow
+   NxU=N_hup
+   If (i = 1) Then
+      xLab$=hLab$
+   else
+      xLab$=""
+   End If
+   HeightPanel dir$+"Interferometer"+Slice$+"hN" 
+   !amove 6. 7
+   !set hei .5
+   !   write "ant. range="+format$(DistMax,"fix 1")+" [km]"
+   !grestore
+end sub
+!=========================================================================
+
+i=0
+set hei fontSz*.7
+while i < N_marks-2
+   Xo=xOffset 
+   Yo=yOffset+i*H1
+   i = i + 1
+   CPlots(Xo, Yo, i)
+Next
+
+
+
+
+
+
