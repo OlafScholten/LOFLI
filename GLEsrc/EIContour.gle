@@ -90,7 +90,7 @@ Sub EIPlots
       xaxis min 0 max 328
       yaxis log min 1.e-2
       title "power @( "+format$(CenLoc1,"fix 3")+", "+format$(CenLoc2,"fix 3")+", "+format$(CenLoc3,"fix 3")+")km"
-      xtitle "t [\mu s] +"+format$(StartTime_ms,"fix 3")+" [ms] - "+format$(tshft_mus,"fix 3")+" [ms]"
+      xtitle "t [\mu s] +"+format$(StartTime_ms,"fix 4")+" [ms] - "+format$(tshft_mus,"fix 4")+" [ms]"
       x1ticks length -.2
       x2ticks length +.2
       ytitle "power"
@@ -114,7 +114,7 @@ Sub EIPlots
    
    OS$ = format$(OffSet,"fix 0")
    amove xOffset+B1+2 yOffset+H1+2+H1/2
-   set hei .6
+   set hei .4
    begin graph
       size 2*B1-2 H1/2
       vscale 1
@@ -174,6 +174,9 @@ Sub EIPlots
    Next
    set lstyle 0
    set lwidth 0.03
+   set hei .4
+   amove xOffset+B1+4 yOffset+H1+1
+   write "t [samples]+"+OS$
    set hei .3
                                                                                     
    if ipol=1 then
