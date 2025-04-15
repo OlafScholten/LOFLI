@@ -23,7 +23,7 @@
  PixPowOpt= 0     ! =0=default: Intensity=sum two transverse polarizations only; =1: Intensity=sum all polarizations weighted with alpha == intensity of F vector; =2: Intensity=sum all three polarizations, including longitudinal with the full weight
 ! -------------------------------------   nohup ./ATRID.sh  >ATRIDB.log 2>&1  &
  OutFileLabel="-Bc" &end  ! 
-   "T-Ba1.dat"
+   "T-Ba1.plt"
    "BbATRID.csv"
 S    1,  274.670117,    -4.78794  -31.71991    6.83932,   73,  2,  601.6  3.61  84.7 ,    3762.    ,  83.97,-104.41,   1.44 ,    379.8    ,  82.08, 164.34,  15.79 ,    212.1    ,  10.03,  22.42,  15.86
 ! Note: Similar position as source #   1
