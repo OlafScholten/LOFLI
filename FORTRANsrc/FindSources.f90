@@ -62,6 +62,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    Integer :: Peakpos_0 ! pulse position for an virtual antenna at the core of CS002
    integer :: NoSourceFound
    Real(dp), external :: RefracIndex
+   Logical :: FirstPass
    !integer, external :: XIndx
    !       Initialize
    PulsPosCore=.false.  ! Pulse positions are on the ref. antenna
@@ -80,6 +81,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
    ChunkNr(1) =1
    ChunkNr(2) =1
    Peak_eo(2)=1
+   FirstPass=.true.   ! used for printing chunk info in '5star'-file
    If(Dual) then
       i_eo_s=2
       i_eo_f=2
@@ -192,11 +194,12 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
          ! Real(dp), save :: ChiSq_lim=10              ! limit set on the chi-square (FitQual)
          ! Real(dp), save :: EffAntNr_lim=0.8        ! limit set on the ratio of effective number of used antennas v.s. available number
          If(Max_EffAnt.lt.10) exit
-         If(i_peakS.eq.1 .and. i_eo.ne.1) Then
+         If(FirstPass) Then
             i_FvStr=0
             Write(18,"(' ', F13.6, 3F11.2,i9)")  &
                         1000.d0*StartT_sam(1)*sample, SourcePos(:,1)/1000., (TimeFrame*1000+i_peakS)
             Flush(Unit=18)
+            FirstPass=.false.
          EndIf
          If(.not.production) write(2,*) 'selectioncriterium', DistMax, Dist_Lim, (N_EffAnt*1./Max_EffAnt), EffAntNr_lim, &
             Sigma(1), Sigma(2), Sigma(3) , 10.*max(99.,1000./(abs(SourcePos(3,1))+0.001)) , Sigma(3), &
@@ -249,7 +252,7 @@ Subroutine SourceFind(TimeFrame,SourceGuess,units)
                            write(18,"(A, F13.6, F12.6, I7, 3F9.3, f5.1, f6.1, I7, 3I3)") 'Start time[ms]:', &
                               1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.d0*sample, Peakpos_0, &
                               SourcePos(:,1)/1000.d0, FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo
-                           Write(18,"(A,I8,':', F13.5, 3F11.2,i3)") '***** label=', (TimeFrame*1000+i_peakS), &
+                           Write(18,"(A,I8,':', F13.5, 3F11.2,i3)") '6-star source: label=', (TimeFrame*1000+i_peakS), &
                               1000.d0*StartT_sam(1)*sample, SourcePos(:,1), i_cal
                            Write(18,"(A,I8,3(F10.2,','),F12.5,'; 0.0')") 'R 1 2 1',  (Peakpos_0+CalSource(i_cal))/2, &
                               SourcePos(:,1), (StartT_sam(1)+Peakpos_0)*sample-DistMax*RefracIndex(SourcePos(3,1))/c_mps

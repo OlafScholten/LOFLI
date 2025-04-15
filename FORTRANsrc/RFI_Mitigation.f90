@@ -47,7 +47,7 @@ program RFI_mitigation
     Character(len=5) :: txt
     Logical :: AllBckgrSpec=.false.  ! produce data files for plotting the backgroung frequency spectra for the reference antennas only
     !Logical :: AllBckgrSpec=.true. ! produce data files for plotting the backgroung frequency spectra for all antennas.
-    Logical :: exists
+    Logical :: exists, PlentyData
     !
     Integer :: nxx, NFail=0 ! number of antennas for which RFI-determination failed
     Integer :: i_even=0, i_odd=0, MinAmp_Ant(Ant_nrMax), Powr_Ant(Ant_nrMax)
@@ -145,24 +145,34 @@ program RFI_mitigation
             Powr=-1.
             nu_fltr=0.
             i_chunkMax=DATA_LENGTH/Time_dim -1
-            If(i_chunkMax.lt.100) goto 999 ! not worthwhile
-            If(((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) .or. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0))) then
-               MakePlots=.true.  !  write statistics to file for the reference station only
-            Else
-               MakePlots=.false.
+            PlentyData=.true.
+            If(i_chunkMax.lt.100) Then
+               Write(2,"(A,I4)") 'Only',i_chunkMax,' Chunks, data set skipped, all data counted as zeros.'
+               N_zeroChunk=i_chunkMax
+               powr=0.
+               MinAmp=0
+               PlentyData=.false. ! not worthwhile
             EndIf
-            !MakePlots=.true.
-            Allocate( MaxAmpChunk(0:i_chunkMax))
-            Call RoughStatistics(i_dst)
-            !     N_zeroChunk= (number of chucks that have an excess in zero valued samples) is determined for this antenna
-            !     MaxAmpChunk(i_chunk) is determined for this antenna
             !
-            Call AccumulateBackgrFreq()
-            DeAllocate (MaxAmpChunk)
-            !
-            ! Determine averaged frequency spectrum for low-MaxAmpli chuncks
-            Call BuildRFIFilter()
-            !  Powr is calculated
+            If( PlentyData) Then
+               If(((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) .or. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0))) then
+                  MakePlots=.true.  !  write statistics to file for the reference station only
+               Else
+                  MakePlots=.false.
+               EndIf
+               !MakePlots=.true.
+               Allocate( MaxAmpChunk(0:i_chunkMax))
+               Call RoughStatistics(i_dst)
+               !     N_zeroChunk= (number of chucks that have an excess in zero valued samples) is determined for this antenna
+               !     MaxAmpChunk(i_chunk) is determined for this antenna
+               !
+               Call AccumulateBackgrFreq()
+               DeAllocate (MaxAmpChunk)
+               !
+               ! Determine averaged frequency spectrum for low-MaxAmpli chuncks
+               Call BuildRFIFilter()
+               !  Powr is calculated
+            EndIf
             !
             i_ant=i_ant+1
             If(i_ant.le. Ant_nrMax) then
@@ -170,40 +180,38 @@ program RFI_mitigation
                Powr_Ant(i_ant)=NINT(powr)
                Unique_SAI(i_ant)=STATION_ID*1000+ Ant_ID
             EndIf
-            If(powr.le.0.5) then
+            !
+            If((powr.le.0.5) .or. .not.PlentyData) then
                Nfail=Nfail+1
                If(Nfail.lt.BadAnt_nr_max) BadAnt_SAI(Nfail)=STATION_ID*1000+ Ant_ID
-               goto 999
             Else
                MinAmpAv=MinAmpAv + MinAmp
                MinAmpSq=MinAmpSq + MinAmp*MinAmp
                powrAv=powrAv + powr
                powrSq=powrSq + powr *powr
+               !
+               write(2,*) 'Unique_SAI(i_ant)', i_ant, Unique_SAI(i_ant)
+               !
+               If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
+               If(MostLatestSampl.lt.(SAMPLE_NUMBER_first+DATA_LENGTH)) MostLatestSampl=(SAMPLE_NUMBER_first+DATA_LENGTH)
+               !
+               ! Test effect filter
+               If(i_file.eq.i_filR .and. ((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) ) then  ! The reference station
+                  RefOdd=Ant_ID
+                  write(2,*) 'odd reference antenna',trim(DSet_Names(i_dst))
+                  Call PlotFreqFilt(i_dst)  ! Frequency spectra
+                  Call TestFilter(i_dst)     ! Filtered time spectra
+               Else If(i_file.eq.i_filR .and. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0)) ) then
+                  RefEve=Ant_ID
+                  write(2,*) 'even reference antenna',trim(DSet_Names(i_dst))
+                  Call PlotFreqFilt(i_dst)  ! Frequency spectra
+                  Call TestFilter(i_dst)     ! filtered spectra
+               Else If(AllBckgrSpec) Then
+                  write(2,*) 'Working on frequency spectrum for ',trim(DSet_Names(i_dst))
+                  Call PlotFreqFilt(i_dst)  ! Frequency spectra
+                  Call TestFilter(i_dst)    ! Filtered time spectra
+               EndIf
             Endif
-            !
-            If(VeryFirstSampl.gt.SAMPLE_NUMBER_first) VeryFirstSampl=SAMPLE_NUMBER_first
-            If(MostLatestSampl.lt.(SAMPLE_NUMBER_first+DATA_LENGTH)) MostLatestSampl=(SAMPLE_NUMBER_first+DATA_LENGTH)
-            !
-            write(2,*) 'Unique_SAI(i_ant)', i_ant, Unique_SAI(i_ant)
-            !
-            ! Test effect filter
-            If(i_file.eq.i_filR .and. ((RefOdd.eq.0) .and. (mod(Ant_ID,2).eq.1)) ) then  ! The reference station
-               RefOdd=Ant_ID
-               write(2,*) 'odd reference antenna',trim(DSet_Names(i_dst))
-               Call PlotFreqFilt(i_dst)  ! Frequency spectra
-               Call TestFilter(i_dst)     ! Filtered time spectra
-            Else If(i_file.eq.i_filR .and. ((RefEve.eq.0) .and. (mod(Ant_ID,2).eq.0)) ) then
-               RefEve=Ant_ID
-               write(2,*) 'even reference antenna',trim(DSet_Names(i_dst))
-               Call PlotFreqFilt(i_dst)  ! Frequency spectra
-               Call TestFilter(i_dst)     ! filtered spectra
-            Else If(AllBckgrSpec) Then
-               write(2,*) 'Working on frequency spectrum for ',trim(DSet_Names(i_dst))
-               Call PlotFreqFilt(i_dst)  ! Frequency spectra
-               Call TestFilter(i_dst)    ! Filtered time spectra
-            EndIf
-            !
-999         continue
             !
             !DeAllocate (MaxAmpChunk)
             If(mod(Ant_ID,2).eq.0) then

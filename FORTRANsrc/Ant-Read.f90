@@ -66,8 +66,8 @@ Subroutine AntennaRead(i_chunk,SourceGuess)
       Else
          Open(unit=12,STATUS='unknown',ACTION='read',FORM ="unformatted", FILE = 'Book/RFI_Filters-v18.uft')
          Open(unit=14,STATUS='old',ACTION='read', FILE = 'Book/LOFAR_H5files_Structure-v18.dat')
-         write(2,*) '!File 14 opened:', 'Book/LOFAR_H5files_Structure-v18.dat'
-         flush(unit=2)
+         !write(2,*) '!File 14 opened:', 'Book/LOFAR_H5files_Structure-v18.dat'
+         !flush(unit=2)
       EndIf
    Else  ! simulation ne '' and width <0; run on simulation data
       If(file14open) then

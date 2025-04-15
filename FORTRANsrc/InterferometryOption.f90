@@ -154,7 +154,10 @@ Subroutine InterferometerRun
    !Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE='GLE-plots.sh')
    !write(2,*) '!PlotAllCurtainSpectra=', SumStrt,SumWindw, CurtainHalfWidth
    If((CurtainHalfWidth.gt.0) .and. (NrPixSmPowTr.lt.10) ) then
-       write(2,*) 'PlotAllCurtainSpectra: for a CurtainHalfWidth of',CurtainHalfWidth, &
+      If(NrPixSmPowTr.gt.1) Then
+         Call PlotMultContours  ! should be called before curtainplotting since files will be deleted thereafter
+      EndIf
+      write(2,*) 'PlotAllCurtainSpectra: for a CurtainHalfWidth of',CurtainHalfWidth, &
             ' around the center of the windos;,', NrPixSmPowTr
       Flush(unit=2)
       PeakNrTotal=2
@@ -174,9 +177,9 @@ Subroutine InterferometerRun
             PlotName=TRIM(PreAmble)//'Track'//TRIM(OutFileLabel), PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
    Call GLEplotControl(PlotType=TRIM(PreAmble)//'Contour', PlotName=TRIM(PreAmble)//'Contour'//TRIM(OutFileLabel), &
             PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel))
-   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin'//'*.csv')
-   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'_EISpec'//'*.dat')
-   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer'//'*.z', Submit=.true.)
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin*.csv')
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'_EISpec*.dat')
+   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer*.z', Submit=.true.)
    !
    write(2,*) 'NewCenLoc', NewCenLoc, ' , ChainRun=', ChainRun
    If(ChainRun.ne.0) Call ChainRuns(NewCenLoc)

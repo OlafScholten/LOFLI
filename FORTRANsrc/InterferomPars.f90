@@ -5,7 +5,7 @@ Module Interferom_Pars
    use DataConstants, only : Ant_nrMax, PeakNr_dim, ChunkNr_dim
    Implicit none
    Complex(dp) :: CTime_sum(1:Time_dim)  ! should indeed be the large dimension
-   integer, parameter :: Nmax_IntFer=250  ! Max number of interference antennas
+   integer, parameter :: Nmax_IntFer=300  ! Max number of interference antennas, just sufficient for 17A-1
    integer, allocatable, save :: Nr_IntFerCh(:)   ! nr of antenna pairs included per chunk
    integer, save :: Nr_IntFerMx=0 ! maximum over all chunks of nr of antenna pairs included, set in EISelectAntennas
    integer, save :: Nr_IntFer=0 ! set equal to Nr_IntFerMx, to become obsolete
@@ -28,7 +28,7 @@ Module Interferom_Pars
    Real(dp), allocatable :: MaxSlcInten(:), MaxSlcIntenLoc(:,:)
    Real(dp), save :: t_shft, t_offsetPow !, PowerScale=1.d0
    Integer, save :: N_sum, SumStrt, SumWindw, NrSlices, SliceLen
-   !     In many cases  NrSlices=1 and  SliceLen=SumWindw  use NrPixSmPowTr ans N_smth instead
+   !     In many cases  NrSlices=1 and  SliceLen=SumWindw; use NrPixSmPowTr and N_smth instead
    Integer, save :: IntfDim, IntfNuDim, IntfLead, IntfBase
    Real(dp), save :: MaxIntfInten, MaxIntfIntenLoc(1:3)
    Real(dp), save :: NewCenLoc(1:3)=(/0.d0,0.d0,0.d0/)
@@ -48,6 +48,9 @@ Module Interferom_Pars
    Integer :: N_smth=40  ! 40 gives much better localization than 20, less radial scatter (checked 5 Febr 2021)
    Real(dp), allocatable, save :: smooth(:)
    logical, save :: ParabolicSmooth=.true.
+   logical, save :: SlicePnts=.false.  !  use cutting points as specified in SlicingPoints
+   Integer, allocatable :: PulsePos(:), PulseWidth(:)
+   Integer, save :: MaxNrSlPnts=1
    Logical, save :: IntPowSpec=.true.
    Integer, save :: NrPixSmPowTr
    Integer, allocatable :: MaxSmPowGrd(:,:)
@@ -158,8 +161,9 @@ Module Interferom_Pars
       Call Alloc_EInterfAll_Pars
       !write(2,*) 'Alloc_EInterfImag_Pars:', SumWindw, N_smth, NrSlices,N_pix(3,1), N_pix(3,2)
       !Flush(unit=2)
-      NrPixSmPowTr=(SumWindw-1)/N_smth-1  ! smallest window has length=(2*N_smth +1)
+      If(.not. SlicePnts) NrPixSmPowTr=(SumWindw-1)/N_smth-1  ! smallest window has length=(2*N_smth +1)
       N_fit=-1
+      !write(2,*) 'Alloc_EInterfImag_Pars:', SumWindw, N_smth, NrPixSmPowTr
       If(NrPixSmPowTr.lt.1) then
          NrPixSmPowTr=0
          IntPowSpec=.false.
@@ -182,15 +186,16 @@ Module Interferom_Pars
       Allocate( MaxSmPowU2(0:NrPixSmPowTr) )
       Allocate( MaxSmPowV2(0:NrPixSmPowTr) )
       Allocate( RefSmPowTr(0:NrPixSmPowTr) )
-      Allocate( PixSmPowTr(0:NrPixSmPowTr,N_pix(1,1):N_pix(1,2),N_pix(2,1):N_pix(2,2),N_pix(3,1):N_pix(3,2)) )
       ! since Real(4), single precision, requires 4 bytes.
       ! Integer calculation may cause overflow to the sign bit, or worse, thus convert to real early on
       If(FirstTimeInterf) write(2,"('Storing pixel traces takes ',F10.6,' Gbytes')")  &
             NrPixSmPowTr* (N_pix(1,2)-N_pix(1,1)+1.)* (N_pix(2,2)-N_pix(2,1)+1.)* (N_pix(3,2)-N_pix(3,1)+1.)*4./1.E9
       allocate(  RimSmPow(N_pix(3,1):N_pix(3,2)) )
       Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
+      If( Allocated( PixSmPowTr)) DeAllocate( PixSmPowTr)
+      Allocate( PixSmPowTr(0:NrPixSmPowTr,N_pix(1,1):N_pix(1,2),N_pix(2,1):N_pix(2,2),N_pix(3,1):N_pix(3,2)) )
       If(NrPixSmPowTr_Previous .ne. NrPixSmPowTr) Then
-         write(2,*) '!Reallocate arrays MaxSmPow..', NrPixSmPowTr_Previous, NrPixSmPowTr
+         !write(2,*) '!Reallocate arrays MaxSmPow..', NrPixSmPowTr_Previous, NrPixSmPowTr
          !If( Allocated( MaxSmPowGrd)) DeAllocate( MaxSmPowGrd )
          !Allocate( MaxSmPowGrd(1:3,0:NrPixSmPowTr) )  ! keep for possible later use
          If( Allocated( MaxSmPow)) DeAllocate( MaxSmPow)
@@ -210,7 +215,7 @@ Module Interferom_Pars
       DeAllocate( AveInten, AveIntenE, AveIntenN)
       DeAllocate( RimInten, SlcInten, MaxSlcInten, MaxSlcIntenLoc)
       DeAllocate( MaxSmPowI12, MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3, MaxSmPowU1, MaxSmPowV1, MaxSmPowU2, MaxSmPowV2 )
-      DeAllocate( RefSmPowTr, PixSmPowTr, MaxSmPowGrd ) ! ,MaxSmPow,  MaxSmPowPix
+      DeAllocate( RefSmPowTr, MaxSmPowGrd ) ! , PixSmPowTr, MaxSmPow,  MaxSmPowPix
       DeAllocate( RimSmPow )
    End Subroutine DeAlloc_EInterfImag_Pars
 ! ------------------------------------------------
