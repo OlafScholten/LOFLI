@@ -32,9 +32,12 @@ This option is run using by the script \verb!"PkIntf.sh"! residing in the FlashF
  !PolFlp_SAI=    130084 ! 150090 !
  ExcludedStat= 'RS210', 'RS509', 'RS508'
  Calibrations="Fld19A-1plane-202408220925.cal" ! FldCal  T  2.27
- TimeBase=  850.  ! not used when reading sources from a .dat or .csv file
+ TimeBase=  850.  !
+ BoxFineness_coarse= 4.5
+ BoxSize_coarse= 80.
+ Chi2_Lim= 9.
+ Spread_Lim= 30.
  OutFileLabel="plane2" &end  !
- -2. 4.0 70.            ! Chi2_Lim, BoxFineness_coarse, BoxSize_coarse
  "planePkInt.csv"
 \end{verbatim}
 \end{linenumbers}
@@ -44,10 +47,14 @@ The lines in the namelist \verb!"&Parameters"! input specify:
 \item \verb!RunOption= "ATRID"!: Run the \ATRID\ Imager
 \item \verb!OutFileLabel="XYZ"!: Additional label used for the output files, including the plots.
 \item \verb!AntennaRange=100.!: The maximal distance (in [km]) from the reference station of the antenna stations that are included in imaging.
+\item \verb!BoxFineness_coarse= 4.5!:  Grid Fineness factor for initial TRI-D runs.
+\item \verb!BoxSize_coarse= 80.!:  Grid-expanse [m] from each initial source position for initial TRI-D runs.
+\item \verb!Chi2_Lim= 9.!:  Sources with larger $chi^2$ will be marked for de-selection; When negative set equal to (mean+StDev).
+\item \verb!Spread_Lim= 30.!:  Sources with larger spreading length in intensity profile will be marked for de-selection; When negative set equal to (mean+StDev).
 \item \verb!TimeBase=850.!: This time is added to the relative time specified in the input.
 \item \verb# Simulation= ""#: No simulated data are used if blank, otherwise the simulated data are read from these files and should have the same value as used when generating the simulated data, see \secref{Sim}.
-\item \verb!IntfSmoothWin=40! (Integer, default=20): the default width of the window in case the window is not specified explicitly (as is the case when using a .dat file for the original source locations.
-\item \verb!PixPowOpt=! (Integer, 0): selects how the intensity of a pixel is calcula
+\item \verb!IntfSmoothWin=40! (Integer, default=20): the default width of the window in case the window is not specified explicitly (as is the case when using a .plt file for the original source locations.
+\item \verb!PixPowOpt=! (Integer, 0): selects how the intensity of a pixel is calculated
    \\\verb!PixPowOpt =0! (default): sum two transverse (as seen from the core) polarizations only.
    \\\verb!PixPowOpt =1! : sum all polarizations weighted with alpha to compensate $A^{-1}$ thus intensity =  $|\vec{F}|$, see \eqref{F_as}.
    \\\verb!PixPowOpt =2! : Sum all three polarizations, thus including longitudinal with the full weight.
@@ -59,38 +66,29 @@ The lines in the namelist \verb!"&Parameters"! input specify:
 \item \verb!"ExcludedStat="!: Mnemonics of the stations that will be excluded from interferometry. The exclusion is usually based on unexpected phases.
 \end{enumerate*}
 
-
-The following line specifies:
-\begin{enumerate*}
-\item[line +1:]   ``\verb#   -2. 2.5 25. #''
-   \begin{enumerate*}
-   \item[1] $-2.$; Maximal allowed value for the $\chi^2$ for the sources. When negative: value is set to (mean plus one standard deviation) of all investigated sources.
-   \item[2] $4.0$, the Fineness factor when performing the coarse TRI-D search.
-   \item[3] $70.$, The extent of the coarse-grid box from the initial source position.
-   \end{enumerate*}
-\end{enumerate*}
-For the lines thereafter (there can be several) there are a few possibilities and this input sequence should end with a line that does not follow the prescribed format, such as ``\verb# ------  #''.  Any line starting with an exclamation sign, !, will be treated as a comment and skipped over.
+For the following lines (there can be several) there are a few possibilities and this input sequence should end with a line that does not follow the prescribed format, such as ``\verb# ------  #''.  Any line starting with an exclamation sign, !, will be treated as a comment and skipped over.
 \begin{enumerate*}
 \item[.csv:]  as in ``\verb# "planeATRID.csv"  #''; The initial sources are read from this file which was created in a previous run of the \ATRID\ imager and should reside in the /files/ subfolder for this flash. The first part of the name is taken equal to the `OutFileLabel' for the run that generated it, the second part is hardwired to be `ATRID.csv'. The initial window size, different for each source, is encoded in this data-file.
-\item[.dat:] as in ``\verb# "PlaneHIntfSpecPowMx_d.dat"  #'', \\or ``\verb# "T-Bc.dat"  #''; The initial sources are read from this file which was created in a previous run of the TRI-D imager or, the second possibility, the DataSelect program (see \secref{DataSelect})  and should reside in the /files/ subfolder for this flash. for the TRI-D imager the first part of the name is taken equal to the `OutFileLabel' for the run that generated it, the second part is hardwired to be `\verb# IntfSpecPowMx_d.dat #'. The initial window size, is NOT encoded in this data-file and the value set by `IntfSmoothWin' is used instead.
-\item[line:] as in ``\verb#S 1111 0.0062   23.22366  -41.86376  8.05660, -100   #'', \\or ``\verb#  1111 0.0062    -41.86376  23.22366   8.05660  #''; where the first character on the line is a mark to determine the reading option,
+\item[.plt:] as in ``\verb# "I-19A-1inib.plt"  #'', \\or ``\verb# "T-Bc.plt"  #''; The initial sources are read from this file which was created in a previous run of the TRI-D imager or, the second possibility, the DataSelect program (see \secref{DataSelect})  and should reside in the /files/ subfolder for this flash. For the TRI-D imager the first part of the name is taken equal to the `OutFileLabel' for the run that generated it, the second part is hardwired to be `\verb# TRID.plt #'. The initial window size, is NOT encoded in this data-file and the value set by `IntfSmoothWin' is used instead.
+\item[line:] as in ``\verb#S 1111 0.0062   23.22366  -41.86376  8.05660, -100   #'', where the first character on the line is a mark to determine the reading option,
     \begin{itemize}
-      \item mark=` ' then: Label, t[ms], x,y,z ; i.e.\  plot-file notation for  coordinates.
+      \item mark=` ' then: Label, t[ms], N,E,h ; i.e.\  plot-file notation for  coordinates.
       \item  mark=`R' then: Label, $t_r$[ms], N,E,h, Width; where $t_r$ is the time the pulse arrives at the reference station, the core.
       \item  mark=`S' then: Label, $t_s$[ms], N,E,h, Width; where $t_s$ is the time at the source position.
    \end{itemize}
-   Also for the Width there are different options:
+   Also for the Width (needs to be an integer) there are different options:
    \begin{itemize}
       \item Width $<$ 0 : window=$|Width|$ and is kept fixed in the \ATRID\ calculation.
       \item Width =0 : window=IntfSmoothWin and length is optimized.
       \item Width $>$ 0 : window=Width and length is optimized following the \ATRID\ procedure.
    \end{itemize}
    The two example lines thus specify the same source where for the first the window is fixed to 100 samples, and for the second it is set to the value of `IntfSmoothWin'.
+\item[line:] as in ``\verb#   -0.2   -1.097 -37.812 9.415, 0.3  #'', giving $t_s$[ms], N,E,h, $t_{length}$[ms]. The ATRID imager will work on a chunk of data of length $t_{length}$ (which may not exceed 0.3~ms) starting at $t_s$. The beamformer is run for the location specifies by (N,E,h) and the peak-slicing routine of the ATRID imager will construct all appropriate slicing times for the complete beamformed time trace of length $t_{length}$. Only pulses with an $I_{12}$ (for the default value of the beamformer option parameter \verb!PixPowOpt =0!) exceeding \verb!NoiseLevel! will be kept. For this option it is necessary that $t_{length}$ is given as a real constant.
 \end{enumerate*}
 
 
 The script produces TRI-D-like images (see \secref{TRID} for the procedures followed)
-and puts the results in data files ``\verb# "xxxATRID.csv"  #'' and ``\verb# "xxxATRIDSrc.dat"  #'' in the subdirectory \verb!"files"! where `OutFileLabel' is substituted for xxx. In the .csv file the sources are de-selected when two of them are considered the same or when the $\chi^2$ is worse than the set criterion. In the summary output, as well as in the .csv file a short reason is given. The .dat file contains all sources and is used for making a plot.  It also prepares the commands in a file with name starting with ( \verb!"Afig-ATRID"!) for running the GLE scripts \cite{GLE} to produce the plots discussed in \secref{PkInt-output}.
+and puts the results in data files ``\verb# "xxxATRID.csv"  #'' and ``\verb# "xxxATRID.plt"  #'' in the subdirectory \verb!"files"! where `OutFileLabel' is substituted for xxx. In the .csv file the sources are de-selected when two of them are considered the same or when the $\chi^2$ is worse than the set criterion. In the summary output, as well as in the .csv file a short reason is given. The .plt file contains all sources and is used for making a plot.  It also prepares the commands in a file with name starting with ( \verb!"Afig-ATRID"!) for running the GLE scripts \cite{GLE} to produce the plots discussed in \secref{PkInt-output}.
 
 It is recommended to subsequently run the script \verb!"DataSelect.sh"! using \verb!"DataSelect.in"! as input to produce the plots that are zoomed in on the region of interest, see \secref{DataSelect}
 
