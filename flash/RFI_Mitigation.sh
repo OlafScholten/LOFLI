@@ -11,7 +11,8 @@ echo ${ArchiveBase}
 
 exit
 #sshfs scholten@kapteyn.astro.rug.nl:/net/dataserver3/data/users/hare/ ~/kaptdata
- olaf@APP01:~/kapdatalink/lightning_data/2018
+ olaf@APP01:     ~/kapdatalink/lightning_data/
+ olaf@Kapteyn:   /Users/users/scholten/DATA/LOFARdata/lightning_data/
 # nohup ./RFI_Mitigation.sh  >RFI_Mitigation.log 2>&1  &   
 
 
