@@ -438,6 +438,7 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    N_FitPar=0
    Call GetNonZeroLine(lname)
    write(2,*) 'timing offset-fit option="',lname,'"'
+   write(2,*) 'possible options are: "only" & "abut" & "antenna", followed by station names and/or "NoSrc", ending with "!" '
    read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
    Do i=1,N_FitPar_max
       !write(2,*) 'FP_Mnem(i):',i,FP_Mnem(i)

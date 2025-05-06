@@ -61,6 +61,7 @@ Module Interferom_Pars
    Real(dp), save :: alpha(3), PolBasis(3,3)  ! polbasis(:,k) belongs to eigenvalue alpha(k)
    Integer, save :: PixPowOpt=0   ! used in "EIAnalyzePixelTTrace"
    Integer, save :: N_best=6
+   Real(dp) :: Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse  ! used in ATRID
    Integer, allocatable :: Grd_best(:,:,:)
    Real(dp), allocatable :: Int_best(:,:)
    Real(dp),save :: StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ

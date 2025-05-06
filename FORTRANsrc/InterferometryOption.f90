@@ -35,7 +35,7 @@ Subroutine InterferometerRun
    character(len=5) :: txt
    character(Len=1) :: Mark
    Character(LEN=lnameLen) :: lname
-   Real(dp) :: StartTime_ms, GridVolume(1:3), BoxFineness
+   Real(dp) :: StartTime_ms, GridVolume(1:3), BoxFineness, WindowTime_ms
    Integer :: Date_T(8)
    Character*7 :: PreAmble
    Real(dp), external :: tShift_ms
@@ -182,12 +182,13 @@ Subroutine InterferometerRun
    Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer*.z', Submit=.true.)
    !
    write(2,*) 'NewCenLoc', NewCenLoc, ' , ChainRun=', ChainRun
-   If(ChainRun.ne.0) Call ChainRuns(NewCenLoc)
+   WindowTime_ms=SumWindw*sample_ms
+   If(ChainRun.ne.0) Call ChainRuns(NewCenLoc, WindowTime_ms)
    Return
     !
 End Subroutine InterferometerRun
 !-------------------------------------------------------------
-Subroutine ChainRuns(NewCenLoc)
+Subroutine ChainRuns(NewCenLoc, WindowTime_ms)
 ! Run several TRI-D calculations in a series
 ! If no TrackFile is specified, the new center location is taken as the bary-center of the present run (=ewCenLoc)
 ! With a TrackFile there are two options,
@@ -201,13 +202,15 @@ Subroutine ChainRuns(NewCenLoc)
    Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc
    Use Interferom_Pars, only : SumStrt, SumWindw, N_smth
    Use Interferom_Pars, only : PixPowOpt, RefinePolarizObs
-   use DataConstants, only : OutFileLabel, DataFolder, Calibrations !, Cnu_dim,
+   Use Interferom_Pars, only : Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
+   use DataConstants, only : OutFileLabel, DataFolder, Calibrations, RunMode, Time_Dim !, Cnu_dim,
    use Chunk_AntInfo, only : TimeBase, ExcludedStat, NoiseLevel,  Simulation, SaturatedSamplesMax
    use FitParams, only : AntennaRange
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, StartT_sam
    use PredefinedTracks, only : GetTrPos, GetTrTime, PreDefTrackFile, t_track
    Implicit none
    Real(dp), intent(inout) :: NewCenLoc(1:3)
+   Real(dp), intent(in) :: WindowTime_ms  ! only of use for ATRI-D runs
    integer :: i,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu, IntfSmoothWin, nxx
    Integer, parameter ::lnameLen=180
    character(len=5) :: txt
@@ -221,11 +224,20 @@ Subroutine ChainRuns(NewCenLoc)
    NAMELIST /Parameters/ RunOption &!, E_FieldsCalc  &  ! just those that are of interest for interferometry
          , IntfSmoothWin, TimeBase, PixPowOpt, RefinePolarizObs  &
          , SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, Calibrations, SaturatedSamplesMax &
-         , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    !  ChunkNr_dim,
+         , ExcludedStat, OutFileLabel, ChainRun, NoiseLevel, AntennaRange    &
+         , Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
    !
+   !write(2,*) 'ChainRuns(NewCenLoc, WindowTime_ms):',NewCenLoc, WindowTime_ms
    If(ChainRun.eq.0) Return
+   StartTime_ms=StartT_sam(1)*sample_ms - TimeBase  ! in ms
+   If( RunMode.eq.8 ) Then
+   !   StartTref_ms=TimeBase + StartTrace_ms + TimeShft - (Time_dim-TraceLength)*sample_ms/2.  ! in ms, the middle of the chunk for this peak
+      StartTime_ms=StartTime_ms + (Time_dim*sample_ms-WindowTime_ms)/2.
+      RunOption='ATRID'
+      !write(2,*) 'chainruns:', SumWindw, WindowTime_ms/sample_ms
+      SumWindw=NINT(WindowTime_ms/sample_ms)
+   EndIf
    !NOTE!!!! On input for tracks time specified was mid-time on track, not the begin to the wanted chunk, undo this
-   StartTime_ms=StartT_sam(1)*sample*1000.d0-TimeBase  ! in ms
    If(PreDefTrackFile.ne.'') Then  ! undo: time specified was mid-time on track, not the begin to the wanted chunk
       write(2,*) 'Track starting time was',StartTime_ms
       StartTime_ms=StartTime_ms+sample_ms*(SumStrt+SumWindw/2)  !Middle of segmet in local time
@@ -266,8 +278,6 @@ Subroutine ChainRuns(NewCenLoc)
       txt='#+01'
    EndIf
    !
-   write(2,*) 'New sartt time @ old source pos=', StartTime_ms, t_track
-   !
    If(NewCenLoc(1).ne.0.d0) then
       !write(2,*) 'txt1',txt,ChainRun
       j=LEN(TRIM(OutFileLabel))
@@ -290,13 +300,13 @@ Subroutine ChainRuns(NewCenLoc)
       write(10,NML = Parameters)
       !
       StartTime_ms=StartTime_ms + t_shft - tShift_ms(NewCenLoc(:))  ! correct for local time shift, keeping same time in the core
-      write(2,*) 'New sartt time @ new source pos=', StartTime_ms, t_track
+      write(2,*) 'New start time @ new source pos=', StartTime_ms, t_track, ', (atrid only:) window=', WindowTime_ms
       If(PreDefTrackFile.ne.'') Then
-         Write(10,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
-         Write(2,"('S',F12.6,1x, A, F12.6)") StartTime_ms, TRIM(PreDefTrackFile), t_new ! Start time at the source location
+         Write(10,"('S',F12.6,1x, A, F12.6, F11.4)") StartTime_ms, TRIM(PreDefTrackFile), t_new, WindowTime_ms ! Start time at the source location
+         Write(2,"('S',F12.6,1x, A, F12.6, F11.4)") StartTime_ms, TRIM(PreDefTrackFile), t_new, WindowTime_ms ! Start time at the source location
       Else
-         Write(10,"('S',F12.6, 3F10.4, F6.1)") StartTime_ms, NewCenLoc/1000. ! Start time at the source location
-         Write(2,"('S',F12.6, 3F10.4, F6.1)") StartTime_ms, NewCenLoc/1000. ! Start time at the source location
+         Write(10,"('S',F12.6, 3F10.4, F11.4)") StartTime_ms, NewCenLoc/1000., WindowTime_ms ! Start time at the source location
+         Write(2,"('S',F12.6, 3F10.4, F11.4)") StartTime_ms, NewCenLoc/1000., WindowTime_ms ! Start time at the source location
          !  239.7 , -25.42  37.28   5.54,  50 !-i- PID=25216;  StartTime_ms, (N,E,h)CenLoc, DistMax[km]
       EndIf
       lname(1:1)="C"

@@ -321,13 +321,15 @@ Program LOFAR_Imaging
     use FFT, only : RFTransform_su,DAssignFFT
     use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
     Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ParabolicSmooth, ChainRun, PixPowOpt, N_fit, RefinePolarizObs
+    Use Interferom_Pars, only : Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
     use GLEplots, only : GLEplotControl
+    use CPU_timeUsage, only : CPU_usage
     Implicit none
     !
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real(dp) :: StartTime_ms, StartingTime, StoppingTime, D
     Real(dp) :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
-    Real(dp) :: Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
+    !Real(dp) :: Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
     CHARACTER(LEN=6) :: txt,Version
@@ -454,6 +456,7 @@ Program LOFAR_Imaging
    End SELECT
    !
    Call System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows)  ! set Flash name & folder names
+   Call CPU_usage
    Call PrintParIntro(TRIM(Sources1), RunOption,OutFileLabel)
    !
    If(nxx.ne.0) Then
@@ -682,6 +685,8 @@ Program LOFAR_Imaging
          Call PrintValues(CalibratedOnly,'CalibratedOnly', &
             'Use only antennas that have been calibrated.')
          Call PrintValues(NoiseLevel,'NoiseLevel', 'Any weaker sources will not be imaged.' ) !
+         Call PrintValues(ChainRun,'ChainRun', &
+            'Automatically start jobs (for - previous or + following timeslots, made to follow a leader.' )
          !
       CASE DEFAULT  ! Help
          Write(2,*) 'Should never reach here!'

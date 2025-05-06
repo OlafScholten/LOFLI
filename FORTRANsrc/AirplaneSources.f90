@@ -16,11 +16,11 @@ Subroutine ReadAirplane(OutFileLabel, BackgrndData, PeakNrTotal, SourceTime_ms, 
    Character(len=1) :: Marker
    integer :: i_Peak, nxx, DataUnit, i, ip, j
    Complex :: Stk(1:6)
-   Logical :: exists
-   real :: time, I3,Un,Lin,Circ,Zen,Azi
+   Logical :: exists, NewAtridFormat
+   real :: time, I3,Un,Lin,Circ,Zen,Azi, IntVol
    !
    DataUnit=28
-   INQUIRE(FILE = trim(DataFolder)//TRIM(OutFileLabel)//'IntfPkSources.dat', exist=exists)  ! in the main Fsash directory
+   INQUIRE(FILE = trim(DataFolder)//TRIM(OutFileLabel)//'IntfPkSources.dat', exist=exists)  ! in the main Flash/files directory
    If(exists) then
       OPEN(UNIT=DataUnit,STATUS='old',ACTION='read',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfPkSources.dat', IOSTAT=nxx)
       If(nxx.ne.0) Then
@@ -46,9 +46,15 @@ Subroutine ReadAirplane(OutFileLabel, BackgrndData, PeakNrTotal, SourceTime_ms, 
       EndDo
    Else
       OPEN(unit=DataUnit,FILE=trim(DataFolder)//TRIM(OutFileLabel)//'PkInt.csv', STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
-      If(nxx.ne.0) then   ! check weather this particular file can be opened
+      NewAtridFormat=.false.
+      If(nxx.ne.0) then   ! check whether this particular file can be opened
          Write(2,*) 'Probelems opening file:"',trim(DataFolder)//TRIM(OutFileLabel)//'PkInt.csv','"'
-         stop 'no datafile'
+         OPEN(unit=DataUnit,FILE=trim(DataFolder)//TRIM(OutFileLabel)//'.csv', STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
+         NewAtridFormat=.true.
+         If(nxx.ne.0) then   ! check whether this particular file can be opened
+            Write(2,*) 'Probelems opening file:"',trim(DataFolder)//TRIM(OutFileLabel)//'.csv','"'
+            stop 'no datafile'
+         endif
       endif
       read(DataUnit,*,iostat=nxx) Marker, PeakNrTotal ! skip first comment line
       Allocate(SourceTime_ms(-7:PeakNrTotal), SourcePos(1:3,-7:PeakNrTotal), SourceIntensity(-7:PeakNrTotal), &
@@ -57,8 +63,16 @@ Subroutine ReadAirplane(OutFileLabel, BackgrndData, PeakNrTotal, SourceTime_ms, 
       i_peak=1
       Do j=1,ip
          nxx=0
-         read(DataUnit,*,iostat=nxx) Marker, i,SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak), PeakWidth(i_peak), Chi2(i_Peak), &
-             SourceIntensity(i_Peak), I3,Un,Lin,Circ,Zen,Azi, Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
+         If(NewAtridFormat) Then
+            read(DataUnit,*,iostat=nxx) Marker, i,SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak), PeakWidth(i_peak), Chi2(i_Peak), &
+                IntVol,SourceIntensity(i_Peak), I3,Un,Lin,Circ,Zen,Azi, Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), &
+                Stk_NEh(3,3,i_Peak)
+!!  #, Source t[ms] ;    North      East        h [km]   Width  Chi^2   IntVol   St_I/20     I_3%   P_un, P_lin, P_circ%  Zen , azi    ;  Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)
+!S    1,   0.007529,   23.22339,  -41.86423,    8.05702,   55,   1.52,    7.0,   79.98    ,  34.6,  67.3,  32.5,   0.2,  33.55,  70.08 , (   4.134    , -1.0200E-09) , (  -2.243    ,  0.2759    ) , (   4.833    ,  0.7132    ) , (   10.50    , -3.8016E-09) , (   6.001    , -0.2985    ) , (   14.45    , -2.6290E-09)
+         Else
+            read(DataUnit,*,iostat=nxx) Marker, i,SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak), PeakWidth(i_peak), Chi2(i_Peak),&
+                SourceIntensity(i_Peak), I3,Un,Lin,Circ,Zen,Azi, Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
+         EndIf
          If(nxx.gt.0) then
             write(2,*) 'Read error:',i
          ElseIf (nxx.lt.0) Then

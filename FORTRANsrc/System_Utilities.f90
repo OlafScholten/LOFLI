@@ -26,7 +26,6 @@ Subroutine System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, F
    Call GETCWD(FlashFolder)  ! Get current working directory
    j=LEN_TRIM(FlashFolder)
    write(2,*) 'FlashFolder="',TRIM(FlashFolder),'" with',j, ' characters'
-   flush(unit=2)
    i_guess=0
    Do i=1,j-1
       If(FlashFolder(i:i) .eq. FChar) Then
@@ -56,6 +55,8 @@ Subroutine System_Initiation(Utility, release, ProgramFolder, UtilitiesFolder, F
    CALL get_environment_variable("AntennaFieldsDir", AntFunFile)
    Write(2,*) 'Environment variable "AntennaFieldsDir"= "',TRIM(AntFunFile) ! ,'", FlashFolder: "',TRIM(FlashFolder),'"'
    !
+   flush(unit=2)
+  !
    Return
 End Subroutine System_Initiation
 !===============================================

@@ -168,17 +168,17 @@ Subroutine ImpulsImagRun
    lname='AFlashImage.in'  ! temporary name holder
    Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(lname))
    If(Dual) then
-      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="d", ', &
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="'//TRIM(OutFileLabel)//'d", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
       write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"('======================================================')")
    Else
-      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="e", ', &
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="'//TRIM(OutFileLabel)//'e", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
       write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
-      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources2)//'", PlotName="o", ', &
+      write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources2)//'", PlotName="'//TRIM(OutFileLabel)//'o", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
       write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
@@ -204,15 +204,15 @@ Subroutine ImpulsImagRun
       !source  ${LL_Base}/scripts/RunProgram.sh DataSelect  DataSelect.in
    EndIf
    !
-   If(Dual) then
-      Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'d'//TRIM(OutFileLabel), &
-         PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'d'//TRIM(OutFileLabel), Submit=.true.)
-   Else
-      Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'e'//TRIM(OutFileLabel), &
-         PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'e'//TRIM(OutFileLabel))
-      Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'o'//TRIM(OutFileLabel), &
-         PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'o'//TRIM(OutFileLabel), Submit=.true.)
-   EndIf
+   !If(Dual) then
+   !   Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'d'//TRIM(OutFileLabel), &
+   !      PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'d'//TRIM(OutFileLabel), Submit=.true.)
+   !Else
+   !   Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'e'//TRIM(OutFileLabel), &
+   !      PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'e'//TRIM(OutFileLabel))
+   !   Call GLEplotControl(PlotType='SourcesPlot', PlotName='Map_'//TRIM(FlashName)//'o'//TRIM(OutFileLabel), &
+   !      PlotDataFile=TRIM(DataFolder)//TRIM(FlashName)//'o'//TRIM(OutFileLabel), Submit=.true.)
+   !EndIf
    !
    Return
 End Subroutine ImpulsImagRun
