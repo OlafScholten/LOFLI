@@ -129,7 +129,7 @@ END MODULE LOFLI_Input
 Subroutine ReadSourceTimeLoc(StartTime_ms, CenLoc)
    use constants, only : dp, Sample, c_mps
    use Chunk_AntInfo, only : TimeBase
-   use PredefinedTracks, only : GetTrPos, GetTrTime, PreDefTrackFile, t_track
+   use PredefinedTracks, only : GetTrPos, PreDefTrackFile, t_track
    Implicit none
    Real(dp), intent(OUT) :: StartTime_ms, CenLoc(1:3)
    Integer, parameter ::lnameLen=180
@@ -664,7 +664,6 @@ End Function SourceNr
       lineTXT(1:N-1)=lineTXT(2:N)
     End Subroutine GetMarkedLine
 !==========================================
-!==========================================
 Subroutine Convert2m(CenLoc)
    Implicit none
    real*8, intent(inout) :: CenLoc(3)
@@ -673,4 +672,32 @@ Subroutine Convert2m(CenLoc)
    Endif
    Return
 End Subroutine Convert2m
+!==========================================
+Module CPU_timeUsage
+    use constants, only : dp
+
+   Integer, save :: WallCount
+   Real,save :: CPUTime=-1., WallTime, CPUstartTime, WallstartTime, WallRate, CPUtimeUse
 !--------------------
+   CONTAINS
+   !
+Subroutine CPU_usage
+   IMPLICIT NONE
+   Logical, save :: First=.true.
+   !
+   call cpu_time(CPUTime)
+   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   If(First) Then
+      WallstartTime=WallCount/WallRate
+      CPUstartTime=CPUTime
+      WRITE(2,"(A,F12.6,A,F12.3,A)") 'CPU start time:', CPUTime, '[s], wall start time=',WallstartTime, '[s]'
+      First=.false.
+   Else
+      WallTime=WallCount/WallRate - WallstartTime
+      CPUtimeUse=CPUstartTime-CPUstartTime
+      WRITE(2,"(A,F12.6,F9.3,A)") 'CPU & Wall time used:', CPUTime, WallTime, '[s]'  ! count_rate, count_max
+   EndIf
+   !
+End    Subroutine CPU_usage
+
+End Module CPU_timeUsage

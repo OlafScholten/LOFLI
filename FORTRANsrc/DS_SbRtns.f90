@@ -958,8 +958,9 @@ Subroutine DS_ReadSelData_PkInt
    Integer :: SourceNrIncr
    !integer :: PixPowOpt
    Real(dp) :: tp
-   Integer :: Width
+   Integer :: Width, i_sequence, LastChar, NullRead
    Complex :: Stks(1:6)    ! order: (1,1:3), (2,2:3), (3,3)
+   Logical :: RepackData
    !
 !         i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), &
 !         Chi2(i_Peak), I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
@@ -976,90 +977,128 @@ Subroutine DS_ReadSelData_PkInt
    Do i_datfil=1,NDataFil  ! select one particular file (may be sequence)
       If((i_datfil.gt.1).and. (datafile(i_datfil).eq."")) exit
       nxx=0
+
+
+
+      i_sequence=0
+      NullRead=0
+      LastChar=LEN_TRIM(datafile(i_datfil))
       !   write(2,*) 'RepackData-1', RepackData, First29
-      !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar)
-      datfile=datafile(i_datfil)
-      FileMain=datfile  ! Base for output file
-      datfile=TRIM(DataFolder)//trim(datfile)
-      OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
-      If(nxx.ne.0) then   ! check weather this particular file can be opened
-         Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
-         Close(Unit=28)
-         cycle
-      endif
-      !
-!            t_offset=TimeBase
-!      If(AmplitudePlot.eq.Tiny) AmplitudePlot=AmpltPlotRead
-!      t_start = t_start-t_offset
-      !
-      ! Start actual reading
-      j=0
-      read(28,*,iostat=nxx) t_start
-      If(TimeBase.eq.tiny) then
-         TimeBase=t_start
-      EndIf
-      t_offset=TimeBase
-      read(28,*,iostat=nxx) Marker  ! skip first comment line
-      do    ! loop over all source points in this file
-         nxx=0
-         Read(28,"(A1,A350)",IOSTAT=nxx) Marker, lineTXT
-         If (nxx.lt.0) Then    ! Write(2,*) 'EOF reached'
-            exit
-         Endif
-         read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
-         If(nxx.gt.0) then
-            read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
-            ISpr=0.
-            If(nxx.gt.0) then
-               write(2,*) 'Read error:',i,t,x,y,z
+      Do While (i_sequence.lt.100)  ! run over the full sequnce of files for this name
+         !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar)
+         datfile=datafile(i_datfil)
+         If(LastChar.ge.2) Then
+            If(datafile(i_datfil)(LastChar-1:LastChar-1).eq.'#') then
+               If(i_sequence.eq.0) Then
+                  datfile=datafile(i_datfil)(1:LastChar-2)
+                  RepackData=.true.
+               Else
+                  write(datfile,"(A,i2.2)") datafile(i_datfil)(1:LastChar), i_sequence
+               EndIf
+               i_sequence=i_sequence+1 ! exit when =0
+               !write(2,*) datfile
+            Elseif (i_datfil .eq. 1) Then
+               RepackData=.false.
+               !i_sequence=101  ! do not cycle
+            EndIf
+         EndIf
+
+
+
+
+         !   write(2,*) 'RepackData-1', RepackData, First29
+         !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar), i_sequence, datfile
+         !datfile=datafile(i_datfil)
+         FileMain=datfile  ! Base for output file
+         datfile=TRIM(DataFolder)//trim(datfile)
+         OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
+         If(nxx.ne.0) then   ! check weather this particular file can be opened
+            Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
+            Close(Unit=28)
+            NullRead=NullRead+1
+            If(NullRead.gt.10) Then  ! stop after 10 files that do not exist
+               exit
+            Else
                cycle
             EndIf
-         Endif
-         !write(2,*) 'no problem yet(1): ',Marker, i,t,x,y,z,width, chi2,  Stks(1:6)
-         If(marker.eq.'!') Then
-            cycle
-         ElseIf(marker.ne.'S') Then
-            write(2,*) 'problem: ',Marker, i,t,x,y,z,width, chi2
-            cycle
-         EndIf
+         Else
+            NullRead=0
+         endif
          !
-         if(x.le.xyztBB(1) .or. x.ge.xyztBB(2)) cycle
-         if(y.le.xyztBB(3) .or. y.ge.xyztBB(4)) cycle   ! [km]
-         if(z.le.xyztBB(5) .or. z.ge.xyztBB(6)) cycle
-         if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
-         if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
+   !            t_offset=TimeBase
+   !      If(AmplitudePlot.eq.Tiny) AmplitudePlot=AmpltPlotRead
+   !      t_start = t_start-t_offset
          !
-         !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,I20, SMPowCut,ISpr  ! already in proper units for plotting
-         If( I20 .lt. SMPowCut) cycle
-         If( chi2 .gt. chi2Cut) cycle
-         If( ISpr .gt. IntensSpread) cycle
-         !write(2,*) 'Passed: ',Marker, i,ISpr, SMPowCut,chi2, chi2Cut
-         SourcTotNr=SourcTotNr+1
-      ! Jan '25' chnged to NEh notatiom
-         RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=y ;  RA(3,SourcTotNr)=x ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
-         Label(1,SourcTotNr)=i
-         SrcWidth(SourcTotNr)= Width
-         SrcChi2(SourcTotNr)= Chi2
-         SrcISpr(SourcTotNr)= ISpr
-         SrcI20(SourcTotNr)= I20
-         SrcI3(SourcTotNr)= I3
-         SrcUn(SourcTotNr)= Un
-         SrcLin(SourcTotNr)= Lin
-         SrcCirc(SourcTotNr)= Circ
-         SrcPZen(SourcTotNr)= Zen
-         SrcPAzi(SourcTotNr)= Azi
-         Stk_NEh(1:6,SourcTotNr)= Stks(1:6)
-         if(SourcTotNr.eq.maxd) then
-            write(*,*) 'Max. dimension reached of', maxd,' at',i
-            write(2,*) 'Max. dimension reached of', maxd,' at',i,t
-            exit
+         ! Start actual reading
+         j=0
+         read(28,*,iostat=nxx) t_start
+         If(TimeBase.eq.tiny) then
+            TimeBase=t_start
          EndIf
-      enddo     ! loop over all source points in this file
-      Close(Unit=28)  ! following is mainly important for multiple files-reads
-      SourceNrIncr=SourcTotNr-PrevSourcTotNr
-      Write(2,"(A, A15,A,I6,A,I6, 4(1pg11.3))") 'After file: ',trim(FileMain), ', SourcTotNr=',SourcTotNr, &
-            ', increment=',SourceNrIncr
-      PrevSourcTotNr=SourcTotNr
+         t_offset=TimeBase
+         read(28,*,iostat=nxx) Marker  ! skip first comment line
+         do    ! loop over all source points in this file
+            nxx=0
+            Read(28,"(A1,A350)",IOSTAT=nxx) Marker, lineTXT
+            If (nxx.lt.0) Then    ! Write(2,*) 'EOF reached'
+               exit
+            Endif
+            read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+            If(nxx.gt.0) then
+               read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+               ISpr=0.
+               If(nxx.gt.0) then
+                  write(2,*) 'Read error:',i,t,x,y,z
+                  cycle
+               EndIf
+            Endif
+            !write(2,*) 'no problem yet(1): ',Marker, i,t,x,y,z,width, chi2,  Stks(1:6)
+            If(marker.eq.'!') Then
+               cycle
+            ElseIf(marker.ne.'S') Then
+               write(2,*) 'problem: ',Marker, i,t,x,y,z,width, chi2
+               cycle
+            EndIf
+            !
+            if(x.le.xyztBB(1) .or. x.ge.xyztBB(2)) cycle
+            if(y.le.xyztBB(3) .or. y.ge.xyztBB(4)) cycle   ! [km]
+            if(z.le.xyztBB(5) .or. z.ge.xyztBB(6)) cycle
+            if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
+            if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
+            !
+            !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,I20, SMPowCut,ISpr  ! already in proper units for plotting
+            If( I20 .lt. SMPowCut) cycle
+            If( chi2 .gt. chi2Cut) cycle
+            If( ISpr .gt. IntensSpread) cycle
+            !write(2,*) 'Passed: ',Marker, i,ISpr, SMPowCut,chi2, chi2Cut
+            SourcTotNr=SourcTotNr+1
+         ! Jan '25' chnged to NEh notatiom
+            RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=y ;  RA(3,SourcTotNr)=x ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
+            Label(1,SourcTotNr)=i
+            SrcWidth(SourcTotNr)= Width
+            SrcChi2(SourcTotNr)= Chi2
+            SrcISpr(SourcTotNr)= ISpr
+            SrcI20(SourcTotNr)= I20
+            SrcI3(SourcTotNr)= I3
+            SrcUn(SourcTotNr)= Un
+            SrcLin(SourcTotNr)= Lin
+            SrcCirc(SourcTotNr)= Circ
+            SrcPZen(SourcTotNr)= Zen
+            SrcPAzi(SourcTotNr)= Azi
+            Stk_NEh(1:6,SourcTotNr)= Stks(1:6)
+            if(SourcTotNr.eq.maxd) then
+               write(*,*) 'Max. dimension reached of', maxd,' at',i
+               write(2,*) 'Max. dimension reached of', maxd,' at',i,t
+               exit
+            EndIf
+         enddo     ! loop over all source points in this file
+         Close(Unit=28)  ! following is mainly important for multiple files-reads
+         SourceNrIncr=SourcTotNr-PrevSourcTotNr
+         Write(2,"(A, A15,A,I6,A,I6, 4(1pg11.3))") 'After file: ',trim(FileMain), ', SourcTotNr=',SourcTotNr, &
+               ', increment=',SourceNrIncr
+         PrevSourcTotNr=SourcTotNr
+         If(i_sequence.eq.0) exit ! to exit sequence loop
+      EndDo ! i_sequence loop
    Enddo
    write(2,*) 'Last event read:',i,' @ t=',t,'[s]'
    !

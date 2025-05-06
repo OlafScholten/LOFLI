@@ -13,6 +13,8 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
    use ThisSource, only : PeakNrTotal !,PeakNr,  PlotCCPhase, Safety, Nr_corr
    use ThisSource, only : PeakPos, ChunkNr
    use ThisSource, only : Alloc_ThisSource
+   use PredefinedTracks, only : PreDefTrackFile, t_track
+   use PredefinedTracks, only : GetTrPos, PreDefTrackFile, t_track
    !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    !#ifdef f2003
    !use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
@@ -61,7 +63,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
       If(nxx.ne.0) exit    ! end of input reached
    !      inquire(FILE = 'files/'//TRIM(Simulation)//'_'//Station_name(i_file)//'.udt', exist=UnformattedSimul)
       Open(Unit=InUnit, STATUS='old',ACTION='read', FILE=TRIM(datafolder)//TRIM(FlashFile),iostat=nxx)
-      If(nxx.ne.0) Then
+      If(nxx.ne.0) Then  ! failed to open the file, it does not exist.
          InUnit=stdin
          OldDatFile=.false.
          PlotFile=.false.
@@ -71,10 +73,32 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
             read(lname(2:InLineLength), *,iostat=nxx) k,t_r,x1,x2,x3  ! [--,tsource_ms,N_km,E_km,h_km]
             If(nxx.ne.0) Then    ! Try Auto Atrid input format
                Read(lname(2:InLineLength),*,iostat=nxx) StartTrace_ms, BoxCenter(1:3), WindowTime_ms  ! Start time
-               If(nxx.ne.0) Then
-                  Write(2,*) '*** error, expected: StartTrace_ms, BoxCenter(1:3), WindowTime_ms but got a non-fitting format'
-                  Stop 'ATRID reading error'
+
+
+
+               If(nxx.ne.0) Then  ! no CenLoc was given, but probably a track-name
+                  Read(lname(2:InLineLength),*,iostat=nxx) StartTrace_ms, PreDefTrackFile, t_track, WindowTime_ms
+                  write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:InLineLength))// &
+                     '" !  Core/Source-| time, & position --or--   -| Midtrack_time, Track_file, track_time', &
+                     'followed by WindowTime_ms'
+                  write(2,*) 'Try track definition at input: '
+                  Write(2,*) '*** StartTrace_ms, Track, t_track, WindowTime_ms but got a non-fitting format'
+                  Write(2,*) '***   for t_track>0: TRI-D @ position=[track @ t=t_track, increment], t=[StartTrace, fixed]'
+                  Write(2,*) '***   for t_track<0: TRI-D @ position=[track @ t=StartTrace], t=[StartTrace, increment]'
+                  If(nxx.ne.0) Then
+                     Write(2,*) '*** error, expected: StartTrace_ms, [BoxCenter(1:3) or track], WindowTime_ms '
+                     Stop 'ATRID reading error'
+                  EndIf
+                  If( t_track.gt.0.0 ) Then  !  t_track was specified
+                     Call  GetTrPos( t_track, BoxCenter(1:3))
+                  Else
+                     Call  GetTrPos( StartTrace_ms, BoxCenter(1:3))
+                  EndIf
+                  lname(1:1)='S'
                EndIf
+
+
+
                Call Convert2m(BoxCenter(1:3))
                Return
                !StartTrace_ms ! in source time
@@ -87,6 +111,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
             '. Assume lines from standard input where TimeBase is defined in Namelist'
          read(lname(2:InLineLength), *,iostat=nxx) k,t_r,x1,x2,x3, PkW ! [--,tsource_ms,N_km,E_km,h_km]
          If(nxx.eq.0) ATRIDinp=.true.  !  assume widths are given
+         If((PkW.gt.-7) .and. (PkW.lt.0)) write(2,*) '*************** Ridiculously small fixed value for width:', PkW
          !Stop 'SourcesDataFile not found'
       Else           ! Read from file
          Write(2,*) 'Reading Sources-Data File: "',TRIM(datafolder)//TRIM(FlashFile),'"'
@@ -191,6 +216,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
             exit
          EndIf
          !
+         !write(2,*) 'logicals:', OldDatFile, PlotFile, csvFile, ATRIDinp, PkW
          i_peak=i_peak+1
          If(PkW .eq. 0 ) PkW=N_Smth
          Source_Width(i_Peak)  = PkW
@@ -264,6 +290,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    use ThisSource, only : ChunkNr, SourcePos, PeakPos, Dual
    use ThisSource, only : PeakNr, PeakNrTotal, PeakChiSQ, TotPeakNr
    Use Interferom_Pars, only :  TIntens000
+   Use Interferom_Pars, only : ChainRun
    Use Interferom_Pars, only :  N_Smth, N_fit, smooth, i_chunk, BoundingBox, TRIDFile
    Use Interferom_Pars, only : SumStrt, SumWindw, NrSlices, SliceLen
    Use Interferom_Pars, only :  SlicePnts, PulsePos, PulseWidth, MaxNrSlPnts
@@ -277,6 +304,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    use GLEplots, only : GLEplotControl
    use ThisSource, only : Alloc_ThisSource
    use HDF5_LOFAR_Read, only : CloseDataFiles
+   use CPU_timeUsage, only : CPU_usage
    !
    Implicit none
    Real(dp), intent(inout) :: Chi2_Lim, IVol_Lim
@@ -309,7 +337,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    !BoxCenter(1:3) ! in [m]
    !
    write(2,"(A)") '===== Running Atrid in Auto-search mode with parameters:'
-   write(2,"(A,F11.5)") 'start time [ms] of the trace:',StartTrace_ms
+   write(2,"(A,F11.5)") 'middle time [ms] of the trace:',StartTrace_ms
    write(2,"(A,F8.6,A)") 'Length [ms] of the trace to be searched:',WindowTime_ms,', should not exeed 0.3 ms'
    write(2,"(A,3F9.4)") 'Center of the box (NEh, [km]) where search is performed:',BoxCenter(1:3)/1000.
    !
@@ -356,10 +384,18 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
 !      write(2,*) 'input for interferometry: ', SumStrt, SumWindw
    !
    !write(2,*) 'search window:', SumStrt,SumWindw, DeadEnd
-   Call WindowCutting(SumWindw, TIntens000(1:SumWindw), DeadEnd, Nmin, PulsePos, PulseWidth, SourceLabel_C, N_minima)
-   PeakNr_dim=N_minima
-   PeakNrTotal=PeakNr_dim
+   If(N_Smth.lt.7) Then
+      Call WindowCutting(SumWindw, TIntens000(1:SumWindw), DeadEnd, Nmin, PulsePos, PulseWidth, SourceLabel_C, N_minima, &
+         NoiseLevel )
+      PeakNr_dim=N_minima
+   Else
+      Call WindowCutting_N_Smth(N_Smth, SumWindw, TIntens000(1:SumWindw), DeadEnd, Nmin, PulsePos, PulseWidth, PeakNr_dim, &
+         NoiseLevel )
+!Subroutine WindowCutting_N_Smth(N_Smth, N_Window, Intens, DeadEnd, Nmin, SourcePos_C, SourceWidth_C, N_Pks)
+      SourceLabel_C(:)=.true.
+   EndIf
    !
+   PeakNrTotal=PeakNr_dim
    Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
    !
    TotPeakNr(0,:)=0
@@ -368,22 +404,25 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    !N_slice_default=N_Smth
    !
    Call GLEplotControl(SpecialCmnd='echo on')  ! to generate unit=10 with the proper name
-   flush(unit=2)
    !
    SlicePnts=.true.
    BoxSize=BoxSize_coarse
    BoxFineness=BoxFineness_coarse
    GridVolume(1:3)=BoxSize
    GridVolume(3)=2*BoxSize
-   NrPixSmPowTr=N_minima
+   NrPixSmPowTr=PeakNr_dim
+   Call CPU_usage
+   flush(unit=2)
    Call EI_run(GridVolume, BoxFineness)
    !
    Write(2,"(A,3F6.2,A,3I3,A,3F6.1,A,F5.2,10(' -'))") 'Coarse-grid round finished on grd-D:' &
          ,d_loc(1:3),', grd-#:',N_pix(1:3,2), ', Box size: p/m',N_pix(1:3,2)*d_loc(1:3),' m, Fineness=',BoxFineness
    Allocate( PeakWidth(1:PeakNr_dim) )
+   Call CPU_usage
    !
    i_peak=0
    write(2,"(A,F7.3,A)") 'Selecting peaks with max I_12 larger than ', NoiseLevel, ' @ coarse imagecube'
+   Flush(unit=2)
    Do k=1,NrPixSmPowTr ! Now perform fine search and determine chi^2
       ST_ms= StartTref_ms + (SumStrt+PulsePos(k))*sample_ms - tShift_ms(MaxSmPowLoc(:,k)) - TimeBase
       If(MaxSmPow(k) .lt. 0.) Then ! otherwise border case or below noise
@@ -397,10 +436,12 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
       write(2,"(I4,A,I5,A,I6, A,F11.6, A,3F9.4, A,I4, A,F10.2)") i_peak, ' = pulse#',k,', sample=', PeakPos(i_Peak), &
          ', t_source=', ST_ms, '[ms], NEh=', SourcePos(:,i_Peak)/1000., ', Window=', PeakWidth(i_Peak), ', I_12=',MaxSmPow(k)
       EndIf
+      Flush(unit=2)
    EndDo
    PeakNrTotal=i_peak
    !
    write(2,*) 'TimeBase=', TimeBase, ', total of ', PeakNrTotal,' sources kept out of', NrPixSmPowTr
+   Call CPU_usage
    flush(unit=2)
    Allocate( PeakStartChunk_ms(1:PeakNrTotal) )
    Allocate( OrignlSourcePos(1:3,1:PeakNrTotal), SourceIntensity(1:PeakNrTotal) )
@@ -446,6 +487,7 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
    Use Interferom_Pars, only : N_best, Grd_best, Int_best
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ, Chi2pDF
    Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm, Stk_NEh  !  calculated in "PolTestCath", called from EI_PolGridDel when (Outpt.ge.1); (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3)
+   Use Interferom_Pars, only : ChainRun
    Implicit none
    Integer, intent(in) :: PeakNrTotal,  Peakpos(1:PeakNrTotal)
    Real(dp), intent(in) :: BoxSize_coarse, BoxFineness_coarse, NoiseLevel
@@ -465,7 +507,7 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
   !
       BoxSize=(10.+BoxSize_coarse/3.)/2.
       BoxFineness=BoxFineness_coarse/3.
-      If(PeakNrTotal.lt.15 ) Then
+      If(PeakNrTotal.lt.15 .and. ChainRun.eq.0) Then
          ContourPlot=.true.
          !verbose=.true.
          verbose=.false.
@@ -536,6 +578,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    use ThisSource, only : ChunkNr, SourcePos, PeakPos, Dual
    use ThisSource, only : PeakNr, PeakNrTotal, PeakChiSQ
    Use Interferom_Pars, only :  TIntens000
+   Use Interferom_Pars, only : ChainRun, CenLoc
    Use Interferom_Pars, only :  N_Smth, N_fit, smooth, i_chunk, BoundingBox, TRIDFile
    Use Interferom_Pars, only : IntFer_ant,  Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Alloc_EInterfCalib_Pars
@@ -548,6 +591,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    use GLEplots, only : GLEplotControl
    use AReadPKI, only : ReadFlashImageDat
    use ATRIDA, only : AtridAuto
+   use CPU_timeUsage, only : CPU_usage
    !
    Implicit none
    Real(dp), intent(inout) :: Chi2_Lim, IVol_Lim
@@ -612,6 +656,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    !OPEN(UNIT=DataUnit,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'IntfPkSources.dat')
    !Write(DataUnit,*) PeakNrTotal,TRIM(OutFileLabel), 10.,' 0 0 0 0 0 0 0 ',0.1 ,  '1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
    write(2,*) 'Starting source analysis for',PeakNrTotal,' sources'
+   Call CPU_usage
    flush(unit=2)
    Do i_Peak=1,PeakNrTotal
 !      SrcQual(10,i_Peak)=0
@@ -636,7 +681,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
       !
       !write(2,*) 'TIntens000(1:2*N_smth+1)', TIntens000(1:2*N_smth+1)
       !Call WindowShift(N_Smth, smooth, TIntens000(1:2*N_smth+1), Sampl_shiftA, txt)
-      Call WindowOptimal(N_Smth, smooth, TIntens000(1:2*N_smth+1), N_Smth_new, Sampl_shiftA, PeakWidth(i_peak))
+      Call WindowOptimal(N_Smth, smooth, TIntens000(1:2*N_smth+1), N_Smth_new, Sampl_shiftA, PeakWidth(i_peak), NoiseLevel)
       Write(2,"(A,I4,A,I3,A,I4,A,I4,A)") 'Peak#',i_peak, ', time shift:',Sampl_shiftA,', window-length changed from ', &
          N_Smth,' to ',N_Smth_new, ' ---------------------------------'
       N_Smth=N_Smth_new
@@ -680,6 +725,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    !Close(Unit=DataUnit)
 9  continue
    !
+   Call CPU_usage
    MinSrcDist=BoxSize_coarse
    Call OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLevel, TimeBase, PeakStartChunk_ms, SourceTime_ms, &
          Peakpos, SourcePos,OrignlSourcePos, OrignlPeakpos, PeakWidth, Chi2, SourceIntensity, SourceIntSpread, SourceIntVol, I3,&
@@ -692,13 +738,14 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    !
    Call GLEplotControl( Submit=.true.)
    !
+   If(ChainRun.ne.0) Call ChainRuns(CenLoc, WindowTime_ms)
    Return
    !
    !====================================================================
    !
 End Subroutine PeakInterferoOption
 !-----------------------------------------
-Subroutine OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLevel, TimeBase, &
+Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLevel, TimeBase, &
          PeakStartChunk_ms, SourceTime_ms, Peakpos, SourcePos, &
          OrignlSourcePos, OrignlPeakpos, PeakWidth, Chi2, SourceIntensity, SourceIntSpread, SourceIntVol, I3, SourceStI, &
          SourceUn, SourceLin, SourceCirc, SourcePolMag, SourcePolZen, SourcePolAzi, SourcePoldOm,  Stk_NEh )
@@ -707,7 +754,7 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLe
    use GLEplots, only : GLEplotControl
    Implicit none
    Integer, intent(in) :: PeakNrTotal,  PeakWidth(1:PeakNrTotal), Peakpos(1:PeakNrTotal), OrignlpeakPos(1:PeakNrTotal)
-   Real(dp), intent(inout) :: Chi2_Lim, IVol_Lim
+   Real(dp), intent(in) :: Chi2_set, IVol_set
    Real(dp), intent(in) :: MinSrcDist, NoiseLevel, TimeBase, PeakStartChunk_ms(1:PeakNrTotal), SourceTime_ms(1:PeakNrTotal), &
       SourcePos(1:3,1:PeakNrTotal), Chi2(1:PeakNrTotal), SourceIntensity(1:PeakNrTotal), SourceIntSpread(1:PeakNrTotal), &
       SourceIntVol(1:PeakNrTotal), I3(1:PeakNrTotal), SourceStI(1:PeakNrTotal), &
@@ -717,7 +764,7 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLe
    Complex, intent(in) :: Stk_NEh(1:3,1:3,1:PeakNrTotal)
    Integer :: i_peak, k, Sam_peak, DataUnit, DataUnitp, Width_max, keep
    Real(dp) :: I20, StI, Chi2Mean, Chi2Var, SpreadMean, SpreadVar, Lin1, PolN, PolE, Polh, PolPlotScale, I3_lim  ! , Aspct_lim
-   Real(dp) :: IVolMean, IVolVar, Spread_lim  ! , Aspct_lim
+   Real(dp) :: IVolMean, IVolVar, Spread_lim, Chi2_Lim, IVol_Lim  ! , Aspct_lim
    Real(dp) :: tMin, tMax, BBx_min(1:3), BBx_max(1:3)
    character(len=2) :: txt
    character(len=4) :: txt2
@@ -728,7 +775,8 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLe
    !
    DataUnit=27  ! for storing more complete info on analyzed sources
    DataUnit=28  ! for storing information for plots
-   write(2,*) 'starting Output for the ATRID Imager'
+   write(2,*) 'starting Output for the ATRID Imager for',PeakNrTotal, ' sources'
+   If(PeakNrTotal.eq.0) return
    !
    Chi2Mean=0.
    Chi2Var=0.
@@ -752,18 +800,27 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_Lim, IVol_Lim, MinSrcDist, NoiseLe
    EndDo
    Chi2Mean=Chi2Mean/PeakNrTotal
    Chi2Var=sqrt((Chi2Var - Chi2Mean*Chi2Mean*PeakNrTotal)/(PeakNrTotal-1))
-   If(Chi2_Lim.lt.0) Then
+   If(Chi2_set.lt.0) Then
       !write(2,*) 'The input negative Chi2_Lim is set equal to Chi2_Lim=Mean+Sigma=',Chi2Mean+Chi2Var
       Chi2_Lim=Chi2Mean+Chi2Var
+   Else
+      Chi2_Lim=Chi2_set  ! Not to spoil limit setting when using ChainRun
    EndIf
    SpreadMean=SpreadMean/PeakNrTotal
    SpreadVar=sqrt((SpreadVar - SpreadMean*SpreadMean*PeakNrTotal)/(PeakNrTotal-1))
    IVolMean=IVolMean/PeakNrTotal
    IVolVar=sqrt((IVolVar - IVolMean*IVolMean*PeakNrTotal)/(PeakNrTotal-1))
-   IVol_lim=10.
-   If(IVol_Lim.lt.0) Then
+!   IVol_lim=10.
+   If(IVol_set.lt.0) Then
       !write(2,*) 'The input negative Chi2_Lim is set equal to Chi2_Lim=Mean+Sigma=',Chi2Mean+Chi2Var
       IVol_Lim=IVolMean+IVolVar
+   Else
+      IVol_Lim=IVol_set
+   EndIf
+   If(IVol_Lim.gt.888) Then
+      !write(2,*) 'The input negative Chi2_Lim is set equal to Chi2_Lim=Mean+Sigma=',Chi2Mean+Chi2Var
+      write(2,*) 'IVol limit tuned down from ', IVol_Lim,' to 888. which is still ridiculously large.'
+      IVol_Lim=888 ! when larger than 999.5 problems with the format of the .plt file
    EndIf
    !If(Spread_Lim.lt.0) Then
    !   !write(2,*) 'The input negative Chi2_Lim is set equal to Chi2_Lim=Mean+Sigma=',Chi2Mean+Chi2Var
@@ -1112,7 +1169,7 @@ Subroutine WindowShift(N_Smth, smooth, Intens, Sampl_shift)
 End Subroutine WindowShift
 !---------------------------------------
 !=====================================================
-Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
+Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW, A_Bckgr)
    ! Optimize window by
    ! a)  Find sample with max intensity
    ! b)  For up and down sides (within N_Smth):
@@ -1126,13 +1183,13 @@ Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
    use DataConstants, only : DataFolder, OutFileLabel
    Implicit none
    Integer, intent(in) :: N_Smth, PkW
-   Real(dp), intent(in) :: smooth(-N_Smth:N_Smth), Intens(-N_Smth:N_Smth)
+   Real(dp), intent(in) :: smooth(-N_Smth:N_Smth), Intens(-N_Smth:N_Smth), A_Bckgr
    Integer, intent(out) :: N_Smth_new, Sampl_shift
    !Character(len=*), intent(in) :: txt
    Integer :: i, j, i_d, i_u, i_max, MinLength, i_min
-   Real(dp) :: A_max, A_d, A_u, A
+   Real(dp) :: A_max, A_d, A_u, A, A_0
    Integer, parameter :: N_Smth_mh=4, N_Smth_min =2*N_Smth_mh ! Minimize size of window, should be even
-   Real(dp), parameter :: A_Bckgr=1.d0
+   !Real(dp), parameter :: A_Bckgr=1.d0
    !
    N_Smth_new=N_Smth
    Sampl_shift=0
@@ -1151,29 +1208,34 @@ Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
          A_max=A
       EndIf
    EndDo
+   !write(2,*) '!WindowOptimal; max', i_max,A_max, A_Bckgr
    !
    A_d=A_max ! find down side of window
    i_min=-N_Smth_mh
-   If(i_max.gt.0) i_min=i_max-N_Smth_mh
-   If(i_min.gt.0) i_min=0
-   Do i=i_min, -N_Smth, -1
+   If(i_max.lt.0) i_min=i_max-1
+!   If(i_min.gt.0) i_min=0
+   i=i_min+1
+   i_d=i ! down side of window
+   A_0=Intens(i)
+   A_d=A_0
+   Do i=i_min-1, -N_Smth, -1
       A=Intens(i)
-      !write(2,*) '!WindowOptimal; d', i,A, A_d
+      !write(2,*) '!WindowOptimal; d', i,A, A_d, ' i_d=', i_d
       If(A.lt.A_Bckgr) Then
-         A_d=A
-         i_d=i ! down side of window
-         Do j=i-1, -N_Smth, -1
+         Do j=i, -N_Smth, -1  ! 06/05/2025 changed: find first minimum in this stretch, othewise take j=0
             A=Intens(j)
-            If(A.gt.A_d) exit
+            If(A.gt.A_0) cycle  ! running uphill
+            If(A.gt.A_d) exit  ! running uphill, check time to stop
             A_d=A
             i_d=j ! down side of window
+            !write(2,*) '!WindowOptimal; dloop', i,A, A_d, i_d
          EndDo
-         !write(2,*) '!WindowOptimal; d1', i,A, A_d, i_d
+         !write(2,*) '!WindowOptimal; d1', j,A, A_d, ' i_d=', i_d
          exit
       ElseIf(A.le. A_d) Then
          i_d=i ! down side of window
          A_d=A
-         !write(2,*) '!WindowOptimal; d2', i,A, A_d, i_d
+         !write(2,*) '!WindowOptimal; d2', A_d, ' i_d=', i_d
       ElseIf(A.gt. A_max) Then
          exit
       EndIf
@@ -1184,24 +1246,27 @@ Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
    i_min=i_d+N_Smth_min
    If(i_min.lt.i_max) i_min=i_max+1 ! make sure to start beyond max, and minimal distance from low end
    If(i_min.lt.1) i_min=1
-   Do i=i_min, N_Smth
+   i=i_min-1
+   i_u=i ! down side of window
+   A_0=Intens(i)
+   A_u=A_0
+   Do i=i_min+1, N_Smth
       A=Intens(i)
-      !write(2,*) '!WindowOptimal; u', i,A, A_u, i_u
+      !write(2,*) '!WindowOptimal; u', i,A, A_u, ' i_u=', i_u
       If(A.lt.A_Bckgr) Then
-         A_u=A
-         i_u=i ! up side of window
-         Do j=i+1, N_Smth
+         Do j=i, N_Smth  ! 06/05/2025 changed: find first minimum in this stretch, othewise take j=0
             A=Intens(j)
-            If(A.gt.A_u) exit
+            If(A.gt.A_0) cycle  ! running uphill
+            If(A.gt.A_u) exit  ! running uphill again, time to stop
             A_u=A
             i_u=j ! up side of window
          EndDo
-         !write(2,*) '!WindowOptimal; u1', i,A, A_u, i_u, j
+         !write(2,*) '!WindowOptimal; u1', j,A, A_u, ' i_u=', i_u
          exit
       ElseIf(A.le. A_u) Then
          i_u=i ! up side of window
          A_u=A
-         !write(2,*) '!WindowOptimal; u2', i,A, A_u, i_u
+         !write(2,*) '!WindowOptimal; u2', A_u, ' i_u=', i_u
       ElseIf(A.gt. A_max) Then
          If(i_u.le.-N_Smth) Then
             i_u=N_Smth_mh
@@ -1211,16 +1276,16 @@ Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
             i_u=i_u-1
             If(i_d .gt. i_u-N_Smth_min) i_d=i_u-N_Smth_min
          EndIf
-         !write(2,*) '!WindowOptimal; u', i,A, A_max, i_u, i_d
+         !write(2,*) '!WindowOptimal; u',  A_max, ' i_u, i_d=', i_u, i_d
          exit
       EndIf
    EndDo
    !
    Sampl_shift=(i_u+i_d)/2
    N_Smth_new=i_u-i_d+1
-!   write(2,*) '!Optimal window', Sampl_shift, N_Smth_new, i_d, i_max, i_u, A_d , A_max,A_u
-!   write(2,*) '!Pulse-low', Intens(i_d-2:i_d+2)
-!   write(2,*) '!Pulse-hi', Intens(i_u-2:i_u+2)
+   !write(2,*) '!Optimal window', Sampl_shift, N_Smth_new, i_d, i_max, i_u, A_d , A_max,A_u
+   !write(2,*) '!Pulse-low:', i_d, i_d+1, Intens(i_d:i_d+1)
+   !write(2,*) '!Pulse-hi:', i_u-1, i_u, Intens(i_u-1:i_u)
    !Flush(unit=2)
 ! on entry WindowOptimal          13          13
  !Optimal window          -1          11          -6          -3           4   4.5137780861166404E-002   5.9222742791737136E-002   4.8830912471730346E-002
@@ -1237,12 +1302,47 @@ Subroutine WindowOptimal(N_Smth, smooth, Intens, N_Smth_new, Sampl_shift, PkW)
    Return
 End Subroutine WindowOptimal
 !---------------------------------------
-Subroutine WindowCutting(N_Window, Intens, DeadEnd, Nmin, SourcePos_C, SourceWidth_C, SourceLabel_C, N_minima)
+Subroutine WindowCutting_N_Smth(N_Smth, N_Window, Intens, DeadEnd, Nmin, SourcePos_C, SourceWidth_C, N_Pks, NoiseLevel)
+!  This cutting routine selects the windows close in length to N_Smth
+   use constants, only : dp
+   !use DataConstants, only : DataFolder, OutFileLabel
+   Implicit none
+   Integer, intent(in) :: N_Smth, N_Window, DeadEnd, Nmin
+   Real(dp), intent(in) :: Intens(1:N_Window), NoiseLevel
+   Integer, intent(out) :: SourcePos_C(0:Nmin), SourceWidth_C(0:Nmin)
+   Integer, intent(out) :: N_Pks
+   Integer :: i,k, N_Smth_new, NSmth, Sampl_shift
+   Integer, parameter :: MinLength=7
+   Real(dp) :: smooth(-N_Smth:N_Smth)  ! a dummy
+   NSmth=2*(N_Smth/2)  ! make sure N_Smth is even
+   k=0
+   If(NSmth.lt.MinLength) stop "N_Smth too small"
+   If(NSmth.gt.2*DeadEnd) stop "Dead end"
+   i=DeadEnd+NSmth/2
+   !write(2,*) i, DeadEnd, NSmth
+   Do while ( i.lt.(N_Window-2*DeadEnd))
+      !write(2,*) '!WindowOptimal; Minimab',i,k
+      !      Flush(unit=2)
+      If(k .ge. Nmin) exit
+      k=k+1
+      ! Do not skip any part of the trace searching for the max
+      !write(2,*) 'Cutting_N_',k,' search window:',i-NSmth/2, i+NSmth+NSmth/2+1
+      Call WindowOptimal(NSmth, smooth, Intens(i-NSmth/2:i+NSmth+NSmth/2+1), N_Smth_new, Sampl_shift, NSmth, NoiseLevel)
+      SourcePos_C(k)=i + NSmth/2 +Sampl_shift
+      SourceWidth_C(k)=N_Smth_new
+      !write(2,*) 'Cutting_N_',k,' found cutting:',SourcePos_C(k)-N_Smth_new/2, SourcePos_C(k)+N_Smth_new/2
+      i=SourcePos_C(k)+ N_Smth_new/2
+   EndDo
+   N_Pks=k
+End Subroutine WindowCutting_N_Smth
+!---------------------------------------
+Subroutine WindowCutting(N_Window, Intens, DeadEnd, Nmin, SourcePos_C, SourceWidth_C, SourceLabel_C, N_minima, NoiseLevel)
+!  This cutting routine selects the windows with minimal length to cover a pulse
    use constants, only : dp
    !use DataConstants, only : DataFolder, OutFileLabel
    Implicit none
    Integer, intent(in) :: N_Window, DeadEnd, Nmin
-   Real(dp), intent(in) :: Intens(1:N_Window)
+   Real(dp), intent(in) :: Intens(1:N_Window), NoiseLevel
    Integer, intent(out) :: SourcePos_C(0:Nmin), SourceWidth_C(0:Nmin)
    Logical, intent(out) :: SourceLabel_C(0:Nmin)
    Integer, intent(out) :: N_minima
@@ -1294,7 +1394,7 @@ Subroutine WindowCutting(N_Window, Intens, DeadEnd, Nmin, SourcePos_C, SourceWid
          smooth_T(:)=0.
          smooth_T(-N_Smth_T/2:N_Smth_T/2)=1./N_Smth_T
          Intens_T(-N_Smth_T:N_Smth_T)=Intens(i_max-N_Smth_T:i_max+N_Smth_T)
-         Call WindowOptimal(N_Smth_T, smooth_T, Intens_T, N_Smth_new, Sampl_shift, N_Smth_T)
+         Call WindowOptimal(N_Smth_T, smooth_T, Intens_T, N_Smth_new, Sampl_shift, N_Smth_T, NoiseLevel)
          DeAllocate( smooth_T, Intens_T )
          SourcePos_C(k)=i_max+Sampl_shift
          SourceWidth_C(k)=N_Smth_new
@@ -1655,4 +1755,5 @@ Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness,
 End Subroutine PeakInterferometerRun
 !-------------------------------------------------------------
 !=========================================
-!!==========================
+
+!=========================================

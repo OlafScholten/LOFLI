@@ -739,6 +739,11 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
       i_s2=SumWindw-N_smth/2
    EndIf
    Do i_s=1,NrSlices ! in reality runs over full window (NrSlices=1)
+      !write(2,*) 'EIAnalyze...',I_s,NrSlices,i_s1, i_s2,SliceLen, i, SumWindw, N_smth, SlicePnts,PulsePos(i),PulseWidth(i)
+      !write(2,*) 'EIAnalyze.. pos.',PulsePos(1:3)
+      !write(2,*) 'EIAnalyze..width',PulseWidth(1:3)
+!  EIAnalyze...           1           1           0           3           3           0           2
+      Flush(unit=2)
       If(NrSlices.eq. 1) Then
          Do j=i_s1, i_s2 ! over full window (NrSlices=1) except the initial and final tails
             SlcInten(i_s)=SlcInten(i_s) + PixelPower(j)

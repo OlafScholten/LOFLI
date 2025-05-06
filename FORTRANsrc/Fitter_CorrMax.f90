@@ -512,7 +512,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                     endif
                 enddo
             endif
-            write(2,*)
+            write(2,"(A,I3,I2,A,f7.2)") '; i_src=',SourceNr(i_Peak),i_eo,', Chi^2/DegrF=', PeakChiSQ(i_Peak)
             write(2,"(A)", ADVANCE='NO') 'Stat Nr ='
             Do i_stat=1, Station_nrMax
                 If(Cnt(i_stat) .ne. 0) then
