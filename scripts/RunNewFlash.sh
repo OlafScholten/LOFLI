@@ -47,8 +47,8 @@ cp ${ParentDir}/{*.sh,*.in,*.bat} ${MainDir}/${NewFlashFolder}
 chmod 764 *.sh
 ls -l
 # copying is finished now, time to become productive
-ls ${ArchiveDir}/*.h5  >directory.out
-#ls ~/kaptdata/lightning_data/2019/D20190424T210306.154Z/*.h5  >directory.out
+ls ${ArchiveDir}/*.h5  >Book/directory.dat
+#ls ~/kaptdata/lightning_data/2019/D20190424T210306.154Z/*.h5  >Book/directory.dat
 
 nohup ./RFI_Mitigation.sh  >RFI_Mitigation.log 2>&1  &   
 echo RFI_Mitigation was submitted, now wait.
