@@ -34,8 +34,8 @@ The file names to be processed are read from  \verb#`Simulate.in'# and \verb#`Si
 \item[6] \verb#'! FracGalacNoisePow=0.5'#: relative fraction of galactic noise to the total noise. Galactic noise has a 1/frequency spectrum, while instrumental noise is taken to be flat. In actual calculations this hardly matters.
 \item[7] \verb#' OutFileLabel="tst",'#:  Additional label for results files.
 \item[8] \verb#'   0.0  20.35,   18.65,    4.15,      -200.0 200. 300.   '#:  A point source is put at time=0 [samples] and position (N,E,h)=(20.35, 18.65, 4.15)~km with dipole strength in direction (N,E,h)=(-200.0 200. 300.). A dipole strength of 1. will show with the same amplitude as the noise when the source is placed at a favorable angle at a distance of 1~km from the antenna. There may be many lines like this one. Note that the times of the produced traces is shifted such as to put the first source at sample 200 for the reference antenna.
-\item[9] \verb#' Cloud 40. 10. 0.1 1000  '#: Put a cloud of 1000 single point-sources as specified in the following line with a standard deviation of spread in time of 40~[samples], in 3D-position of 10~[m], and in 3D-polarization of 0.1
-\item[11] \verb#' Repeat 150 4'#:  Place 4 sources with the same properties at the same position at time intervals of 150 samples.
+\item[9] \verb#' Cloud 40. 10. 0.1 1000  '#: Put a cloud of 1000 single point-sources as specified in the following line with a standard deviation of a Gaussian spread in time of 40~[samples], in 3D-position of 10~[m], and in 3D-polarization of 0.1 (which is tiny in this example where the polarization vector is [-20.0, 20., 30.])
+\item[11] \verb#' Repeat 150 4'#:  Place 4 sources with the same properties at the same position (as specified on the following line) at time intervals of 150 samples. The "Repeat" may also be followed by a "Cloud" specification.
 \end{enumerate*}
 
 \subsection{Output files and print-out}%\seclab{RFI-out}

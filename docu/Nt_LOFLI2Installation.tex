@@ -34,14 +34,15 @@ gfortran & gnu fortran compiler, present on most Linux systems.\\
 \\fftpack & Basic FFT routines.  Source code is included in this distribution.\\
 & Download from: \href{http://www.netlib.org/fftpack/}{FFTPACK}; the double precision version is used.
 \\lapack & Advanced linear algebra routines.\\
-& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/lapack/}{LAPACK}.
+& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/lapack/}{LAPACK}$^*$.
 \\blas & Basic linear algebra routines.\\
-& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/blas/}{BLAS}.
+& Present on Linux systems, for Windows, download from: \href{https://www.netlib.org/blas/}{BLAS}$^*$.
 \\hdf5-fortran & Allows random access to compressed data files with \href{https://portal.hdfgroup.org/display/support}{.h5} extension.\\
 & Download from: \href{https://www.hdfgroup.org/downloads/hdf5/}{Linux} and \href{https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.6/hdf5-1.6.7/src/unpacked/release_docs/INSTALL_Windows.txt}{Windows}
 \\
 GLE & Principal plotting utility \cite{GLE}.\\
-& Download from: \href{https://glx.sourceforge.io/index.html}{sourceforge}. The shortcut ``gle" should start running the gle program.
+& Download from: \href{https://glx.sourceforge.io/index.html}{sourceforge}. The shortcut ``gle" should start running the gle program.\\
+$^*$ & On some Linux systems the ``Lapack'' and the ``Blas'' libraries do not link properly with Fortran and one is advised to use ``openblas'' to replace both.
 \\\hline
 \end{tabular}
 \end{table}
@@ -76,9 +77,14 @@ where you should be careful not to add spaces around the = sign.
 \end{tabular}
 \end{table}
 
+When using the openblas library make in `ShortCuts.sh' the substitutions \\
+   BLASlib="/usr/lib64/libopenblas.so"\\
+   LAPACKlib=""
+
+
 \subsection{Windows installation of LOFLI-2.0}
 
-This installation is very similar to that for Linux, except for some `insignificant' differences as all scripts have the extension ``.bat" in stead of ``.sh"., using `$\backslash$' in stead of `/' for folders, and `\%...\%' for using environment variables in stead of `\${...}'. 
+This installation is very similar to that for Linux, except for some `insignificant' differences as all scripts have the extension ``.bat" in stead of ``.sh"., using `$\backslash$' in stead of `/' for folders, and `\%...\%' for using environment variables in stead of `\${...}'.
 
 Start by setting the system variable {\small \verb!LL_Base! } to point to the folder where LOFLI will be installed. To do so, edit the system variables for your windows system. The instructions given in {\small \verb!ModifyingWindowsParameters.docx! } in folder `docu' tell you how to do so. Add a variable named ``LL\_Base" to point to the directory where the LOFLI package is installed, on my system:\\
 {\small \verb!"C:\Users\Olaf Scholten\Documents\AstroPhys\Lightning\LOFLI"! }\\

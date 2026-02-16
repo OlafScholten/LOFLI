@@ -1,8 +1,9 @@
 
 \section{RFI mitigation}\seclab{RFIm}
 
-The purpose of \verb!"RFI_Mitigation.sh"! is to pre-process the data-files for a single flash and in the process determine the frequency notch filters to mitigate RFI. The RFI filter data is written to \verb!"Book/RFI_Filters.uft"! of the main flash-working directory `FlashFolder'. The file names to be processed are read from the file \verb!"directory.out"! (should be in the FlashFolder) as was created by the script \verb!"NewFlash.sh"!. The script \verb!"NewFlash.sh"! should have automatically started the running of \verb!"RFI_Mitigation.sh"!.
+The purpose of \verb!"RFI_Mitigation.sh"! is to pre-process the data-files for a single flash and in the process determine the frequency notch filters to mitigate RFI. The RFI filter data is written to \verb!"Book/RFI_Filters.uft"! of the main flash-working directory `FlashFolder'. The file names to be processed are read from the file \verb!"directory.dat"! (should be in the `Book' subfolder of FlashFolder) as was created by the script \verb!"NewFlash.sh"!. The script \verb!"NewFlash.sh"! should have automatically started the running of \verb!"RFI_Mitigation.sh"!.
 
+When processing HBA data a file \verb!"H_directory.dat"!  should be present in the `Book' folder, listing the files containing HBA data. 
 
 The files will be processed in the order as listed in \verb!"directory.out"!
 where the \note{ second } station in the directory listing will be used as the reference station later in imaging (to change this replace the ``2" on the line \verb!"${ProgramDir}$Prog ${AntennaFieldsDir} 2"! by the appropriate number in \verb!"RFI_Mitigation.sh"!). Be careful to set here a station that is in a rather dense part of the array, preferably be it  CS002.
@@ -14,7 +15,7 @@ The script \verb!"RFI_Mitigation.sh"! takes a while to run. At the end it will s
 
 \subsection{Additional details}
 
-All files in the directory listing given in \verb!"'directory.out'"! are scanned. If 9 of the first 100 data-chunks of a specific antenna are non-zero an RFI analysis is made otherwise the antenna is omitted from further analysis. The amplitudes of the 9 frequency spectra are summed. In the range of 25 to 79~MHz. A running (inclined) straight line fit is made over 2~MHz. When the amplitude is larger that the average (from the line-fit) that frequency is filtered out. In addition the power in this frequency range is determined as the sum of the square amplitude (in frequency). This power will later be used to normalize spectra. The antenna positions are obtained from the files in directory \verb!"AntennaFields/"! (in ``MainDir") and written to the auxiliary file.
+All files in the directory listing given in \verb!"'directory.dat'"! are scanned. If 9 of the first 100 data-chunks of a specific antenna are non-zero, an RFI analysis is made otherwise the antenna is omitted from further analysis. The amplitudes of the frequency spectra are summed for those data chuncks that have a sufficiently small power. In the range of 25 to 79~MHz. (for HBA 109 -- 170~MHz)  a running (inclined) straight line fit is made over 2~MHz. When the amplitude is larger that the average (from the line-fit) that frequency is filtered out. In addition the power in this frequency range is determined as the sum of the square amplitude (in frequency). This power will later be used to normalize spectra. The antenna positions are obtained from the files in directory \verb!"AntennaFields/"! (in ``MainDir") and written to the auxiliary file.
 
 \subsection{Figures and print-out}\seclab{RFI-out}
 

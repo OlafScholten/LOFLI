@@ -34,7 +34,7 @@ For generating a flash image the following parameters may also be important, bes
 Specific options when using data from the impulsive imager, with their default value. All determine the quality conditions a source should obey to be plotted.
 \begin{enumerate*}
 \item \verb!RMS_ns= 4.0!: condition [$\sqrt(\chi^2) <$ \verb!RMS_ns!] in units [ns].
-\item \verb!DelNEff= 25 ! (integer): condition when [\verb!DelNEff! $>0$] is [(\# of available antennas) - (\# number of used antennas)) $\leq$ \verb!DelNEff! ], where (\# of available antennas) is the number of antennas that have data for this source and (\# number of used antennas) is the number of antennas where the pulse from this source could be identified unambiguously.
+\item \verb!DelNEff= 5 ! (integer): condition when [\verb!DelNEff! $>0$] is [(\# of available antennas) - (\# number of used antennas)) $\leq$ \verb!DelNEff! ], where (\# of available antennas) is the number of antennas that have data for this source and (\# number of used antennas) is the number of antennas where the pulse from this source could be identified unambiguously.
 \item \verb!LinCutH= 2.0!: condition: [$\sigma_h \times h <$ \verb!CutSigmaH! $\times$ \verb!LinCutH!] when [$h < $\verb!LinCutH!], unit [km], where $\sigma_h$ is the error in the altitude of a source as estimated by the impulsive imager at altitude $h$. The error in altitude is usually larger than those in Northing or Easting of the source. Additionally it is seen that this error grows with the altitude of the source which is the reason for the linear dependence. This quality indicator is particularly important when imaging ground strokes.
 \item \verb!CutSigmaH= 17.0!: see above.
 \item \verb!QualPlot= F !(logical): make a scatter plot of different quality indicators to investigate their correlations.
@@ -57,113 +57,163 @@ Some Generic options when using data from both imagers, with their default value
 \item \verb!tCutl= 0.0!: lower end of block filter in time.
 \item \verb!tCutu= 0.0!: upper end of block filter in time. This allows for blocking-out a single bright source that may even be outside the windowed area, but enters the picture through `side beams'.
 \item \verb!BckgrFile= ""!: name of file that is displayed as a grey background plot.
-\item \verb!ZoomBox= "NoBox" !:  name of the plot that zooms-in on a section of the present plot. This produces a box in the figure indicating the zoomed-in area. This option is used frequntly, see for example Ref.~\cite{Scholten:2021-HANL}.
+\item \verb!ZoomBox= "NoBox" !:  name of the plot that zooms-in on a section of the present plot. This produces a box in the figure indicating the zoomed-in area. This option is used frequently, see for example Ref.~\cite{Scholten:2021-HANL}.
 \item \verb!AmplitudePlot=!  (Imp: =-1.00 ; TRI-D: =10.0): it sets the diameter of the largest symbols used in the plot. When zero or negative, a fixed size dot will be used for all points, independent of their intensity. Additionally the panel showing the intensity spectrum will not be shown.
 \item \verb!NEhtBB=!: an alternative way to specify the bounding box using Northing, Easting, Altitude, and Time.
 \end{enumerate*}
 
-
-\begin{figure}[th]
-\centering{\includegraphics[width=0.49\textwidth]{Figs/Imp_18D1e-i} }
-\centering{\includegraphics[width=0.49\textwidth]{Figs/T-b-D3Repack} }
-%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
-	\caption{Typical image for the Impulsive Imager (left) and the TRI-D imager (right) as created by running ``DataSelect.bat". Light blue band is the reconstructed track (starting from the latest point and tracing back). Top panel give pulse power statistics where the modified exponential is plotted in red and the modified power law plotted in blue.}	 \figlab{ImpulsiveImg}
-\end{figure}
-
-
-The produced .dat files are plain text files and contain some header lines with some general information followed by the specific data of the sources. The files have a format that is suitable for the plotting script \verb!"SourcesPlot.gle"!.
-
-
-Two gle-scripts \verb#'%UtilDir%Intensity.gle'# and \verb#'%UtilDir%SourcesPlot.gle'# make the following plots.
-
-\begin{figure}[h]
-\setlength{\unitlength}{.48\textwidth} % .43\textwidth}
-   \subfloat[Figure `IntfSpecSel']{ \includegraphics[width=\unitlength]{Figs/Mx_dIntfSpecSel}  \figlab{InterfSrc-Spec}}
-   \subfloat[Figure `AmplFit']{ \includegraphics[width=\unitlength]{Figs/Mx_dAmplFit}  \figlab{InterfSrc-Ampl}}
-	\caption{Top panel in \figref{InterfSrc-Spec} shows the intensity distribution of the sources and two fits (that obviously do not resemble the data for this case). The lower panels the usual way of plotting the sources where the size of the circles reflects the intensity.
-\figref{InterfSrc-Ampl} displays an attempt to fit the pulse-strength distribution.}	 \figlab{InterfSrc}
-\end{figure}
-
-Obviously more writing needs be done, but this is it for the time being.
+After finishing selecting the data to be put in images the program spawns a job to run the gle scripts for generating the figures as described in \secref{DS-output}.
 
 \subsection{Track finding}
 
-Produces, among other aspects of a leader, the velocity distribution along the leader track as used in Ref.~\cite{Scholten:2021-RNL}
+Produces, among other aspects of a leader, the velocity distribution along the leader track as used in Ref.~\cite{Scholten:2021-RNL}.
 
 Some Generic options when using data from both imagers, with their default value:
 \begin{enumerate*}
-\item \verb!NLongTracksMax= 0 !: Maximum number of tracks to include in plot
-\item \verb!MaxTrackDist= !: Max. distance between sources to include on a track.
-\item \verb!Wtr=!: Weight of newest source for track centroid.
-\item \verb!Aweight= 0.0!: Importance of intensity in weight of newest source for track centroid.
-\item \verb!TimeWin=!: [ms]. Width of gaussian in time to weigh the sources for mean track position.
-\item \verb!PreDefTrackFile= ""!: Label of file that contains a track to be included.
-\item \verb!dt_MTL=!: [ms]. Time-step for constructing tracks.
-\item \verb!HeightFact= 0.0!: Relative height scale for calculating distances.
-\item \verb!SrcDensTimeResol=!: [ms]. Source Density Time Resolution.
+\item \verb!NLongTracksMax= 0 !: Maximum number of tracks to be constructed and analyzed.
+\item \verb!PreDefTrackFile= ""!: Label of file that contains a track to be included. This may be useful if you have analyzed these sources before and want to refine the track structure.
+\item \verb!MaxTrackDist= !: Max. distance between sources to be include on a track.
+\item \verb!Wtr=!: Weight of newest source for calculating the new track-head position and weight.
+\item \verb!Aweight= 0.0!: Importance of intensity in calculating the weight of a source, $Weight=(I \times Aweight+1.)$.
+\item \verb!TimeWin=!: [ms]. Once all sources belonging to a track have been found, this specifies the width of gaussian in time to weigh the sources to construct the smoothed track position.
+\item \verb!dt_MTL=!: [ms]. Time-step for binning the smoothed tracks as written to a file with extension ``.trc''. This is used in the plots for showing the tracks and may also be used in the TRI-D imager to follow a track, see option `ChainRun',  \secref{ChainRun}.
+\item \verb!HeightFact= 0.0!: Relative height scale for calculating distances. Since usually the resolution in height is worse than in the horizontal coordinates, the height differences are scaled by this factor.
+\item \verb!SrcDensTimeResol=!: [ms]. Source Density Time Resolution used to construct the `burstiness' of a track when making a fourier decomposition of the track density.
 \end{enumerate*}
 
+The code tried to organize the sources into tracks. A track are a series of sources that can be ordered, based on the settings of the other parameters. If the number of sources in a track is larger than 20 (hard coded, not an input parameter) the track is considered to be long and worth keeping for further analysis. \verb!NLongTracksMax ! should not exceed 9. For the sources that are assigned to a track a smooth average curve is constructed. The distribution of the sources around this curve is calculated as well as the propagation speed.
 
-\begin{figure}[th]
-\centering{\includegraphics[ width=0.49\textwidth]{Figs/TrSc_18D1e-i} }
-%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
-	\caption{Typical image for the Impulsive Imager when showing the statistics along a track.}	 \figlab{ImpulsiveTrack}
-\end{figure}
-
-If the 7th number on the second line in the input, ``FlashImage.in", is positive, a graph like \figref{ImpulsiveTrack} is made for each track. The second panel from the top shows the pulse density along the flash as function of time for various width of a gaussian smoothing function. The top panel shows the fourier decomposition of this plot. The third from the top gives the velocity along the track. The blue line for each source along the track, the red line for an average leader-tip location. The bottom three panels show the spread of the sources in the three directions from the propagating tip of the leader, in blue as a scatter plot v.s.\ time of the source (top and right scales), in red as a histogram (bottom and left scales).
-
-For TRI-D based images a Principal Component analysis is performed on the direction of the polarization vector for each slice and a plot is make.
-
-\subsection{Power spectrum}
-Produces a power-law fit to source intensities, much like what was used in Ref.~\cite{Machado:2021, Scholten:2021-INL}
-
-Some Generic options when using data from both imagers, with their default value:
-\begin{enumerate*}
-\item \verb! MaxAmplFitPercent= 0.1 !: Max amplitude fitted with modifies power law. (TRI-D only?)
-\end{enumerate*}
-
-The result is displayed in \figref{ImpulsiveImg} for the image of the flash for the selected area. The normalized pulse powers distributions $N(I)$ are fitted with a modified exponential,
-\begin{equation}
-N(I)= {\cal N}_e \,e^{-\alpha_e\,I-\gamma_e/I^2}\;, \eqlab{PowLaw}
-\end{equation}
-as well as with a modified powerlaw,
-T\begin{equation}
-N(I)= {\cal N} \,I^{-\alpha}  \,e^{-\gamma/I}\;, \eqlab{PowLaw}
-\end{equation}
-where $I$ is expressed in units of [GB]. The last factor, dependent on $\gamma$, suppresses the distribution at small amplitudes to good agreement with the data. The values for the fitted values for the normalization ${\cal N}$, the power $\alpha$, and the small-intensity suppression factor $\gamma$ are given in the output file (with extension .out).
-
-The out file %\verb#'IntfrSrcSel.out'# looks like
-
-\begin{linenumbers}
-\tiny
-\resetlinenumber
-\begin{verbatim}
- ======================  Mx_d
- After file:files/IntfSpecPowMx_d.dat, SourcTotNr=          59
- Time span data=   343.94184999999999        343.94967000000003
-Amplitudes (#=      59), max@ 198243.0, 5-pctile@********, 10-pctile@87401.70
-Amplitude with   0.001pctile as included in fit @********
- $b *exp(-a*A-c/A^2); \chi^2=$  0.98,with  a,b,c=  0.0023 0.903E-05   0.00    ; nrm=  0.805E+05
- $b *A^-a *exp(-c/A); \chi^2=$  0.97,with  a,b,c=   4.023 0.156E+07   0.00    ; nrm=  0.805E+05
- $b *exp(-a*A-c/A^2); \chi^2=$  0.98,with  a,b,c= 0.2304E-020.9031E-05   0.00    ; nrm=   6.10      0.805E+05
- $b *A^-a *exp(-c/A); \chi^2=$  0.97,with  a,b,c=  4.023    0.1562E+07   0.00    ; nrm=   7.04      0.805E+05
- number of sources in plots:          59   1000.0000000000000      Mx_dIntfSpecSel
- ======================  End input
-\end{verbatim}
-\end{linenumbers}
-
-Showing the number of points that fall within the plot boundary. A fit is made to the power spectrum for different functional dependencies and the resulting parameters are specified.
+A track is constructed in a dynamic process where for each source, in reverse time ordering, the distance to all active tracks is calculated. If this distance obeys certain conditions the new source is added to the nearest track and the new head position is calculated using a weighting procedure. At the end the long tracks are time-binned and the data for the long tracks are written to file.
 
 \subsection{Space-time correlation}
 
 Produces the space-time correlation plots as used in Ref.~\cite{Wang:2023}
 
-The calculation of TD correlators requires positive values for "Corr\_dD" and "Corr\_Dnr"
+The calculation of space-time correlations requires positive values for "Corr\_dD" and "Corr\_Dnr"
 \begin{enumerate*}
 \item \verb!Corr_dD !: Distance step size for time-distance correlator.
-\item \verb!Corr_Dnr!: max. number of distance bins for time-distance correlator.
-\item \verb!Corr_dtau=!: Time step size for time-distance correlator.
+\item \verb!Corr_Dnr!:  max. number of distance bins for time-distance correlator.
+\item \verb!Corr_dtau=!: [km] Time step size for time-distance correlator.
 \end{enumerate*}
 
+\subsection{Output and figures} \seclab{DS-output}.
+
+
+\begin{figure}[th]
+%\setlength{\unitlength}{.48\textwidth} % .43\textwidth}
+\subfloat[Impulsive]{\includegraphics[bb=0.0cm 0.0cm 23.5cm 30.7cm,clip, width=0.49\textwidth]{Figs/I-18D-1e-i} \figlab{SI-Imp} }
+\subfloat[TRI-D]{\includegraphics[bb=0.0cm 0.0cm 23.5cm 34.0cm,clip, width=0.49\textwidth]{Figs/T-b-D3Repack}  \figlab{SI-TRI-D} }
+%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
+	\caption{Typical image for the Impulsive Imager (left) and the TRI-D imager (right) as created by running ``DataSelect". Light blue band is the reconstructed track (starting from the latest point and tracing back). Top panel give pulse power statistics where the modified exponential is plotted in red and the modified power law plotted in blue.}	 \figlab{SourceImg}
+\end{figure}
+
+The principle out of this program ar the well-known images of sources as shown in \figref{SourceImg}.
+The input used for the left image is
+{%\tiny
+\scriptsize
+%\footnotesize
+\begin{verbatim}
+&Parameters  datafile="Srcs18-evenS", RMS_ns= 2.5 , DelNEff=5, PlotName="e-i",
+ xyztBB= -30.00 -27.  -7.5 -5.0  4.5 7.0  -1. 30.0
+ NLongTracksMax=1, MaxTrackDist=0.1, Wtr=0.5, Aweight=1., TimeWin=0.25,
+&End
+\end{verbatim}
+}
+which is reading the sources from ``\verb!Srcs18-evenS.csv !'', created by running the impulsive imager for flash 18D-1.
+
+The image on the right of \figref{SourceImg} by
+{%\tiny
+\scriptsize
+%\footnotesize
+\begin{verbatim}
+&Parameters  datafile="b-D3Repack" ,  SMPowCut = 1.e3 ,  AmplitudePlot=10.  ! datafile="b-D3#+"
+ xyztBB= -27.5 -26  -12.5 -11.5  6.5 8.1   826.1 826.3
+NLongTracksMax=1, MaxTrackDist=0.5, Wtr=0.5, TimeWin=0.01,
+&End
+\end{verbatim}
+}
+which is reading the sources from ``\verb!files/b-D3RepackTRID.plt !'', created by running the \verb!DataSelect! with parameter ``\verb!datafile="b-D3#+"!'' that reads the output from a chain of TRI-D imager runs.
+
+\subsubsection{Power spectrum}
+
+Produces a power-law fit to source intensities, much like what was used in Ref.~\cite{Machado:2021, Scholten:2021-INL}
+
+Some Generic options when using data from both imagers, with their default value:
+\begin{enumerate*}
+\item \verb! MaxAmplFitPercent= 0.1 !: Max amplitude that is included in the with modified power-law fit.
+\end{enumerate*}
+
+
+\begin{figure}[th]
+\centering{\includegraphics[ width=0.49\textwidth]{Figs/I-18D-1e-iAmplFit} }
+%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
+	\caption{Typical image for the Impulsive Imager of the source intensities.}	 \figlab{ImpulsivePower}
+\end{figure}
+
+The result is displayed in \figref{ImpulsivePower} for the image of \figref{SI-Imp} and the top panel of \figref{SI-TRI-D}.
+
+The normalized pulse powers distributions $N(I)$ are fitted with a modified exponential,
+\begin{equation}
+N(I)= {\cal N}_e \,e^{-\alpha_e\,I-\gamma_e/I^2}\;, \eqlab{PowLaw}
+\end{equation}
+as well as with a modified powerlaw,
+T\begin{equation}
+N(I)= {\cal N} \,I^{-\alpha}  \,e^{-\gamma/I}\;, \eqlab{mPowLaw}
+\end{equation}
+where $I$ is expressed in units of [GB]. The last factor, dependent on $\gamma$, suppresses the distribution at small amplitudes to good agreement with the data. The values for the fitted values for the normalization ${\cal N}$, the power $\alpha$, and the small-intensity suppression factor $\gamma$ are given in the output file (with extension .out).
+
+{\scriptsize
+\resetlinenumber
+\begin{verbatim}
+ $b *exp(-a*A-c/A^2); \chi^2=$  9.97,with  a,b,c=  0.0500  0.00       0.00    ; nrm=   379.
+ $b *A^-a *exp(-c/A); \chi^2=$  0.87,with  a,b,c=   2.728  25.6       3.52    ; nrm=   379.
+\end{verbatim}
+}
+
+Obviously more writing needs be done, but this is it for the time being.
+
+\subsubsection{Tracks}
+
+\begin{figure}[th]
+%\setlength{\unitlength}{.48\textwidth} % .43\textwidth}
+\subfloat[TrSc]{\includegraphics[ width=0.38\textwidth]{Figs/T-b-D3RepackTrSc} \figlab{ST-scat} }
+\subfloat[Angl]{\includegraphics[ width=0.55\textwidth]{Figs/T-b-D3RepackAngl}  \figlab{ST-pol} }
+%\centering{\includegraphics[ width=0.49\textwidth]{Figs/TrSc_18D1e-i} }
+%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
+	\caption{Typical image for the statistics along a track.}	 \figlab{Track}
+\end{figure}
+
+If a track is extracted from the data, plots like shown in \figref{Track} are generated where \figref{ST-scat} is generated for the impulsive as well as the TRI-D imagers and the polarization analysis, presented in \figref{ST-pol}, only for the TRI-D imager.
+
+The different panels in \figref{ST-scat} show different aspects of the sources along the constructed track.
+\\bottom three panels: For each source assigned to a track the distance from the track-head is given where the position of the track-head is taken at the same time as the source. The three panels show the different components of the distance vector. In blue the bottom panel shows the distribution of the easting component of this vector (scale in [m] on the right, for the time (scale on top) of the source. In red the histogrammed distribution is shown with the number on the left ordinate and the distance component on the bottom abscissa. These plots are excellent to indicate if the fitted track indeed follows the data. If not, the fit may be improved by re-adjusting the parameters. If fluctuations are seen, it probably means that ``\verb!TimeWin"!'' should be set to a lower value.
+\\4$^{th}$ panel from bottom: The velocity along the track. The red line using the mean position of the sources in time bins of length ``\verb!TimeWin"!''. The blue line shows the velocity for the leader-head.
+\\5$^{th}$ panel from bottom: The relative pulse density. The different colors show the density distribution for different binning scales, where the basic scale, denoted above the panel, is calculated from the trace length.  In principle this plot could emphasize a pulsed time structure.
+\\top panel: The fourier frequency spectrum of the pulse density distribution. For regular stepping this should show a peak at the corresponding frequency.
+
+The polarization direction along a track is analyzed in \figref{ST-pol}.
+\\bottom three panels: For TRI-D based images a Principal Component analysis is performed on the direction of the polarization vector for each slice. The azimuth and zenith angles of the two largest components as well as their lengths are shown. The strength of the smallest component is shown in yellow.
+\\4$^{th}$ panel from bottom: the same velocity distribution as in the previous figure.
+\\top two panels: In blue the azimuth and zenith angle orientation of the velocity is shown. Green and red show the orientation of the major polarization axis, where the two colors denote the two orientations of this polarization vector.
+
+\subsubsection{Correlations}
+
+\begin{figure}[th]
+\centering{\includegraphics[ width=0.49\textwidth]{Figs/I-18D-1e-iTDcorr} }
+%\centering{\includegraphics[ bb=1.0cm 2.4cm 24.5cm 25.7cm,clip, width=0.49\textwidth]{../Figs/SE20A7-NPMx_1HIntfSpecSel} }
+	\caption{Typical image for the Impulsive Imager of the TD-correlations.}	 \figlab{ImpulsiveCorr}
+\end{figure}
+
+{%\tiny
+\scriptsize
+%\footnotesize
+\begin{verbatim}
+&Parameters  datafile="Srcs18-evenS", RMS_ns= 2.5 , DelNEff=5, PlotName="e-i",
+ xyztBB= -30.00 -27.  -7.5 -5.0  4.5 7.0  -1. 30.0
+! NLongTracksMax=1, MaxTrackDist=0.1, Wtr=0.5, Aweight=1., TimeWin=0.25,
+ Corr_dD=0.01  , Corr_Dnr=100 , Corr_dtau=0.01
+&End
+\end{verbatim}
+}
 
 \clearpage 

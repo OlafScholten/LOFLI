@@ -150,13 +150,13 @@ Source: \texttt{#1}; %Last edited: \FileDate{#1.tex}
 %Last Modified: \pdffilemoddate{\jobname.tex}\\
 %\thepdfmoddateof{\jobname.tex}\\
 Last edited: \FileDate{\jobname.tex} }\vspace{15ex}
-\centerline{\Large  Guide to the LOFLI 2.0 program suite, V23}
+\centerline{\Large  Guide to the LOFLI 2.0 program suite, V26}
 
 
 \newpage
 
 \vspace{2ex}
-This guide is structured chronologically to detail the main steps in converting LOFAR TBB data into an image of a lightning flash. Each chapter focuses on a specific part of the process. For an overview of the fundamental imaging methodology, refer to \cite{Scholten:2021-init}. Editions beyond version 21 also feature routines for complete interferometry (TRI-D imager).
+This guide is structured chronologically to detail the main steps in converting LOFAR TBB data into an image of a lightning flash. Each chapter focuses on a specific part of the process. For an overview of the fundamental imaging methodology, refer to \cite{Scholten:2021-init}. Editions beyond version 21 also feature routines for Beamforming and Polarimetry (TRI-D\cite{Scholten:2021-INL,Scholten:2022} \& ATRI-D~\cite{Scholten:2025} imagers).
 
 Each chapter includes a thorough explanation of the code's key components, along with examples of input commands, resulting output, and shell commands for running the code in a Linux environment.
 
@@ -181,9 +181,9 @@ The code is available for free use, but users are encouraged to cite the publica
 \input{Nt_LOFAR-Imag}
 \input{Nt_Explore}
 \input{Nt_TimCalibr}
-\input{Nt_PulsSelct}
-\input{Nt_Interferometry}
-\input{Nt_PkInt}
+\input{Nt_ImpImag}
+\input{Nt_TRID}
+\input{Nt_ATRID}
 \input{Nt_SimulateData}
 \chapter{Supplementary scripts}\seclab{supp}
 \input{Nt_DataSelect}
