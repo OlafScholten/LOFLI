@@ -45,14 +45,12 @@ end if
 DataFile$=labl$+"CorrectedSources.dat"    ! DLsIntfSpecPolrz_d.dat 
 DataSumm$=labl$+"CorrectedSummary.dat"    ! DLsIntfSpecPolrz_d.dat 
    fopen DataFile$ inchanw read
-   freadln inchanw  N_sources x_cen y_cen z_cen Size_m
+   freadln inchanw  N_sources x_cen y_cen z_cen Size_m t_min t_max BankAng Plane$
 !
-!Size_m=64.8  ! Wingspan
-!Size_m=73.9  ! Length plane
-!x_cen=37
+!
+include "PlanePics/PlaneInfo.gle"
 
 x_cen=x_cen-Size_m/2.
-PlaneDir$='..'   
 !
 !
 sub 2Dpolxy dtI$ dx$ dy$  dMaxInt dc$ dpol$
@@ -84,68 +82,36 @@ sub 2Dpolxy dtI$ dx$ dy$  dMaxInt dc$ dpol$
    set lwidth Lwidth_def
 end sub
 !
-sub 2Dpolxym dtI$ dx$ dy$  dMaxInt dc$ dpol$
-   local dmax=3
-   local dmin=-3
-   local DDx = dmax-dmin
-   for i = 1 to ndata(dpol$)
-      local x = datayvalue(dx$,i)
-      local y = datayvalue(dy$,i)
-      local poly = datayvalue(dpol$,i)*Plot_Scale
-      local polx = dataxvalue(dpol$,i)*Plot_Scale
-      If (AmplitudePlot=0) then
-         MSzeI=MSze
-      Else
-         !MSzeI=log(datayvalue(dtI$,i))*FactAmp ! dMinInt
-         MSzeI=sqrt(100)*FactAmp ! dMinInt
-         !MSzeI=sqrt(datayvalue(dtI$,i)/dMaxInt)*FactAmp ! dMinInt
-         If(MSzeI < 0.01) then 
-            MSzeI=0.01
-         End If
-      End If
-      local Cscale = (datayvalue(dc$,i)-dmin)/DDx
-      Clr(Cscale)
-      set lwidth MSzeI
-      amove xg(x)+polx yg(y)+poly
-      aline xg(x)-polx yg(y)-poly !MSymb$ MSzeI  ! 
-      !set color black
-      !amove xg(x) yg(y)
-      !write x y MSzeI i datayvalue(dtI$,i)
-   next i
-   set color black
-   set lwidth Lwidth_def
-end sub
-
 !Center picture, in airplane centered coordinates, with 0 at tail tip, in [m] at 
 !Coordinates of middle left side picture, in airplane centered coordinates, with 0 at tail tip, in [m] at 
 !x_cen=-5.5
-!y_cen=0
+y_cen=0
 !z_cen=0
 Size_plot=B
 !Size_m=10
 Plot_Scale=Size_plot/Size_m  ! convert m to plot-size
 !------------------------------     Top view
 ! put the background picture of the airplane
-hOS=75.8  ! width of the picture in [m], plane= 73.9 m end of the tail wings is at 0.7, nose of the plane at hos-0.7
+!hOS=75.8  ! width of the picture in [m], plane= 73.9 m end of the tail wings is at 0.7, nose of the plane at hos-0.7
 ! put right end of picture somewhat beyond nose, put zero at the tip of the tail
+vhRatio=2/3.
 Begin Clip  ! ----------------
    Begin Path Clip stroke
       Amove HorOff VerOff
-      Box Size_plot Size_plot
+      Box Size_plot Size_plot*vhRatio
    End Path
-   amove HorOff+(-x_cen-0.7+L_planeshift)*Plot_Scale VerOff+Size_plot/2+(-hos/2+4.75-y_cen)*Plot_Scale
-   postscript 'Boeing_777_top.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+   amove HorOff+(-x_cen+HorOffTopV)*Plot_Scale VerOff+Size_plot*vhRatio/2+(VerOffTopV-y_cen)*Plot_Scale
+   postscript PictureTopV$ HoSiTopV*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
 End Clip ! -----------------
-
 !
 amove HorOff VerOff
 begin graph
-   size Size_plot Size_plot
+   size Size_plot Size_plot*vhRatio
    vscale 1
    hscale 1
 ! put right end of picture somewhat beyond nose, put zero at the tip of the tail
    xaxis min x_cen max Size_m+x_cen hei fontSz !dticks  10 ! dsubticks .2  ! length=7
-   yaxis min y_cen-Size_m/2 max y_cen+Size_m/2 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   yaxis min y_cen-Size_m*vhRatio/2 max y_cen+Size_m*vhRatio/2 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
    !data events.dat  d3=c2,c6 d4=c3,c4 
    data DataSumm$ d28=c0,c8 d20=c10,c11 ignore 1
    data DataFile$ d6=c2,c9 d1=c0,c3 d2=c0,c4 d3=c0,c5 d8=c0,c8 d10=c10,c11 ignore 1
@@ -166,12 +132,12 @@ amove xg(Size_m+x_cen-6-5) yg(-Size_m/4)
 box Plot_Scale*10 Plot_Scale*Size_m/2
 !
 set just tl
-amove HorOff+fontSz  VerOff+Size_plot-fontSz
+amove HorOff+fontSz  VerOff+Size_plot*vhRatio-fontSz
 text top view
 set just cc
 amove HorOff+B/2  VerOff-2*fontSz
 text Along [m]
-amove HorOff-2*fontSz  VerOff+B/2
+amove HorOff-2*fontSz  VerOff+Size_plot*vhRatio/2
 begin rotate 90
    text Transverse [m]
 end rotate 
@@ -183,63 +149,108 @@ set just br
 set color darkmagenta
 amove HorOff+B-fontSz/5 VerOff+fontSz/5
 begin box fill lightyellow add 0.1 round .3
-   text https://commons.wikimedia.org/w/index.php?curid=17277417
+   !text https://commons.wikimedia.org/w/index.php?curid=17277417
+   write PictCredit$
 end box
 set hei fontSz
 set just cc
 set color black
 !---------------------------------------
 !
-amove HorOff VerOff+Size_plot+bsh*2/3
+sub Bars dw$ dc$ dxy$ dx$
+   local dmax=3
+   local dmin=-3
+   local DDx = dmax-dmin  ! for the color scale
+   for i = 1 to ndata(dxy$)
+      local x = datayvalue(dx$,i)
+!      local x = dataxvalue(dxy$,i)
+!      local y = datayvalue(dxy$,i)/100
+      local y = datayvalue(dxy$,i)/100
+      local Cat = datayvalue(dc$,i)
+      If (AmplitudePlot=0) then
+         MSzeI=MSze
+      Else
+         MSzeI=sqrt(datayvalue(dw$,i))*FactAmp ! dMinInt
+         If(MSzeI < 0.01) then 
+            MSzeI=0.01
+         End If
+      End If
+      local Cscale = (Cat-dmin)/DDx
+      Clr(Cscale)
+      set lwidth MSzeI
+      amove xg(x) yg(Cat)
+      aline xg(x) yg(Cat+y)  ! 
+   next i
+   set color black
+   set lwidth Lwidth_def
+end sub
+!
+amove HorOff VerOff+Size_Plot/2+2*bsh  ! +vhRatio*Size_plot+bsh*2/3
+tmin=t_min
+dt=(t_max-t_min)*0.2
+tmax=t_max+dt
+tInset=t_max+dt/2
 begin graph
-   size Size_plot 25
+   size Size_plot Size_plot/2
    vscale 1
    hscale 1
-   xaxis min -350 max +25 hei fontSz nolast !dticks  10 ! dsubticks .2  ! length=7
-   yaxis min -3.5 max 4.5 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
+   xaxis min tmin max tmax hei fontSz nolast !dticks  10 ! dsubticks .2  ! length=7
+   yaxis min -2.5 max 3.5 hei fontSz !dticks  10 !dticks 0.1 ! dticks  1 dsubticks .2        ! length=9
    ylabels off
-   data DataSumm$ d28=c0,c8 d26=c2,c9 d29=c2,c6 ignore 1
-   data DataFile$ d6=c2,c9  d2=c0,c2   d8=c0,c8 d9=c2,c6 ignore 1
-   let d11=d6/d9*pi
-   let d10=5*cos(d11),5*sin(d11)
-   let d31=0  ! hor position of summaries
-   let d32=-3+x*1. from 1 to 10 step 1  !ndata(d2) ! vert position of summaries
-   let d36=100.  from 1 to 10 step 0.1  ! width of summaries
-   let d33=d26/d29*pi
-   let d30=5*cos(d33),5*sin(d33)
+   data DataSumm$ d17=c2,c7 d18=c2,c8  d11=c2,c14  d12=c0,c2 ignore 1
+   let d10=d12*0.+tInset 
+   data DataFile$ d6=c2,c9 d8=c0,c8 d1=c2,c14  d2=c0,c2   d8=c0,c8 d9=c2,c6 ignore 1
+   let d16=d17*300. 
 end graph
-dmaxInt = dmaxy(d6)
-2Dpolxy(d6, d2, d8, dmaxInt, d8, d10)
-2Dpolxym(d36, d31, d32, dmaxInt, d28, d30)
-amove xg(-20) yg(-3.2)
-box Plot_Scale*10 23
+Bars(d6, d8, d1, d2)
+Bars(d16, d18, d11, d10)
+amove xg(tInset)-Plot_Scale*5 yg(-2.3)
+d=yg(3.3)-yg(-2.3)
+box Plot_Scale*10 d
+!
+   for i = -2 to 3
+      tlow=tmin
+      thi=t_max
+      dmax=3
+      dmin=-3
+      DDx = dmax-dmin  ! for the color scale
+      Cscale = (i-dmin)/DDx
+      Clr(Cscale)
+      set lwidth 0.05
+      amove xg(tlow) yg(i)
+      aline xg(thi) yg(i)  ! 
+   next i
+   set color black
+   set lwidth Lwidth_def
+!
+!
 !
 set hei fontSz*3/4.
 set just cr
-amove xg(-350)-fontSz/3 yg(-2)
+amove xg(tmin)-fontSz/3 yg(-2)
 write rE
-amove xg(-350)-fontSz/3 yg(-1)
+amove xg(tmin)-fontSz/3 yg(-1)
 write rW
-amove xg(-350)-fontSz/3 yg(0)
+amove xg(tmin)-fontSz/3 yg(0)
 write T
-amove xg(-350)-fontSz/3 yg(1)
+amove xg(tmin)-fontSz/3 yg(1)
 write lW
-amove xg(-350)-fontSz/3 yg(2)
+amove xg(tmin)-fontSz/3 yg(2)
 write lE
 set just cl
-amove xg(25)+fontSz/3 yg(-2)
+amove xg(tmax)+fontSz/3 yg(-2)
 write rE
-amove xg(25)+fontSz/3 yg(-1)
+amove xg(tmax)+fontSz/3 yg(-1)
 write rW
-amove xg(25)+fontSz/3 yg(0)
+amove xg(tmax)+fontSz/3 yg(0)
 write T
-amove xg(25)+fontSz/3 yg(1)
+amove xg(tmax)+fontSz/3 yg(1)
 write lW
-amove xg(25)+fontSz/3 yg(2)
+amove xg(tmax)+fontSz/3 yg(2)
 write lE
-amove xg(25)+fontSz/3 yg(3)
+amove xg(tmax)+fontSz/3 yg(3)
 write Bg
-amove HorOff+Size_plot-2*fontSz  VerOff+Size_plot+bsh*2/3-fontSz*3/4
+amove HorOff+Size_plot-2*fontSz  VerOff-fontSz*3/4+Size_Plot/2+2*bsh 
 set hei fontSz
    text t [ms]
 !
@@ -251,16 +262,15 @@ HorOff=HorOff+Size_Plot+2*bsh
 ! put the background picture of the airplane
 hOS=67.0  ! width of the picture in [m], wingspan plane= 64.8 m picture is about 66.0
 ! put right end of picture somewhat beyond nose, put zero at the tip of the tail
-!amove HorOff+((B-HOS)/2 VerOff+(B-hos)/2+4.25-5
 Begin Clip  ! ----------------
    Begin Path Clip stroke
       Amove HorOff VerOff
       Box Size_plot Size_plot/2
    End Path
-amove HorOff+((Size_m-HOS+0.4)/2-y_cen)*Plot_Scale VerOff+(Size_m/4-9)*Plot_Scale
-postscript 'Boeing_777_front.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+   amove HorOff+((Size_m+HorOffFrntV)/2-y_cen)*Plot_Scale VerOff+(Size_m/4+VerOffFrntV)*Plot_Scale
+   postscript PictureFrntV$ HoSiFrntV*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
 End Clip ! -----------------
-!
+!!
 amove HorOff VerOff
 begin graph
    size Size_plot Size_plot/2
@@ -296,7 +306,7 @@ amove HorOff+fontSz  VerOff+Size_plot/2-fontSz
 text front view
 set just cc
 amove HorOff+3*fontSz VerOff+fontSz
-   text \alpha_{bank}=14^o
+   write "\alpha_{bank}="+format$(BankAng, "fix 0")+"^o"
 amove HorOff+B/2  VerOff-2*fontSz
    text Transverse [m]
 amove HorOff-2*fontSz  VerOff+B/4
@@ -310,14 +320,13 @@ HorOff=HorOff
 !------------------------------     Side view
 !
 ! put the background picture of the airplane
-hOS=75.8  ! width of the picture in [m], plane= 73.9 m end of the tail wings is at 0.7, nose of the plane at hos-0.7
 Begin Clip  ! ----------------
    Begin Path Clip stroke
       Amove HorOff VerOff
       Box Size_plot Size_plot/2
    End Path
-amove HorOff+(-x_cen-0.7+L_planeshift)*Plot_Scale  VerOff+(Size_m/4-HOS/14)*Plot_Scale 
-postscript 'Boeing_777_side.eps' hOS*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
+   amove HorOff+(HorOffSdV-x_cen)*Plot_Scale  VerOff+(VerOffSdV+Size_m/4)*Plot_Scale 
+   postscript PictureSdV$ HoSiSdV*Plot_Scale vsize  ! hos sets the horizontal size of the .eps picture where cliipng is done in same units
 End Clip ! -----------------
 !
 amove HorOff VerOff

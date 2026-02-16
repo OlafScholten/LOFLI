@@ -11,20 +11,25 @@ if(nargs() > 0 ) then
     file$=arg$(1)
 end if
 filePreamb$=file$+'RFI_'
+if(nargs() > 2 ) then 
+    AntIdE$=arg$(2)
+    AntIdO$=arg$(3)
+end if
 !--------------------------------------------------------------------
 
-Sub Plot_EvenOdd
 
-fileStat$=filePreamb$+EvenOdd$+'Stat.dat'
 
-fopen fileStat$ inchan read
-freadln inchan i AntID$ p MinAmp
+Sub Plot_EvenOdd AntId$
 
-p=p*1000.
+fileStat$=filePreamb$+EvenOdd$+'Stat.plt'
+fileFilt$=filePreamb$+'AntT'+AntId$+'.plt'
+
+fopen fileFilt$ inchan read
+freadln inchan  MinAmp Stat$ AntNr Bckgr Nfilt LH$ i_ant
 
 set just CC 
 amove x_off+Wi/2 y_off+3*dy+4*He-1.2
-write EvenOdd$
+write Stat$ AntNr EvenOdd$
 amove x_off+Wi/2 y_off+2*dy+3*He-1.2
 write AntID$
 
@@ -36,7 +41,7 @@ begin graph
    hscale 1  
    xaxis !min 0. max 100 !dticks 20 dsubticks 5
    yaxis  nolast !min -.3*10^5 max .3*10^5 !dticks 5 dsubticks 1
-   data filePreamb$+'AntR'+AntId$+'.dat' d1=c2,c3  d2=c2,c4  
+   data filePreamb$+'AntR'+AntId$+'.plt' d1=c2,c3  d2=c2,c4  
    d2 line lwidth 0.04   color green
    let d9=minAmp
    d9 line lstyle 1 lwidth 0.02 color black
@@ -68,7 +73,7 @@ begin graph
    xaxis !min 0. max 100 !dticks 20 dsubticks 5
    xlabels off
    yaxis log min 0.7 max 1000 !dticks 5 dsubticks 1
-   data filePreamb$+'AntT'+AntId$+'.dat' d1=c2,c3  d2=c2,c4  
+   data fileFilt$ d1=c2,c3  d2=c2,c4  ignore 1
    let d12=d1
    d12 line lwidth 0.04  color red 
    d2 line lwidth 0.04   color blue
@@ -95,7 +100,7 @@ begin graph
    hscale 1  
    xaxis !min 0. max 100 !dticks 20 dsubticks 5
    yaxis !log max 5000 !dticks 5 dsubticks 1
-   data filePreamb$+'AntT'+AntId$+'.dat'   d5=c1,c3 ignore 2
+   data fileFilt$   d5=c1,c3 ignore 2
    let d6 = hist d5 from 0.9 to 1.3 bins 100 !!!dm [from x1] [to x2] [bins n] [step n]
    d6 line hist
 end graph
@@ -104,25 +109,37 @@ begin key
    position tr
    text "Filtered" 
 End key
+set just LC 
+amove x_off+1. y_off+dy+3*He+.6
+write "Bckgr=" Bckgr
 set just CC 
 amove x_off+Wi/4 y_off+dy+2*He-1.3
 text normalized RMS
 
+If LH$ = 'H' Then
+ numin=100.
+ numax=200.
+Else
+ numin= 0.
+ numax=100.
+End If
 amove x_off+Wi/2+dx y_off+dy+2*He
 begin graph
   size Wi/2-dx He
   noBox
   vscale 1
   hscale 1
-   xaxis min 0. max 100 dticks 10 dsubticks 5
+   xaxis min numin max numax dticks 10 dsubticks 5
    yaxis  min 0 max 2 !dticks 5 dsubticks 1
    !x1axis off
    !yaxis log min 0.05 max 5 !dticks 5 dsubticks 1
-     data filePreamb$+'AntF'+AntId$+'.dat' d1=c1,c2  d11=c1,c3
+     data filePreamb$+'AntF'+AntId$+'.plt' d1=c1,c2  d11=c1,c3 d15=c1,c5
      d11 marker fcircle msize .3  color green
      d11 line lwidth .02  color green
-     d1 marker fcircle msize .1  color red
+     d1 marker fcircle msize .2  color red
      d1 line lwidth .02  color red
+     d15 marker fcircle msize .1  color blue
+     d15 line lwidth .02  color blue
 end graph
 begin key
    nobox 
@@ -130,6 +147,9 @@ begin key
    Text "Freq. Ampl." marker fcircle msize .2 color red
    text "Filter" marker fcircle msize .2  color green
 End key
+set just RC 
+amove x_off+Wi-1. y_off+dy+3*He+.6
+write "Nfilt=" NFilt
 set just CC 
 amove x_off+Wi*3/4+dx y_off+dy+2*He-1.3
 text \nu [MHz]
@@ -148,7 +168,7 @@ begin graph ! Accumulated statistics
      d3 marker circle msize .2 color orange
      d11 marker circle msize .13 color red
      d2 marker cross msize .1 color green
-     data filePreamb$+EvenOdd$+'Zero.dat' d4=c1,c3
+     data filePreamb$+EvenOdd$+'Zero.plt' d4=c1,c3
      d4 marker diamond msize .2 color magenta
 end graph
 begin key
@@ -159,16 +179,18 @@ begin key
    text "Bkgr level" marker cross msize .1 color green
    text "%dataloss" marker diamond msize .2 color magenta
 End key
+amove xg(i_ant) yg(0)
+rline 0 He/2
 
 End Sub
 !---------------------------------------------------------------------
 
 EvenOdd$='Even'
-Plot_EvenOdd
+Plot_EvenOdd( AntIdE$)
 
 begin translate 30 0
 EvenOdd$='Odd'
-Plot_EvenOdd
+Plot_EvenOdd( AntIdO$)
 end translate
 
 !set font pstr fontlwidth 0.06 hei 0.8 just CC  

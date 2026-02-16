@@ -20,8 +20,6 @@ fileStat$=filePreamb$+EvenOdd$+'Stat.dat'
 fopen fileStat$ inchan read
 freadln inchan i AntID$ p MinAmp
 
-p=p*1000.
-
 set just CC 
 amove x_off+Wi/2 y_off+3*dy+4*He-1.2
 write EvenOdd$

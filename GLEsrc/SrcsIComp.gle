@@ -1,0 +1,87 @@
+!size   26 54
+verSz=5
+horSz=19
+fontSz=0.7
+bsh=2*fontSz
+HorOff=3.
+VerOff=3.
+dB=bsh+horSz
+dH=bsh+verSz
+DotSz=0.6*fontSz
+BDotSz=0.9*fontSz
+MarkSz=1.*fontSz
+size  HorOff+dB VerOff+6*verSz+dH
+! ======================================
+file$='Comp'
+if(nargs() > 0 ) then 
+    file$=arg$(1)
+end if
+!fileTrack$=file$+Track$
+!dfileang$=fileTrack$+'Angls.plt'
+filedat$=file$+'.plt'
+!fopen filedat$ inchan read
+!freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$
+!freadln inchan NTracks EventNr Q t_start label$
+
+set lwidth 0.04
+set font pstr
+set hei fontSz
+
+declare sub Clr Cscale
+include "RdYlBl.gle"
+include "ClrOld.gle"
+include "MaxMin.gle"
+include "ColorLegenda.gle"
+include "DiscreteColor.gle"
+
+
+sub Clr Cscale
+  !RdYlBl(Cscale)
+  ClrOld(Cscale)
+end sub
+
+
+V_plot=VerOff+5*verSz+2*bsh
+amove HorOff V_plot
+begin graph
+   size 1.5*verSz 1.5*verSz
+   vscale 1
+   hscale 1
+   xaxis min 0 max 1 hei fontSz  dticks  0.5 dsubticks .1  ! length=7
+   !xlabels off
+   yaxis  min 0 ! max 20
+   data filedat$ d1=c1,c2 d2=c1,c3 d3=c1,c4  !ignore 1
+   let d11 = hist d1 step 0.1
+   let d12 = hist d2 step 0.1
+   let d13 = hist d3 step 0.1
+      d11 marker dot  msize BDotSz color red
+      d12 marker dot  msize DotSz color blue
+      d13 marker dot  msize DotSz color cyan
+end graph
+begin key
+    nobox
+    position tr
+    set color black
+    marker dot  msize BDotSz color red text "R"
+    marker dot  msize DotSz color blue text "T"
+    marker dot  msize DotSz color cyan text "V"
+end key
+
+
+
+
+
+!================================================
+set color black
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+translate -0. -0.5
+! include feyn.gle
+include note.gle
+@note "SrcsTrDprd" ! +"-"+file$
+translate 0 2
+!end rotate

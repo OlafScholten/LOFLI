@@ -9,6 +9,14 @@ sub SetDiscrColorPastel i
         set color peru ! brown
     else if i = 5 then
         set color lightgreen ! green
+    else if i = 6 then
+        set color mediumslateblue !  
+    else if i = 7 then
+        set color mistyrose !  
+    else if i = 8 then
+        set color gold ! 
+    else if i = 9 then
+        set color thistle !  
     else
       set color grey10
     end if
@@ -16,7 +24,7 @@ end sub
 
 sub SetDiscrColorHard i_C
     local i
-    i = i_c-11*fix(i_c/11)
+    i = i_c-12*fix(i_c/12)
     if i = 1 then
         set color  darkblue
     else if i = 2 then
@@ -38,7 +46,9 @@ sub SetDiscrColorHard i_C
     else if i = 10 then
         set color  yellowgreen
     else if i = 11 then
-        set color  gold
+        set color  orange ! gold
+    else if i = 12 then
+        set color  violet ! gold
     else
       set color grey10
     end if
@@ -56,3 +66,5 @@ MyCol8$ = "darkolivegreen"
 MyCol9$ = "green"
 MyCol10$ = "yellowgreen"
 MyCol11$ = "gold"
+
+

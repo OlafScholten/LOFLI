@@ -6,7 +6,7 @@ bsh=2.5*fontSz    ! 1.5
 HorOff=1.0+bsh
 VerOff=2.0+bsh
 !
-file$='../20A-7/files/IntfSpecSelSE20A7-E3IMMx_0'
+file$='files/I-20A-7H_C1b-v4Speed'
 if(nargs() > 0 ) then 
     file$=arg$(1)  ! Should include the appropriate path to make this script machine independent
 end if
@@ -14,7 +14,7 @@ filedat$=file$+'.plt'
 fopen filedat$ inchan read
 freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
 !freadln inchan xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
-freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
+freadln inchan  EventNr Qual$ label$ N_st E_st h_st t_st MaxSpeed
 !
 B=14     ! abcissa of nirthing v.s. Easting plot
 Z1=5     ! ordinate of height v.s. time plot
@@ -23,29 +23,25 @@ Z=5 ! Z1     ! ordinate of height v.s. easting plot
 H=B*(Nmax-Nmin)/(Emax-Emin)
 !Z=B*(hmax-hmin)/(Emax-Emin)
 !
-If AmplitudePlot <= 0 then  ! logical operation apparently does not work around subroutine definition
-   top=VerOff+h+Z+bsh+Z1+fontSz
-   AmplitudePlot=0
-   MSymb$='fcircle'
-Else
+!   top=VerOff+h+Z+bsh+Z1+fontSz
    top=VerOff+h+Z+2*bsh+2.*Z1+fontSz
-   MSymb$='circle'
-   If (Emax-Emin) <= 0.25 then
-         MSymb$='otimes'
-   End If
-End If
+   MSymb$='fcircle'
 !
 size   HorOff+B+Z+bsh/2 top+bsh/2 ! ----------------------------
 !
-!NTracks=0   !  omit plotting leader tracks
+! MaxSpeed=0.5
+star_size=1.2
+!star_color$='cyan'
+star_color$='fuchsia'
+!star_color$='lime'
+!star_color$='darkviolet'
 !
 declare sub Clr Cscale
 include "RdYlBl.gle"
 include "ClrOld.gle"
 include "MaxMin.gle"
-include "ColorLegenda.gle"
+!include "ColorLegenda.gle"
 include "IntfBox.gle"
-include "DiscreteColor.gle"
 !
 NIgn=2
 if(ZmBx$ = 'NoBox') then
@@ -69,11 +65,30 @@ MinMSze=0.3
 if(EventNr > 900) then
    MinMSze=MinMSze*30./sqrt(EventNr)
 end if
-MSze= .004/(Emax-Emin)  ! should be about 0.1 m on the scale of the plot
+MSze= .04/(Emax-Emin)  ! should be about 1 m on the scale of the plot
 If (MSze < MinMSze) then MSze=MinMSze
 !amove 6 5
 !write ZmBx$ t_offst EventNr NTracks
 !NTracks=0
+
+sub ClrPltt x0 y0 Leng dmin dmax
+    local NC = 10
+    local Del = Leng/NC
+    set color black
+    amove x0+del y0-del/2
+    write format$(dmin, "fix 1")
+    for i = 0 to NC
+        !        Cscale = i*Del/Leng
+        Clr(i*Del/Leng)
+        amove x0 y0+i*Del
+        marker fsquare Del*2
+    next i
+    set color black
+    amove x0+del y0+Leng-del/2
+    write format$(dmax, "fix 1")
+    amove x0+del y0+Leng/2
+    write 'speed [km/ms]'
+end sub
 
 sub SetDiscrColor i
     if i = 1 then
@@ -93,8 +108,8 @@ end sub
 
 
 sub Clr Cscale
-  !RdYlBl(Cscale)
-  ClrOld(Cscale)
+  RdYlBl(Cscale)
+  !ClrOld(Cscale)
 end sub
 
    FactAmp=AmplitudePlot/4.  ! to keep the size of the dot for amplitude=10 independent of AmplitudePlot
@@ -125,7 +140,11 @@ end sub
            End If
            local Cscale = (dataxvalue(dt$,i)-dmin)/DDx
            amove xg(x) yg(y)
-           Clr(Cscale)
+           If(Cscale <1.0) Then
+            Clr(Cscale)
+           Else
+            set color black
+           End If
            !
            marker MSymb$ MSzeI  ! 
        next i
@@ -144,9 +163,9 @@ begin graph
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
    yaxis min hmin max hmax hei fontSz ! dticks  1 dsubticks .2        ! length=9
    If NIgn=2 then
-      data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c6    ignore 2
+      data filedat$ d3=c2,c1 d4=c2,c5  d5=c7,c2    ignore 2
    Else
-      data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c6    ignore 10
+      data filedat$ d3=c2,c1 d4=c2,c5  d5=c7,c2    ignore 10
    End If
    ! d4 marker cross msize 0.2 color blue
 end graph
@@ -156,34 +175,24 @@ if(bbx>0) then
    box (xg(btMax)-xg(btMin)) (yg(bhmax)-yg(bhmin)) 
    set lwidth FrameLwidth
 end if
-! amove 4 9
-! write NTracks
-for i =1 to NTracks
-   istr$ = format$(i, "fix 0")
-   !  istr$ = format$(i, "prefix 2 fix 0")
-   fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
-   ! amove 3 10+i
-   ! write fileldr$
-   fopen fileldr$ leadr read
-   set lwidth 0.2
-   !SetDiscrColor(i)
-   SetDiscrColorPastel(i)
-   freadln leadr tL yL xL zL
-   amove xg(tL) yg(zL)
-   until feof(leadr)
-      freadln leadr tL yL xL zL
-      aline xg(tL) yg(zL) 
-   next
-   set color black
-   set lwidth 0.04
-   fclose leadr
-next i
-dmax = dmaxx(d3)
-dmin = dminx(d3)
+!dmax = dmaxx(d5)
+dmin = dminx(d5)
 dMinInt = dminy(d5)
-dmaxInt = dmaxy(d5)
+dmaxInt = dmaxx(d5)
+dmax = MaxSpeed
+If(dmax < dmin) then
+   dmax=2*dmin
+End If
 !write dMinInt dMaxInt
-2Dtime(d3,d4,dmin,dmax,d5)
+2Dtime(d5,d4,dmin,dmax,d5)
+amove xg(t_st) yg(h_st)
+set color star_color$
+Marker star star_size
+set color black
+
+!AmplitudePlot=-1
+!If (AmplitudePlot>0) then
+
 
 if(Z>0) then   
    amove HorOff VerOff+h  ! (E-W,h) -------------------------------
@@ -195,9 +204,9 @@ if(Z>0) then
       yaxis min hmin max hmax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
       xlabels off
       If NIgn=2 then
-         data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c6    ignore 2
+         data filedat$ d3=c2,c1 d4=c4,c5  d5=c7,c2    ignore 2
       Else
-         data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c6    ignore 10
+         data filedat$ d3=c2,c1 d4=c4,c5  d5=c7,c2    ignore 10
       End If
       ! d4 marker cross msize 0.1 color blue
    end graph
@@ -208,26 +217,13 @@ if(Z>0) then
       box (xg(bEmax)-xg(bEmin)) (yg(bhmax)-yg(bhmin)) 
       set lwidth FrameLwidth
    end if
-   for i =1 to NTracks
-      istr$ = format$(i, "fix 0")
-      fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
-      fopen fileldr$ leadr read
-      set lwidth 0.2
-      !SetDiscrColor(i)
-      SetDiscrColorPastel(i)
-      freadln leadr tL yL xL zL
-      amove xg(xL) yg(zL)
-      until feof(leadr)
-         freadln leadr tL yL xL zL
-         aline xg(xL) yg(zL) 
-      next
-      set color black
-      set lwidth 0.04
-      fclose leadr
-   next i
-   dmax = dmaxx(d3)
-   dmin = dminx(d3)
-   2Dtime(d3,d4,dmin,dmax,d5)
+  ! dmax = dmaxx(d3)
+  ! dmin = dminx(d3)
+   2Dtime(d5,d4,dmin,dmax,d5)
+   amove xg(E_st) yg(h_st)
+   set color star_color$
+   Marker star star_size
+   set color black
     
    amove HorOff+b VerOff   ! (h,N-S) -----------------------------
    begin graph
@@ -238,9 +234,9 @@ if(Z>0) then
       yaxis min Nmin max Nmax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
       ylabels off
       If NIgn=2 then
-         data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c6    ignore 2
+         data filedat$ d3=c2,c1 d4=c5,c3  d5=c7,c2    ignore 2
       Else
-         data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c6    ignore 10
+         data filedat$ d3=c2,c1 d4=c5,c3  d5=c7,c2    ignore 10
       End If
       ! d4 marker cross msize 0.3 color blue
    end graph
@@ -255,26 +251,11 @@ if(Z>0) then
       amove xg(hmin+2*ErrZ) yg(Nmin+2*Erry)
       Ellipse (2*ErrZ) (2*Erry) 
    end if
-   for i =1 to NTracks
-      istr$ = format$(i, "fix 0")
-      fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
-      fopen fileldr$ leadr read
-      set lwidth 0.2
-      !SetDiscrColor(i)
-      SetDiscrColorPastel(i)
-      freadln leadr tL yL xL zL
-      amove xg(zL) yg(yL)
-      until feof(leadr)
-         freadln leadr tL yL xL zL
-         aline xg(zL) yg(yL) 
-      next
-      set color black
-      set lwidth 0.04
-      fclose leadr
-   next i
-   dmax = dmaxx(d3)
-   dmin = dminx(d3)
-   2Dtime(d3,d4,dmin,dmax,d5)
+   2Dtime(d5,d4,dmin,dmax,d5)
+   amove xg(h_st) yg(N_st)
+   set color star_color$
+   Marker star star_size
+   set color black
 end if
 
 amove HorOff VerOff     ! (E-W,N-S) ---------------------------
@@ -292,9 +273,9 @@ begin graph
    xsubticks length .1
    ysubticks length .1
    If NIgn=2 then
-      data filedat$ d3=c2,c1 d4=c4,c3  d5=c2,c6 ignore 2
+      data filedat$ d3=c2,c1 d4=c4,c3  d5=c7,c2 ignore 2
    Else
-      data filedat$ d3=c2,c1 d4=c4,c3  d5=c2,c6 ignore 10
+      data filedat$ d3=c2,c1 d4=c4,c3  d5=c7,c2 ignore 10
    End If
    ! d4 marker cross msize 0.2 color blue
    !data file$+'1.plt' d5=c2,c4
@@ -307,26 +288,11 @@ if(bbx>0) then
     box (xg(bEmax)-xg(bEmin)) (yg(bNmax)-yg(bNmin)) 
    set lwidth FrameLwidth
 end if
-for i =1 to NTracks
-  istr$ = format$(i, "fix 0")
-  fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
-  fopen fileldr$ leadr read
-  set lwidth 0.2
-   !SetDiscrColor(i)
-   SetDiscrColorPastel(i)
-  freadln leadr tL yL xL zL
-  amove xg(xL) yg(yL)
-  until feof(leadr)
-    freadln leadr tL yL xL zL
-    aline xg(xL) yg(yL) 
-  next
-  set color black
-  set lwidth 0.04
-  fclose leadr
-next i
-dmax = dmaxx(d3)
-dmin = dminx(d3)
-2Dtime(d3,d4,dmin,dmax,d5)
+2Dtime(d5,d4,dmin,dmax,d5)
+amove xg(E_st) yg(N_st)
+set color star_color$
+Marker star star_size
+set color black
    
 if(Z>0) then   ! plot colorpalette
     x0 = HorOff+B+0.1*Z+fontSz/2.
@@ -336,19 +302,19 @@ if(Z>0) then   ! plot colorpalette
 end if
 
 !AmplitudePlot=-1
-If (AmplitudePlot>0) then
-amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------------
+!If (AmplitudePlot>0) then
+   amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------------
    begin graph
       size B+Z z1
       vscale 1
       hscale 1
       If NIgn=2 then
-        data filedat$   d4=c2,c6 ignore 2
+        data filedat$   d4=c2,c7 ignore 2
       Else
-        data filedat$   d4=c2,c6 ignore 10
+        data filedat$   d4=c2,c7 ignore 10
       End If
-      dMin = dMinInt
-      dMax = dmaxy(d4)+dMin
+      dMin = dMin
+      dMax = 2*MaxSpeed ! dmaxy(d4)+dMin
       !If(dMax>1.E5) then dMin=1.0
       If(dMin>1.) then 
          dMin=dMinInt
@@ -359,39 +325,17 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
       Else If (dMin>=0.03) then
          dMin=0.03
       Else  dMin=0.01    
-      let d5 = d4*11.  ! to convert from I20 (Integrated intensity divided by 20 [to make it compattible to default TRID])  to pJ/MHz
-      dmin=dmin*10
-      dmax=dmax*11.
-      xaxis log min dMin max dMax ! hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
+      let d5 = d4
+      xaxis  min dMin max dMax ! hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
       yaxis log min 0.8 hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
       let d6 = hist d5 step dMin !!!dm [from x1] [to x2] [bins n] [step n]
       d6 line hist
-      If ((xa1>0) and (EventNr > 900)) then
-         let d7 = dMin*xb1*exp(-xa1*x-xc1/(x*x)) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n
-         d7 line color red
-      end If
-      If ((xa2>0) and (EventNr > 900)) then
-         !let d8 = b2*exp(-a2*x-c2/(x*sqrt(x))) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n
-         let d8 = dMin*xb2*(x)^(-xa2)*exp(-xc2/x-xd2/x^2) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
-         d8 line color blue
-      End If
    end graph
    set just TR 
    rmove B+Z-fontSz/2 Z1-fontSz/2
-   write "[pJ/MHz]"
-   If ((xa2>0) and (EventNr > 900)) then
-      set color blue
-      rmove -2 0
-      write xa2
-   End If
-   If ((xa1>0) and (EventNr > 900)) then
-      rmove -2 0
-      set color red
-      write xa1 
-   End If
+   write "[10^6 m/s]"
    set color black
- !  text Amplitude distribution
-End If
+!End If
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 set hei fontSz

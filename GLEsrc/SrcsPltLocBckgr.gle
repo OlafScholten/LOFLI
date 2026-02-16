@@ -5,15 +5,14 @@ Z=Z1
 !fontSz=1.0
 fontSz=0.8
 bsh=2.5*fontSz    ! 1.5
-HorOff=1.5+bsh
+HorOff=1.0+bsh
 VerOff=2.0+bsh
-B=14+Z1-Z
 
 UnderFileDatA$=''   ! 'files/19A1-Rx.plt'
 NBckgr=0
 !UnderFileDatB$='files/19A1-R626.plt'
 UFSymb$='fcircle'
-UFSymbSz=.7
+UFSymbSz=0.7
 greylevelA$=Grey20
 !greylevelB$=Grey10
 
@@ -29,11 +28,30 @@ end if
 filedat$=file$+'.plt'
 !filedat$='../files/'+file$+'.plt'
 fopen filedat$ inchan read
-freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
-freadln inchan NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
+freadln inchan NTracks EventNr Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
 !NTracks=0   !  omit plotting leader tracks
-H=B*(yMax-yMin)/(xMax-xMin)
-size   HorOff+B+Z+bsh VerOff+H+Z+2*Z1+3*bsh ! ----------------------------
+!
+B=14     ! abcissa of nirthing v.s. Easting plot
+Z1=5     ! ordinate of height v.s. time plot
+Z=5 ! Z1     ! ordinate of height v.s. easting plot
+! Z=0  ! if active, omit side panels
+H=B*(Nmax-Nmin)/(Emax-Emin)
+!Z=B*(hmax-hmin)/(Emax-Emin)
+!
+If AmplitudePlot <= 0 then  ! logical operation apparently does not work around subroutine definition
+   top=VerOff+h+Z+bsh+Z1+fontSz
+   AmplitudePlot=0
+   MSymb$='fcircle'
+Else
+   top=VerOff+h+Z+2*bsh+2.*Z1+fontSz
+   MSymb$='circle'
+   If (Emax-Emin) <= 0.25 then
+         MSymb$='otimes'
+   End If
+End If
+!
+size   HorOff+B+Z+bsh/2 top+bsh/2 ! ----------------------------
 !
 declare sub Clr Cscale
 include "RdYlBl.gle"
@@ -51,7 +69,7 @@ else if(ZmBx$ = 'IntfBox') then
     NIgn=10
 else
     fopen ZmBx$+'.plt' inbox read
-    freadln inbox byMin byMax bxMin bxMax bzMin bzMax btMin btMax
+    freadln inbox bNMin bNMax bEMin bEMax bhMin bhMax btMin btMax
     bbx=+1
 end if 
 
@@ -62,7 +80,7 @@ MinMSze=0.3
 if(EventNr > 900) then
    MinMSze=MinMSze*30./sqrt(EventNr)
 end if
-MSze= .04/(xMax-xMin)  ! should be about 1 m on the scale of the plot
+MSze= .04/(EMax-EMin)  ! should be about 1 m on the scale of the plot
 If (MSze < MinMSze) then MSze=MinMSze
 !amove 6 5
 !write ZmBx$ t_offst EventNr NTracks
@@ -98,7 +116,7 @@ If AmplitudePlot <= 0 then  ! logical operation apparently does not work around 
 Else
    top=VerOff+h+Z+2*bsh+2.*Z1+fontSz
    MSymb$='circle'
-   If (xMax-xMin) <= 0.25 then
+   If (EMax-EMin) <= 0.25 then
          MSymb$='otimes'
    End If
 End If
@@ -153,8 +171,8 @@ End If
    end sub
 
 ! Start plotting
-amove HorOff top 
-write label$  "; Q="  Q "ns, "  EventNr " sources" 
+amove HorOff-bsh top 
+write label$  "; "  Qual$+','   EventNr " sources"
 
 amove HorOff VerOff+h+Z+bsh ! (time,h) ---------------------------------------------------
 begin graph
@@ -162,7 +180,7 @@ begin graph
    vscale 1
    hscale 1
    xaxis min tMin max tMax hei fontSz ! dticks  1 dsubticks .2  ! length=7
-   yaxis min zMin max zMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
+   yaxis min hMin max hMax hei fontSz ! dticks  1 dsubticks .2        ! length=9
    If NIgn=2 then
       data filedat$ d3=c2,c1 d4=c2,c5  d5=c2,c6    ignore 2
    Else
@@ -171,15 +189,15 @@ begin graph
    ! d4 marker cross msize 0.2 color blue
 end graph
 if(bbx>0) then
-   amove xg(btMin) yg(bzMin)
-   box (xg(btMax)-xg(btMin)) (yg(bzMax)-yg(bzMin)) 
+   amove xg(btMin) yg(bhMin)
+   box (xg(btMax)-xg(btMin)) (yg(bhMax)-yg(bhMin)) 
 end if
 ! amove 4 9
 ! write NTracks
 for i =1 to NTracks
    istr$ = format$(i, "fix 0")
    !  istr$ = format$(i, "prefix 2 fix 0")
-   fileldr$=file$+istr$+'.plt'       ! obtain this leader structure
+   fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
    ! amove 3 10+i
    ! write fileldr$
    fopen fileldr$ leadr read
@@ -209,8 +227,8 @@ if(Z>0) then
       size B Z
       vscale 1
       hscale 1
-      xaxis min xMin max xMax ! hei fontSz nofirst nolast ! dticks  1 dsubticks .2 hei fontSz nofirst ! length=7
-      yaxis min zMin max zMax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
+      xaxis min EMin max EMax ! hei fontSz nofirst nolast ! dticks  1 dsubticks .2 hei fontSz nofirst ! length=7
+      yaxis min hMin max hMax hei fontSz nofirst ! dticks  1 dsubticks .2 hei fontSz       ! length=9
       xlabels off
       If NIgn=2 then
          data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c6    ignore 2
@@ -218,19 +236,19 @@ if(Z>0) then
          data filedat$ d3=c2,c1 d4=c4,c5  d5=c2,c6    ignore 10
       End If
       IF NBckgr=1 then
-         data UnderFileDatA$ d14=c3,c5 ignore 2
+         data UnderFileDatA$ d14=c4,c5 ignore 2
          d14 marker UFSymb$ msize UFSymbSz color greylevelA$
       End If
       ! d4 marker cross msize 0.1 color blue
    end graph
    if(bbx=-2) then  IntfBox_Eh
    if(bbx>0) then
-      amove xg(bxMin) yg(bzMin)
-      box (xg(bxMax)-xg(bxMin)) (yg(bzMax)-yg(bzMin)) 
+      amove xg(bEMin) yg(bhMin)
+      box (xg(bEMax)-xg(bEMin)) (yg(bhMax)-yg(bhMin)) 
    end if
    for i =1 to NTracks
       istr$ = format$(i, "fix 0")
-      fileldr$=file$+istr$+'.plt'       ! obtain this leader structure
+      fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
       fopen fileldr$ leadr read
       set lwidth 0.2
       SetDiscrColor(i)
@@ -248,13 +266,16 @@ if(Z>0) then
    dmin = dminx(d3)
    2Dtime(d3,d4,dmin,dmax,d5)
     
+!   amove HorOff+b VerOff   ! (h,N-S) -----------------------------
+!    write UFSymb$  UFSymbSz  greylevelA$
+    
    amove HorOff+b VerOff   ! (h,N-S) -----------------------------
    begin graph
       size Z H
       vscale 1
       hscale 1
-      xaxis min zMin max zMax hei fontSz nofirst !  dticks  1 dsubticks .2  ! length=7
-      yaxis min yMin max yMax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
+      xaxis min hMin max hMax hei fontSz nofirst !  dticks  1 dsubticks .2  ! length=7
+      yaxis min NMin max NMax hei fontSz  nolast !  dticks  1 dsubticks .2      ! length=9
       ylabels off
       If NIgn=2 then
          data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c6    ignore 2
@@ -262,23 +283,23 @@ if(Z>0) then
          data filedat$ d3=c2,c1 d4=c5,c3  d5=c2,c6    ignore 10
       End If
       IF NBckgr=1 then
-         data UnderFileDatA$ d14=c5,c4 ignore 2
+         data UnderFileDatA$ d14=c5,c3 ignore 2
          d14 marker UFSymb$ msize UFSymbSz color greylevelA$
       End If
       ! d4 marker cross msize 0.3 color blue
    end graph
    if(bbx=-2) then  IntfBox_hN
    if(bbx>0) then
-      amove xg(bzmin) yg(bymin)
-      box (xg(bzMax)-xg(bzMin)) (yg(byMax)-yg(byMin)) 
+      amove xg(bhMin) yg(bNMin)
+      box (xg(bhMax)-xg(bhMin)) (yg(bNMax)-yg(bNMin)) 
    end if
    if(ErrZ>0) then
-      amove xg(zmin+2*ErrZ) yg(ymin+2*Erry)
+      amove xg(hMin+2*ErrZ) yg(NMin+2*Erry)
       Ellipse (2*ErrZ) (2*Erry) 
    end if
    for i =1 to NTracks
       istr$ = format$(i, "fix 0")
-      fileldr$=file$+istr$+'.plt'       ! obtain this leader structure
+      fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
       fopen fileldr$ leadr read
       set lwidth 0.2
       SetDiscrColor(i)
@@ -302,8 +323,8 @@ begin graph
    size B H
    vscale 1
    hscale 1
-   xaxis min xMin max xMax hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
-   yaxis min yMin max yMax hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
+   xaxis min EMin max EMax hei fontSz ! nolast ! dticks 1 dsubticks .2 hei fontSz !nolast ! length=7
+   yaxis min NMin max NMax hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
    !  yaxis  min 0 max 2e-8  hei fontSz ! dticks 5 dsubticks 1
    axis grid
    ticks color grey40  lstyle 2
@@ -317,7 +338,7 @@ begin graph
       data filedat$ d3=c2,c1 d4=c4,c3  d5=c2,c6 ignore 10
    End If
    IF NBckgr=1 then
-      data UnderFileDatA$ d14=c3,c4 ignore 2
+      data UnderFileDatA$ d14=c4,c3 ignore 2
       d14 marker UFSymb$ msize UFSymbSz color greylevelA$
    End If
    ! d4 marker cross msize 0.2 color blue
@@ -326,12 +347,12 @@ begin graph
 end graph
 if(bbx=-2) then  IntfBox_EN
 if(bbx>0) then
-    amove xg(bxmin) yg(bymin)
-    box (xg(bxMax)-xg(bxMin)) (yg(byMax)-yg(byMin)) 
+    amove xg(bEMin) yg(bNMin)
+    box (xg(bEMax)-xg(bEMin)) (yg(bNMax)-yg(bNMin)) 
 end if
 for i =1 to NTracks
   istr$ = format$(i, "fix 0")
-  fileldr$=file$+istr$+'.plt'       ! obtain this leader structure
+  fileldr$=file$+'-tr'+istr$+'.plt'       ! obtain this leader structure
   fopen fileldr$ leadr read
   set lwidth 0.2
   SetDiscrColor(i)
@@ -386,23 +407,28 @@ amove HorOff VerOff+h+Z+bsh+Z1+2.*fontSz     ! (Amplitude) ---------------------
       yaxis log min 0.8 hei fontSz ! nolast !  dticks 1 dsubticks .2 hei fontSz  nolast     ! length=9
       let d6 = hist d5 step dMin !!!dm [from x1] [to x2] [bins n] [step n]
       d6 line hist
-      If(a1>0) then
-         let d7 = dMin*b1*exp(-a1*x-c1/(x*x)) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n
+      If ((xa1>0) and (EventNr > 900)) then
+         let d7 = dMin*xb1*exp(-xa1*x-xc1/(x*x)) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n
          d7 line color red
       end If
-      If(a2>0) then
+      If ((xa2>0) and (EventNr > 900)) then
          !let d8 = b2*exp(-a2*x-c2/(x*sqrt(x))) step 40 from 2 !! with a LOG xaxis scale STEP is taken as the number of steps n
-         let d8 = dMin*b2*(x)^(-a2)*exp(-c2/x-d2/x^2) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
+         let d8 = dMin*xb2*(x)^(-xa2)*exp(-xc2/x-xd2/x^2) step 40 from dMin !! with a LOG xaxis scale STEP is taken as the number of steps n  ! exp(-c2*100./x^2))
          d8 line color blue
       End If
    end graph
    set just TR 
    rmove B+Z-fontSz/2 Z1-fontSz/2
-   set color blue
-   write a2
-   rmove -2 0
-   set color red
-   write a1 
+   If ((xa2>0) and (EventNr > 900)) then
+      set color blue
+      rmove -2 0
+      write xa2
+   End If
+   If ((xa1>0) and (EventNr > 900)) then
+      rmove -2 0
+      set color red
+      write xa1 
+   End If
    set color black
  !  text Amplitude distribution
 End If
@@ -420,7 +446,7 @@ amove HorOff+0.5*(B+z)  VerOff+h+z+bsh-1.7*fontSz
 !text time [ms] (t_offst
 write "time [ms] (+" t_offst " [ms])"
 
-amove 1.5 VerOff+0.5*h
+amove HorOff-bsh VerOff+0.5*h
 begin rotate 90
    text Northing [km]
    rmove 0.5*h+Z/2 0 

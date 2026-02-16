@@ -8,13 +8,17 @@ VerOff=3.
 dB=bsh+horSz
 dH=bsh+verSz
 DotSz=0.3*fontSz
+MarkSz=0.3*fontSz
 size  HorOff+dB VerOff+5*verSz+dH
 ! ======================================
 file$='files/T-4b-D1-Z1a'
-if(nargs() > 0 ) then 
+if(nargs() > 1 ) then 
     file$=arg$(1)
+    Track$='-tr'+arg(2)
+    i_track=arg(2)
 end if
-dfileang$=file$+'Angls1.plt'
+fileTrack$=file$+Track$
+dfileang$=fileTrack$+'Angls.plt'
 filedat$=file$+'.plt'
 fopen filedat$ inchan read
 freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$
@@ -24,15 +28,19 @@ set lwidth 0.04
 set font pstr
 set hei fontSz
 
-!amove HorOff VerOff+5*verSz+dH-1.5*fontSz 
-amove HorOff VerOff*0.5
-write label$
-
 declare sub Clr Cscale
 include "RdYlBl.gle"
 include "ClrOld.gle"
 include "MaxMin.gle"
 include "ColorLegenda.gle"
+include "DiscreteColor.gle"
+
+set font pstb
+SetDiscrColorPastel(i_track)
+amove HorOff VerOff*0.5
+write label$+' '+Track$
+set color black
+set font pstr
 
 sub Clr Cscale
   !RdYlBl(Cscale)
@@ -152,9 +160,9 @@ begin graph
    xlabels off
   !yaxis min 0 max 25 hei fontSz ! dticks  1 dsubticks .2        ! length=9
   ! yaxis min 0 ! max 1.6 hei fontSz ! dticks  1 dsubticks .2        ! length=9
-  data file$+'1.plt' d1=c1,c12   ignore 1
+  data fileTrack$+'.plt' d1=c1,c12   ignore 1
   d1 svg_smooth 5 marker cross msize 0.1 color blue
-  data file$+'_bin_1.plt' d2=c10,c9   ignore 1
+  data fileTrack$+'bin.plt' d2=c10,c9   ignore 1
   d2 line lwidth 0.05 color red
 end graph
 begin key
@@ -241,6 +249,6 @@ write 'Azimuth (N)'
 translate -0. -0.5
 ! include feyn.gle
 include note.gle
-@note "TrScat" ! +"-"+file$
+@note "SrcsTrAngles" ! +"-"+file$
 translate 0 2
 !end rotate

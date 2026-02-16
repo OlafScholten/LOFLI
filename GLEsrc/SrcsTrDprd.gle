@@ -13,10 +13,13 @@ MarkSz=1.*fontSz
 size  HorOff+dB VerOff+6*verSz+dH
 ! ======================================
 file$='files/T-4b-D1-Z1a'
-if(nargs() > 0 ) then 
+if(nargs() > 1 ) then 
     file$=arg$(1)
+    Track$='-tr'+arg(2)
+    i_track=arg(2)
 end if
-dfileang$=file$+'Angls1.plt'
+fileTrack$=file$+Track$
+dfileang$=fileTrack$+'Angls.plt'
 filedat$=file$+'.plt'
 fopen filedat$ inchan read
 freadln inchan yMin yMax xMin xMax zMin zMax tMin tMax ZmBx$
@@ -26,15 +29,21 @@ set lwidth 0.04
 set font pstr
 set hei fontSz
 
-!amove HorOff VerOff+5*verSz+dH-1.5*fontSz 
-amove HorOff VerOff*0.5
-write label$
-
 declare sub Clr Cscale
 include "RdYlBl.gle"
 include "ClrOld.gle"
 include "MaxMin.gle"
 include "ColorLegenda.gle"
+include "DiscreteColor.gle"
+
+set font pstb
+SetDiscrColorPastel(i_track)
+amove HorOff VerOff*0.5
+write label$+' '+Track$
+amove HorOff VerOff+5*verSz+2*bsh+1.5*verSz+0.5*fontSz
+write label$+' '+Track$
+set color black
+set font pstr
 
 sub Clr Cscale
   !RdYlBl(Cscale)
@@ -210,7 +219,7 @@ begin graph
    hscale 1
    xaxis min 0 max 1 hei fontSz  dticks  0.5 dsubticks .1  ! length=7
    !xlabels off
-   yaxis  min 0 max 20
+   yaxis  min 0 ! max 20
    data dfileang$ d1=c1,c19 d2=c1,c20 d3=c1,c27  ignore 1
    let d11 = hist d1 step 0.1
    let d12 = hist d2 step 0.1
@@ -226,9 +235,11 @@ begin graph
 end graph
 begin key
     nobox
-    position tr
+    position tc
     set color black
-    text "p.v"
+    marker dot  msize BDotSz color red text "p.v"
+    marker dot  msize DotSz color blue text "p.R"
+    marker dot  msize DotSz color cyan text "p.h"
 end key
 
 V_plot=VerOff+5*verSz+2*bsh
@@ -239,7 +250,7 @@ begin graph
    hscale 1
    xaxis min 0 max 1 hei fontSz  dticks  0.5 dsubticks .1  ! length=7
    !xlabels off
-   yaxis min 0 max 20
+   yaxis min 0 ! max 20
    data dfileang$ d1=c1,c22 d2=c1,c24 d3=c1,c26  ignore 1
    let d11 = hist d1 step 0.1
    let d12 = hist d2 step 0.1
