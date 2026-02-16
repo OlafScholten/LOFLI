@@ -316,8 +316,9 @@ End Subroutine SortPerm
 End Module unque
 !=================================
 Module StationMnemonics
-    Use Chunk_AntInfo, only : Station_name, Station_number
-    Integer, parameter :: StationNrMax=39  ! smaller or equal to Station_nrMax
+    Use Chunk_AntInfo, only : LOFAR_name, LOFAR_number, LOFARNrMax
+    !Integer, parameter :: LOFARNrMax=39  ! smaller or equal to Station_nrMax
+    character(len=1), parameter :: HLBA(0:1)=(/'L','H'/)
     !Character(len=5), parameter :: Station_name(1:StationNrMax)=(/&
     !    "CS001","CS002","CS003","CS004","CS005","CS006","CS007","CS011","CS013","CS017",&
     !    "CS021","CS024","CS026","CS030","CS031","CS032","CS101","CS103","CS201","CS301",&
@@ -341,55 +342,83 @@ Module StationMnemonics
     !   40x 16n
     !   50x 18n
 Contains
-Subroutine Station_ID2Mnem(STATION_ID,Station_Mnem)
+Subroutine Station_ID2Mnem(STATION_ID,Station_Mnem, LOFAR_Mnem, Atype)
     Implicit none
     Integer, intent(in) :: STATION_ID
-    Character(len=5), intent(out) :: Station_Mnem
-    Integer :: i
+    Character(len=6), intent(out) :: Station_Mnem
+    Character(len=5), intent(out), optional :: LOFAR_Mnem
+    Integer, intent(out), optional :: Atype
+    Character(len=5) :: txt
+    Integer :: i, i_type=0
     Station_Mnem="XSNNN"
-    Do i=1,StationNrMax
-        If(STATION_ID.eq.Station_number(i)) then
-            Station_Mnem=Station_name(i)
+    Do i=1,LOFARNrMax
+        If(STATION_ID/10.eq.LOFAR_number(i)) then
+            txt=LOFAR_name(i)
+            i_type=Mod(STATION_ID,10)
             exit
         endif
     enddo
+    If(i_type.gt.1) Then
+      write(2,*) '!Station_ID2Mnem:',i,STATION_ID, LOFAR_name(i), i_type
+      Flush(unit=2)
+      stop 'Station_ID2Mnem: i_type above range'
+    endIf
+    Station_Mnem=txt//HLBA(i_type)
+    If(present(Atype)) Atype=i_type
+    If(present(LOFAR_Mnem)) LOFAR_Mnem=txt
     !Write(2,*) 'Station_Mnem',Station_Mnem,i,STATION_ID
     return
 End Subroutine Station_ID2Mnem
 !
-Character(len=5) Function Statn_ID2Mnem(STATION_ID)
+Character(len=6) Function Statn_ID2Mnem(STATION_ID)
     Implicit none
     Integer, intent(in) :: STATION_ID
-    Character(len=5) :: Station_Mnem
+    Character(len=6) :: Station_Mnem
+    !write(2,*) '!Function Statn_ID2Mnem:', STATION_ID
+    !  Flush(unit=2) ! writing to the same unit while calling a function is not allowed.
     Call Station_ID2Mnem(STATION_ID,Station_Mnem)
+    !write(2,*) '!Function Statn_ID2Mnem:', Station_Mnem
+    !  Flush(unit=2)
     Statn_ID2Mnem=Station_Mnem
 End Function Statn_ID2Mnem
 !
-Subroutine Station_Mnem2ID(Station_Mnem,STATION_ID)
+Subroutine LOFAR_Mnem2ID(LOFAR_Mnem,LOFAR_ID,i_Type)
     Implicit none
-    Integer, intent(out) :: STATION_ID
-    Character(len=5), intent(in) :: Station_Mnem
+    Integer, intent(out) :: LOFAR_ID
+    Integer, intent(out), optional :: i_Type
+    Character(len=*), intent(in) :: LOFAR_Mnem
     Integer :: i
-    Station_ID=0
-    Do i=1,StationNrMax
-        If(Station_Mnem(3:5) .eq. Station_name(i)(3:5)) then
-            STATION_ID=Station_number(i)
+    LOFAR_ID=0
+    Do i=1,LOFARNrMax
+        If(LOFAR_Mnem(3:5) .eq. LOFAR_name(i)(3:5)) then
+            LOFAR_ID=LOFAR_number(i)
             exit
         endif
     enddo
-    If(Station_ID.eq.0) then
-        Write(2,*) '*******Station_Mnem not found',Station_Mnem
+    i=LEN_TRIM(LOFAR_Mnem)
+    If(present(i_type)) Then
+       i_type=-1
+       if(i.eq.6) Then
+         If(LOFAR_Mnem(6:6) .eq. HLBA(1)) Then
+            i_type=1
+         Else
+            i_type=0
+         EndIf
+       EndIf
+    EndIf
+    If(LOFAR_ID.eq.0) then
+        Write(2,*) '*******LOFAR_Mnem not found',LOFAR_Mnem
     Endif
     return
-End Subroutine Station_Mnem2ID
+End Subroutine LOFAR_Mnem2ID
 !
-Integer Function Statn_Mnem2ID(Station_Mnem)
+Integer Function LFR_Mnem2ID(LOFAR_Mnem)
     Implicit none
-    Character(len=5), intent(in) :: Station_Mnem
-    Integer :: STATION_ID
-    Call Station_Mnem2ID(Station_Mnem,STATION_ID)
-    Statn_Mnem2ID=Station_ID
-End Function Statn_Mnem2ID
+    Character(len=5), intent(in) :: LOFAR_Mnem
+    Integer :: LOFAR_ID
+    Call LOFAR_Mnem2ID(LOFAR_Mnem,LOFAR_ID)
+    LFR_Mnem2ID=LOFAR_ID
+End Function LFR_Mnem2ID
 !
 End Module StationMnemonics
 !=================================

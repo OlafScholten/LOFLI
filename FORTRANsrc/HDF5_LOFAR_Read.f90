@@ -20,7 +20,7 @@ Module HDF5_LOFAR_Read
   Integer           :: Group_nr
   Character(len=50) ::  Group_names(Group_max)
   CHARACTER(LEN=140) :: filename
-  Integer, parameter :: DSet_max=24
+  Integer, parameter :: DSet_max=50 ! 24
   Integer           :: DSet_nr
   Character(len=50) ::  DSet_names(DSet_max)
   INTEGER(HID_T), save :: file_ID ! File Handle
@@ -41,7 +41,6 @@ Module HDF5_LOFAR_Read
 CONTAINS
 !------------------------
 Subroutine GetFileName(filenr, nxx)
-   use DataConstants, only : DataFolder
   IMPLICIT NONE
   Integer, intent(in) :: filenr
   Integer, intent(out) :: nxx

@@ -10,20 +10,20 @@
     !use unque
     use FitParams, only : FitParam, X_Offset, Fit_TimeOffsetAnt, ParamScaleFac, Fit_TimeOffsetStat
     use FitParams, only : N_FitPar_max, N_FitPar, N_FitStatTim, Nr_TimeOffset, Fit_AntOffset
-    use DataConstants, only : Station_nrMax, Ant_nrMax, RunMode, ChunkNr_dim
+    use DataConstants, only : Used_StationNr, RunMode, ChunkNr_dim
     use ThisSource, only : Nr_Corr, CorrAntNrs, SourcePos, RefAntErr, PeakNrTotal
-    use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt, Unique_SAI
-    use StationMnemonics, only : Station_Mnem2ID
+    use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt
+!    use StationMnemonics, only : LOFAR_Mnem2ID
     implicit none
     Real(kind = 8), intent(out) :: X(N_FitPar_max)
     logical, intent(inout) :: First
     integer, intent(in) :: FitPos(4)
     integer :: i,j,k,j_corr, nxx, i_ant, i_Peak, i_eo, i_chunk
-    Integer :: vec(Ant_nrMax)
+    !Integer :: vec(Ant_nrMax)
     !Equivalence (Ant_Stations(1,1),vec(1))
-    logical,dimension(Station_nrMax) :: mask
+    logical, dimension(Used_StationNr) :: mask
     integer, save ::  FP_s(0:N_FitPar_max), FP(0:4)
-    Character(len=5) :: FP_MNem(0:N_FitPar_max)
+    Character(len=6) :: FP_MNem(0:N_FitPar_max)
     character*180 :: lname
     character*4 :: option
     Logical,save :: FitNoSources
@@ -48,29 +48,32 @@
     endif
   1   Continue
     !
-    N_FitStatTim=0
-    Nr_TimeOffset=1
-    if(FP_s(1).GT.0) then
-     Do i=1,N_FitPar_max
-        ! write(2,*) 'SetFitParamsLMA:',i,FP_s(i)
-        if(FP_s(i) .le. 0) exit
-        Do i_chunk=1, ChunkNr_dim
-         Do i_eo=0,1
-            If(any(FP_s(i)==Ant_Stations(CorrAntNrs(1:Nr_Corr(i_eo,i_chunk),i_eo,i_chunk),i_chunk)) ) goto 2  ! check if this station included in present fit
+   N_FitStatTim=0
+   Nr_TimeOffset=1
+   if(FP_s(1).GT.0) then
+      Do i=1,N_FitPar_max
+         !write(2,*) '!SetFitParamsLMA:',i,FP_s(i)
+         if(FP_s(i) .le. 0) exit
+         Do i_chunk=1, ChunkNr_dim
+            Do i_eo=0,1
+               If(any(FP_s(i)==Ant_Stations(CorrAntNrs(1:Nr_Corr(i_eo,i_chunk),i_eo,i_chunk),i_chunk)) ) goto 2  ! check if this station included in present fit
+            Enddo
          Enddo
-        Enddo
-        exit
-  2     Continue
-        Do k=1, Nr_UniqueStat
+         !write(2,*) '!SetFitParamsLMA:',Nr_Corr(0,1), Ant_Stations(CorrAntNrs(1:Nr_Corr(0,1),0,1),1)
+         exit
+  2      Continue
+         Do k=1, Nr_UniqueStat
           If(Unique_StatID(k).eq. FP_s(i)) then
+            !write(2,*) '!SetFitParamsLMA',i,k,FP_s(i), N_FitStatTim, N_FitPar_max, Fit_AntOffset
             N_FitStatTim= N_FitStatTim + 1 ! position in 'FitParam'
             FitParam(N_FitStatTim)= k ! the timing of station "Unique_StatID(k)" will be fitted.
             X_Offset(N_FitStatTim)=Nr_TimeOffset   ! position in 'X' for this station, or the first antanna for this station
             If(Fit_AntOffset) then
-                 Do j= 1,Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1)
-                    X(Nr_TimeOffset)=Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j)
-                    Nr_TimeOffset=Nr_TimeOffset+1
-                 Enddo
+               Do j= 1,Tot_UniqueAnt(k)-Tot_UniqueAnt(k-1)
+                 X(Nr_TimeOffset)=Fit_TimeOffsetAnt(Tot_UniqueAnt(k-1)+j)
+                 Nr_TimeOffset=Nr_TimeOffset+1
+               Enddo
+               !write(2,*) '!SetFitParamsLMA, ant',j,Nr_TimeOffset,X(1:Nr_TimeOffset-1)
             Else
               X(Nr_TimeOffset)=Fit_TimeOffsetStat(k)
               Nr_TimeOffset=Nr_TimeOffset+1
@@ -80,7 +83,7 @@
         Enddo ! k=1, Nr_UniqueStat
      Enddo
     endif
-    X_Offset(N_FitStatTim+1)=Nr_TimeOffset
+    X_Offset(N_FitStatTim+1)=Nr_TimeOffset ! is the offset for the first timing parameter for station 'N_FitStatTim'
     !
     N_FitPar=N_FitStatTim
     !write(*,*) 'FP',FP(:),N_FitPar
@@ -112,7 +115,7 @@
     !
     First=.false.
     ParamScaleFac(:) = 1.
-    !write(*,*) 'N_FitPar,N_FitStatTim', N_FitPar,N_FitStatTim
+    !write(2,*) '!SetFitParamsLMA, N_FitPar,N_FitStatTim', N_FitPar,N_FitStatTim
     !write(2,*) 'Fit_TimeOffsetAnt',Fit_TimeOffsetAnt(150:180)
     !write(2,"(A,10F11.2)") 'RefAntErr_SFP(i_Peak):',(RefAntErr(i_Peak),i_Peak=1,PeakNrTotal)
     !write(2,"(A,10F11.2)") 'X_SFP=',(X(i),i=1,10)
@@ -126,7 +129,7 @@ Subroutine PrntFitPars(X)
     use FitParams
     !use FittingParameters
     use ThisSource, only : PeakPos, PeakNrTotal, Peak_eo, ChunkNr, PeakChiSQ, PeakRMS, ExclStatNr, Dropped
-    use Chunk_AntInfo, only : Unique_StatID, StartT_sam
+    use Chunk_AntInfo, only : Unique_StatID, StartT_sam, Used_StationNr
     use Chunk_AntInfo, only : Tot_UniqueAnt, Unique_SAI ! constructed in "Find_unique_StatAnt" in FitParams.f90
     use StationMnemonics, only : Station_ID2Mnem
     use StationMnemonics, only : Statn_ID2Mnem
@@ -136,15 +139,15 @@ Subroutine PrntFitPars(X)
     real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
     integer ( kind = 4 ) :: i,j, i_Peak, i_chunk
     integer, external :: XIndx
-    Character(len=5) :: Station_Mnem
+    Character(len=6) :: Station_Mnem
     Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
     Logical :: VerboseOutput=.false.
     !
     If(N_FitStatTim .gt. 0) then
         Do i=1,N_FitStatTim
             Call Station_ID2Mnem(Unique_StatID(FitParam(i)),Station_Mnem)
-            write(2,"(A,i2,'), ',A5,50F11.3)") 'Fit_TimeOffsets[samples](',i,Station_Mnem,(X(j),j= X_Offset(i),X_Offset(i+1)-1)
-            If(Fit_AntOffset) write(2,"(30x,50i11)")(Unique_SAI(Tot_UniqueAnt(FitParam(i)-1)+j),j= 1,X_Offset(i+1)-X_Offset(i))
+            write(2,"(A,i2,'), ',A5,50F8.3)") 'Fit_TimeOffsets[samples](',i,Station_Mnem,(X(j),j= X_Offset(i),X_Offset(i+1)-1)
+            If(Fit_AntOffset) write(2,"(30x,50i8)")(Unique_SAI(Tot_UniqueAnt(FitParam(i)-1)+j),j= 1,X_Offset(i+1)-X_Offset(i))
         enddo
     endif
     i_chunk=0
@@ -162,9 +165,9 @@ Subroutine PrntFitPars(X)
                     FitParam_Mnem(FitParam(N_FitStatTim+i)),X( XIndx(i,i_Peak) )
             Enddo
             write(2,"(' RMS[ns]=',F7.2,', sqrt(chi^2/df)=',F7.2)", ADVANCE='NO') PeakRMS(i_Peak),sqrt(PeakChiSQ(i_Peak))
-            If(Station_nrMax.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
+            If(Used_StationNr.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
                write(2,"(' Excluded:')", ADVANCE='NO')
-               Do i=1,Station_nrMax
+               Do i=1,Used_StationNr
                   If(ExclStatNr(i,i_peak).eq.0) exit
                   Write(2,"(1x,A5)", ADVANCE='NO') Statn_ID2Mnem(ExclStatNr(i,i_peak))
                Enddo
@@ -176,9 +179,9 @@ End Subroutine PrntFitPars
 !==========================================
 Subroutine X2Source(X)
 ! Move fit results fron X to Sourcepos and FineOffset_
-    use DataConstants, only : Station_nrMax
+    !use DataConstants, only : Station_nrMax
     use ThisSource, only : SourcePos, RefAntErr, PeakNrTotal
-    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt,  Unique_SAI
+    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Tot_UniqueAnt!,  Unique_SAI
     use FitParams
     use constants, only : dp
     Implicit none
@@ -232,25 +235,29 @@ End Subroutine X2Source
 !===================================
 Subroutine Find_unique_StatAnt()
 !  Update list of unique stations and antennas.
-    use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt
     use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
     use DataConstants, only : Interferometry !Polariz
     !use ThisSource, only : Fit_TimeOffsetStat, Unique_StatID
     use Chunk_AntInfo, only : Ant_Stations, Ant_nr, Ant_IDs
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
-    use StationMnemonics, only : Statn_ID2Mnem
+    use StationMnemonics, only : Statn_ID2Mnem, Station_ID2Mnem
     use unque, only : unique
+    use FitParams, only : Alloc_FitParams
     Implicit none
-    Integer :: vec(Ant_nrMax*(ChunkNr_dim+1))
+    Integer, allocatable :: vec(:)
     integer, save ::  i_chunk, k, StatID, i_stat, i_ant
     integer,dimension(:),allocatable :: Station_IDs  ! scratch array
     !Logical, save :: First=.true.
     Integer, save :: Previour_Nr_UniqueAnt=-1
+    Character(len=6) :: Station_Mnem
+    Character(len=6), external :: Xtatn_ID2Mnem
     !
     !write(2,*) 'ChunkNr_dim=',ChunkNr_dim
+    Allocate( vec(Ant_nrMax*(ChunkNr_dim+1)) )
     vec=0
     k=0
-    !write(2,*) 'Find_unique_StatAnt:', Nr_UniqueStat,Ant_nr(1: ChunkNr_dim)
+    !write(2,*) '!Find_unique_StatAnt:', Nr_UniqueStat,ChunkNr_dim,Ant_nr(1: ChunkNr_dim)
+    Flush(unit=2)
     If(Nr_UniqueStat.gt.0) then
       Vec(1:Nr_UniqueStat)=Unique_StatID(1:Nr_UniqueStat)
       k=Nr_UniqueStat
@@ -262,11 +269,12 @@ Subroutine Find_unique_StatAnt()
     enddo
     Call unique(vec,Station_IDs)
     Nr_UniqueStat=size(Station_IDs)-1
-    !Write(2,*) 'Find_unique_StatAnt:Nr_UniqueStat=',Nr_UniqueStat
+    !Write(2,*) '!Find_unique_StatAnt:Nr_UniqueStat=',Nr_UniqueStat
+    Flush(unit=2)
     Unique_StatID(1:Nr_UniqueStat)=Station_IDs(2:Nr_UniqueStat+1)  ! get rid of leading 0
     Deallocate(Station_IDs)
     !
-    !Write(2,*) 'Nr_UniqueStat1=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
+    !Write(2,*) '!Nr_UniqueStat1=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
     !  Find Unique antenna SAI-numbers
     k=0
     If(Nr_UniqueAnt.gt.0) then
@@ -286,7 +294,7 @@ Subroutine Find_unique_StatAnt()
          Enddo
       Else
         vec(k+1:k+Ant_nr(i_chunk))= &  !  How can this work? should this rather be vec(k+1:k+Ant_nr(i_chunk)); it does work however!
-            1000*Ant_Stations(1:Ant_nr(i_chunk),i_chunk) + Ant_IDs(1:Ant_nr(i_chunk),i_chunk)
+            100*Ant_Stations(1:Ant_nr(i_chunk),i_chunk) + Ant_IDs(1:Ant_nr(i_chunk),i_chunk)
         !write(2,*) 'Find_unique, CHECK!!!!', k, Ant_nr(i_chunk), Ant_IDs(1,i_chunk),'--',Ant_IDs(Ant_nr(i_chunk),i_chunk), &
         !       ' ; ',vec(k+1),'--',vec(Ant_nr(i_chunk)),'--', vec(k+Ant_nr(i_chunk))
         k=k+Ant_nr(i_chunk)
@@ -301,18 +309,31 @@ Subroutine Find_unique_StatAnt()
     endif
     Unique_SAI(1:Nr_UniqueAnt)=Station_IDs(2:Nr_UniqueAnt+1)  ! get rid of leading 0
     Deallocate(Station_IDs)
+    DeAllocate( vec )
     !
-    !Write(2,*) 'Nr_UniqueStat1=',Nr_UniqueStat, Unique_SAI(1:5)
-    !Write(2,*) 'Nr_UniqueStat2=',Nr_UniqueStat, Unique_SAI(56:68)
-    !Write(2,*) 'Find_unique_StatAnt',First, ChunkNr_dim
+    !Write(2,*) '!Nr_UniqueSAI1=',Nr_UniqueStat, Unique_SAI(1:5)
+    !Write(2,*) '!Nr_UniqueStat2=',Nr_UniqueStat, Unique_SAI(56:68)
+    !Write(2,*) '!Find_unique_StatAnt', ChunkNr_dim
+    !Flush(unit=2)
+!    Call Station_ID2Mnem(Unique_StatID(1),Station_Mnem)
+!    Write(2,*) '!Find_unique_Stat Mnem 1:', Station_Mnem, Unique_StatID(1)
+!    Flush(unit=2)
+!    Station_Mnem=Statn_ID2Mnem(10)
+!    Write(*,*) '!Find_unique_Stat Mnem S10:', Station_Mnem
+!    Flush(unit=2)
+    !Write(2,*) '!Find_unique_Stat Mnem 3:', Statn_ID2Mnem(Unique_StatID(3))
+    !Flush(unit=2)
     If(Previour_Nr_UniqueAnt.lt.Nr_UniqueAnt) then
       Previour_Nr_UniqueAnt = Nr_UniqueAnt
-      Write(2,"(A,I3,2x,50(1x,I5))") 'Nr_UniqueStat=',Nr_UniqueStat, Unique_StatID(1:Nr_UniqueStat)
-      write(2,"(A,I4,2x,50(1x,A5))") 'Nr_UniqueAnt=',Nr_UniqueAnt, (Statn_ID2Mnem(Unique_StatID(k)),k=1,Nr_UniqueStat)
+      Write(2,"(A,I3,A,50(1x,I6))") 'Nr_UniqueStat:',Nr_UniqueStat,' ; ', Unique_StatID(1:Nr_UniqueStat)
+      Flush(unit=2)
+      write(2,"(A,I4,A,50(1x,A6))") 'Nr_UniqueAnt:',Nr_UniqueAnt,' ; ', (Statn_ID2Mnem(Unique_StatID(k)),k=1,Nr_UniqueStat)
+      Flush(unit=2)
     Endif
     !Do k=1,Nr_UniqueAnt/10 +1
-    !write(2,*) k,Unique_SAI(10*(k-1)+1:10*k)
+    !  write(2,*) '!',k,Unique_SAI(10*(k-1)+1:10*k)
     !enddo
+    !Flush(unit=2)
     !
     Tot_UniqueAnt(0)=0
     StatID=Unique_SAI(1)/1000
@@ -322,21 +343,23 @@ Subroutine Find_unique_StatAnt()
             StatID=Unique_SAI(k)/1000
             i_stat=i_stat+1
         endif
+!        write(2,*) '! Tot_UniqueAnt:',i_stat, k
+!        Flush(unit=2)
         Tot_UniqueAnt(i_stat)=k       ! highest ranknr of unique_antenna for station Unique_StatID(i_stat)
     Enddo
     !
-    Fit_TimeOffsetStat(:)=0.
-    Fit_TimeOffsetAnt(:)=0.
+    Call Alloc_FitParams
+!    Fit_TimeOffsetStat(:)=0.
+!    Fit_TimeOffsetAnt(:)=0.
     !FitOffset_SAI(:)=Unique_SAI        ! SAI = Station+Antenna_ID = station_ID*1000 + Ant_nr
     !
     Return
     !
-    Do i_stat=1,Nr_UniqueStat
-        write(2,*) i_stat,Tot_UniqueAnt(i_stat),Unique_StatID(i_stat),Unique_SAI(Tot_UniqueAnt(i_stat-1)+1:Tot_UniqueAnt(i_stat))
-    enddo
-    !
-    Return
+    !Do i_stat=1,Nr_UniqueStat
+    !    write(2,*) i_stat,Tot_UniqueAnt(i_stat),Unique_StatID(i_stat),Unique_SAI(Tot_UniqueAnt(i_stat-1)+1:Tot_UniqueAnt(i_stat))
+    !enddo
 End Subroutine Find_unique_StatAnt
+!===================================
 !===================================
 Integer Function XIndx(i,i_peak)
     use FitParams, only : FitParam, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset

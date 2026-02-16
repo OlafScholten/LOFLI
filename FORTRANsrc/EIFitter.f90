@@ -189,8 +189,7 @@ End Subroutine EI_Fitter
 !=================================================
 Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
     use constants, only : dp,sample,c_mps
-    use DataConstants, only : Station_nrMax, Ant_nrMax
-!    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err
+    use DataConstants, only : Ant_nrMax  !Station_nrMax,
     use ThisSource, only :  SourcePos, PeakNrTotal, PeakPos, ChunkNr, PeakChiSQ, ExclStatNr
     use Interferom_Pars, only : Cnu_p0, Cnu_t0, Cnu_p1, Cnu_t1,  N_fit, AntPeak_OffSt, Chi2pDF
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
@@ -238,7 +237,7 @@ Subroutine CompareEI( meqn, nvar, X, nf, R, uiparm, urparm, ufparm )
   Real(dp) :: DelChi(-N_fit:+N_fit,1:2*Nr_IntFerMx)
     !
     integer :: j, i_SAI, i_eqn, i_stat, i_ant, i_Peak, i_chunk, Station_ID, j_IntFer, Antenna_SAI, Outpt
-    Character(len=5) :: Station_Mnem
+    !Character(len=6) :: Station_Mnem
     Character(len=9) :: Label
     !
     Outpt=0
@@ -510,7 +509,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
    Do j=-N_s,N_s ! fold time-dependence with smoothing function
       Do m=1,3  ! convert to time
          AiF(m)=SUM( Ai(m,:)*FTime_PB(i_s+j,:) )
-         TIntens_pol(m,j)=Abs(AiF(m))**2  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
+         TIntens_pol(m,j)=Abs(AiF(m))**2  !  Intensity trace for different pol directions as seen at the core, For use in "ATRID_Option"
       Enddo
       If(smooth(j).le. 0.) cycle
       N_chi=N_chi+1
@@ -599,7 +598,7 @@ Subroutine EI_PolGridDel(Nr_IntFer, FitDelay, i_sample, i_chunk , VoxLoc, AntPea
       Close(UNIT=33)
       Close(UNIT=34)
       Write(GLE_file,"('CuP-',A,A)") TRIM(OutFileLabel),trim(txt)
-      Call GLEscript_Curtains(30, GLE_file, N_s, i_chunk, trim(DataFolder)//TRIM(OutFileLabel), TRIM(txt), &
+      Call GLEscript_EFieldCurtain(30, GLE_file, N_s, i_chunk, trim(DataFolder)//TRIM(OutFileLabel), TRIM(txt), &
                dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF, VoxLoc(:))
       !Write(2,"(16x,A,5x,A,5x,A,6x,A,2x,A,4x,A)") 'D', 'Power','weight','delta_chi^2'!,'Power','d_chi/sqrt(P)'
       write(2,*) 'Make CurtainPlot ',TRIM(OutFileLabel),trim(txt)
@@ -890,7 +889,7 @@ Subroutine EI_PolSetUp(Nr_IntFer, IntfBase, i_chunk, VoxLoc, AntPeak_OffSt, Cnu_
    !Use Interferom_Pars, only : CTime_p, CTime_t, Noise_p, Noise_t  !PixLoc, CenLoc,
    use AntFunCconst, only : Freq_min, Freq_max,Ji_p0,Ji_t0,Ji_p1,Ji_t1, Gain  !J_0p,J_0t,J_1p,J_1t,
    use Interferom_Pars, only :IntfNuDim, dnu, inu1, inu2
-   use GLEplots, only : GLEplotControl
+   !use GLEplots, only : GLEplotControl
    use FFT, only : RFTransform_CF, RFTransform_CF2CT
    Implicit none
    Integer, intent(in) :: Nr_IntFer, IntfBase, i_chunk  ! IntfLead
@@ -976,7 +975,7 @@ End Subroutine EI_PolSetUp
 ! ------------------------
 Pure Subroutine GetInterfFitDelay(i_chunk, FitDelay)
     use constants, only : dp
-    use DataConstants, only : Station_nrMax, Ant_nrMax
+    use DataConstants, only : Ant_nrMax  ! Station_nrMax,
     use ThisSource, only :  PeakNrTotal, PeakPos,  ChunkNr
     Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos
@@ -1011,11 +1010,11 @@ End Subroutine GetInterfFitDelay
 ! ------------------------
 Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
    use constants, only : dp
-   use DataConstants, only : Station_nrMax, Ant_nrMax
+   use DataConstants, only : Ant_nrMax
    use ThisSource, only :  PeakNrTotal, PeakPos, ChunkNr
    Use Interferom_Pars, only : IntfNuDim, IntFer_ant, Nr_IntFerMx, Nr_IntferCh, N_fit, smooth
    use Chunk_AntInfo, only : Ant_Stations, Ant_pos
-   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
+   use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Nr_UniqueAnt
    !use FitParams, only : N_FitPar, N_FitStatTim, FitParam, X_Offset
    !use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset
    use StationMnemonics, only : Statn_ID2Mnem ! , Station_ID2Mnem
@@ -1029,7 +1028,15 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
    real(dp) :: PartChiSq_p(1:Nr_IntFerMx), PartChiSq_t(1:Nr_IntFerMx)
    !
    integer :: i, i_SAI, i_stat, i_ant, Station_ID,j_IntFer, Antenna_SAI
+   Real(dp), save :: AntChiSq(1:501)
+   Integer, save :: AntN(1:501)
+   Logical, save :: First=.true.
    !
+   If(first) Then
+      AntN(1:501)=0
+      AntChiSq(1:501)=0.
+      First=.false.
+   EndIf
    ChiSq=0.
    PartChiSq(:)=0
    PartChiSq_p(:)=0. ; PartChiSq_t(:)=0.
@@ -1053,9 +1060,18 @@ Subroutine WriteDelChiPeak(i_chunk, DelChi,PartChiSq,PartChi2Int)
       !Do i_stat=1, Nr_UniqueStat      ! Get station number from the Unique_StatID list
       !    If(Unique_StatID(i_stat).eq. Station_ID) exit
       !enddo
+      Do i=1, Nr_UniqueAnt     ! Get station number from the Unique_StatID list
+          If(Unique_SAI(i).eq. Antenna_SAI) exit
+      enddo
+      If(i.gt.500) i=500
+      AntChiSq(i)=AntChiSq(i)+PartChiSq_p(j_IntFer)
+      AntN(i)=AntN(i)+1
+      AntChiSq(i+1)=AntChiSq(i+1)+PartChiSq_t(j_IntFer)
       If(PartChiSq(j_IntFer).gt. (2*ChiSq)) Then
-         Write(2,"(I5,A6,I7, 3F7.2, 2F9.3)") j_IntFer, Statn_ID2Mnem(Station_ID), Antenna_SAI, PartChiSq(j_IntFer),&
-               PartChiSq_p(j_IntFer), PartChiSq_t(j_IntFer)
+         Write(2,"(I5,A6,I7, 3(A,F7.2), A, 2F9.3, I4, I5)") j_IntFer, Statn_ID2Mnem(Station_ID), Antenna_SAI, &
+            ', chi^2_tot=', PartChiSq(j_IntFer),&
+            ', _phi=', PartChiSq_p(j_IntFer), ', _th=', PartChiSq_t(j_IntFer), &
+            ', _RunningAve=', AntChiSq(i)/AntN(i), AntChiSq(i+1)/AntN(i), AntN(i), i
          !Write(2,*) 'p: DelChi(i,2*j_IntFer-1)', N_fit, DelChi(-N_fit:N_fit,2*j_IntFer-1)
          !Write(2,*) 't: DelChi(i,2*j_IntFer)', j_IntFer, DelChi(-N_fit:N_fit,2*j_IntFer)
       EndIf

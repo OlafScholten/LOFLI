@@ -58,7 +58,7 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
    TrackNr=PreDefTrackNr
    TrackENr(:)=0
    !tNrS(:)=1
-   Write(2,*) 'PreDefTrackNr=',PreDefTrackNr
+   Write(2,*) 'Number of predefined tracks=',PreDefTrackNr
    !TrackE(TrackENr(TrackNr),TrackNr)=j
    ! TrackPos(1:3,TrackNr)=RA(2:4,j)
    !TOrder=-1
@@ -71,11 +71,11 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
       j_i=SourcTotNr
       TOrder=-1
    EndIf
-   !write(2,*) 'Assign2Tracks: SourcTotNr=',SourcTotNr, j_i,j_f
+   !write(2,*) 'Assign2Tracks: SourcTotNr=',SourcTotNr, j_i,j_f, TrackNr
    Do j=j_i,j_f,TOrder ! loop over all sources
       Call GetPreDefTrPos(RA(1,j),TrackPos) ! fills positions of all predifined tracks at time RA(1,j)
       n_cls=0  ! number of close-lying tracks
-      !write(2,*) j,RA(1,j),TrackPos(1:3,1)
+      !write(2,*) 'PreDefTrPos:',j,RA(1,j),TrackPos(1:3,1)
       Do i=1,TrackNr
          !dist=0.         ! distance to the next point (in time)
          dist=((TrackPos(3,i)-RA(4,j))/HeightFact)**2  ! weigh vertical distance by factor "HeightFact" less
@@ -83,9 +83,9 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
          dist=dist +(TrackPos(1,i)-RA(2,j))**2  ! changed to factor 1 less weight for z
          dist=dist +(TrackPos(2,i)-RA(3,j))**2
          Dist=sqrt(dist)       ! distance of track-head(i) to the next (in time) source(j)
-         !If(i.lt.2) Write(2,*) j,RA(1,j),Dist,i,TrackPos(3,i)
+         !If(i.lt.2) Write(2,*) j,RA(1,j),RA(2,j),Dist,i, MaxTrackDist
          If(dist .gt. MaxTrackDist) cycle
-         ! write(2,*) TrackNr,j,i,dist,TrackPos(1:3,i)
+         ! write(2,*) TrackNr,j,i,dist,TrackPos(1:3,i),n_cls
          ! Add to existing Track
          n_cls=n_cls+1
          Cls_track(n_cls)=i
@@ -146,16 +146,25 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
    ! Clean-up short tracks
    LongTrackNr=TrackNr
    TotLongTrackEve=0
+ !  Do i = 1, TrackNr
+ !     If(TrackENr(i).lt. LongTrack_Min) then ! delete this track
+ !        LongTrackNr=LongTrackNr-1
+ !        If(TrackENr(i).le.0) cycle
+ !     endif
+ !     j=TrackE(1,i)  ! source number for first source on this track
+ !     k=TrackE(TrackENr(i),i)  ! Source number of last source on this track
+ !!     write(2,"(A,i2,A,I4,A,2F7.1,2I5)") 'TrackNr=',i,', has # pixels=',TrackENr(i),'; t_i, t_f =',RA(1,j),RA(1,k)!,j,k
+ !     TotLongTrackEve=TotLongTrackEve + TrackENr(i)
+
+   LongTrackNr=0
    Do i = 1, TrackNr
-      If(TrackENr(i).lt. LongTrack_Min) then ! delete this track
-         LongTrackNr=LongTrackNr-1
-         If(TrackENr(i).le.0) cycle
-      endif
-      j=TrackE(1,i)  ! source number for first source on this track
-      k=TrackE(TrackENr(i),i)  ! Source number of last source on this track
-      write(2,"(A,i2,A,I4,A,2F7.1,2I5)") 'TrackNr=',i,', has # pixels=',TrackENr(i),'; t_i, t_f =',RA(1,j),RA(1,k)!,j,k
-      TotLongTrackEve=TotLongTrackEve + TrackENr(i)
-    enddo
+      If(TrackENr(i).lt. LongTrack_Min) cycle
+      If(LongTrackNr.ge.9) cycle
+      LongTrackNr=LongTrackNr+1
+      If(LongTrackNr.eq.i) cycle
+      TrackENr(LongTrackNr)=TrackENr(i)
+      TrackE(1:TrackENr(LongTrackNr),LongTrackNr)=TrackE(1:TrackENr(i),i)
+   enddo
     !
     write(2,"(A,i5,A,I5)") 'Nr of events=',SourcTotNr,' , total # in tracks=',TotLongTrackEve
     write(2,"(A,i2,A,I2)") 'Nr of tracks=',TrackNr,'; # of long tracks=', LongTrackNr
@@ -188,9 +197,9 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
    Character(len=*) :: PlotFile
    !Real*8 :: TrackPos(1:3,TrackLenMax)  !  TrackPos(1:3,i): position of the head of the i^th track
    !
-   Integer :: i_LongTr, i,j,k,kk,jk
+   Integer :: i_track, j,k,kk,jk
    Character*8 :: extension
-   Real*8 :: Xsq, Ysq, Zsq, tw, w, Pos(1:3), dt
+   Real*8 :: Xsq, Ysq, Zsq, Xms, Yms, Zms, X5,Y5,Z5, tw, w, Pos(1:3), dt
    Real*8 :: RadDev, HorDev, HDist, Velocity, TW2, V_hor, V_th, V_ph
    complex  :: LeaderStks(1:6), AveStks(1:3,1:3) !  ,TrackLenMax)
    Real(dp) :: PolZen(1:3), PolAzi(1:3), PolMag(1:3), PoldOm(1:3), Thet1, Phi1
@@ -204,44 +213,45 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
    !
    Write(2,"(A,f7.4,A)") 'Time window for track smoothing=',TimeWin,'[ms]'
    Tw2=TimeWin*TimeWin
-    i_LongTr=0
    !Call Flush(2)
    !    Hist1=0.000001 ; Hist2=0.000001
    prin=.false.   !  Do not print polarization observables
    !prin=.true.   !  Do not print polarization observables
    PolZen(1:3)=0. ; PolAzi(1:3)=0. ; PolMag(1:3)=0. ; PoldOm(1:3)=0.
-   do i=1,TrackNr
+   do i_track=1,LongTrackNr
       !write(2,*) 'ConstructTracks',i,TrackENr(i), LongTrack_Min, PolarAna
-      If(TrackENr(i).lt. LongTrack_Min) cycle
-      i_LongTr=i_LongTr+1
-      if(i_LongTr.ge.10) exit
       !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
-      write(extension,"(i1,A4)") i_LongTr,'.plt' !,&
-      OPEN(unit=29,FILE=TRIM(PlotFile)//trim(extension),FORM='FORMATTED',STATUS='unknown')
+      write(extension,"('-tr',i1)") i_track !,&
+      !write(extension,"(i1,A4)") i_LongTr,'.plt' !,&
+      OPEN(unit=29,FILE=TRIM(PlotFile)//trim(extension)//'.plt',FORM='FORMATTED',STATUS='unknown')
       write(29,"('!',T22,'Running Average Leader Head position',T73,'Source position',T121,'Derived quantities')")
       write(29,"('!',T7,'time',T22,'North=y',T38,'East=x',T53,'height=z',T73,'North=y',T89,'East=x',T104,'z=height', &
          T121,'Delta_t[ms]',T137,'Delta_Rad[km]',T153,'Delta_Rxz',T169,'Delta_h',T188,'v[km/ms]',T202,'Dist.toTip[m]')")
       If(PolarAna) Then
-         OPEN(unit=30,FILE=TRIM(PlotFile)//'Angls'//trim(extension),FORM='FORMATTED',STATUS='unknown')
+         OPEN(unit=30,FILE=TRIM(PlotFile)//trim(extension)//'Angls.plt',FORM='FORMATTED',STATUS='unknown')
          write(30,"('!',T10,'Running Average Leader Head position',T47,'Velocity angle',T77,&
             'Polarization amplitudes & angles')")
          write(30,"('!',T5,'time',T17,'North=y',T28,'East=x',T39,'z=height',T50,'Th(Zen),Azim(N)',T72,'Ampl', &
-            T82,'Th(Zen), Azim(N), d(omga)',T116,'Repeated twice more', T185,'F(P.V), F(P.R), Dist, P.Dist,   TrDist,   P.Tr')")
+            T82,'Th(Zen), Azim(N), d(omga)',T116,'Repeated twice more', T184,'F(P.V), F(P.R),   Dist, P.Dist,   TrDist,  P.Tr,', &
+            T239'Qd, PdotQ, Pdoth')")
+!!   time        North=y    East=x     z=height   Th(Zen),Azim(N)       Ampl      Th(Zen), Azim(N), d(omga)         Repeated twice more                                                  F(P.V), F(P.R),   Dist,  P.Dist,   TrDist,   P.Tr, Qd, PdotQ, Pdoth
+! 1154.921114    1.09539  -10.04397    9.27672  ,  38.87,  52.37   ,    8.979    ,  45.56, -18.44,  13.98 ,    1.712    ,  49.73,-165.37,   7.14 ,    1.400    ,  73.84,  88.29,  12.04, 0.565, 0.865,    0.976, 0.600,    0.290, 0.205,    0.290, 0.799, 0.949
       EndIf
       !MeanTrackLoc(1:3,:)=0.   !, N_MTL, Nmax_MTL=500
       Xsq=0.
       Ysq=0.
       Zsq=0.
       vv(1:3)=0.
-      Do k=1,TrackENr(i)
-            j=TrackE(k,i) ! j= rank-number of k-th source on track i
+      Do k=1,TrackENr(i_track)
+            j=TrackE(k,i_track) ! j= rank-number of k-th source on track i
+            !write(2,*) 'ConstructTracks:k,j', k,j
             ! Calculate Estimated Leader position
             tw=0.
             twp=0.
             Pos(1:3)=0.
             LeaderStks(1:6)=0.
-            Do kk=1,TrackENr(i) ! average positions of sources along this track with gaussian-in-time weighting
-                jk=TrackE(kk,i) ! jk= rank-number of other sources on track i
+            Do kk=1,TrackENr(i_track) ! average positions of sources along this track with gaussian-in-time weighting
+                jk=TrackE(kk,i_track) ! jk= rank-number of other sources on track i
                 dt=(RA(1,j)-RA(1,jk))**2        ! dt has units of t^2 !!!
                 If(dt.gt.8.*Tw2) cycle
                 w=exp(-dt/Tw2)*(SrcI20_r(j)*Aweight+1.)  ! Include intensity in weight factor
@@ -257,39 +267,40 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
                   LeaderStks(1:6)=LeaderStks(1:6)+wp*Stk_NEh(1:6,Iperm(jk))
               EndIf
             enddo
-            LeaderPos(1,k,i)=RA(1,j)         ! Time of the leader head = the time of the last source
-            LeaderPos(2:4,k,i)=Pos(1:3)/tw  ! position of the leader head
+            LeaderPos(1,k,i_track)=RA(1,j)         ! Time of the leader head = the time of the last source
+            LeaderPos(2:4,k,i_track)=Pos(1:3)/tw  ! position of the leader head
             If(PolarAna) Then
                LeaderStks(1:6)=LeaderStks(1:6)/twp
                Call PolPCACathCon(LeaderStks, PolZen, PolAzi, PolMag, PoldOm, prin)
             EndIf
             !
-            RadDev=(RA(4,j)-LeaderPos(4,k,i))*RA(4,j)  ! deviation along the axis from souce to reference antenna
+            RadDev=(RA(4,j)-LeaderPos(4,k,i_track))*RA(4,j)  ! deviation along the axis from souce to reference antenna
             HorDev=0.d0
             HDist=0.d0
             Do kk=2,3
-               RadDev=RadDev+(RA(kk,j)-LeaderPos(kk,k,i))*RA(kk,j)
-               HorDev=HorDev+(RA(kk,j)-LeaderPos(kk,k,i))*RA(5-kk,j)*(-1)**kk  ! cross product in horizontal plane
+               RadDev=RadDev+(RA(kk,j)-LeaderPos(kk,k,i_track))*RA(kk,j)
+               HorDev=HorDev+(RA(kk,j)-LeaderPos(kk,k,i_track))*RA(5-kk,j)*(-1)**kk  ! cross product in horizontal plane
                HDist=HDist+ RA(kk,j)*RA(kk,j)            ! length of vector, distance^2 to reference
             EndDo
             RadDev=RadDev/SQRT(HDist+ RA(4,j)*RA(4,j))
             HorDev=HorDev/SQRT(HDist)
-            dist=1000.*sqrt(SUM( (LeaderPos(2:4,k,i)-RA(2:4,j))**2 ))  ! distance from tip; in [m]
+            dist=1000.*sqrt(SUM( (LeaderPos(2:4,k,i_track)-RA(2:4,j))**2 ))  ! distance from tip; in [m]
             If(k.ge.2) then  ! otherwise LeaderPos(1,k-1,i) is not defined
-               If(abs(LeaderPos(1,k,i)-LeaderPos(1,k-1,i)).lt. 1.D-7) Then
+               If(abs(LeaderPos(1,k,i_track)-LeaderPos(1,k-1,i_track)).lt. 1.D-7) Then
                   If((k.le.3) ) Then
                      Velocity=0.  ! units: 10^6 m/s
                   Else
-                     If((LeaderPos(1,k,i)-LeaderPos(1,k-2,i)).ne. 0.) Then
-                        Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-2,i))**2))/ &
-                              (LeaderPos(1,k,i)-LeaderPos(1,k-2,i))  ! units: 10^6 m/s
+                     If((LeaderPos(1,k,i_track)-LeaderPos(1,k-2,i_track)).ne. 0.) Then
+                        Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i_track)-LeaderPos(2:4,k-2,i_track))**2))/ &
+                              (LeaderPos(1,k,i_track)-LeaderPos(1,k-2,i_track))  ! units: 10^6 m/s
                      EndIf
                      !write(2,*) 'Mean Velocity',k, Velocity, SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-2,i))**2)), &
                      !   (LeaderPos(1,k,i)-LeaderPos(1,k-2,i))
                   EndIf
                Else
-                  Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))  ! units: 10^6 m/s
-                  Vv(1:3)=(LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))/(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))
+                  Velocity=TOrder*SQRT(SUM((LeaderPos(2:4,k,i_track)-LeaderPos(2:4,k-1,i_track))**2))/ &
+                        (LeaderPos(1,k,i_track)-LeaderPos(1,k-1,i_track))  ! units: 10^6 m/s
+                  Vv(1:3)=(LeaderPos(2:4,k,i_track)-LeaderPos(2:4,k-1,i_track))/(LeaderPos(1,k,i_track)-LeaderPos(1,k-1,i_track))
                   V_hor=sqrt(Vv(1)*Vv(1) + Vv(2)*Vv(2))
                   V_th=atan2(V_hor,Vv(3))*180./pi  ; V_ph=atan2(Vv(2),Vv(1))*180./pi
                   !write(2,*) 'Velocity',k, Velocity, SQRT(SUM((LeaderPos(2:4,k,i)-LeaderPos(2:4,k-1,i))**2)), &
@@ -301,7 +312,7 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
                   Polv(2)=sin(SrcPZen(Iperm(j))*pi/180.) * sin(SrcPAzi(Iperm(j))*pi/180.)
                   Polv(3)=cos(SrcPZen(Iperm(j))*pi/180.)
                   PdothatV=abs(sum(Polv(1:3)*Vh(1:3)) )
-                  distv(1:3)=1000.*(LeaderPos(2:4,k,i)-RA(2:4,j))  ! in [m]
+                  distv(1:3)=1000.*(LeaderPos(2:4,k,i_track)-RA(2:4,j))  ! in [m]
                   PdotD=abs(sum(Polv(1:3)*distv(1:3))/(dist+0.0001))    ! Add 0.1 mm to avoid /0.
                   Trv(1:3)=distv(1:3)-Vh(1:3) * sum(distv(1:3)*Vh(1:3))   ! transverse distance vector from leader; in [m]
                   Trd=sqrt(sum(Trv(1:3)*Trv(1:3)) ) !+ 0.000001)   ! Add 0.001 mm^2 to avoid /0
@@ -330,11 +341,11 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
                EndIf
                Phi1=PolAzi(1)
                write(29,"(1x,4(2x,g14.8),3x,3(2x,g14.8),3x,g14.8,3(2x,g14.8),3x,g12.3,1x,F8.2)") &
-                    LeaderPos(1:4,k,i), RA(2:4,j), LeaderPos(1,k,i)-LeaderPos(1,k-1,i) &
-                    ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i), Velocity, dist
+                    LeaderPos(1:4,k,i_track), RA(2:4,j), LeaderPos(1,k,i_track)-LeaderPos(1,k-1,i_track) &
+                    ,RadDev,HorDev,RA(4,j)-LeaderPos(4,k,i_track), Velocity, dist
                If(PolarAna) write(30,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)), &
-                     2x,2F6.3,4(F10.3,F9.4) )") &
-                    LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3), &
+                     2(',',F6.3),3(',',F9.3,',',F6.3),',',F6.3 )") &
+                    LeaderPos(1:4,k,i_track), V_th, V_ph, (PolMag(jk), PolZen(jk), PolAzi(jk), PoldOm(jk), jk=1,3), &
                     PdothatV, PdotR, dist, PdotD, Trd, PdotTr, Qd, PdotQ, Pdoth
                !If(PolarAna) write(2,"(1x,F11.6,3(F11.5), 2x, 2(',',f7.2) ,2x, 3(' , ',g12.4, 3(',',f7.2)) )") &
                !     LeaderPos(1:4,k,i), V_th, V_ph, (PolMag(j), PolZen(j), PolAzi(j), PoldOm(j), j=1,3)  !V_hor, V_N, V_E, V_h!
@@ -347,9 +358,11 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
             !i_bin=(LeaderPos(1,k,i)-LeaderPos(1,k-1,i))/Bin2size
             !if(i_bin.gt.bin_max) i_bin=bin_max
             !Hist2(i_bin)=Hist2(i_bin) + 1.   ! Histogram for time between subsequent steps in a leader
-            Xsq=Xsq+(LeaderPos(2,k,i)-RA(2,j))*(LeaderPos(2,k,i)-RA(2,j))
-            Ysq=Ysq+(LeaderPos(3,k,i)-RA(3,j))*(LeaderPos(3,k,i)-RA(3,j))
-            Zsq=Zsq+(LeaderPos(4,k,i)-RA(4,j))*(LeaderPos(4,k,i)-RA(4,j))
+            Xsq=Xsq+(LeaderPos(2,k,i_track)-RA(2,j))*(LeaderPos(2,k,i_track)-RA(2,j))
+            Ysq=Ysq+(LeaderPos(3,k,i_track)-RA(3,j))*(LeaderPos(3,k,i_track)-RA(3,j))
+            Zsq=Zsq+(LeaderPos(4,k,i_track)-RA(4,j))*(LeaderPos(4,k,i_track)-RA(4,j))
+            !write(2,*) 'ConstructTracks:Xsq [m]', i,k,j, sqrt(Xsq)*1000., (LeaderPos(2,k,i)-RA(2,j))*1000., RA(1,j)
+            !write(2,*) 'ConstructTracks:pos [km]', RA(1:4,j)
             !If(SQRT(SUM((LeaderPos(2:4,k,i)-RA(2:4,j))*(LeaderPos(2:4,k,i)-RA(2:4,j)))) .gt. 0.06) then
             !   write(2,*) k,j,i,(LeaderPos(2:4,k,i)-RA(2:4,j)), RadDev, HorDev
             !Endif
@@ -358,10 +371,16 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
         If(PolarAna) Then
             LeaderStks(1:6)=0
             twp=0
-            Do k=1,TrackENr(i)
-               j=TrackE(k,i) ! j= rank-number of k-th source on track i
-               LeaderStks(1:6)=LeaderStks(1:6)+Stk_NEh(1:6,Iperm(j))*SrcWidth(Iperm(j))
-               twp=twp+SrcWidth(Iperm(j))
+            wp=1.
+            Do k=1,TrackENr(i_track)
+               j=TrackE(k,i_track) ! j= rank-number of k-th source on track i
+               If(DS_Mode .eq. 3) Then
+                  wp=SrcWidth(Iperm(j))
+               EndIf
+               !write(2,*) 'ConstructTracks;i,j', i, k, j, Iperm(j)
+               !Flush(unit=2)
+               LeaderStks(1:6)=LeaderStks(1:6)+Stk_NEh(1:6,Iperm(j))*wp
+               twp=twp+wp
                !write(2,"('!',4I4,10F8.3)") k,j,Iperm(j),SrcWidth(Iperm(j)),Real(LeaderStks(1)+LeaderStks(4)+LeaderStks(6))/twp, &
                !   Imag(LeaderStks(2))/twp,Imag(LeaderStks(3))/twp,Imag(LeaderStks(5))/twp
             EndDo
@@ -370,14 +389,47 @@ Subroutine ConstructTracks(DS_Mode, RA, SrcI20_r, SrcPZen, SrcPAzi, SrcWidth, IP
             write(2,*) 'Track averages integrated Stokes [= Width x (Stokes/sample)]:'
             Call PolPCACathCon(LeaderStks, PolZen, PolAzi, PolMag, PoldOm, prin)
             prin=.false.   !  Do not print polarization observables
-         EndIf
-        !
-        Write(2,"(A,i2,I5,A,3F7.1)") 'Track#',i,TrackENr(i),', RMS(E,N,H)[m]:', &
-         sqrt(Xsq/TrackENr(i))*1000., sqrt(Ysq/TrackENr(i))*1000., sqrt(Zsq/TrackENr(i))*1000.
-        Close(unit=29)
-        If(PolarAna) Close(unit=30)
-        Write(2,*) 'ConstructTracks, File written:',TRIM(PlotFile)//trim(extension),' with ',TrackENr(i), ' data lines'
-    enddo ! i=1,TrackNr
+      EndIf
+      !
+      Xms=Xsq/TrackENr(i_track)
+      Yms=Ysq/TrackENr(i_track)
+      Zms=Zsq/TrackENr(i_track)
+      Write(2,"(A,i2,I5,A,3F8.2)") 'Track#',i_track,TrackENr(i_track),', RMS(N,E,H)[m]:', &
+         sqrt(Xms)*1000., sqrt(Yms)*1000., sqrt(Zms)*1000.
+      Xsq=0.
+      Ysq=0.
+      Zsq=0.
+      jk=0
+      X5=0.
+      Y5=0.
+      Z5=0.
+      kk=0
+      Do k=1,TrackENr(i_track)
+         j=TrackE(k,i_track) ! j= rank-number of k-th source on track i_track
+         If((LeaderPos(2,k,i_track)-RA(2,j))*(LeaderPos(2,k,i_track)-RA(2,j)) .gt. 25*Xms) cycle
+         If((LeaderPos(3,k,i_track)-RA(3,j))*(LeaderPos(3,k,i_track)-RA(3,j)) .gt. 25*Yms) cycle
+         If((LeaderPos(4,k,i_track)-RA(4,j))*(LeaderPos(4,k,i_track)-RA(4,j)) .gt. 25*Zms) cycle
+         X5=X5+(LeaderPos(2,k,i_track)-RA(2,j))*(LeaderPos(2,k,i_track)-RA(2,j))
+         Y5=Y5+(LeaderPos(3,k,i_track)-RA(3,j))*(LeaderPos(3,k,i_track)-RA(3,j))
+         Z5=Z5+(LeaderPos(4,k,i_track)-RA(4,j))*(LeaderPos(4,k,i_track)-RA(4,j))
+         kk=kk+1
+         If((LeaderPos(2,k,i_track)-RA(2,j))*(LeaderPos(2,k,i_track)-RA(2,j)) .gt. 9*Xms) cycle
+         If((LeaderPos(3,k,i_track)-RA(3,j))*(LeaderPos(3,k,i_track)-RA(3,j)) .gt. 9*Yms) cycle
+         If((LeaderPos(4,k,i_track)-RA(4,j))*(LeaderPos(4,k,i_track)-RA(4,j)) .gt. 9*Zms) cycle
+         Xsq=Xsq+(LeaderPos(2,k,i_track)-RA(2,j))*(LeaderPos(2,k,i_track)-RA(2,j))
+         Ysq=Ysq+(LeaderPos(3,k,i_track)-RA(3,j))*(LeaderPos(3,k,i_track)-RA(3,j))
+         Zsq=Zsq+(LeaderPos(4,k,i_track)-RA(4,j))*(LeaderPos(4,k,i_track)-RA(4,j))
+         jk=jk+1
+         !write(2,*) 'ConstructTracks:Xsq [m]', k,j, sqrt(Xsq)*1000., (LeaderPos(2,k,i_track)-RA(2,j))*1000., RA(1,j)
+      EndDo
+      Write(2,"(A,i2,I5,A,3F8.2)") 'Track#',i_track,kk,', RMS(N,E,H)[m](excl 5 sigma):', &
+         sqrt(X5/kk)*1000., sqrt(Y5/kk)*1000., sqrt(Z5/kk)*1000.
+      Write(2,"(A,i2,I5,A,3F8.2)") 'Track#',i_track,jk,', RMS(N,E,H)[m](excl 3 sigma):', &
+         sqrt(Xsq/jk)*1000., sqrt(Ysq/jk)*1000., sqrt(Zsq/jk)*1000.
+      Close(unit=29)
+      If(PolarAna) Close(unit=30)
+      Write(2,*) 'ConstructTracks, File written:',TRIM(PlotFile)//trim(extension),' with ',TrackENr(i_track), ' data lines'
+   enddo ! i=1,TrackNr
     !
    Return
 End Subroutine ConstructTracks
@@ -395,19 +447,19 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
    !
    Integer, parameter :: Nmax_MTL=500
    Real*8 :: MeanTrackLoc(1:4,Nmax_MTL)   !, dt_MTL=0.2  ! [ms]
-   Integer :: N_MTL, i_MTL, t_MTL, t_old, i,j, k, i_LongTr, count
+   Integer :: N_MTL, i_MTL, t_MTL, t_old, i_track,j, k, count
    Character*8 :: extension
    Real*8 :: dt,dist,t0
    !
    count=0
-   i_LongTr=0
-   do i=1,TrackNr
-      If(TrackENr(i).lt. LongTrack_Min) cycle
-      i_LongTr=i_LongTr+1
-      if(i_LongTr.ge.10) exit
+   !i_LongTr=0
+   do i_track=1,LongTrackNr
+    !  If(TrackENr(i).lt. LongTrack_Min) cycle
+    !  i_LongTr=i_LongTr+1
+    !  if(i_LongTr.ge.10) exit
       !write(extension,"(A2,i1,A4)") '_s',nxx,'.dat' !,&
-      write(extension,"(i1,A4)") i_LongTr,'.plt' !,&
-      OPEN(unit=27,FILE=TRIM(PlotFile)//'_bin_'//trim(extension),FORM='FORMATTED',STATUS='unknown')
+      write(extension,"('-tr',i1,A)") i_track,'bin' !,&
+      OPEN(unit=27,FILE=TRIM(PlotFile)//trim(extension)//'.plt',FORM='FORMATTED',STATUS='unknown')
       write(27,"('!',F5.3,'Binned, t [ms]',T24,'N [km]',T39,'E',T53,'h',T73,'v_N',T86,'v_E',T99,'v_h',T110,'v[km/ms]', &
          T124,'Ave_t[ms]')")   dt_MTL
 1     Continue
@@ -415,11 +467,11 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
       i_MTL=0  ! just counter for filled bins
       MeanTrackLoc(1:4,:)=0.
       !Call Flush(2)
-      t0=RA(1,TrackE(1,i)) ! start time of this track
-      Do k=1,TrackENr(i)  ! average location over bin with length dt_MTL
-         j=TrackE(k,i) ! j= rank-number of k-th source on track i
+      t0=RA(1,TrackE(1,i_track)) ! start time of this track
+      Do k=1,TrackENr(i_track)  ! average location over bin with length dt_MTL
+         j=TrackE(k,i_track) ! j= rank-number of k-th source on track i_track
          t_MTL=TOrder*(RA(1,j)-t0)/dt_MTL
-         !write(2,*) i_old,t_MTL,i,j,MeanTrackLoc(1,1:t_MTL)
+         !write(2,*) i_old,t_MTL,i_track,j,MeanTrackLoc(1,1:t_MTL)
          !Call Flush(2)
          If(t_MTL.gt.t_old) then
             i_MTL=i_MTL+1
@@ -436,12 +488,12 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
             N_MTL=N_MTL+1
          Endif
       Enddo
-      write(2,*) 'long track',i_LongTr,' has ',i_MTL,'bins of ',dt_MTL,'[ms] filled'
-      If((i_LongTr.eq.1) .and. (i_MTL.lt.3) .and. (count.lt.5)) Then
+      write(2,*) 'long track',i_track,' has ',i_MTL,'bins of ',dt_MTL,'[ms] filled'
+      If((i_track.eq.1) .and. (i_MTL.lt.3) .and. (count.lt.5)) Then
          dt_MTL=dt_MTL/2.
          count=count+1
          goto 1
-      ElseIf((i_LongTr.eq.1) .and. (i_MTL.lt.3)) Then
+      ElseIf((i_track.eq.1) .and. (i_MTL.lt.3)) Then
          Write(2,*) 'Too few bins at dt_MTL=',dt_MTL,'[ms] for the first long track'
          dt_MTL=-dt_MTL
          close(unit=27)
@@ -463,27 +515,27 @@ Subroutine BinTracks(dt_MTL, RA, SourcTotNr, PlotFile)
          !Endif
       Enddo
       close(unit=27)
-      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//'_bin_'//trim(extension),' with ',i_MTL, ' data lines'
-      if(i_LongTr.eq.1) Then  ! write track for the first, may be used for interferometric tracing
-         OPEN(unit=27,FILE=TRIM(PlotFile)//'.trc',FORM='FORMATTED',STATUS='unknown')
-         Do k=1,i_MTL
-            If(TOrder.gt.0) Then  ! order in increasing time in tNEh notation
-               write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,k), &
-                  MeanTrackLoc(2:4,k)
-            Else
-               write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,i_MTL-k+1), &
-                  MeanTrackLoc(2:4,i_MTL-k+1)
-            EndIf
-         Enddo
-         close(unit=27)
-      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//'.trc',' with ',i_MTL, ' data lines'
-      EndIf
+      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//trim(extension)//'.plt',' with ',i_MTL, ' data lines'
+      !if(i_LongTr.eq.1) Then  ! write track for the first, may be used for interferometric tracing
+      OPEN(unit=27,FILE=TRIM(PlotFile)//trim(extension)//'.trc',FORM='FORMATTED',STATUS='unknown')
+      Do k=1,i_MTL
+         If(TOrder.gt.0) Then  ! order in increasing time in tNEh notation
+            write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,k), &
+               MeanTrackLoc(2:4,k)
+         Else
+            write(27,"(4(1x,g14.8),3x,3(1x,g12.4),2x,g10.4,2x,g13.7)") MeanTrackLoc(1,i_MTL-k+1), &
+               MeanTrackLoc(2:4,i_MTL-k+1)
+         EndIf
+      Enddo
+      close(unit=27)
+      Write(2,*) 'BinTracks; File:',TRIM(PlotFile)//trim(extension)//'.trc',' with ',i_MTL, ' data lines'
+      !EndIf
    enddo
     !
    Return
 End Subroutine BinTracks
 !===============================================
-Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
+Subroutine AnalyzeBurst(RA, SrcI20_r, i_track, SourcTotNr, PlotFile)
    ! Make a histogram of the source times in a track where each pulse is smeared with a gaussian
    ! with half width of t_resol, where this resolution changes. The histogram is stored in TBurst_trace(T)
    ! Then check how often >3.5 (N1) or >2.5 (N2) sources are within the t_resol
@@ -492,147 +544,174 @@ Subroutine AnalyzeBurst(RA, SrcI20_r, SourcTotNr, PlotFile)
    use FFT, only : RFTransform_su, DAssignFFT, RFTransform_CF
    IMPLICIT none
    Real(dp), Intent(in) :: RA(4,*)
-   Integer, intent(in) :: SourcTotNr !, Label(4,*)  !  SrcI20_r(Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
+   Integer, intent(in) :: i_track, SourcTotNr !, Label(4,*)  !  SrcI20_r(Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
    real, intent(in) :: SrcI20_r(*)  !  SrcI20_r = (Label(2,j)*Aweight+1.)  ! Include intensity in weight factor
-   Character(len=*) :: PlotFile
+    Character(len=*) :: PlotFile
    integer, parameter :: TB_max=131072, N_nu=TB_max/2  ! 65536 ! 65536=2^16 ; 32768=2^15 ! 2048=2^11 ! 262144=2^18 ! 131072=2^17
    real*8 :: t_resol,T_max, T_min, TimeDur, A, B, Norm
    Real*8 :: TBurst_trace(0:TB_max), d_nu, F_Th, nu, BinSize, ResScalFact
    Real*8, allocatable :: TBurst_trace1(:)
    real*8 :: dt1, A1, RT1, d1
    Complex(dp) :: Cnu(0:N_nu)
-   integer :: i,j, k,N_k,NTSampl, T_C, T, T1, T2, N1, N2, NM2, NM3, tr, iT1
+   integer :: j, k,N_k,NTSampl, T_C, T, T1, T2, N1, N2, NM2, NM3, tr, iT1
    Character*8 :: extension
-    !
-    i=1
-    write(2,*) TOrder,RA(1,TrackE(1,i)),TrackE(1,i),RA(1,TrackE(TrackENr(i),i)),TrackE(TrackENr(i),i)
-    extension=''
-    ResScalFact=5.
-    Do i=1,1   ! analyze only these tracks
-      If(TrackENr(i).lt. LongTrack_Min) cycle ! check if this track qualifies as a long one
-      If(TOrder.gt.0) then
-         T_min=RA(1,TrackE(1,i))                 ! time of first event on track i
-         T_max=RA(1,TrackE(TrackENr(i),i))       ! time of last event on track i
-      Else
-         T_max=RA(1,TrackE(1,i))                 ! time of first event on track i
-         T_min=RA(1,TrackE(TrackENr(i),i))       ! time of last event on track i
+   !
+   !write(2,*) TOrder,RA(1,TrackE(1,i)),TrackE(1,i),RA(1,TrackE(TrackENr(i),i)),TrackE(TrackENr(i),i)
+   extension=''
+   ResScalFact=5.
+   If(TOrder.gt.0) then
+      T_min=RA(1,TrackE(1,i_track))                 ! time of first event on track i_track
+      T_max=RA(1,TrackE(TrackENr(i_track),i_track))       ! time of last event on track i_track
+   Else
+      T_max=RA(1,TrackE(1,i_track))                 ! time of first event on track i_track
+      T_min=RA(1,TrackE(TrackENr(i_track),i_track))       ! time of last event on track i_track
+   EndIf
+   TimeDur= (T_max - T_min)
+   t_resol= SrcDensTimeResol  ! mili second
+   If(t_resol .gt. TimeDur) t_resol=TimeDur
+   !write(2,*) 'AnalyzeBurst: t_resol ', t_resol, T_min, T_max
+   NTSampl=0
+   !
+   Do tr=1,5
+      t_resol=t_resol/ResScalFact
+      NTSampl=int(TimeDur/t_resol)
+      if(NTSampl .gt. TB_max) Then
+         NTSampl=TB_max
       EndIf
-      TimeDur= (T_max - T_min)
-      t_resol= SrcDensTimeResol  ! mili second
-      If(t_resol .gt. TimeDur) t_resol=TimeDur
-      write(2,*) 'AnalyzeBurst: t_resol ', t_resol, T_min, T_max
-      NTSampl=0
+      !write(2,*) '!AnalyzeBurst, tryal', tr, t_resol, ResScalFact, NTSampl, TB_max
+      !Flush(unit=2)
+      TBurst_trace=0.
+      Norm=0.
+      Do k=1,TrackENr(i_track) ! loop over all events in track i_track
+          j=TrackE(k,i_track)   ! get event number of k-th track member
+          T_C=Int((RA(1,j)-T_min)/t_resol)  ! central time for this averaging period
+          norm=norm + (SrcI20_r(j)*Aweight+1.) ! Use intensity weighting
+          T1=T_C-8
+          if(T1.lt.0) T1=0
+          T2=T_C+8
+          if(T2.gt.NTSampl) T2=NTSampl
+          If(T1.ge.T2) exit
+          Do T=T1,T2 ! update the +/- 8 time bins around the central
+              TBurst_trace(T)=TBurst_trace(T)+ exp(-(T-(RA(1,j)-T_min)/t_resol)**2)*(SrcI20_r(j)*Aweight+1.)
+          Enddo
+      enddo
+      TBurst_trace(:)=TBurst_trace(:)*TrackENr(i_track)/(norm)  !  /(t_resol*norm)
+      A=MaxVal(TBurst_trace(:))
+      If(tr.eq.1) Then
+         dt1=t_resol
+         A1=A
+         TBurst_trace(:)= TBurst_trace(:)/A
+         allocate( TBurst_trace1(0:NTSampl+2) )
+         TBurst_trace1(0:NTSampl+2)=TBurst_trace(0:NTSampl+2)
+      EndIf
+      ! B=MinVal(TBurst_trace(:))
+      N1=COUNT(TBurst_trace .gt. 3.5)
+      N2=COUNT(TBurst_trace .gt. 2.5)
+      NM2=COUNT(TBurst_trace .gt. A/2.)
+      NM3=COUNT(TBurst_trace .gt. A/3.)
       !
-      Do tr=1,5
-         t_resol=t_resol/ResScalFact
-         NTSampl=int(TimeDur/t_resol)
-         if(NTSampl .gt. TB_max) Then
-            NTSampl=TB_max
-         EndIf
-         TBurst_trace=0.
-         Norm=0.
-         Do k=1,TrackENr(i) ! loop over all events in track i
-             j=TrackE(k,i)   ! get event number of k-th track member
-             T_C=Int((RA(1,j)-T_min)/t_resol)  ! central time for this averaging period
-             norm=norm + (SrcI20_r(j)*Aweight+1.) ! Use intensity weighting
-             T1=T_C-8
-             if(T1.lt.0) T1=0
-             T2=T_C+8
-             if(T2.gt.NTSampl) T2=NTSampl
-             If(T1.ge.T2) exit
-             Do T=T1,T2 ! update the +/- 8 time bins around the central
-                 TBurst_trace(T)=TBurst_trace(T)+ exp(-(T-(RA(1,j)-T_min)/t_resol)**2)*(SrcI20_r(j)*Aweight+1.)
-             Enddo
-         enddo
-         TBurst_trace(:)=TBurst_trace(:)*TrackENr(i)/(norm)  !  /(t_resol*norm)
-         A=MaxVal(TBurst_trace(:))
-         If(tr.eq.1) Then
-            dt1=t_resol
-            A1=A
-            TBurst_trace(:)= TBurst_trace(:)/A
-            allocate( TBurst_trace1(0:NTSampl+2) )
-            TBurst_trace1(0:NTSampl+2)=TBurst_trace(0:NTSampl+2)
-         EndIf
-         ! B=MinVal(TBurst_trace(:))
-         N1=COUNT(TBurst_trace .gt. 3.5)
-         N2=COUNT(TBurst_trace .gt. 2.5)
-         NM2=COUNT(TBurst_trace .gt. A/2.)
-         NM3=COUNT(TBurst_trace .gt. A/3.)
-         !
-         write(extension,"(i2.2,A4)") tr,'.plt' !,& SourceTimeDistribution (STD)
-         OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-'//trim(extension),FORM='FORMATTED',STATUS='unknown')
-         write(27,*) t_resol*1000., A1, A
-         write(27,"('! ', T8,'time[ms]',T33,'PulseDensity',T49,'resol[ms]=',F9.6)") t_resol
-         If(NTSampl.le.1) Then
-            NTSampl=1
-            TBurst_trace(1)=0.
-         EndIf
-         Do T=0,NTSampl
-            RT1=T*t_resol/dt1
-            it1=int(RT1)
-            d1=RT1-iT1
-            norm=((1.-d1)*TBurst_trace1(it1) + d1*TBurst_trace1(it1+1))*A1
-            write(27,*) T_min+T*t_resol, TBurst_trace(T), TBurst_trace(T)/norm
-            !TBurst_trace(T)=TBurst_trace(T)/norm
-         enddo
-         Close(unit=27)
-         Write(2,"(A,i2,A,f7.4,A,F7.1,A,i5,A,i5,A,3I6,2A)") 'track #=',i,', sample=',t_resol,'[ms], maximum=',A, &
-             ', > 3.5:',N1,', > 2.5:',N2,', #samples=',NTSampl,NM2,NM3,'; File:',TRIM(PlotFile)//'_STD-'//trim(extension)
-      enddo  ! tr
-      deallocate( TBurst_trace1)
-      !
-      Call RFTransform_su(NTSampl+1)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-      !
-      Call RFTransform_CF(TBurst_trace,Cnu)
-      OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-nu.plt',FORM='FORMATTED',STATUS='unknown')
-      write(27,"('! ',T6,'freq[1/ms]',T31,'Ampl',T57,'Not rebinned')")
-      d_nu=2./(t_resol*(NTSampl+1))
-      F_Th=d_nu/2
-      N_k=0
-      A=0.
-      B=0.
-      BinSize=d_nu/128
-      BinSize=BinSize/128
-      write(2,*) 'AnalyzeBurst: frequency ', d_nu, d_nu*TB_max/2
-      Do T=0,(NTSampl+1)/2
-         nu=T*d_nu
-         If(nu.gt.F_th) then
-            write(27,*) B/N_k,A/N_k, nu, BinSize, N_k
-            F_th=1.05*nu ! to re-bin results
-            N_k=1
-            A=ABS(Cnu(T))
-            B=nu
-         Else
-            A=A+ABS(Cnu(T))
-            B=B+nu
-            N_k=N_k+1
-         Endif
-         !write(27,*) T*d_nu,ABS(Cnu(T))
+      write(extension,"(i2.2,A4)") tr,'.plt' !,& SourceTimeDistribution (STD)
+      OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-'//trim(extension),FORM='FORMATTED',STATUS='unknown')
+      !Write(2,*) 'AnalyzeBurst; File-time:',TRIM(PlotFile)//'_STD-'//trim(extension)
+      write(27,*) t_resol*1000., A1, A
+      write(27,"('! ', T8,'time[ms]',T33,'PulseDensity',T49,'resol[ms]=',F9.6)") t_resol
+      If(NTSampl.le.1) Then
+         NTSampl=1
+         TBurst_trace(1)=0.
+      EndIf
+      Do T=0,NTSampl
+         RT1=T*t_resol/dt1
+         it1=int(RT1)
+         d1=RT1-iT1
+         norm=((1.-d1)*TBurst_trace1(it1) + d1*TBurst_trace1(it1+1))*A1
+         write(27,*) T_min+T*t_resol, TBurst_trace(T), TBurst_trace(T)/norm
+         !TBurst_trace(T)=TBurst_trace(T)/norm
       enddo
       Close(unit=27)
-      Write(2,*) 'AnalyzeBurst; File:',TRIM(PlotFile)//'_STD-nu.plt',' with <',(NTSampl+1)/2, ' data lines'
-      Call DAssignFFT()         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-      !
-    enddo ! i, track number
+      Write(2,"(A,i2,A,f7.4,A,F7.1,A,i5,A,i5,A,3I6,2A)") 'track #=',i_track,', sample=',t_resol,'[ms], maximum=',A, &
+          ', > 3.5:',N1,', > 2.5:',N2,', #samples=',NTSampl,NM2,NM3,'; File:',TRIM(PlotFile)//'_STD-'//trim(extension)
+      Flush(unit=2)
+   enddo  ! tr
+   deallocate( TBurst_trace1)
+   !
+   Call RFTransform_su(NTSampl+1)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   !
+   Call RFTransform_CF(TBurst_trace,Cnu)
+   OPEN(unit=27,FILE=TRIM(PlotFile)//'_STD-nu.plt',FORM='FORMATTED',STATUS='unknown')
+   write(27,"('! ',T6,'freq[1/ms]',T31,'Ampl',T57,'Not rebinned')")
+   d_nu=2./(t_resol*(NTSampl+1))
+   F_Th=d_nu/2
+   N_k=0
+   A=0.
+   B=0.
+   BinSize=d_nu/128
+   BinSize=BinSize/128
+   !write(2,*) 'AnalyzeBurst: frequency ', d_nu, d_nu*TB_max/2
+   !   Flush(unit=2)
+   Do T=0,(NTSampl+1)/2
+      nu=T*d_nu
+      If(nu.gt.F_th) then
+         write(27,*) B/N_k,A/N_k, nu, BinSize, N_k
+         F_th=1.05*nu ! to re-bin results
+         N_k=1
+         A=ABS(Cnu(T))
+         B=nu
+      Else
+         A=A+ABS(Cnu(T))
+         B=B+nu
+         N_k=N_k+1
+      Endif
+      !write(27,*) T*d_nu,ABS(Cnu(T))
+   enddo
+   Close(unit=27)
+   !Write(2,*) 'AnalyzeBurst; File-frequency:',TRIM(PlotFile)//'_STD-nu.plt',' with <',(NTSampl+1)/2, ' data lines'
+   Call DAssignFFT()         !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   !
+!    enddo ! i, track number
 end Subroutine AnalyzeBurst
 !===================================================================
 Subroutine ReadPreDefTrFile(PreDefTrackFile)
    !Use TrackConstruct, only : PreDefTrack, tNrS_max, PreDefTrackNr, PreDefTrackNr_Max, NrPreDefTrackPoints_Max, tNrS
+   ! Somewhat different from the track read in "PredefTrack.f90" most unfortunately
    IMPLICIT none
    Character(len=100), Intent(IN) :: PreDefTrackFile
-   Integer :: nxx, i_track, i_t, lab,i
+   Integer :: nxx, i_track, i_t, lab,i,len, indx,kmUnits
+   Real(dp) :: t_ms, NEh(1:3)
    Character(len=5) :: Extension
    character(len=80) :: line
+   Logical :: ENh
    !
    PreDefTrackNr=0
    tNrS(1:PreDefTrackNr_Max)=1  ! needed in GetPreDefTrPos
-   Do i_track=1,PreDefTrackNr_Max
-      write(Extension,"(i1,A4)") i_track,'.plt' !,&
+   !!
+   i_track=1
+   Len=LEN_TRIM(PreDefTrackFile)
+   Extension=''
+   ENh=.false.
+   kmUnits=1
+   nxx=1
+   If(Len.gt.4) then
+      if((PreDefTrackFile(Len-3:Len) .eq. '.dat')) Then  ! use a plot file
+         ENh=.true.
+         kmUnits=1
+         OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
+         read(22,*,iostat=nxx) t_ms
+         read(22,*,iostat=nxx) t_ms
+      Elseif((PreDefTrackFile(Len-3:Len) .eq. '.trc')) Then ! Use a special track file
+         OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
+      Elseif((PreDefTrackFile(Len-3:Len) .eq. '.plt')) Then ! Use a more modern plot file
+         OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
+      EndIf
+   EndIf
+   If(nxx .ne. 0) then
+!   Do i_track=1,PreDefTrackNr_Max
+       write(Extension,"(i1,A4)") i_track,'.plt' !,&
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile)//trim(extension),IOSTAT=nxx)
       If(nxx .ne. 0) then
          write(2,*) 'No predefined track file:',trim(PreDefTrackFile)//trim(extension)
-         exit
+         return
       Endif
+   EndIf
       !write(2,*) 'ReadPreDefTr:',trim(PreDefTrackFile)//trim(extension)
       i_t=0
       Do i=1,NrPreDefTrackPoints_Max
@@ -640,15 +719,43 @@ Subroutine ReadPreDefTrFile(PreDefTrackFile)
          If(nxx.ne.0) exit
          if(line(1:1).eq.'!') cycle
          i_t=i_t+1
-         read(line,*,iostat=nxx) lab, PreDefTrack(0:3, i_t, i_track)
+
+         write(2,*) 'PreDefTrack:',i_t,i,ENh, TRIM(line)
+      If(ENh) Then
+         read(line,*,iostat=nxx) indx, t_ms, NEh(:)
+         PreDefTrack(0, i_t, i_track)=t_ms
+         PreDefTrack(1, i_t, i_track)=NEh(2)*kmUnits
+         PreDefTrack(2, i_t, i_track)=NEh(1)*kmUnits
+         PreDefTrack(3, i_t, i_track)=NEh(3)*kmUnits
+      Else
+         read(line,*,iostat=nxx) t_ms, NEh(:)
+         Call Convert2m(NEh(:))
+         PreDefTrack(0, i_t, i_track)=t_ms
+         PreDefTrack(1:3, i_t, i_track)=NEh(1:3)*kmUnits/1000.
+      EndIf
+         !read(line,*,iostat=nxx) lab, PreDefTrack(0:3, i_t, i_track)
          !write(2,*) PreDefTrack(0:3, i_t, i_track), i_t, i_track
-         If(nxx.ne.0) exit
+         If(nxx.ne.0) Then
+            i_t=i_t-1
+            exit
+         EndIf
       Enddo
       Close(UNIT=22)
-      write(2,*) 'ReadPreDefTr:',trim(PreDefTrackFile)//trim(extension), i_t-1
-      tNrS_max(i_track)=i_t-1
+      write(2,*) 'ReadPreDefTr:',trim(PreDefTrackFile)//trim(extension), i_t
+      If(TOrder*PreDefTrack(0, 1, i_track) .gt. TOrder*PreDefTrack(0, i_t, i_track)) Then  ! reorder track
+         Do i=1,i_t/2
+            t_ms=PreDefTrack(0, i, i_track)
+            NEh(1:3)=PreDefTrack(1:3, i, i_track)
+            indx=i_t-i+1
+            PreDefTrack(0, i, i_track)=PreDefTrack(0, indx, i_track)
+            PreDefTrack(0, indx, i_track)=t_ms
+            PreDefTrack(1:3, i, i_track)=PreDefTrack(1:3, indx, i_track)
+            PreDefTrack(1:3, indx, i_track)=NEh(1:3)
+         EndDo
+      EndIf
+      tNrS_max(i_track)=i_t
       PreDefTrackNr=i_track
-   Enddo
+!   Enddo
    !
    Return
 End Subroutine ReadPreDefTrFile

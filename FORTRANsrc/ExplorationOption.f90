@@ -10,10 +10,9 @@ Subroutine ExplorationRun
    use Explore_Pars, only : Alloc_Explore_Pars
    use FFT, only : RFTransform_su,DAssignFFT
    use GLEplots, only : GLEplotControl
-   !use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
    Implicit none
    !
-   Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), i_expl  ! FitRange_Samples,
+   Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), i_expl
    Real*8 :: StartTime_ms, StartingTime, StoppingTime, dt_ms
    Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline); dimension needed for "Call FindCallibr(SourceGuess)"
    Integer :: ir_file,ir_grp,ir_dst, DATA_LENGTH, SAMPLE_NUMBER_first, i_dist, i_guess, TimeFr
@@ -33,7 +32,7 @@ Subroutine ExplorationRun
    XFrameEi=-80  ; XFrameEf=+80
    XFrameNi=-80  ; XFrameNf=+80
    XFrameh=15
-   OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'Explore.dat')
+   OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//'Explore.plt')
    write(29,"(6(1x,f8.3),2(1x,f8.3),1x,A20)") XFrameEi, XFrameEf, XFrameNi, XFrameNf, &
       0.,XFrameh,StartTime_ms,StoppingTime,' NoBox  0 ! Explore '
    Write(29,*) ' 0 1 0 0 Explore-', TRIM(FlashName), ' 0 0 0 0 0 0 0 0 0.1 !'
@@ -69,14 +68,14 @@ Subroutine ExplorationRun
    enddo
    Close(unit=29)
    !
-   Call GLEplotControl(PlotType='SourcesPlot', PlotName='Img_Explore', &
+   Call GLEplotControl(PlotType='SrcsPltLoc', PlotName='Img_Explore', &
       PlotDataFile=TRIM(DataFolder)//'Explore', Submit=.true.)
    Return
    !Call AnalSpectStats  ! Obsolete now, a more thorough job is done in RFI_Mitigation-v18
 End Subroutine ExplorationRun
 !=====================================
 Subroutine GetSpectStats(i_chunk, i_expl)
-   use DataConstants, only : Station_nrMax,PeakNr_dim,Time_dim, Production
+   use DataConstants, only : PeakNr_dim,Time_dim !, Production
    use Chunk_AntInfo, only : CTime_spectr, Ant_Stations, Ant_IDs, Ant_nr !
    use Chunk_AntInfo, only : Unique_SAI, Unique_StatID, Nr_UniqueStat
    use constants, only : dp,pi,ci,sample
@@ -92,7 +91,7 @@ Subroutine GetSpectStats(i_chunk, i_expl)
 
    integer :: i_SAI, StLoc, t_Max,i_stat, Antenna_SAI
    Integer, save :: PeakNr1, i_stat_old=0, N_ant
-   character(len=5) :: Station_Mnem
+   character(len=6) :: Station_Mnem
    logical :: prnt= .false.
    !
    !

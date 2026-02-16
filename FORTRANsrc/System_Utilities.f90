@@ -131,3 +131,50 @@ Subroutine CreateNewFolder(FileName)
    EndIf
    Return
 End Subroutine CreateNewFolder
+!==========================================
+Module CPU_timeUsage
+   use constants, only : dp
+
+   Integer, save :: WallCount
+   Real,save :: CPUTime=-1., WallTime, CPUstartTime, WallstartTime, WallRate, CPUtimeUse
+!--------------------
+   CONTAINS
+   !
+Subroutine CPU_usage(Message)
+   IMPLICIT NONE
+   Character(len=*), intent(in), optional :: Message
+   Logical, save :: First=.true.
+   !
+   call cpu_time(CPUTime)
+   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   If(present(Message)) write(2,"(1x,A,1x)", ADVANCE='NO') TRIM(Message)//': '
+   If(First) Then
+      WallstartTime=WallCount/WallRate
+      CPUstartTime=CPUTime
+      WRITE(2,"(A,F12.6,A,F12.3,A)") 'CPU start time:', CPUTime, '[s], wall start time=',WallstartTime, '[s]'
+      First=.false.
+   Else
+      WallTime=WallCount/WallRate - WallstartTime
+      CPUtimeUse=CPUTime-CPUstartTime
+      WRITE(2,"(A,F12.6,F11.3,A, A,' & ',A )") 'CPU & Wall time used:', CPUTimeUse, WallTime, '[s] =',&  ! count_rate, count_max
+         Convert2HMs(CPUTimeUse),Convert2HMs(WallTime)
+   EndIf
+   Flush(unit=2)
+   !
+End    Subroutine CPU_usage
+!-----------------------------
+Function  Convert2HMs(t_s)
+   IMPLICIT NONE
+   Real, intent(in) :: t_s
+   Character(len=12) :: Convert2HMs
+   Integer :: t_h,t_m
+   Real :: t_sr  ! residual seconds
+   !
+   t_h=FLOOR(t_s/3600.)
+   t_sr=t_s - t_h*3600.
+   t_m=FLOOR(t_sr/60.)
+   t_sr=t_sr - t_m*60.
+   write(Convert2HMs,"(I3,':',I2.2,':',F5.2)") t_h,t_m,t_sr
+End Function Convert2HMs
+
+End Module CPU_timeUsage

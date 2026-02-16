@@ -15,7 +15,7 @@ Subroutine FitCCorr(X)
     use FitParams, only : FitParam, N_FitPar, N_FitStatTim, N_FitStatTim, Fit_PeakNrTotal, Nr_TimeOffset, N_FitPar_max
     use FitParams, only : CalcHessian, Sigma, SpaceCov, FitQual, ParamScaleFac, N_EffAnt, Max_EffAnt !, ImagingRun
     use DataConstants, only : ChunkNr_dim, Production
-    use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, CCorr_Err, Peak_eo, Safety
+    use ThisSource, only : Nr_Corr, PeakNr, PeakNrTotal, CCorr_Err, Peak_eo, MeanErr !
     Implicit none
     real ( kind = 8 ), intent(inout) :: X(N_FitPar_max)
     integer ( kind = 4 ) :: i, j, k
@@ -47,13 +47,16 @@ Subroutine FitCCorr(X)
       If(any(FitParam(N_FitStatTim+1:N_FitStatTim+i)==4)) k=PeakNrTotal-Fit_PeakNrTotal ! for each pulse the timings need be fitted
     endif
     nvar=Nr_TimeOffset-1 + (N_FitPar-N_FitStatTim)*Fit_PeakNrTotal+k  ! total number of parameters that are fitted
+    !write(2,*) '!FitCCorr, nvar:', nvar,Nr_TimeOffset, N_FitPar, N_FitStatTim, Fit_PeakNrTotal,k
+ !FitCCorr, nvar:          26          15          17          14           4           0
     If(nvar.gt.N_FitPar_max) then
       write(*,*) 'Fitting stat: nvar=',nvar,', Meqn=',Meqn,', buffer size=',v_dim
       write(2,*) '*****Too many fitparameters=',nvar,'should not exceed ',N_FitPar_max
       write(2,*) 'breakdown, Nr_TimeOffset=',Nr_TimeOffset-1,'peak-related=',nvar-Nr_TimeOffset+1
       stop 'FitCCorr'
     endif
-    !write(2,*) 'Nr_TimeOffset + (N_FitPar-N_FitStatTim)*Fit_PeakNrTotal+k',Nr_TimeOffset, (N_FitPar-N_FitStatTim),Fit_PeakNrTotal,k
+    !write(2,*) '!FitCCorr, Nr_TimeOffset + (N_FitPar-N_FitStatTim)*Fit_PeakNrTotal+k', &
+    !                 Nr_TimeOffset, (N_FitPar-N_FitStatTim),Fit_PeakNrTotal,k
     Meqn=0          ! total number of data-points that enter in the chi^2 search
     Do i_chunk=1, ChunkNr_dim
       i=MAX(Nr_Corr(0,i_chunk)-1,0)
@@ -69,8 +72,8 @@ Subroutine FitCCorr(X)
       Meqn = Meqn + i*PeakNr(0,i_chunk) + k*PeakNr(1,i_chunk)      ! number of equations
     enddo
     v_dim=93 + Meqn*nvar + 3*Meqn + nvar*(3*nvar+33)/2
-    !write(*,*) 'Meqn=',Meqn,nvar,Nr_Corr(0,1),Nr_Corr(1,1),i,k
-    !write(2,*) 'Nr_TimeOffset:',Nr_TimeOffset,N_FitPar,N_FitStatTim,Fit_PeakNrTotal,k
+    !write(*,*) '!FitCCorr, Meqn=',Meqn,nvar,Nr_Corr(0,1),Nr_Corr(1,1),i,k
+    !write(2,*) '!FitCCorr, Nr_TimeOffset:',Nr_TimeOffset,N_FitPar,N_FitStatTim,Fit_PeakNrTotal,k
     IF(.not. Production) write(2,*) 'Fitting stat: nvar=',nvar,', Meqn=',Meqn,', buffer size=',v_dim
     !write(*,*) 'Meqn,nvar',Meqn,nvar
     allocate( Jacobian(Meqn,nvar) )
@@ -130,119 +133,129 @@ Subroutine FitCCorr(X)
     !    iv(18)=1
    !  iv(26) if (iv(covmat) is positive, then the lower triangle of the covariance matrix is stored rowwise in v starting at
    !             v(iv(covmat)).  if iv(covmat) = 0, then no attempt was made.
-    ! iv(nfcov).... iv(40) is the number of calls made on calcr when
-    !             trying to compute covariance matrices.
-    ! iv(ngcall)... iv(30) is the number of gradient evaluations (calls on
-    !             calcj) so far done (including those used for computing
-    !             the covariance).
-    ! iv(ngcov).... iv(41) is the number of calls made on calcj when
-    !             trying to compute covariance matrices.
-    ! iv(niter).... iv(31) is the number of iterations performed.
-    !
-    FitQual=-1
+   ! iv(nfcov).... iv(40) is the number of calls made on calcr when
+   !             trying to compute covariance matrices.
+   ! iv(ngcall)... iv(30) is the number of gradient evaluations (calls on
+   !             calcj) so far done (including those used for computing
+   !             the covariance).
+   ! iv(ngcov).... iv(41) is the number of calls made on calcj when
+   !             trying to compute covariance matrices.
+   ! iv(niter).... iv(31) is the number of iterations performed.
+   !
+   FitQual=-1
    if((nvar .gt. 0) .and. (meqn .gt. nvar)) then   ! otherwise the system is underdetermined
-         !NF=-1
-         !call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
-         !call nl2sno ( meqn, nvar, x, CompareCorrTime, iv, v, uiparm, Jacobian, ufparm )
-         Call nl2sol ( meqn, nvar, x, CompareCorrTime, JacobianCorrTime, iv, v, uiparm, Jacobian, ufparm, error )
-         If(error.ge.10) then
-            write(2,*) 'parameter is NaN'
-            error=10
-            goto 9
-         endif
-         If(error.gt.0) then
-            write(2,*) 'endless loop in NL2SOL truncated'
-            goto 9
-         endif
-         !
-         !Write(*,*) 'end nl2sol'
-         FitQual=2*v(10)/(meqn-nvar)
-         IF(.not. Production) write(2,"('Result, chi^2/ndf=',F9.2)", ADVANCE='NO') 2*v(10)/(meqn-nvar)
-         IF(.not. Production) write(*,"('chi^2/ndf=',F9.2)") 2*v(10)/(meqn-nvar)
-         IF(.not. Production) write(2,"(', # of fie calls=',i3,' and # of iterations=',i3,' Covariance at',i5)") iv(6),iv(31)
-         sigma(:)=999.999
-         N_EffAnt=-nvar
-         Do k=1,PeakNrTotal
-            N_EffAnt=N_EffAnt+COUNT(CCorr_Err(2:Nr_Corr(Peak_eo(k),1),k).lt.1.)
-         Enddo
-         Max_EffAnt= meqn-nvar
+      !NF=-1
+      !call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
+      !call nl2sno ( meqn, nvar, x, CompareCorrTime, iv, v, uiparm, Jacobian, ufparm )
+      Call nl2sol ( meqn, nvar, x, CompareCorrTime, JacobianCorrTime, iv, v, uiparm, Jacobian, ufparm, error )
+      If(error.ge.10) then
+         write(2,*) 'parameter is NaN'
+         error=10
+         goto 9
+      endif
+      If(error.gt.0) then
+         write(2,*) 'endless loop in NL2SOL truncated'
+         goto 9
+      endif
+      !
+      !Write(*,*) 'end nl2sol'
+      FitQual=2*v(10)/(meqn-nvar)
+      IF(.not. Production) write(2,"('Result, chi^2/ndf=',F9.2)", ADVANCE='NO') 2*v(10)/(meqn-nvar)
+      IF(.not. Production) write(*,"('chi^2/ndf=',F9.2)") 2*v(10)/(meqn-nvar)
+      !write(2,"(A, 'Result, chi^2/ndf:',F9.2,3I5)") '!FitCCorr, ',2*v(10)/(meqn-nvar),  (meqn-nvar)
+      IF(.not. Production) write(2,"(', # of fie calls=',i3,' and # of iterations=',i3,' Covariance at',i5)") iv(6),iv(31)
+      sigma(:)=999.999
+      N_EffAnt=-nvar
+      !write(2,*) '!FitCCorr, N_EffAnt',N_EffAnt
+      Do k=1,PeakNrTotal
+         N_EffAnt=N_EffAnt+COUNT(CCorr_Err(2:Nr_Corr(Peak_eo(k),1),k).lt.20.)
+         IF(.not. Production) write(2,"(A,I2,I4,400(F5.1,';'))") '!FitCCorr, N_EffAnt',k,N_EffAnt, &
+               CCorr_Err(1:Nr_Corr(Peak_eo(k),1),k)
+      Enddo
+      Max_EffAnt= meqn-nvar
+      k=NVar
+      If(NVar.gt.3) k=3
+      !If(NVar.gt.3) SpaceCov=SpaceCov/4.  ! Reduce the default errors by a factor 2, in case Hessian was not calculated
+      !write(2,*) 'Fitter, SpaceCov(1:k,1:k)',SpaceCov(1:k,1:k)
+      !SpaceCov(1:k,1:k)=SpaceCov(1:k,1:k)/9.  ! Reduce the default errors by a factor 3, in case Hessian was not calculated
+      SpaceCov(1:k,1:k)=SpaceCov(1:k,1:k)/2.  ! Reduce the default errors by a factor sqrt(2),(=roughly ratio of distMax) in case Hessian was not calculated
+      !Write(2,*) 'if iv(covmat): ',iv(26)
+      !           if iv(covmat) = -1, then the finite difference hessian was indefinite
+      !              if iv(covmat) = -2, then a successful finite differencing step could not be found for some component of x
+      If( (iv(26) .gt.0) .and. (Fit_PeakNrTotal.eq.1) .and. (NVar.ge.3) ) then
+         IF(.not. Production) write(2,*) 'Covariance matrix = chi^2/ndf * Hessian^{-1}'
          k=NVar
-         If(NVar.gt.3) k=3
-         !If(NVar.gt.3) SpaceCov=SpaceCov/4.  ! Reduce the default errors by a factor 2, in case Hessian was not calculated
-         !write(2,*) 'Fitter, SpaceCov(1:k,1:k)',SpaceCov(1:k,1:k)
-         !SpaceCov(1:k,1:k)=SpaceCov(1:k,1:k)/9.  ! Reduce the default errors by a factor 3, in case Hessian was not calculated
-         SpaceCov(1:k,1:k)=SpaceCov(1:k,1:k)/2.  ! Reduce the default errors by a factor sqrt(2),(=roughly ratio of distMax) in case Hessian was not calculated
-         !Write(2,*) 'if iv(covmat): ',iv(26)
-!           if iv(covmat) = -1, then the finite difference hessian was indefinite
-!              if iv(covmat) = -2, then a successful finite differencing step could not be found for some component of x
-         If( (iv(26) .gt.0) .and. (Fit_PeakNrTotal.eq.1) .and. (NVar.ge.3) ) then
-            IF(.not. Production) write(2,*) 'Covariance matrix = chi^2/ndf * Hessian^{-1}'
-            k=NVar
-            If(NVar.gt.4) k=4
-            Do i=1,k
-               !write(2,"(10f10.4)") (V(iv(26)+k+i*(i-1)/2-1),k=1,i)
-               IF(.not. Production) write(2,"(10g12.3)") V(iv(26)+i*(i-1)/2:iv(26)+i*(i+1)/2-1)
-               Sigma(i)=sqrt(V(iv(26)+i*(i+1)/2-1))
-               !If(Sigma(i) .gt. 1000.) Sigma(i)=999.999
+         If(NVar.gt.4) k=4
+         Do i=1,k
+            !write(2,"(10f10.4)") (V(iv(26)+k+i*(i-1)/2-1),k=1,i)
+            IF(.not. Production) write(2,"(10g12.3)") V(iv(26)+i*(i-1)/2:iv(26)+i*(i+1)/2-1)
+            Sigma(i)=sqrt(V(iv(26)+i*(i+1)/2-1))
+            !If(Sigma(i) .gt. 1000.) Sigma(i)=999.999
+         Enddo
+         !IF(.not. Production .and. ImagingRun) then
+         !   XStore(1:3)=X(1:3)
+         !   Dist= sqrt(X(1)*X(1) + X(2)*X(2) + X(3)*X(3))
+         !   NF=-1
+         !   write(2,*) 'Source distance moved to ',Dist+2.,'[m]'
+         !   X(1:3)=XStore(1:3)*(Dist+2.)/Dist
+         !   !write(2,*) 'Source distance moved to height',XStore(3)+2.5,'[m]'
+         !   !X(3)=XStore(3)+2.5
+         !   call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
+         !   write(2,*) 'Source distance moved to ',Dist-2.,'[m]'
+         !   X(1:3)=XStore(1:3)*(Dist-2.)/Dist
+         !   !write(2,*) 'Source distance moved to height',XStore(3)-2.5,'[m]'
+         !   !X(3)=XStore(3)-2.5
+         !   call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
+         !   X(1:3)=XStore(1:3)
+         !   write(2,*) 'Source distance moved back to ',Dist,'[m]'
+         !Endif
+         Do i=1,3
+            Do j=1,i
+            SpaceCov(i,j)=V(iv(26)+i*(i-1)/2+j-1)
+            SpaceCov(j,i)=SpaceCov(i,j)
             Enddo
-            !IF(.not. Production .and. ImagingRun) then
-            !   XStore(1:3)=X(1:3)
-            !   Dist= sqrt(X(1)*X(1) + X(2)*X(2) + X(3)*X(3))
-            !   NF=-1
-            !   write(2,*) 'Source distance moved to ',Dist+2.,'[m]'
-            !   X(1:3)=XStore(1:3)*(Dist+2.)/Dist
-            !   !write(2,*) 'Source distance moved to height',XStore(3)+2.5,'[m]'
-            !   !X(3)=XStore(3)+2.5
-            !   call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
-            !   write(2,*) 'Source distance moved to ',Dist-2.,'[m]'
-            !   X(1:3)=XStore(1:3)*(Dist-2.)/Dist
-            !   !write(2,*) 'Source distance moved to height',XStore(3)-2.5,'[m]'
-            !   !X(3)=XStore(3)-2.5
-            !   call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
-            !   X(1:3)=XStore(1:3)
-            !   write(2,*) 'Source distance moved back to ',Dist,'[m]'
-            !Endif
-            Do i=1,3
-               Do j=1,i
-               SpaceCov(i,j)=V(iv(26)+i*(i-1)/2+j-1)
-               SpaceCov(j,i)=SpaceCov(i,j)
-               Enddo
-            Enddo
-            !If(k.le.3) then  !  Assume that RefTimeErr is  fitted
-            !   Do i=k,3
-            !      SpaceCov(i,i)=1.D7 ! about 3 km
-            !   Enddo
-            !Endif
-         Endif
-         !If(Sigma(3).lt.99.)
-         IF(.not. Production) then
-            Write(2,"(A,2I6,A,F8.2,A)", ADVANCE='NO') 'N_EffAnt=',N_EffAnt,Max_EffAnt &
-               ,', chi^2/ndf=',2*v(10)/(meqn-nvar), ', stations marked when timing StDev > 1.5'
-               !,', Sigma=',Sigma(1:3)
-            If(SpaceCov(1,1) .gt. 0.) then
-               Write(2,"(A,G11.3)", ADVANCE='NO') ', SQRT{SpaceCov(i,i)}[km]:',sqrt(SpaceCov(1,1))/1000.
-               If(SpaceCov(2,2) .gt. 0.) then
-                  Write(2,"(G11.3)", ADVANCE='NO') sqrt(SpaceCov(2,2))/1000.
-                  If(SpaceCov(3,3) .gt. 0.) Write(2,"(G11.3)", ADVANCE='NO') sqrt(SpaceCov(3,3))/1000.
-               Endif
+         Enddo
+         !If(k.le.3) then  !  Assume that RefTimeErr is  fitted
+         !   Do i=k,3
+         !      SpaceCov(i,i)=1.D7 ! about 3 km
+         !   Enddo
+         !Endif
+      Endif
+      !If(Sigma(3).lt.99.)
+      IF(.not. Production) then
+         Write(2,"(A,2I6,A,F8.2,A)", ADVANCE='NO') 'N_EffAnt=',N_EffAnt,Max_EffAnt &
+            ,', chi^2/ndf=',2*v(10)/(meqn-nvar), ', stations marked when timing StDev > 1.5'
+            !,', Sigma=',Sigma(1:3)
+         If(SpaceCov(1,1) .gt. 0.) then
+            Write(2,"(A,G11.3)", ADVANCE='NO') ', SQRT{SpaceCov(i,i)}[km]:',sqrt(SpaceCov(1,1))/1000.
+            If(SpaceCov(2,2) .gt. 0.) then
+               Write(2,"(G11.3)", ADVANCE='NO') sqrt(SpaceCov(2,2))/1000.
+               If(SpaceCov(3,3) .gt. 0.) Write(2,"(G11.3)", ADVANCE='NO') sqrt(SpaceCov(3,3))/1000.
             Endif
-            write(2,*) ' '
-         EndIf
-         !Write(2,*) 'SQRT{SpaceCov(i,i)}[km]:',(sqrt(SpaceCov(i,i))/1000.,i=1,3)
-         !
-         NF=-1
-         call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
-         X(1:nvar) = X(1:nvar) * ParamScaleFac(1:nvar)  !  Undo factor in COMPASS
-         If(.not. Production) Call PrntFitPars(X)
+         Endif
+         write(2,*) ' '
+      EndIf
+      !Write(2,*) 'SQRT{SpaceCov(i,i)}[km]:',(sqrt(SpaceCov(i,i))/1000.,i=1,3)
+      !
+      NF=-1
+      call CompareCorrTime ( meqn, nvar, x, NF, v, uiparm, Jacobian, ufparm )
+      X(1:nvar) = X(1:nvar) * ParamScaleFac(1:nvar)  !  Undo factor in COMPASS
+      Dist=0.
+      Do i=1,PeakNrTotal
+         Dist=Dist+ 1./(MeanErr(i)*MeanErr(i))
+      EndDo
+      FitQual=FitQual/Dist
+      If(.not. Production) Call PrntFitPars(X)
    endif
 9  Continue
-    !
-    Deallocate( Jacobian)
-    Deallocate( v )
-    !
-    !Call PrntFitPars(X)
-    Return
-    !
+   !write(2,*) '!FitCCorr, end:', FitQual, nvar, X(1:nvar)
+   !
+   Deallocate( Jacobian)
+   Deallocate( v )
+   !
+   !Call PrntFitPars(X)
+   Return
+   !
 End Subroutine FitCCorr
 !=================================================
 Subroutine JacobianCorrTime ( meqn, nvar, X_p, nf, Jacobian, uiparm, urparm, ufparm )
@@ -260,24 +273,26 @@ Subroutine JacobianCorrTime ( meqn, nvar, X_p, nf, Jacobian, uiparm, urparm, ufp
   !write(2,*) 'X_p',X_p(1:3)
   !write(*,*) 'calc Jac'
   Call CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacob, ufparm )
-  !write(2,*) 'Jacob2',Jacob(2,:)
-  !write(2,*) 'Jacob3',Jacob(3,:)
-  !write(*,*) 'JacobN',meqn,Jacob(meqn,:)
+  !write(2,*) '!JacobianCorrTime, Jacob2',Jacob(2,:)
+  !write(2,*) '!JacobianCorrTime, Jacob3',Jacob(3,:)
+  !write(2,*) '!JacobianCorrTime, JacobN',meqn,Jacob(meqn,:)
   Jacobian(:,:)=Jacob(:,:)
   Return
   End Subroutine JacobianCorrTime
 !=================================================
 Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
     use constants, only : dp,sample,c_mps
-    use DataConstants, only : Station_nrMax, Ant_nrMax, Production
-!    use DataConstants, only : Polariz
-    use ThisSource, only : Nr_Corr, CCorr_max, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ
-    use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped, StStdDevMax_ns
+    use DataConstants, only : Station_nrMax, Ant_nrMax, Production, Time_dim
+    use ThisSource, only : Safety
+    !use Chunk_AntInfo, only :  CTime_spectr
+    use ThisSource, only : Nr_Corr, CCorr_tSh, CCorr_Err, PeakNrTotal, PeakPos, Peak_eo, ChunkNr, PeakRMS, PeakChiSQ, MeanErr
+    use ThisSource, only : CorrAntNrs, T_Offset, SourcePos, RefAntErr, Peak_Offst, Dropped, StStdDevMax_ns, Error_norm
     use Chunk_AntInfo, only : Ant_Stations, Ant_pos, Ant_RawSourceDist
     use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Ant_IDs, Unique_SAI, Tot_UniqueAnt
     use FitParams, only : ParamScaleFac, N_FitPar, N_FitStatTim, FitParam, X_Offset
     use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset, FullAntFitPrn
     use StationMnemonics, only : Station_ID2Mnem
+   use Chunk_AntInfo, only : LHBASet
 !*****************************************************************************80
 !
 !  Discussion:
@@ -303,65 +318,71 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
 !   v6: account for noise-error in the pulse of the reference antenna by a constant offset
 !   v7: account for timing off-set to be fitted per antenna
 !
-  implicit none
+   implicit none
     real ( kind = 8 ), intent(in) :: X_p(1:nvar)
-  integer ( kind = 4 ), intent(in) :: meqn
-  integer ( kind = 4 ), intent(in) :: nvar
-  integer ( kind = 4 ), intent(in) :: nf
-  real ( kind = 8 ), intent(out) :: R(meqn)
-  external ufparm
-  integer ( kind = 4 ), intent(in) :: uiparm(*)
-  real ( kind = 8 ), intent(out) :: Jacobian(meqn,nvar)
-  real ( kind = 8 ) :: X(nvar),D1,D2,Rns
+   integer ( kind = 4 ), intent(in) :: meqn
+   integer ( kind = 4 ), intent(in) :: nvar
+   integer ( kind = 4 ), intent(in) :: nf
+   real ( kind = 8 ), intent(out) :: R(meqn)
+   external ufparm
+   integer ( kind = 4 ), intent(in) :: uiparm(*)
+   real ( kind = 8 ), intent(out) :: Jacobian(meqn,nvar)
+   real ( kind = 8 ) :: X(nvar),D1,D2,Rns
 
    real ( kind = 8 ) ::   StatFineOff, T_shft, val
    Real(dp) :: ChiSq(1:Station_nrMax,1:PeakNrTotal), Ave(1:Station_nrMax,1:PeakNrTotal), RMS(1:Station_nrMax,1:PeakNrTotal)
-   Real(dp) :: SumJac(1:Station_nrMax,1:PeakNrTotal), ChiSqWeight(1:Station_nrMax,1:PeakNrTotal)
+   Real(dp) :: ChiSqWeight(1:Station_nrMax,1:PeakNrTotal)  ! SumJac(1:Station_nrMax,1:PeakNrTotal),
    integer :: Cnt(1:Station_nrMax), CPE_eqn(Ant_nrMax),C_A(Ant_nrMax)  ! , Dropped(1:Station_nrMax)
    !
    integer :: i,j,k, i_SAI, j_corr, i_eqn, i_stat, i_ant, i_Peak, i_eo, i_chunk, Station_ID, i_ant1, i_xyz, i_StOff, Antenna_SAI
    real(dp) :: RDist, T_shft1
    integer, external :: XIndx
    logical :: prn, StCal
-   Character(len=5) :: Station_Mnem
+   Character(len=6) :: Station_Mnem
    Real(dp) :: IndxRefrac
+   Real(dp) :: B, TShiftPeak(1:Ant_nrMax), Sam_ms
+   Integer :: Ch2, Upper, Lower, i_type, toSample
    Real(dp), external :: RefracIndex
    Integer, external :: SourceNr
+   Complex(dp), pointer :: CTspec_a_c(:)
     !
-    prn=.false.
-    StCal=.false.  ! Calculate fit statistics per source
-    if(NF.lt.0) prn=.true.
-    if(NF.lt.0) StCal=.true.
-    IF( Production) prn=.false.
-    !if(NF.lt.0) FullAntFitPrn=.true.
-    !write(2,*) 'NF=',NF
-    !If(N_FitStatTim .gt. 0) prn=.true.
-    !If(N_FitStatTim .gt. 0) FullAntFitPrn=.true.
-    !write(2,*) 'NF',NF, X_p(1:nvar)
-    !prn=.true.
-    !
-    !if(nvar.eq.1) write(*,*) 'CompareCorrTime',meqn, nvar, nf
-    !write(2,*) 'X---Corr', nf, nvar, X_p(1:10),';', ParamScaleFac(1:10)
-    X(1:nvar) = X_p(1:nvar) * ParamScaleFac(1:nvar)  !
-    !write(2,*) 'X(1:nvar)',X(1:nvar)
-    Call X2Source(X)
-    !
-    !If(nf.eq.1)         Call PrntFitPars(X)
-    !write(2,"(A,10F11.2)") 'RefAntErr_CCT(i_Peak):',(RefAntErr(i_Peak),i_Peak=1,PeakNrTotal)
-    !write(2,"(A,10F11.2)") 'X_CCT=',(X(i),i=1,10)
-    !write(2,"(A,10F11.2)") 'X_CCT=',(X(i),i=11,nvar)
-    !write(2,200) X
-    !    write(*,"('Fitting-try:',15(G12.6,','))") X
-    !
-    i_eqn=0
-    ChiSq=0.
-    Ave=0.
-    RMS=0.
-    SumJac=0.
-    ChiSqWeight(:,:)=0.
-    Dropped = 0
-    !if(nvar.eq.1) write(*,*) 'X_p',X_p
-    Do i_Peak=1,PeakNrTotal
+   !Allocate( ChiSq(1:Station_nrMax,1:PeakNrTotal), Ave(1:Station_nrMax,1:PeakNrTotal), RMS(1:Station_nrMax,1:PeakNrTotal) )
+   !Allocate( SumJac(1:Station_nrMax,1:PeakNrTotal), ChiSqWeight(1:Station_nrMax,1:PeakNrTotal) )
+   !Allocate( Cnt(1:Station_nrMax), CPE_eqn(Ant_nrMax),C_A(Ant_nrMax)  )
+   prn=.false.
+   StCal=.false.  ! Calculate fit statistics per source
+   if(NF.lt.0) prn=.true.
+   if(NF.lt.0) StCal=.true.
+   IF( Production) prn=.false.
+   !if(NF.lt.0) FullAntFitPrn=.true.
+   !write(2,*) 'NF=',NF
+   !If(N_FitStatTim .gt. 0) prn=.true.
+   !If(N_FitStatTim .gt. 0) FullAntFitPrn=.true.
+   !write(2,*) 'NF',NF, X_p(1:nvar)
+   !prn=.true.
+   !
+   !if(nvar.eq.1) write(*,*) 'CompareCorrTime',meqn, nvar, nf
+   !write(2,*) 'X---Corr', nf, nvar, X_p(1:10),';', ParamScaleFac(1:10)
+   X(1:nvar) = X_p(1:nvar) * ParamScaleFac(1:nvar)  !
+   !write(2,*) 'X(1:nvar)',X(1:nvar)
+   Call X2Source(X)
+   !
+   !If(nf.eq.1)         Call PrntFitPars(X)
+   !write(2,"(A,10F11.2)") 'RefAntErr_CCT(i_Peak):',(RefAntErr(i_Peak),i_Peak=1,PeakNrTotal)
+   !write(2,"(A,10F11.2)") 'X_CCT=',(X(i),i=1,10)
+   !write(2,"(A,10F11.2)") 'X_CCT=',(X(i),i=11,nvar)
+   !write(2,200) X
+   !    write(*,"('Fitting-try:',15(G12.6,','))") X
+   !
+   i_eqn=0
+   ChiSq=0.
+   Ave=0.
+   RMS=0.
+   !SumJac=0.
+   ChiSqWeight(:,:)=0.
+   Dropped = 0
+   !if(nvar.eq.1) write(*,*) 'X_p',X_p
+   Do i_Peak=1,PeakNrTotal
         Cnt=0
         i_eo=Peak_eo(i_peak)
         i_chunk=ChunkNr(i_peak)
@@ -369,7 +390,7 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
         Do j_corr=1,Nr_Corr(i_eo,i_chunk)
             i_ant=CorrAntNrs(j_corr,i_eo,i_chunk)
             Station_ID = Ant_Stations(i_ant,i_chunk)
-            Antenna_SAI= 1000*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
+            Antenna_SAI= 100*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
             !write(*,*) 'j_corr=',j_corr,Antenna_SAI
             Do i_stat=1, Nr_UniqueStat      ! Get station number from the Unique_StatID list
                 If(Unique_StatID(i_stat).eq. Station_ID) exit
@@ -398,6 +419,9 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                         else
                            i_StOff=X_Offset(i)       ! Station offset for fitting station timing
                         endif
+                        !write(2,*) '!CompareCorrTime, i_stat:', i_StOff, i, X_Offset(i), &
+                        !      i_SAI, Tot_UniqueAnt(i_stat-1), i_stat, j_corr, Antenna_SAI
+                        !write(2,*) '!CompareCorrTime, SAI:', Unique_SAI(Tot_UniqueAnt(i_stat-1):i_SAI+1)
                         ! i_StOff is needed for calculating  Jacobian(i_eqn,i_StOff)=[d(R(i_ant,i_Peak)0/d(X(i_StOff))]
                         ! where 'X(i_StOff)' refers to a station or antenna timing off-set
                         ! This is finite only when 'i_StOff' corresponds to the station or antenna for which 'R' is calculated
@@ -409,16 +433,17 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             !
             Call RelDist(SourcePos(1,i_Peak),Ant_pos(1,i_ant,i_chunk),RDist)
             Rdist=Rdist - Ant_RawSourceDist(i_ant,i_chunk) + StatFineOff ! - INT(Peak_Offst(i_Peak))
+            TShiftPeak(j_corr)=Rdist
             If(j_corr .eq. 1) then
                !T_shft1=Rdist + RefAntErr(i_Peak)  ! Before April 2022, works better than when correcting for the off-set
-                T_shft1=Rdist - CCorr_max(1,i_Peak)  + RefAntErr(i_Peak)  ! April 2022
-               ! One would expect that the self-correlation, i.e. CCorr_max(1,i_Peak), peaks at zero, however,
+                T_shft1=Rdist - CCorr_tSh(1,i_Peak)  + RefAntErr(i_Peak)  ! April 2022
+               ! One would expect that the self-correlation, i.e. CCorr_tSh(1,i_Peak), peaks at zero, however,
                !  this seems not the case for asymmetric pulses. For these asymmetric pulses the real part peaks at
                !  (close to) zero, as expected, but the imaginary part is not anti-symmetric w.r.t. zero. This appears
                !  to pull the max of the Hilbert transform away from zero, much to my surprise. To compensate for this
                !  the off-set is corrected for this asymmetry that should persist for all cross correlations. Nasty!!
-               !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak):' &
-               !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(1,i_Peak), CCorr_max(2,i_Peak)
+               !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_tSh(j_corr,i_Peak):' &
+               !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_tSh(1,i_Peak), CCorr_tSh(2,i_Peak)
                i_ant1=i_ant
                D1=sum((SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk))*(SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk)))
                D1=sqrt(D1)     ! True distance from source to reference antena
@@ -432,34 +457,36 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             !
             i_eqn=i_eqn+1
             !if(nvar.eq.1) write(*,*) i_eqn
-            R(i_eqn)= (CCorr_max(j_corr,i_Peak) - T_shft)/CCorr_Err(j_corr,i_Peak)
+            R(i_eqn)= (CCorr_tSh(j_corr,i_Peak) - T_shft)/CCorr_Err(j_corr,i_Peak)
             If(CCorr_Err(j_corr,i_Peak).gt.1000) R(i_eqn)=0.  ! For excluded stations no peak-position is determined
             !
-            !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak):' &
-            !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_max(j_corr,i_Peak)- T_shft
+            !If(FullAntFitPrn) write(2,*) 'i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_tSh(j_corr,i_Peak):' &
+            !   ,i_Peak,j_corr,i_ant,Antenna_SAI, CCorr_tSh(j_corr,i_Peak)- T_shft
             !
             ChiSq(i_stat,i_Peak) = ChiSq(i_stat,i_Peak) + R(i_eqn)*R(i_eqn)
             Cnt(i_stat) = Cnt(i_stat) + 1
             !
             Jacobian(i_eqn,:) = 0.
+            !write(2,*) '!CompareCorrTime, i_StOff', i_eqn,i_StOff, j_corr,i_Peak, CCorr_Err(j_corr,i_Peak)
+            !Flush(unit=2)
             If(i_StOff.gt.0) Jacobian(i_eqn,i_StOff) = -1./CCorr_Err(j_corr,i_Peak)
             D2=sum((SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk))*(SourcePos(:,i_Peak)-Ant_pos(:,i_ant,i_chunk)))
             D2=sqrt(D2)     ! True distance from source to present antena
             !
-            val=0.
+            !val=0.
             !if(nvar.eq.1) write(*,*) Cnt(i_stat), i_stat
             IndxRefrac = RefracIndex( SourcePos(3,i_Peak) )
             Do i=1 , N_FitPar-N_FitStatTim !Jacobian(i_eqn,i) = d R(i_eqn) / d X(i)
                 i_xyz=FitParam(N_FitStatTim+i)
                 k=XIndx(i,i_Peak)
                 If(i_xyz .eq. 4) then
-                    Jacobian(i_eqn,k)=+1./CCorr_Err(j_corr,i_Peak) ! Due to RefAntErr(i_Peak)
+                    Jacobian(i_eqn,k)=+1./CCorr_Err(j_corr,i_Peak) ! Due to RefAntErr(i_Peak), units [LBA-samples^-1]
                 else
                     Jacobian(i_eqn,k)=(SourcePos(i_xyz,i_Peak)-Ant_pos(i_xyz,i_ant,i_chunk))/D2 &
                         - (SourcePos(i_xyz,i_Peak)-Ant_pos(i_xyz,i_ant1,i_chunk))/d1
                     Jacobian(i_eqn,k)=-Jacobian(i_eqn,k)*IndxRefrac /(c_mps*sample) ! Convert to units of [samples]
-                    val=val+Jacobian(i_eqn,k)*Jacobian(i_eqn,k)*25.  ! 25 to convert from [samples^2] to [ns^2]
-                    Jacobian(i_eqn,k)=Jacobian(i_eqn,k)/CCorr_Err(j_corr,i_Peak)
+                    !val=val+Jacobian(i_eqn,k)*Jacobian(i_eqn,k)*25.  ! 25 to convert from [samples^2] to [ns^2]
+                    Jacobian(i_eqn,k)=Jacobian(i_eqn,k)/CCorr_Err(j_corr,i_Peak)  ! units of [m^-1]
                 endif
             enddo
             !if(nvar.eq.1) write(*,*) k
@@ -471,23 +498,31 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                 endif
                 CPE_eqn(j_corr)=i_eqn
                 C_A(j_corr)=i_ant
-                Rns = R(i_eqn)*5.*CCorr_Err(j_corr,i_Peak) ! put this in [ns]
+                Rns = R(i_eqn)*5.*CCorr_Err(j_corr,i_Peak) ! deviation in [ns]
                 Ave(i_stat,i_Peak)=Ave(i_stat,i_Peak) + Rns ! put this in [ns]
                 RMS(i_stat,i_Peak)=RMS(i_stat,i_Peak) + Rns*Rns ! put this in [ns]
-                SumJac(i_stat,i_Peak)=SumJac(i_stat,i_Peak)+ val
-                ChiSqWeight(i_stat,i_Peak)=ChiSqWeight(i_stat,i_Peak) +0.04/(CCorr_Err(j_corr,i_Peak)*CCorr_Err(j_corr,i_Peak))
+                !SumJac(i_stat,i_Peak)=SumJac(i_stat,i_Peak)+ val
+                ChiSqWeight(i_stat,i_Peak)=ChiSqWeight(i_stat,i_Peak) + (Error_norm/(CCorr_Err(j_corr,i_Peak)))**2
+                ! ChiSqWeight is the (per station) equivalent of the effective number of good antennas
             endif
             !
-            !Call spline_cubic_val ( 2*Safety+1, t_CCorr(-Safety), &
-            !    CCorr(-Safety,j_corr,i_Peak,i_eo), CCorr_pp(-Safety,j_corr,i_Peak,i_eo), &
-            !    T_shft, val)
-            !If(prn) write(2,"(A,I3,A,I2,I2,A,f7.2,A,F6.4)") 'j_corr=',j_corr,', i_Peak=',i_Peak,i_eo,&
-            !    ', T_shft=', T_shft,', correlation=', val
-        enddo ! j_corr=1,Nr_Corr(i_eo)
+        enddo ! j_corr=1,Nr_Corr(i_eo,i_chunk)
         If(StCal) then
             !PeakChiSQ(i_Peak)= sum(ChiSq(:,i_Peak))/(sum(Cnt(:))-sum(Dropped(:,i_Peak)))
-            PeakChiSQ(i_Peak)= sum(ChiSq(:,i_Peak))/sum(ChiSqWeight(:,i_Peak))
-            PeakRMS(i_Peak)= sqrt(sum(RMS(:,i_Peak))/sum(Cnt(:)))
+            k=Nr_Corr(i_eo,i_chunk)
+            !write(2,"(A,I3,200F5.1)") '!CompareCorrTime, err:',k , CCorr_Err(1:k,i_Peak)
+            B= sum(ChiSqWeight(:,i_Peak))
+            k=sum(Cnt(:))
+            MeanErr(i_Peak)= sqrt(k/B) ! > 1. As multiplicative factor of Error_norm
+            PeakChiSQ(i_Peak)= sum(ChiSq(:,i_Peak))/B  ! normalized by the sum of the squares of the error bars in [ns], gives something with units of [ns]
+            !write(2,*) '!CompareCorrTime, chi^2:',i_peak,PeakPos(i_Peak), PeakChiSQ(i_Peak), B, MeanErr(i_Peak)
+            PeakRMS(i_Peak)= sqrt(sum(RMS(:,i_Peak))/k)
+            !write(2,*) '!CompareCorrTime, RMS:',PeakRMS(i_Peak),sum(RMS(:,i_Peak)),sum(Cnt(:))
+!FitCCorr, Result, chi^2/ndf:     0.20  193
+ !CompareCorrTime, chi^2:           1       40420  0.84764125290279146        24.394140929346896
+ !CompareCorrTime, RMS:   1.8572529484368538        348.38823996221612              101
+ !CompareCorrTime, chi^2:           2       40420   1.8012379708625430        9.5081773198008435
+ !CompareCorrTime, RMS:   1.8672704695054625        338.20980360985362               97
         Endif
         If(prn) then
             write(2,"(A,I3,I2,A,I7,A, 2f7.2,A,3(F11.2,','),A,F7.3)", ADVANCE='NO') 'i_src=',SourceNr(i_Peak),i_eo, &
@@ -504,12 +539,24 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
                         Call Station_ID2Mnem(Station_ID,Station_Mnem)
                         write(2,"(/,1x,A5,';')", ADVANCE='NO')   Station_Mnem
                     endif
-                    val=R(i)*5.*CCorr_Err(j_corr,i_Peak)  !  [ns]
-                    If(abs(val) .gt. 10.) then
-                        write(2,"(i2.2,'*',F5.0,'*;')", ADVANCE='NO') Ant_IDs(i_ant,i_chunk),val
-                    else
-                        write(2,"(i2.2,F7.2,';')", ADVANCE='NO') Ant_IDs(i_ant,i_chunk),val
-                    endif
+                  Ch2=NINT(PeakPos(i_Peak) + TShiftPeak(j_corr)-TShiftPeak(1))
+                  Lower=Max(1, Ch2-Safety)
+                  Upper=MIN(Ch2+Safety,Time_dim) ! all calculated in [LBA samples]
+                  If(Upper.lt.Lower) Then
+                     B=0.
+                  Else
+                     Call LHBASet(i_ant, i_chunk, CTspec_a_c, i_type, Sam_ms, toSample)
+                     B=Sqrt(SUM((Abs(CTspec_a_c(toSample*Lower:toSample*Upper))**2)))
+                  EndIf
+                  !
+                  val=R(i)*5.*CCorr_Err(j_corr,i_Peak)  !  [ns]
+                  If(abs(val) .gt. 10.) then
+                     write(2,"(i6.6,'*',F5.0,'* (',G10.3,');')", ADVANCE='NO') &
+                           100*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk),val,B
+                  else
+                     write(2,"(i6.6,F7.2,' (',G10.3,');')", ADVANCE='NO') &
+                           100*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk),val,B
+                  endif
                 enddo
             endif
             write(2,"(A,I3,I2,A,f7.2)") '; i_src=',SourceNr(i_Peak),i_eo,', Chi^2/DegrF=', PeakChiSQ(i_Peak)
@@ -587,19 +634,22 @@ Subroutine CompareCorrTime ( meqn, nvar, X_p, nf, R, uiparm, Jacobian, ufparm )
             write(2,"(A,/)") '-----'
         endif ! prn
         !if(nvar.eq.1) write(*,*) 'SourcePos(1,i_Peak)',SourcePos(1,i_Peak),i_peak
-    Enddo  ! i_Peak=1,PeakNr
-    !    if(nvar.eq.1) write(*,*) 'R',R
-    !
-    !val=sum(ChiSq)
-    If(prn) Write(2,*) ' total chisq ',sum(ChiSq),(sum(ChiSq(:,i_Peak)),i_Peak=1,PeakNrTotal)
-    !stop  'CompareCorrTime'
-    !
-    ! If(N_FitStatTim .gt. 0) stop
-    !OPEN(UNIT=4,STATUS='unknown',FILE=trim(FileFitResult)//'.dat' ) !'plot/FitResult.dat')
-    !write(4,"('!CoreDist[m], phi[rad]',3x,'I',11x,'I_calc',8x,'sigma_I',7x,&
-    !    'Q',9x,'Q_calc',4x,'sigma_Q',3x,'U',9x,'U_calc',4x,'sigma_U',3x,'V',9x,'V_calc',4x,'sigma_V')")
-    !close(unit=4)
-    return
+   Enddo  ! i_Peak=1,PeakNr
+   !    if(nvar.eq.1) write(*,*) 'R',R
+   !
+   !val=sum(ChiSq)
+   If(prn) Write(2,*) ' total chisq ',sum(ChiSq),(sum(ChiSq(:,i_Peak)),i_Peak=1,PeakNrTotal)
+   !stop  'CompareCorrTime'
+   !
+   ! If(N_FitStatTim .gt. 0) stop
+   !OPEN(UNIT=4,STATUS='unknown',FILE=trim(FileFitResult)//'.dat' ) !'plot/FitResult.dat')
+   !write(4,"('!CoreDist[m], phi[rad]',3x,'I',11x,'I_calc',8x,'sigma_I',7x,&
+   !    'Q',9x,'Q_calc',4x,'sigma_Q',3x,'U',9x,'U_calc',4x,'sigma_U',3x,'V',9x,'V_calc',4x,'sigma_V')")
+   !close(unit=4)
+   !DeAllocate( ChiSq, Ave, RMS )
+   !DeAllocate( SumJac, ChiSqWeight )
+   !DeAllocate( Cnt, CPE_eqn,C_A  )
+   return
 End Subroutine CompareCorrTime
 !==================================================
 Subroutine ufparm ( meqn, nvar, x )

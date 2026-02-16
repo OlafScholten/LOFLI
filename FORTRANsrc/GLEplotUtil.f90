@@ -9,6 +9,7 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
    Logical, intent(in), optional :: Submit
    Character(len=40), save :: BatchFile=''
    character*100 :: shellin
+   Integer :: i,N
    !Character(len=19), parameter :: CallGLE='call GLE -d pdf -o '  ! space at end is important
    !Character(len=5), parameter :: PJ='.pdf ' ! space at end is important
    !Character(len=12), parameter :: CallGLE='call GLE -o '  ! space at end is important
@@ -48,10 +49,10 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
          !Write(10,"(7(A,/) )") 'call ../ShortCuts.bat'  ! define the proper shortcuts; not needed here
       Else
          Open(UNIT=10,STATUS='unknown',ACTION='WRITE',FILE=TRIM(BatchFile)//'.sh')   ! It is assumed that this scipt is launched in the FlashFolder
-         Write(10,"(7(A,/) )") &
-            '#!/bin/bash', &
-            !  '#!/bin/bash -v', &
-            '#','#' , 'source  ${LL_Base}/ShortCuts.sh', 'set -x'     ! ,  'FlashFolder=$(pwd)',  'ProgramDir="/home/olaf/LMA-fit/LMA2019/program"'
+ !        Write(10,"(7(A,/) )") &
+ !           '#!/bin/bash', &
+ !           !  '#!/bin/bash -v', &
+ !           '#','#' , 'source  ${LL_Base}/ShortCuts.sh', 'set -x'     ! ,  'FlashFolder=$(pwd)',  'ProgramDir="/home/olaf/LMA-fit/LMA2019/program"'
       EndIf
    EndIf
    If(BatchFile.eq. '') Return
@@ -61,13 +62,23 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
             !PlotName=trim(datafile(1))//TRIM(extension)//TRIM(OutFileLabel)//'AmplFit'
             If(Windows) Then
                If(present(Bckgr)) Then
-                  Write(10,"(A)") &
-                  CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+                  Write(10,"(A)") CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
                         //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'//' "'//TRIM(FlashFolder)//trim(Bckgr)//'"'
                Else
-                  Write(10,"(A)") &
-                  CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
-                        //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'
+                  N=LEN_TRIM(PlotDataFile)
+                  shellin=' '
+                  shellin(1:N)=PlotDataFile(1:N)
+                  Do i=2,N-1
+                     If(PlotDataFile(i:i).eq.' ') Then
+                        shellin(i:i+2)='" "'
+                        shellin(i+3:i+2+N-i)=PlotDataFile(i+1:N)
+                        exit
+                     EndIf
+                  EndDo
+                  Write(10,"(A)") CallGLE//trim(PlotName)//PJ//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
+                        //'"'//TRIM(FlashFolder)//trim(shellin)//'"'
+                  !write(2,*) 'CallGLE= "',CallGLE,'"'
+                  !write(2,*) 'PlotName//PJ= "',trim(PlotName)//PJ,'"'
                   !"call GLE -d pdf -o "//trim(PlotName)//".pdf "//TRIM(UtilitiesFolder)//trim(PlotType)//".gle "&
                   !      //'"'//TRIM(FlashFolder)//trim(PlotDataFile)//'"'
                EndIf
@@ -107,11 +118,11 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
    If(present(Submit)) Then
       If(Submit) Then
          If(windows) then
-            If(RunMode.eq.5) Then
-              write(10,"('del files\*_STD-*.plt')")
-              write(10,"('del files\AmplFit*.plt')")
-              write(10,"('del files\*_bin_1.plt')")
-            EndIf
+            !If(RunMode.eq.5) Then
+            !  write(10,"('del files\*_STD-*.plt')")
+            !  write(10,"('del files\AmplFit*.plt')")
+            !  write(10,"('del files\*_bin_1.plt')")
+            !EndIf
             Close(unit=10)
             shellin = 'RunGLEplots.bat'
             CALL system(shellin)
@@ -120,19 +131,23 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
          Else
             If(RunMode.eq.2) Then
               write(10,"('rm ',A,'{LOFAR_Corr*.dat,CCPeakPhase*.dat}')") TRIM(DataFolder)
-      !!         write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
-            ElseIf(RunMode.eq.5) Then
-              write(10,"('rm ',A,'*_STD-*.plt')") TRIM(DataFolder)
-              write(10,"('rm ',A,'AmplFit*.plt')") TRIM(DataFolder)
-              write(10,"('rm ',A,'*_bin_1.plt')") TRIM(DataFolder)
+              write(10,"('rm ',A,'{LOFAR_Time*.dat,LOFAR_Freq*.dat}')") TRIM(DataFolder)
+            !ElseIf(RunMode.eq.5) Then
+            !  write(10,"('rm ',A,'*_STD-*.plt')") TRIM(DataFolder)
+            !  write(10,"('rm ',A,'AmplFit*.plt')") TRIM(DataFolder)
+            !  write(10,"('rm ',A,'*_bin_1.plt')") TRIM(DataFolder)
             EndIf
             Close(unit=10)
             shellin = 'chmod 755 '//TRIM(BatchFile)//'.sh'
             CALL system(shellin)
-            shellin = 'nohup ./'//TRIM(BatchFile)//'.sh  >'//TRIM(BatchFile)//'.log 2>&1  & '
+            !shellin = 'nohup ./'//TRIM(BatchFile)//'.sh  >'//TRIM(BatchFile)//'.log 2>&1  & '
+            shellin = 'source ./'//TRIM(BatchFile)//'.sh'
             CALL system(shellin)
-            Write(2,*) TRIM(BatchFile)//'.sh  is submitted'
-            Write(*,*) TRIM(BatchFile)//'.sh  is submitted'
+            !Write(2,*) TRIM(BatchFile)//'.sh  is submitted'
+            !Write(*,*) TRIM(BatchFile)//'.sh  is submitted'
+            shellin = 'rm  '//TRIM(BatchFile)//'.sh'
+            CALL system(shellin)
+            Write(2,*) TRIM(BatchFile)//'.sh  is removed and plots habe been made'
          EndIf
          BatchFile=''
       EndIf

@@ -13,7 +13,7 @@ Subroutine EI_PrntFitPars(X)
     Implicit none
     real ( kind = 8 ), intent(in) :: X(N_FitPar_max)
     integer ( kind = 4 ) :: i,j, i_Peak, i_chunk, i_fit
-    Character(len=5) :: Station_Mnem
+    Character(len=6) :: Station_Mnem
     Character(len=1) :: FitParam_Mnem(4)=(/'N','E','h','t'/)
     !
     If(N_FitStatTim .gt. 0) then
@@ -36,7 +36,7 @@ Subroutine EI_PrntFitPars(X)
                   '[samples]=',StartT_sam(i_chunk)*Sample*1000.d0,'[ms]'
             Endif
             Write(2,"(i3,2x,i2,A,I6,A,3F8.3)", ADVANCE='NO') i_Peak,ChunkNr(i_Peak),&
-                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.d0 
+                ', PeakPos',PeakPos(i_Peak),', source@', X( X_Offset(i_fit-1):X_Offset(i_fit)-1 )/1000.d0
             write(2,"(', chi^2/df=',F7.2)", ADVANCE='NO') PeakChiSQ(i_Peak)
             !If(Station_nrMax.gt.0 .and. (SUM(Dropped(:,i_Peak)).gt.0)) then
             !      write(2,"(' Excluded:')", ADVANCE='NO')
@@ -134,7 +134,7 @@ Subroutine EI_PolarizPeak(i_Peak)   ! called in "EI_Fitter"
       Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak))
    Windw=3*N_Smth
    !write(2,*) 'EI_PolarizPeak: Outpt=',Outpt
-   write(Label,"('Pk ',i4.2)") i_Peak
+   write(Label,"('Src',i4.2)") i_Peak
    Call EI_PolGridDel(Nr_IntFerCh(i_chunk), FitDelay, IntfNuDim, i_chunk, SourcePos(1,i_Peak), AntPeak_OffSt(1,i_Peak), &
       Cnu_p0(0,1,i_peak), Cnu_t0(0,1,i_peak), Cnu_p1(0,1,i_peak), Cnu_t1(0,1,i_peak), &
       Outpt, DelChi, Label, ExclStatNr(:,i_peak) )

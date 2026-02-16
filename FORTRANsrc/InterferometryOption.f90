@@ -157,13 +157,14 @@ Subroutine InterferometerRun
       If(NrPixSmPowTr.gt.1) Then
          Call PlotMultContours  ! should be called before curtainplotting since files will be deleted thereafter
       EndIf
-      write(2,*) 'PlotAllCurtainSpectra: for a CurtainHalfWidth of',CurtainHalfWidth, &
+      write(2,*) 'Call PlotAllCurtainSpectra: for a CurtainHalfWidth of',CurtainHalfWidth, &
             ' around the center of the windos;,', NrPixSmPowTr
       Flush(unit=2)
       PeakNrTotal=2
       Peak_eo(1)=0   ; Peak_eo(2)=1  ! only the i_eo=0 peaks are used for curtainplotting
+      write(2,*) 'Need to set j_type in InterferometryOption********************'
       ChunkNr(1)=1   ; ChunkNr(2)=1 ! chunk nr
-      RefAnt(1,0)=IntFer_ant(1,1)
+      RefAnt(1,0,0)=IntFer_ant(1,1)
       TotPeakNr(0,1)=1
       PeakNr(0,1)=1
       !RefAnt(i_chunk,i_eo)

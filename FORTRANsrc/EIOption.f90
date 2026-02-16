@@ -29,6 +29,7 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    use Chunk_AntInfo, only : SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
    !use GLEplots, only : GLEplotControl
    Use Interferom_Pars, only : Alloc_EInterfImag_Pars, DeAlloc_EInterfImag_Pars
+   use CPU_timeUsage, only : CPU_usage
    use mod_test
    Implicit none
    Real(dp), intent(in) :: GridVolume(1:3), BoxFineness
@@ -43,10 +44,8 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    CALL DATE_AND_TIME (Values=DATE_T)
    If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i1)") (DATE_T(i),i=5,8), ' start Interferometry'
    WRITE(*,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") (DATE_T(i),i=5,8), achar(27)//'[0m'
-   call cpu_time(CPUTime)
-   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
-   If(FirstTimeInterf) WallstartTime=WallCount/WallRate
-   If(FirstTimeInterf) WRITE(2,"(A,F9.3,A)") 'CPU time:', CPUTime, '[s]'  ! count_rate, count_max
+   !call cpu_time(CPUTime)
+   CALL CPU_usage
    !
    !i_chunk=1
    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
@@ -120,15 +119,17 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    !----------------------------------------
    If(FirstTimeInterf) WRITE(2,"(1X,I2,':',I2.2,':',I2.2,'.',I3.3,A,i3)") (DATE_T(i),i=5,8), ' analyze'
    WRITE(*,"(A,1X,I2,':',I2.2,':',I2.2,'.',I3.3,A)") ' analyze',(DATE_T(i),i=5,8), achar(27)//'[0m'
-   call cpu_time(CPUTime)
-   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
-   WallTime=WallCount/WallRate - WallstartTime
-   WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   !call cpu_time(CPUTime)
+   !CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   !WallTime=WallCount/WallRate - WallstartTime
+   !WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   Call CPU_usage
    !
    !If(FirstTimeInterf) Then
    !EndIf
    i_eo=0
    Call OutputIntfPowrTotal(IntFer_ant(1,1), i_eo)  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !IntPowSpec=.true.
    If(IntPowSpec) Call OutputIntfPowrMxPos(i_eo)  ! main one for analyzing slices
    If(FirstTimeInterf) Call OutputIntfSlices(i_eo)   ! Needed only for automatically following max intensity with ChainRun, not completely sure (23 Febr 2025)
    !
@@ -137,12 +138,12 @@ Subroutine EI_Run(GridVolume, BoxFineness)
    !
    Call DeAlloc_EInterfImag_Pars
    !
-   call cpu_time(CPUTime)
-   CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
-   WallTime=WallCount/WallRate - WallstartTime
+   !call cpu_time(CPUTime)
+   !CALL SYSTEM_CLOCK(WallCount, WallRate)  !  Wallcount_rate)
+   !WallTime=WallCount/WallRate - WallstartTime
    !Write(2,*) 'Wall:', WallTime, WallCount, WallRate, CPUTime
-   If(FirstTimeInterf) WRITE(2,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
-   WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   If(FirstTimeInterf) Call CPU_usage !WRITE(2,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
+   !WRITE(*,"(A,F9.3,F12.6,A)") 'Wall & CPU time:', WallTime, CPUTime, '[s]'  ! count_rate, count_max
    FirstTimeInterf=.false.
    Return
     !
@@ -248,11 +249,11 @@ Subroutine EISelectAntennas(i_chunk)
    ! And put the condition the both dipoles are at same location
    !--------------------------------------------
    use constants, only : dp
-   use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos !, Ant_RawSourceDist
+   use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, LBA_nr, HBA_nr, Ant_pos !, Ant_RawSourceDist
    use Chunk_AntInfo, only : Unique_StatID, Nr_UniqueStat, Unique_SAI, Nr_UniqueAnt, Tot_UniqueAnt
    Use Interferom_Pars, only : IntFer_ant, Nr_IntFerMx, Nr_IntferCh, Nmax_IntFer, FirstTimeInterf ! the latter gives # per chunk
    use FitParams, only : AntennaRange
-   use DataConstants, only : Station_nrMax, Ant_nrMax, ChunkNr_dim
+   use DataConstants, only : Ant_nrMax, ChunkNr_dim ! Station_nrMax,
    use StationMnemonics, only : Statn_ID2Mnem
     use unque, only : unique
    Implicit none
@@ -276,6 +277,7 @@ Subroutine EISelectAntennas(i_chunk)
         !write(2,*) Statn_ID2Mnem(Station), Ant_pos(:,i_ant,i_chunk)/1000.
         ! write(2,*) '-->',j_IntFer+1, Statn_ID2Mnem(Station), Ant_IDs(i_ant,i_chunk)
       endif
+      If(Mod(Station,10).ne.0) cycle  ! Use HBA only for the time
       !write(2,*) 'i_ant, Station, Dist',i_ant, Station, Dist
       If(Dist .gt. AntennaRange*1000.) cycle  ! Limit to antennas near the superterp
       if(mod(Ant_IDs(i_ant,i_chunk),2) .ne. 0) cycle       ! First select the even,
@@ -685,6 +687,7 @@ Subroutine EIAnalyzePixelTTrace(i_N, i_E, i_h, SumWindw, IntfNuDim, CMTime_pix)
          !If( SmPow.gt. 0.6*RefSmPowTr(i) ) SmPow=0.
          Call BestOnes(i_N, i_E, i_h, SmPow, Grd_best(1,1,i), Int_best(1,i), N_best)
          PixSmPowTr(i,i_N, i_E, i_h)=SmPow  !  needed for intensity interpolation around the maximal intensity pixel
+         !write(2,*) '!EIAnalyzePixelTTrace',i, SmPow, MaxSmPow(i)
          If( SmPow.gt. MaxSmPow(i) ) Then  ! store max for each slice
             MaxSmPow(i)=SmPow
             MaxSmPowGrd(1,i)=i_N

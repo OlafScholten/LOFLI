@@ -12,8 +12,8 @@ Module Interferom_Pars
    Integer, allocatable, save :: IntFer_ant(:,:)
    !Integer, Save ::  IntfSmoothWin=20   ! set equal to N_Smth
    Integer :: i_chunk
-   Real(dp), save :: dtAnt_tp(0:Ant_nrMax/2)  ! Step size for pixels; obsolete but used in CrossCorr
-   Integer, save :: NSrc_tp(0:Ant_nrMax/2)  !! difference in timing for theta and phi pol; Obsolete
+   Real(dp), save, allocatable :: dtAnt_tp(:)  ! Step size for pixels; obsolete but used in CrossCorr
+   Integer, save, allocatable :: NSrc_tp(:)  !! difference in timing for theta and phi pol; Obsolete
    !Real(dp), allocatable :: IntfNorm(:)
    Real(dp), save :: d_loc(1:3)  ! Step size for pixels
    Real(dp), save :: diff(3) ! max abs. time shift per pixel in direction i
@@ -82,9 +82,9 @@ Module Interferom_Pars
    !Complex(dp), Allocatable :: dChi_ap(:), dChi_at(:)
    Real(dp), Allocatable :: dChi_ap(:), dChi_at(:)
    Complex(dp), Allocatable, save :: Cnu_p0(:,:,:), Cnu_t0(:,:,:), Cnu_p1(:,:,:), Cnu_t1(:,:,:)
-   Real(dp), Allocatable :: TIntens_pol(:,:)   !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
+   Real(dp), Allocatable :: TIntens_pol(:,:)   !  Intensity trace for different pol directions as seen at the core, For use in "ATRID_Option"
    !       array TIntens_pol is build in subroutine EI_PolGridDel
-   Real(dp), Allocatable :: TIntens000(:)   !  Intensity trace for central pixel, For use in "PeakInterferoOption", build in EIAnalyzePixelTTrace
+   Real(dp), Allocatable :: TIntens000(:)   !  Intensity trace for central pixel, For use in "ATRID_Option", build in EIAnalyzePixelTTrace
 
    !Real(dp), Allocatable, save :: W_ap(:,:), W_at(:,:) !created in EI_Weights for all chunks
    !Real(dp), Allocatable, save :: Noise_p(:), Noise_t(:) !needed in EI_Weights for present chunk for generating weights
@@ -107,6 +107,7 @@ Module Interferom_Pars
       Logical, save :: AntennaFunctionDone=.false.
       Integer, save :: N_smth_previous=-1
       If(.not. AntennaFunctionDone) Then
+         Allocate( dtAnt_tp(0:Ant_nrMax/2), NSrc_tp(0:Ant_nrMax/2)  )
          Call AntFieParGen()
          If(.not. GainFactor) Then
             Nrm=SUM(Gain(:))/(Freq_max - Freq_min)
@@ -131,8 +132,8 @@ Module Interferom_Pars
          If(Allocated(TIntens_pol) ) DeAllocate( TIntens_pol )
          If(Allocated(TIntens000) ) DeAllocate( TIntens000 )
          Allocate( Smooth(-N_smth:N_smth) )
-         Allocate( TIntens000(1:SumWindw) )  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
-         Allocate( TIntens_pol(1:3,-N_smth:N_smth) )  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
+         Allocate( TIntens000(1:SumWindw) )  !  Intensity trace for different pol directions as seen at the core, For use in "ATRID_Option"
+         Allocate( TIntens_pol(1:3,-N_smth:N_smth) )  !  Intensity trace for different pol directions as seen at the core, For use in "ATRID_Option"
          Call SetSmooth(N_Smth, ParabolicSmooth, Smooth)
          !Write(2,"(1x,A,I3,A,I3,I3,A,3F6.3)") 'Width smoothing fie=', N_smth, &
          !   '; relative values in range (',N_smth/2-1,N_smth/2+1,') = ',Smooth(N_smth/2-1:N_smth/2+1)/Smooth(0)

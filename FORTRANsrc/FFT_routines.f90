@@ -99,6 +99,7 @@
   lenR = N_Time
   call Rfft1f ( N_Time, inR, D, N_Time, wsave, lensav, work, lenwrk, ier )
   CALL R2C(D,C)
+!  write(2,*) '!RFTransform_CF_Filt', t_shft, N_nu
 !
 !    write(2,*) '0',abs(B(0)),ph(B(0)), f(0)
 !    write(2,*) '1',abs(B(1)),ph(B(1)), f(1)

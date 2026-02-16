@@ -111,6 +111,29 @@ Subroutine RelDist(Source,LFRAnt,RDist)
     Return
 End Subroutine RelDist
 !================================================
+Subroutine RelDist_ms(Source,LFRAnt,RDist_ms)
+!   RDist is distance relative to center of CS002, in units of time-samples
+!  RDist= dt_(core-source) - dt_(ant-source)=dt_{cs} - dt_{as}
+! t_core=t_s + dt_cs ; t_ant=t_s + dt_as  ; t_s=t_ant-dt_as
+! thus: t_core=t_ant + Rdist
+    use constants, only : dp,sample,c_mps
+    implicit none
+    real(dp), intent(in) :: Source(3)
+    real(dp), intent(in) :: LFRAnt(3)
+    real(dp), intent(out) :: RDist_ms
+    Real(dp) :: D
+   Real(dp) :: IndxRefrac
+   Real(dp), external :: RefracIndex
+    !write(2,*) 'source',source
+    !write(2,*) 'LFRAnt',LFRAnt
+    D=sum((Source(:)-LFRAnt(:))*(Source(:)-LFRAnt(:)))
+    RDist_ms = sqrt(D)
+    D=sum(Source(:)*Source(:))  ! core=center station CS002 is at zero
+    RDist_ms = RDist_ms- sqrt(D)         ! units of [meter]
+    RDist_ms = Rdist_ms*RefracIndex( Source(3) )*1000.d0/c_mps ! Convert to units of [ms]
+    Return
+End Subroutine RelDist_ms
+!================================================
 Real(kind=8) Function tShift_ms(Source)  !
     use constants, only : dp,sample,c_mps
     implicit none

@@ -36,7 +36,7 @@ Subroutine E_Callibr()
    use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
    Use Interferom_Pars, only : IntFer_ant, Nr_IntferCh ! the latter gives # per chunk
    use Interferom_Pars, only : Alloc_EInterfCalib_Pars
-   use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
+   use StationMnemonics, only : Statn_ID2Mnem 
    ! use LOFLI_Input, only : ReadSourceTimeLoc
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
    Use Calibration, only : WriteCalibration ! was MergeFine

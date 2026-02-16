@@ -60,7 +60,7 @@ Subroutine ReadPreDefTr( i_track)
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
       read(22,*,iostat=nxx) t_ms
       read(22,*,iostat=nxx) t_ms
-   Elseif((PreDefTrackFile(Len-3:Len) .eq. '.trc')) Then ! Use a specila track file
+   Elseif((PreDefTrackFile(Len-3:Len) .eq. '.trc')) Then ! Use a special track file
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)
    Elseif((PreDefTrackFile(Len-3:Len) .eq. '.plt')) Then ! Use a more modern plot file
       OPEN(UNIT=22,STATUS='old',ACTION='Read',FILE=trim(PreDefTrackFile),IOSTAT=nxx)

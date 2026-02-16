@@ -170,7 +170,7 @@
  !   I   Subroutine PlotAllCurtainSpectra(CurtainWidth)
  !   I   Subroutine GLEscript_CurtainPlot(unt, file, CurtainWidth, i_Peak, UsePeakNr)
  !   I   Subroutine GLE_Corr()
- !   I   Subroutine GLEscript_Curtains(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
+ !   I   Subroutine GLEscript_EFieldCurtain(unt, file, WWidth, i_chunk, FileA, Label, dChi_ap, dChi_at, Power_p, Power_t, Chi2pDF)
  !   Include 'ImpulsImagOption.f90'
  !   I   Subroutine ImpulsImagRun
  !   I   use DataConstants, only : ProgramFolder, UtilitiesFolder, FlashFolder, DataFolder, FlashName, Windows
@@ -227,7 +227,7 @@
  !   I   end Subroutine System_MemUsage
  !   I   Subroutine CreateNewFolder(FileName)
  !   Include 'PeakInterferoOption.f90'
- !   I   Subroutine PeakInterferoOption()
+ !   I   Subroutine ATRID_Option()
  !   I   Subroutine WriteInterfRslts(i_Peak)
  !   I   Subroutine ReadFlashImageDat(SourceGuess)
  !   Program LOFAR_Imaging
@@ -236,32 +236,39 @@
  !   Subroutine AntennaSanity()
  !----------------- 6/04/2022@17:49:44.374--------------------------
  !------------------------------------------
-!    Include 'ConstantsModules.f90'
+!    Include 'H_ConstantsModules.f90'
 !    Include 'FFT_routines.f90'
-!    Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+!    Include 'H_ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+!    Include 'AntFuncCnst.f90'
 !    Include 'AntFunct.f90'
-!    Include 'InterferomPars.f90'
-!    Include 'LOFLI_InputHandling.f90'
+!    Include 'H_InterferomPars.f90'
+!    Include 'PredefTrack.f90'
+!    Include 'H_MappingUtilitiesModules.f90'
+!    Include 'H_CalibrationsMod.f90'
+!   Include 'System_Utilities.f90'
+ !    Include 'H_GLEplotUtil.f90'
+!    Include 'H_LOFLI_InputHandling.f90'
 !    Include 'HDF5_LOFAR_Read.f90'
-!    Include 'MappingUtilities.f90'
-!    Include 'GLEplotUtil.f90'
-!    Include 'Ant-Read.f90'
-!    Include 'CrossCorr.f90'
-!    Include 'FindCallibr.f90'   ! Station Callibration
-!    Include 'FitParams.f90'
-!    Include 'Fitter_CorrMax.f90'     ! uses chi-square mini
-!    Include 'FindSources.f90'
-!    Include 'SourceTryal.f90'  ! v16.f90' = v17.f90'  ; v17a.f90' uses grid search
-!    Include 'ExplorationOption.f90'
-!    Include 'CurtainPlotOption.f90'
-!    Include 'ImpulsImagOption.f90'
-!    Include 'InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
-!    Include 'EIOption.f90'
-!    !Include 'EIStokes-testW.f90'
-!    !Include 'SIOption.f90'
-!    Include 'ECallibrOption.f90'
-!    Include 'System_Utilities.f90'
-!    Include 'PeakInterferoOption.f90'
+!    Include 'H_MappingUtilities.f90'
+!    Include 'H_Ant-Read.f90'
+!    Include 'H_CrossCorr.f90'
+!    Include 'H_FindCallibr.f90'   ! Station Callibration
+!    Include 'MGMR3D_spline.f90'   ! Station Callibration
+!    Include 'H_FitParams.f90'
+!    Include 'H_Fitter_CorrMax.f90'     ! uses chi-square mini
+!    Include 'H_FindSources.f90'
+!    Include 'H_SourceTryal.f90'  ! v16.f90' = v17.f90'  ; v17a.f90' uses grid search
+!    Include 'H_ExplorationOption.f90'
+!    Include 'H_CurtainPlotOption.f90'
+!    Include 'H_ImpulsImagOption.f90'
+!    Include 'H_InterferometryOptSbRtns.f90'  ! d: Cnu storage changed for InterfEngineB
+!    Include 'H_InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
+!    Include 'H_EIOption.f90'
+!    Include 'H_EICallRtns.f90'
+!    Include 'H_EIFitter.f90'
+!    Include 'H_ECallibrOption.f90'
+!    Include 'H_PeakInterferoOption.f90'
+!    Include 'nl2sol.f90'
 !-----------------------------------
 Program LOFAR_Imaging
 !
@@ -296,8 +303,11 @@ Program LOFAR_Imaging
 !  v17: work on locating algorithm versions 17 and 17a
 !  v17a: NL2SOL minimal stepsize improved
 !  v18: Optimize locating algorithm and esstablish best of 17 and 17a
-!  File Units in use: (2=output),10,11,(12=RFI filter),13,(14=H5 data),
-!     (15,16,17=source locations),19,20,21,(25,26,27=peakfind stat),29,30,31
+!  File Units in use: (2=output),10,11,(12=RFI filter),13,(14,15=H5 data),
+!     (17=source locations),(18=starred source),19,20,21,(22=predef track),(27=peakfind stat),29,30,31
+!     23 is also used in simulate data
+!     (31,32,33,34 used in EI-fitter)
+!     (35,36, 45,46 in Findsources & Impulsive imager)
 !  v18: Peakfinding optimized further
 !  v18: Zero-data criterium as well as normalization modified (in 'AntRead')
 !  v18: Produce plots of interferometric maxima for automatic-slices; units= 28, 29 used locally
@@ -309,8 +319,10 @@ Program LOFAR_Imaging
     use DataConstants, only : Time_dim, Production, RunMode, Utility, release
     use DataConstants, only : PeakNr_dim, ChunkNr_dim, Diagnostics, EdgeOffset, Calibrations, OutFileLabel
     use DataConstants, only : Interferometry ! Polariz
-    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, t_ccorr, Safety, CurtainHalfWidth, StStdDevMax_ns
-    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal ! , PeakPos
+    use DataConstants, only : Ant_nrMax, LAnt_nrMax, HAnt_nrMax
+    use DataConstants, only : Used_StationNr, Used_LStationNr, Used_HStationNr
+    use ThisSource, only : Alloc_ThisSource, Dual, RealCorrelation, Safety, CurtainHalfWidth, StStdDevMax_ns ! , t_ccorr
+    use ThisSource, only : CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, NrP, PeakNrTotal, ImpImWeights ! , PeakPos
     use FitParams, only : FitIncremental, WriteCalib, FullAntFitPrn,  AntennaRange
     use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, Sigma_AntT, SearchRangeFallOff  ! ,PeakS_dim, Explore
     use FitParams, only : FullSourceSearch ! , SigmaGuess
@@ -319,7 +331,7 @@ Program LOFAR_Imaging
     use Chunk_AntInfo, only : ExcludedStat_max, SgnFlp_nr, PolFlp_nr, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI
     use Chunk_AntInfo, only : Alloc_Chunk_AntInfo, ExcludedStat, SaturatedSamplesMax, N_Chunk_max
     use FFT, only : RFTransform_su,DAssignFFT
-    use StationMnemonics, only : Statn_ID2Mnem, Statn_Mnem2ID
+    use StationMnemonics, only : Statn_ID2Mnem, LFR_Mnem2ID
     Use Interferom_Pars, only : IntfPhaseCheck, N_smth, ParabolicSmooth, ChainRun, PixPowOpt, N_fit, RefinePolarizObs
     Use Interferom_Pars, only : Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
     use GLEplots, only : GLEplotControl
@@ -328,7 +340,7 @@ Program LOFAR_Imaging
     !
     Integer :: i,j,i_chunk, i_Peak, units(0:2), FitRange_Samples, IntfSmoothWin !, CurtainHalfWidth
     Real(dp) :: StartTime_ms, StartingTime, StoppingTime, D
-    Real(dp) :: SourceGuess(3,N_Chunk_max) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
+    Real(dp), allocatable :: SourceGuess(:,:) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
     !Real(dp) :: Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
     Integer, parameter :: lnameLen=180
     CHARACTER(LEN=1) :: Mark
@@ -348,12 +360,12 @@ Program LOFAR_Imaging
          , IntfPhaseCheck, IntfSmoothWin, ParabolicSmooth, TimeBase,  ChainRun, RefinePolarizObs  &
          , Diagnostics, Dual, FitIncremental, HeightCorrectIndxRef &
          , Simulation, SignFlp_SAI, PolFlp_SAI, BadAnt_SAI, SaturatedSamplesMax, Calibrations, WriteCalib, CalibratedOnly &
-         , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, OutFileLabel &
+         , StStdDevMax_ns, ExcludedStat, FitRange_Samples, FullAntFitPrn, AntennaRange, PixPowOpt, ImpImWeights, OutFileLabel &
          , CCShapeCut_lim, ChiSq_lim, EffAntNr_lim, Sigma_AntT, SearchRangeFallOff, NoiseLevel, PeaksPerChunk &     !  ChunkNr_dim,
          , Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse
    !- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   Version='v25.1'
-   release='25.1 (Jan, 2025)'
+   Version='v26.1'
+   release='26.1 (Jan, 2026)'
    Utility='LOFLi-Imaging'
    CALL get_environment_variable("LIBRARY", lname)
    !WRITE (*,*) "LIBRARY=",TRIM(lname)
@@ -509,6 +521,7 @@ Program LOFAR_Imaging
          read(*,NML = Parameters) ! to reposition correctly
          !
          If(Dual) NrP= 8
+         i_guess=0  ! dummy parameter???
          If(i_peak.eq.0) Then
             PeakNr_dim=2*NrP*ChunkNr_dim
             FitIncremental=.true.
@@ -517,7 +530,7 @@ Program LOFAR_Imaging
          Else
             PeakNr_dim=i_peak
          EndIf
-         write(2,*) 'number of calibration sources:',PeakNr_dim
+         write(2,*) '!LOFAR-Imag, number of calibration sources:',PeakNr_dim, i_guess
          !
          WriteSimulation(2)=-1
          CalibratedOnly=.False.
@@ -536,10 +549,12 @@ Program LOFAR_Imaging
          'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
          Call PrintValues(FitIncremental,'FitIncremental', &
          'Slowly increasing the range of the antennas to find the source position.')
+         !Call PrintValues(ImpImWeights,'ImpImWeights', &
+         !'A) Include weighting factors derived from the shapes of the cross-correlation functions.')
          Call PrintValues(AntennaRange,'AntennaRange', &
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(FitRange_Samples,'FitRange_Samples', &
-         'Maximum deviation (in samples) for a pulse in an antenna to be included in source position fitting.')
+         'Maximum deviation (in LBA-samples) for a pulse in an antenna to be included in source position fitting.')
          !Call PrintValues(Fit_AntOffset,'Fit_AntOffset', 'Off-sets per antenna are searched and fitted.')
          Call PrintValues(WriteCalib,'WriteCalib', 'Write out an updated calibration-data file.')
          Call PrintValues(HeightCorrectIndxRef,'HeightCorrectIndxRef', 'Correct index refraction for source height.')  ! width of plot?
@@ -553,7 +568,7 @@ Program LOFAR_Imaging
          !ImagingRun=.true.
          ChunkNr_dim=1
          PeakNr_dim=2
-         Production=.true.
+         Production=.true. ! set in 'ImpulsImagRun' to .false. when running on fewer than 3 chuncks.
          CurtainHalfWidth=-1
          Diagnostics=.false.
          FullAntFitPrn=.false.
@@ -574,6 +589,8 @@ Program LOFAR_Imaging
             'Maximum distance (from the core, in [km]) for  antennas to be included.')
          Call PrintValues(FullSourceSearch,'FullSourceSearch', &
          'Perform without any preferred direction, otherwise take the sourceguess as a preference.')
+         !Call PrintValues(ImpImWeights,'ImpImWeights', &
+         !'B) Include weighting factors derived from the shapes of the cross-correlation functions.')
          Call PrintValues(Simulation,'Simulation', 'Run on simulated data from such files.')  !
          Call PrintValues(EffAntNr_lim,'EffAntNr_lim', &
             'minimal fraction of the total number of antennas for which the pulse is located.' ) !
@@ -590,7 +607,7 @@ Program LOFAR_Imaging
          PeakNr_dim=i_peak
          PeakNrTotal=i_peak  ! one of these is obsolete now
          !
-         write(2,*) 'number of calibration sources:',PeakNr_dim
+         write(2,*) '!LOFAR-Imag, number of field-calibration sources:',PeakNr_dim
          Rewind(unit=5) ! Standard input
          read(*,NML = Parameters) ! to reposition correctly
          !
@@ -650,10 +667,11 @@ Program LOFAR_Imaging
          Interferometry=.true.
          FitRange_Samples=7
          Dual=.false.
-         CurtainHalfWidth=-1
+         ! CurtainHalfWidth=-1
          RefinePolarizObs=.false.
+         !RefinePolarizObs=.true.
          !Polariz=Dual  !
-         CalibratedOnly=.true.
+         !CalibratedOnly=.true.
          If(IntfSmoothWin.lt.3) IntfSmoothWin=3
          N_smth=IntfSmoothWin
          If(BoxFineness_coarse.lt.0.1) Then
@@ -709,7 +727,11 @@ Program LOFAR_Imaging
    !     Some remaining setup
    If(FitRange_Samples.lt.5) FitRange_Samples=5
    Safety=FitRange_Samples
-   Call Alloc_Chunk_AntInfo !  uses ChunkNr_dim
+   ! obtain the number of antennas and stations used in tis LOFAR recording
+   Call AntennaCount(LAnt_nrMax,  Used_LStationNr, HAnt_nrMax, Used_HStationNr)
+   Ant_nrMax=LAnt_nrMax+HAnt_nrMax
+   Used_StationNr=Used_LStationNr+Used_HStationNr
+   Call Alloc_Chunk_AntInfo !  uses ChunkNr_dim, Ant_nrMax,  Station_nrMax, HAnt_nrMax, HStation_nrMax
 !   Call Alloc_ThisSource    !  uses ChunkNr_dim & PeakNr_dim
 !   Do i=-Safety,Safety
 !     t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
@@ -727,7 +749,7 @@ Program LOFAR_Imaging
 !
    Do j=1,ExcludedStat_max
       If(ExcludedStat(j).eq.'     ') exit
-      ExcludedStatID(j)=Statn_Mnem2ID(ExcludedStat(j))
+      ExcludedStatID(j)=LFR_Mnem2ID(ExcludedStat(j))
       write(2,*) 'Excluded:',j,ExcludedStatID(j),ExcludedStat(j)
    enddo
    !
@@ -740,6 +762,7 @@ Program LOFAR_Imaging
    EndDo ! i_dist=1,MaxFitAntD_nr
    flush(unit=2)
    !
+   Allocate( SourceGuess(1:3,1:N_Chunk_max) )
    ! Start the more serious stuff
    SELECT CASE (MOD(RunMode,10))
       ! ========0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -820,7 +843,7 @@ Program LOFAR_Imaging
          Call GLEplotControl( Submit=.true.)
          !
       CASE(8)   ! ATRID
-         Call PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse)
+         Call ATRID_Option(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse)
          !If(XcorelationPlot) Call GLE_Corr()  ! opens unit 10
          Call GLEplotControl( Submit=.true.)
   End SELECT

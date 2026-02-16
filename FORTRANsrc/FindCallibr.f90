@@ -22,10 +22,10 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
 !      2) This also requires that the Y- (i_ant=even) and X- (i_ant=even+1) dipoles are both active at the same
 !        antenna location (in the same chunck).
    use Chunk_AntInfo, only : Unique_SAI, StartT_sam, TimeFrame, tot_uniqueant
-   use DataConstants, only : Ant_nrMax
+   !use DataConstants, only : Ant_nrMax
    use ThisSource, only : Dual, RealCorrelation
-   use ThisSource, only : NrP, t_ccorr, SourcePos, RefAntErr, ExclStatNr, Peak_eo, ChunkNr, TotPeakNr
-   use ThisSource, only : Nr_corr, PeakNr, PeakNrTotal, PlotCCPhase, Safety, PolBasis, Tref_dim, T2_Dim
+   use ThisSource, only : NrP, SourcePos, RefAntErr, ExclStatNr, Peak_eo, ChunkNr, TotPeakNr ! , t_ccorr
+   use ThisSource, only : Nr_corr, PeakNr, PeakNrTotal, Tref_dim, T2_Dim ! , PlotCCPhase, , PolBasis
    use ThisSource, only : PeakPos, Peak_eo, PeakRMS, PeakChiSQ, StStdDevMax_ns
    use ThisSource, only : XFrameEi, XFrameEf, XFrameNi, XFrameNf, XFrameh
    use FitParams, only : MaxFitAntDistcs, MaxFitAntD_nr, FitIncremental, PulsPosCore, WriteCalib, N_EffAnt, Max_EffAnt
@@ -34,7 +34,6 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, RunMode
    use FitParams, only : MeanCircPol, Cnu01, Fit_TimeOffsetAnt, Fit_AntOffset, N_FitStatTim, FitParam, X_Offset
    use FFT, only : RFTransform_su, RFTransform_CF2CT
-   !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
    Use Calibration, only : WriteCalibration ! was MergeFine
    Implicit none
    Real(dp), intent(in) :: SourceGuess(3,*)
@@ -43,7 +42,7 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
    integer :: i, j, k, i_ant, j_corr, i_eo, i_chunk, i_dist, MinFitAntD_nr
    logical, save :: Fitfirst=.true.
    !Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
-   integer :: i_loc(1), i_Peak, StLoc, StatMax, ReadErr, PeakNr1
+   integer :: i_loc(1), i_Peak, StLoc, ReadErr, PeakNr1
    Integer :: PeakSP(2*NrP,0:2), PeakSWl(2*NrP,0:2), PeakSWu(2*NrP,0:2), PeakSAmp(2*NrP,0:2), PeakD_nr
    Real(dp) :: DistMax
    Integer, parameter :: w_low=5 ! Min slices between peaks in odd&even to be merged; should be about twice the value set in DualPeakFind
@@ -60,17 +59,16 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
     Integer :: UpSF= 16, i_SAI, OutUnit ! UpSampleFactor
    !
    !       Initialize
+   !write(2,*) '!FindCallibr, entering Find_unique_StatAnt', ChunkNr_dim
+   !flush(unit=2)
    Call Find_unique_StatAnt()
    !
-   Do i=-Safety,Safety
-     t_ccorr(i)=i ! time axis needed for spline interpolation of CrossCorrelation
-   Enddo
  !   Do i_Peak=1,PeakNr_dim      ! initialize
  !       SourcePos(:,i_Peak) = SourceGuess(:)
  !       RefAntErr(i_Peak) = 0.
  !   Enddo
-!   write(2,*) 'sourceguess', NrP, SourceGuess
-!   flush(unit=2)
+   !write(2,*) '!FindCallibr, sourceguess', ChunkNr_dim
+   !flush(unit=2)
    Nr_Corr=0
  !  ExclStatNr(:,:)=0
    Call GetRefAnt(ChunkNr_dim)
@@ -83,8 +81,8 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
   !    If(TotPeakNr(1,ChunkNr_dim).eq.0)
   ! Endif
    !write(2,*) 'ReadErrh: ',ReadErr
+   !write(2,*) '!FindCallibr:',ChunkNr_dim,TotPeakNr(1,ChunkNr_dim)
    !flush(unit=2)
-   write(2,*) 'FindCallibr:',ChunkNr_dim,TotPeakNr(1,ChunkNr_dim)
    If((RunMode.eq.1) .or. (TotPeakNr(1,ChunkNr_dim).eq.0)) then  ! Find peak positions instead of reading them from input
       Do i_chunk=1, ChunkNr_dim     ! get the NrP strongest peaks in this time block
          Call DualPeakFind(2*NrP, i_chunk, PeakD_nr, PeakSP, PeakSWl, PeakSWu, PeakSAmp) ! used for imaging production
@@ -172,14 +170,14 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
    Else
       MinFitAntD_nr=MaxFitAntD_nr
    Endif
-   StatMax=1050 ! Ant_Stations(1,1)
+   !StatMax=1050 ! Ant_Stations(1,1)
    !FitNoSources=.false.
    PeakRMS(1)=0.
    Do i_dist=MinFitAntD_nr,MaxFitAntD_nr
       DistMax=MaxFitAntDistcs(i_dist) ! in kilometers
       If(DistMax.eq.-1) exit
     !write(2,*) 'RefAntErr---X', RefAntErr(1)
-      Call FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
+      Call FitCycle(FitFirst,DistMax,FitNoSources)
     !write(2,*) 'RefAntErr---Y', RefAntErr(1)
       !Call PrntNewSources()
    !write(2,*) 'i_dist: ', i_dist
@@ -210,11 +208,10 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
       Return
     endif
 !   flush(unit=2)
-    StatMax=1050
     DistMax= MaxFitAntDistcs(MaxFitAntD_nr) ! in kilometers
     !FitNoSources=.false.
     !FitNoSources=.true.
-    Call FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
+    Call FitCycle(FitFirst,DistMax,FitNoSources)
     !
 1   continue
     !
@@ -224,14 +221,14 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
     !  MeanCircPol=.true.
     !EndIf
     MeanCircPol=.false.
-    PlotCCPhase=XcorelationPlot
-    Call BuildCC(StatMax,DistMax)
+    !PlotCCPhase=XcorelationPlot
+    Call BuildCC(DistMax)
    !
    If(MeanCircPol) Then  ! Obsolete option
       call RFTransform_su(UpSF*T2_dim)          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       Allocate( ST01T(1:UpSF*T2_dim) )
       Allocate( ST01nu(0:UpSF*T2_dim/2) )
-      !    Write(2,*) 'Mean t-p dt:',SUM(dtAnt_tp(:))/SUM(NSrc_tp(:)),'Polariz',Polariz, T2_dim, Tref_dim
+      !    Write(2,*) 'Mean t-p dt:',SUM(dtAnt_tp(:))/SUM(NSrc_tp(:)),'Polariz',Polariz, T2_dim
       Do i=1, N_FitStatTim
          k = FitParam(i)   ! =Station number
       !   If(Fit_AntOffset .and. Polariz) then ! The other cases are dealt with in X2Source
@@ -243,6 +240,9 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
                   ST01nu(0:T2_dim/2)=Cnu01(0:T2_dim/2,i_SAI/2)  ! as generated in " Call BuildCC(StatMax,DistMax)"
                   ST01nu(T2_dim/2+1:UpSF*T2_dim/2)=0.
                   Call RFTransform_CF2CT(ST01nu,ST01T )
+
+!                  PulseDimHL(i_type)
+
                   i_loc=MaxLoc(REAL(ST01T(1+UpSF*Tref_dim/2:UpSF*T2_dim-UpSF*Tref_dim/2) )) +UpSF*Tref_dim/2
                   B=(REAL(ST01T(i_loc(1)+1))-REAL(ST01T(i_loc(1)-1)))/2.   ! fit with Y(x)=Y(0)+B x - MTC/2 x^2
                   MTC=2*REAL(ST01T(i_loc(1))) - REAL(ST01T(i_loc(1)+1)) - REAL(ST01T(i_loc(1)-1))
@@ -278,7 +278,7 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
       Enddo
       DeAllocate( ST01T )
       DeAllocate( ST01nu )
-      DeAllocate( PolBasis)
+      !DeAllocate( PolBasis)
       DeAllocate( Cnu01 )
       MeanCircPol=.false.
    Endif
@@ -291,13 +291,111 @@ Subroutine FindCallibr(SourceGuess, XcorelationPlot)
    OutUnit=2
    Call PrntNewSources(ZeroCalOffset, OutUnit)
    !
-   PlotCCPhase=.false.
+   Call CheckAntHealth
+   !
+   !PlotCCPhase=.false.
    Return
     !
 End Subroutine FindCallibr
 !=================================
+Subroutine CheckAntHealth
+   use constants, only : dp
+   use DataConstants, only : Station_nrMax, Ant_nrMax
+   use ThisSource, only : Nr_Corr, CCorr_tSh, CCorr_Err, PeakNrTotal, Peak_eo, ChunkNr !, PeakRMS, PeakChiSQ, MeanErr
+   use ThisSource, only : CorrAntNrs, Error_norm
+   use Chunk_AntInfo, only : Ant_Stations, Unique_SAI
+   !use StationMnemonics, only : Station_ID2Mnem
+   Implicit none
+   Real(dp) :: AntHealth(1:Ant_nrMax), AntX(1:Ant_nrMax, 1:PeakNrTotal), X
+   Integer :: AntCnt(1:Ant_nrMax)
+   Logical :: AntPeak(1:Ant_nrMax, 1:PeakNrTotal)
+   integer :: i_SAI, j_corr,  i_stat, i_Peak, i_eo, i_chunk
+   !
+   write(2,*) 'Antenna-Health analysis ==================='
+   AntHealth(:)=0.
+   AntCnt(:)=0.
+   AntPeak(:,:)=.false.
+   AntX(:,:)=0.
+   i_stat=1
+   Do i_Peak=1,PeakNrTotal
+      i_eo=Peak_eo(i_peak)
+      i_chunk=ChunkNr(i_peak)
+      !write(2,"(A, I4)", ADVANCE='NO') '!i_peak:', i_peak
+      Do j_corr=1,Nr_Corr(i_eo,i_chunk)
+         Call GetiSAI(i_eo,i_chunk, j_corr, i_stat, i_SAI)
+         X=CCorr_Err(j_corr,i_Peak)/Error_norm
+         !If(X.gt.20.) cycle
+         AntHealth(i_SAI)=AntHealth(i_SAI) + (1/X)**2
+         AntCnt(i_SAI)=AntCnt(i_SAI) + 1
+         AntPeak(i_SAI, i_Peak)=.true.
+         AntX(i_SAI, i_Peak)=X
+         !If(X .gt. 4. ) Write(2,"(A,I7,F5.1)", ADVANCE='NO') ';',Unique_SAI(i_SAI),X
+      EndDo
+      !write(2,*) ' '
+   EndDo
+   !
+   Do i_SAI=1,Ant_nrMax
+      !If(AntCnt(i_SAI).gt.0) Then
+      If(AntCnt(i_SAI).gt.0) Then
+         X=sqrt(AntCnt(i_SAI)/AntHealth(i_SAI))
+         If(X .gt. 3 ) Then
+            Write(2,"(I4,I8, I4,  F6.1, 2x)", ADVANCE='NO') i_SAI, Unique_SAI(i_SAI), AntCnt(i_SAI), X
+            Do i_peak=1,PeakNrTotal
+               If( AntPeak(i_SAI, i_Peak)) Then
+                  write(2,"('x')", ADVANCE='NO')
+               Else
+                  write(2,"(' ')", ADVANCE='NO')
+               EndIf
+               If(Modulo(i_peak,10) .eq.0 ) write(2,"('|')", ADVANCE='NO')
+            Enddo
+            write(2,"(', [Range:',F5.1 F5.1,']')", ADVANCE='NO') &
+               MINVAL(AntX(i_SAI,1:PeakNrTotal),DIM=1,MASK=AntPeak(i_SAI,1:PeakNrTotal)), &
+               MAXVAL(AntX(i_SAI, 1:PeakNrTotal),DIM=1)
+            Do i_peak=1,PeakNrTotal
+               If( AntPeak(i_SAI, i_Peak)) Then
+                  write(2,"(';',I3,F5.1)", ADVANCE='NO') i_peak, AntX(i_SAI, i_Peak)
+               EndIf
+            Enddo
+            write(2,"('.')")
+         EndIf
+      EndIf
+   EndDo
+   !
+   Return
+End Subroutine CheckAntHealth
+!============================================
+Subroutine GetiSAI(i_eo,i_chunk, j_corr, i_stat, i_SAI)
+   use constants, only : dp
+   !use DataConstants, only : Station_nrMax, Ant_nrMax
+   !use ThisSource, only : Nr_Corr, CCorr_tSh, CCorr_Err, PeakNrTotal, Peak_eo, ChunkNr !, PeakRMS, PeakChiSQ, MeanErr
+   use ThisSource, only : CorrAntNrs
+   use Chunk_AntInfo, only : Ant_Stations ! , Ant_pos, Ant_RawSourceDist
+   use Chunk_AntInfo, only : Unique_StatID, Ant_IDs, Unique_SAI, Nr_UniqueStat, Tot_UniqueAnt
+   !use FitParams, only : ParamScaleFac, N_FitPar, N_FitStatTim, FitParam, X_Offset
+   !use FitParams, only : Fit_TimeOffsetStat, Fit_TimeOffsetAnt, Fit_AntOffset, FullAntFitPrn
+   !use StationMnemonics, only : Station_ID2Mnem
+   !use Chunk_AntInfo, only : LHBASet
+   Implicit none
+   Integer, intent(in) :: i_eo,i_chunk, j_corr
+   Integer, intent(inout) :: i_stat
+   integer, intent(out) :: i_SAI
+   integer :: i_ant, Antenna_SAI
+   !
+   i_ant=CorrAntNrs(j_corr,i_eo,i_chunk)
+   Antenna_SAI= 100*Ant_Stations(i_ant,i_chunk) + Ant_IDs(i_ant,i_chunk)
+   If(Ant_Stations(i_ant,i_chunk) .ne. Unique_StatID(i_stat)) Then
+      Do i_stat=1, Nr_UniqueStat      ! Get station number from the Unique_StatID list
+          If(Unique_StatID(i_stat).eq. Ant_Stations(i_ant,i_chunk)) exit
+      enddo
+   EndIf
+   Do i_SAI=Tot_UniqueAnt(i_stat-1)+1,Tot_UniqueAnt(i_stat)      ! Get antenna number from the Unique_Antennas list
+       If(Unique_SAI(i_SAI).eq. Antenna_SAI) exit
+   enddo
+   !
+   Return
+End Subroutine GetiSAI
 !================================
-Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
+Subroutine FitCycle(FitFirst,DistMax,FitNoSources)
     !use DataConstants, only : ChunkNr_dim
     !use Chunk_AntInfo, only : Ant_Stations, Ant_IDs, Ant_nr, Ant_pos
     use ThisSource, only : Nr_Corr, PeakRMS, PeakChiSQ, PeakNrTotal
@@ -306,7 +404,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     Implicit none
     logical, intent(inout) :: FitFirst
     logical, intent(in) :: FitNoSources
-    integer, intent(in) :: StatMax
+    !integer, intent(in) :: StatMax
     Real(dp), intent(in) :: DistMax
     real ( kind = 8 ) :: X(N_FitPar_max) !, Dist
     integer :: FitPos(4) !, i, j, k, i_ant, j_corr, i_eo, i_chunk, Station
@@ -317,7 +415,7 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     flush(unit=2)
     CalcHessian=.false.
     SpaceCov(1,1)=-.1 ; SpaceCov(2,2)=-.1 ; SpaceCov(3,3)=-.1 ;
-    Call BuildCC(StatMax,DistMax)
+    Call BuildCC(DistMax)
     !
     FitPos(1)=1 ; FitPos(2)=2 ; FitPos(3)=3 ; FitPos(4)=-4  !(4=timing error, 1-3 is N,E,h)
     If(DistMax.le. 0.30) then
@@ -338,13 +436,8 @@ Subroutine FitCycle(FitFirst,StatMax,DistMax,FitNoSources)
     !write(2,*) 'Fit with Nr_Corr=',Nr_Corr,'============================================================'
     !write(2,"(A,I4,A,I3,A,i4,A,F7.2,A)") 'N_FitPar=',N_FitPar ,', N_FitStatTim=', N_FitStatTim, &
     !    ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
-   If(StatMax.lt.50) then
-      write(2,"(A,2I4,A,I4,A,i4,A,F7.2,A)") '==== Fit with Nr_Corr=',Nr_Corr(0:1,1),', N_FitPar=',N_FitPar , &
-         ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
-   else
       write(2,"(A,2I4,A,I4,A,F7.2,A)") '==== Fit with Nr_Corr=',Nr_Corr(0:1,1),', N_FitPar=',N_FitPar, &
          ', max distance to ref. station=',DistMax,'[km]'
-   endif
 !    write(2,"(A,I4,A,I3,A,i4,A,F7.2,A)") 'N_FitPar=',N_FitPar ,', N_FitStatTim=', N_FitStatTim, &
 !        ', max station nr in fit=',StatMax, ', max distance to ref. station=',DistMax,'[km]'
     Call FitCCorr(X)  ! fit source
@@ -418,18 +511,18 @@ End Subroutine GetLargePeaks
 !============================
 !----------------------------------
 Subroutine GetStationFitOption(FP_s, FitNoSources)
-   use DataConstants, only : Station_nrMax
+   !use DataConstants, only : Station_nrMax
    use FitParams, only : Fit_AntOffset, N_FitPar_max
    use Chunk_AntInfo, only : Nr_UniqueStat, Unique_StatID
-   use StationMnemonics, only : Station_Mnem2ID
+   use StationMnemonics, only : LOFAR_Mnem2ID
    Implicit none
    integer, Intent(OUT)::  FP_s(0:N_FitPar_max)
    Logical, Intent(out) ::  FitNoSources
-   Character(len=5) :: FP_MNem(0:N_FitPar_max)
+   Character(len=6) :: FP_MNem(0:N_FitPar_max)
    logical,dimension(Nr_UniqueStat) :: mask
    character*300 :: lname
    character*4 :: option
-   Integer :: i, nxx, k, N_FitPar
+   Integer :: i, nxx, N_FitPar, LOFAR_ID, i_Type
    !
    FP_s(:)=0
    FP_MNem(:)=' '
@@ -442,18 +535,19 @@ Subroutine GetStationFitOption(FP_s, FitNoSources)
    read(lname,*,iostat=nxx) option, FP_MNem(1:N_FitPar_max) ! option=abut,only
    Do i=1,N_FitPar_max
       !write(2,*) 'FP_Mnem(i):',i,FP_Mnem(i)
-      If(FP_Mnem(i).eq.'     ') exit
+      If(TRIM(FP_Mnem(i)) .eq.'') exit
       If(TRIM(FP_Mnem(i)).eq.'!') exit
-      If(FP_Mnem(i).eq.'NoSrc') Then
+      If(TRIM(FP_Mnem(i)).eq.'NoSrc') Then
           FitNoSources=.true.
           cycle
       EndIf
-      Call Station_Mnem2ID(FP_Mnem(i),k)
+      If(FP_Mnem(i)(6:6).eq.' ') FP_Mnem(i)(6:6)='L'
+      Call LOFAR_Mnem2ID(FP_Mnem(i),LOFAR_ID,i_Type)
       !write(2,*) 'FP_Mnem(i)2:',i, FP_Mnem(i),k
-      If(k.eq.0) cycle ! exit
+      If(LOFAR_ID.eq.0) cycle ! exit
       N_FitPar=N_FitPar+1
-      FP_s(N_FitPar)=k
-      !write(2,*) i,FP_Mnem(i),FP_s(i)
+      FP_s(N_FitPar)=10*LOFAR_ID+i_type
+      !write(2,*) '!GetStationFitOption:', i,FP_Mnem(i),FP_s(i), N_FitPar
    Enddo
    !read(lname,*,iostat=nxx) option, FP_s(1:N_FitPar_max) ! option=abut,only
    If(option .eq. 'abut') then

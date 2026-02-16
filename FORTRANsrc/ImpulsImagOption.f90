@@ -14,7 +14,7 @@ Subroutine ImpulsImagRun
    use GLEplots, only : GLEplotControl
    Implicit none
    INTEGER :: DATE_T(8),i
-   Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2), FitRange_Samples!, CurtainWidth
+   Integer :: j,i_chunk, ChunkNr_start, ChunkNr_stop, units(0:2) !, CurtainWidth
    Integer :: i_dist, i_guess, nxx, valueRSS
    Real*8 :: StartTime_ms, StartingTime, StoppingTime, D
    Real*8 :: SourceGuess(3,1) ! = (/ 8280.01,  -15120.48,    2618.37 /)     ! 1=North, 2=East, 3=vertical(plumbline)
@@ -46,7 +46,7 @@ Subroutine ImpulsImagRun
       StartTime_ms=StartTime_ms + tShift_ms(SourceGuess(:,1)) ! convert to reference antenna time
    EndIf
    Write(TxtImagingPars,"(A,I3,A,F6.1,A,F4.1,A,F4.1,A,F4.0,A,F5.0,A,F5.1,A,F6.1,A,3F5.1,A,i5)") &
-      'FitRange=',Safety,'[samples],',AntennaRange,'[km], Sigma_AntT=',Sigma_AntT, &
+      'FitRange=',Safety,'[ 5 ns ],',AntennaRange,'[km], Sigma_AntT=',Sigma_AntT, &
       '[samples], SearchRangeFallOff-factor=',SearchRangeFallOff,', CCShapeCut_lim=',CCShapeCut_lim*100., &
       '%, ChiSq_lim=',ChiSq_lim,'[ns^2], EffAntNr_lim=',EffAntNr_lim*100., '%, Noise=',NoiseLevel, &
       ', Guess(N,E,h)=(', SourceGuess(:,1)/1000.,')[km], PeaksPerChunk=',PeaksPerChunk
@@ -67,34 +67,34 @@ Subroutine ImpulsImagRun
    Sources='Srcs'//release(1:2)
    If(Dual) then
       Sources1=TRIM(Sources)//'-dbl'//TRIM(OutFileLabel)
-      Open(unit=17,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
-      Write(17,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-      Write(17,"('! ',A)") TRIM(TxtImagingPars)
-      Write(17,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even&odd antenna numbers'
-      Open(unit=27,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
-      write(27,*) TRIM(Txt20ImagingPars)
-      write(27,"('! ',A)") TRIM(Txt20Identifier)
       units(2)=17
+      Open(unit=units(2),STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'.csv')
+      Write(units(2),"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
+      Write(units(2),"('! ',A)") TRIM(TxtImagingPars)
+      Write(units(2),"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even&odd antenna numbers'
+      Open(unit=units(2)+10,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
+      write(units(2)+10,*) TRIM(Txt20ImagingPars)
+      write(units(2)+10,"('! ',A)") TRIM(Txt20Identifier)
    Else
       Sources1=TRIM(Sources)//'-even'//TRIM(OutFileLabel)
-      Open(unit=15,STATUS='unknown',ACTION='write', FILE = TRIM(Sources1)//'.csv')
-      Write(15,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-      Write(15,"('! ',A)") TRIM(TxtImagingPars)
-      Write(15,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even antenna numbers'
-      Open(unit=25,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
-      write(25,*) TRIM(Txt20ImagingPars)
-      write(25,"('! ',A)") TRIM(Txt20Identifier)
-      units(0)=15
+      units(0)=23
+      Open(unit=units(0),STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'.csv')
+      Write(units(0),"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
+      Write(units(0),"('! ',A)") TRIM(TxtImagingPars)
+      Write(units(0),"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' even antenna numbers'
+      Open(unit=units(0)+10,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources1)//'_stat.csv')
+      write(units(0)+10,*) TRIM(Txt20ImagingPars)
+      write(units(0)+10,"('! ',A)") TRIM(Txt20Identifier)
       !
       Sources2=TRIM(Sources)//'-odd'//TRIM(OutFileLabel)
-      Open(unit=16,STATUS='unknown',ACTION='write', FILE = TRIM(Sources2)//'.csv')
-      Write(16,"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
-      Write(16,"('! ',A)") TRIM(TxtImagingPars)
-      Write(16,"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' odd antenna numbers'
-      Open(unit=26,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources2)//'_stat.csv')
-      write(26,*) TRIM(Txt20ImagingPars)
-      write(26,"('! ',A)") TRIM(Txt20Identifier)
       units(1)=16
+      Open(unit=units(1),STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources2)//'.csv')
+      Write(units(1),"('! ',A,A,A)") TRIM(TxtIdentifier),'; ',TRIM(Calibrations)
+      Write(units(1),"('! ',A)") TRIM(TxtImagingPars)
+      Write(units(1),"(f12.9,2A)") StartTime_ms/1000.d0,TRIM(lname),' odd antenna numbers'
+      Open(unit=units(1)+10,STATUS='unknown',ACTION='write', FILE = TRIM(DataFolder)//TRIM(Sources2)//'_stat.csv')
+      write(units(1)+10,*) TRIM(Txt20ImagingPars)
+      write(units(1)+10,"('! ',A)") TRIM(Txt20Identifier)
    Endif
    !
    ChunkNr_start=StartingTime/(1000.d0*sample*(Time_dim-2*EdgeOffset))+1
@@ -102,11 +102,17 @@ Subroutine ImpulsImagRun
    Station_OutOfRange(:)=0
    !ChunkNr_start=1501 ; ChunkNr_stop=1900 ! No Time Frame == ChunkNr
    write(*,"(A,i5,A)") achar(27)//'[45m # of data-blocks read in=',(ChunkNr_stop-ChunkNr_start),achar(27)//'[0m'
-   If((ChunkNr_stop-ChunkNr_start).gt.3) Production=.true.
+   write(2,"('Performing imaging for chunks # ', I0,' till # ',I0)") ChunkNr_start, ChunkNr_stop
+   If((ChunkNr_stop-ChunkNr_start).ge.3) Then
+      Production=.true.
+      write(2,*) 'Running in production mode since 3 or more chunks will be imaged'
+   Else
+      Production=.false.
+   EndIf
    Open(unit=18,STATUS='unknown',ACTION='write', FILE = TRIM(Sources)//'-5star-'//TRIM(OutFileLabel)//'.dat')
    write(18,*) '! StartT_sam[ms]:', '1000.d0*StartT_sam(1)*sample, (TimeFrame-1)*(Time_dim-2*EdgeOffset)*1000.*sample, ', &
       'Peakpos_0, SourcePos(:,1)/1000., FitQual, 100.*N_EffAnt/Max_EffAnt, PeakSAmp(i_peakS,i_eo), Wl, Wu,i_eo'
-   Write(18,"(' ', A13, 3A11,A9)")  'StartT','N[km]','E[km]','h[km]','label'
+   Write(18,"('!', A13, 3A11,A9)")  'StartT','N[km]','E[km]','h[km]','label'
    Write(18,"('C # 2 1',A8,3(A10,','),A12,';',A9,',',3(A8,','),2(A4,','),A7,',',2(A3,','),A3)") &
       'Peakpos','N[m]','E[m]','h[m]','t[ms]','Chi^2','N_a','N_mx','Ampl','W_l','W_u','eo'
 !                  Write(18,"('C',i2,' 2 1',I8,3(F10.2,','),F12.5,';',f9.3,',',2(I4,','),I7,',',2(I3,','),2I3)") &
@@ -136,13 +142,13 @@ Subroutine ImpulsImagRun
    EndDo !  i_chunk
    !
    If(Dual) Then
-      Close(Unit=17)
-      Close(Unit=27)
+      Close(Unit=units(2))
+      Close(Unit=units(2)+10)
    Else
-      Close(Unit=15)
-      Close(Unit=16)
-      Close(Unit=25)
-      Close(Unit=26)
+      Close(Unit=units(0))
+      Close(Unit=units(1))
+      Close(Unit=units(0)+10)
+      Close(Unit=units(1)+10)
    Endif
    close(unit=14)
    close(unit=12)
@@ -170,17 +176,17 @@ Subroutine ImpulsImagRun
    If(Dual) then
       write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="'//TRIM(OutFileLabel)//'d", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
-      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+      write(10,"(A,4f8.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"('======================================================')")
    Else
       write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources1)//'", PlotName="'//TRIM(OutFileLabel)//'e", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
-      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+      write(10,"(A,4f8.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"(A,A)") '&Parameters  datafile="'//TRIM(Sources2)//'", PlotName="'//TRIM(OutFileLabel)//'o", ', &
          'CutSigmaH=17., LinCutH=2., RMS_ns= 3.5 , DelNEff=25,  AmplitudePlot=10. '
-      write(10,"(A,4f6.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
+      write(10,"(A,4f8.1,' 0.0 12. ',2f7.1,' &End')") ' NEhtBB= ', &
             NMin, NMax, Emin, EMax, StartingTime, StoppingTime !  plotting command
       write(10,"('======================================================')")
    EndIf
@@ -194,13 +200,15 @@ Subroutine ImpulsImagRun
          PlotDataFile=TRIM(DataFolder)//TRIM(Sources1) )
       Call GLEplotControl(PlotType='PeakStats', PlotName='PeakStatsO'//TRIM(OutFileLabel), &
          PlotDataFile=TRIM(DataFolder)//TRIM(Sources2) )
+      Call GLEplotControl(CleanPlotFile=TRIM(Sources2)//'_stat.csv')
    EndIf
+   Call GLEplotControl(CleanPlotFile=TRIM(Sources1)//'_stat.csv')
    !
    If(Windows) Then
-      Call GLEplotControl(SpecialCmnd='call %LL_Base%\scripts\RunProgram.bat DataSelect '//TRIM(lname))
+      Call GLEplotControl(SpecialCmnd='call %LL_Base%\scripts\RunProgram.bat DataSelect '//TRIM(lname), Submit=.true.)
       !call %LL_Base%\scripts\RunProgram.bat DataSelect DataSelect.in
    Else
-      Call GLEplotControl(SpecialCmnd='source  ${LL_Base}/scripts/RunProgram.sh DataSelect '//TRIM(lname))
+      Call GLEplotControl(SpecialCmnd='source  ${LL_Base}/scripts/RunProgram.sh DataSelect '//TRIM(lname), Submit=.true.)
       !source  ${LL_Base}/scripts/RunProgram.sh DataSelect  DataSelect.in
    EndIf
    !

@@ -6,16 +6,16 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
    !
    use constants, only : dp,sample, c_mps, sample_ms
    use DataConstants, only : PeakNr_dim, ChunkNr_dim, DataFolder, EdgeOffset, Time_dim
-   use Chunk_AntInfo, only : Station_nrMax, StartT_sam, TimeBase
+   use Chunk_AntInfo, only : Used_StationNr, StartT_sam, TimeBase
    use Chunk_AntInfo, only : ChunkStTime_ms, ChunkFocus
    Use Interferom_Pars, only : N_Smth, BoundingBox
    use ThisSource, only : SourcePos,  TotPeakNr !NrP, t_ccorr,
-   use ThisSource, only : PeakNrTotal !,PeakNr,  PlotCCPhase, Safety, Nr_corr
+   use ThisSource, only : PeakNrTotal !,PeakNr,  PlotCCPhase,  Nr_corr
    use ThisSource, only : PeakPos, ChunkNr
    use ThisSource, only : Alloc_ThisSource
    use PredefinedTracks, only : PreDefTrackFile, t_track
    use PredefinedTracks, only : GetTrPos, PreDefTrackFile, t_track
-   !use StationMnemonics, only : Statn_ID2Mnem, Station_Mnem2ID
+   !use StationMnemonics, only : Statn_ID2Mnem,
    !#ifdef f2003
    !use, intrinsic :: iso_fortran_env, only : stdin=>input_unit, &
    !                                          stdout=>output_unit, &
@@ -31,7 +31,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
    Integer, allocatable, intent(out) :: PeakWidth(:)
    Real(dp), intent(out) :: StartTrace_ms, BoxCenter(1:3), WindowTime_ms
    integer :: i_chunk, i, k, i_nr=1 !, i_c ,i_ca  !,i_eoa
-   Character(len=5) :: Station_Mnem, ExclStMnem(1:Station_nrMax)
+   Character(len=6) :: ExclStMnem(1:Used_StationNr)  ! Station_Mnem,
    integer :: i_Peak, nxx, InUnit, PkW
    Integer, parameter :: stdin=5
    Integer, parameter :: SourceRead_N=4000
@@ -86,6 +86,9 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
                   Write(2,*) '***   for t_track>0: TRI-D @ position=[track @ t=t_track, increment], t=[StartTrace, fixed]'
                   Write(2,*) '***   for t_track<0: TRI-D @ position=[track @ t=StartTrace], t=[StartTrace, increment]'
                   If(nxx.ne.0) Then
+                     Write(2,*) 'or'
+                     Write(2,*) 'not a valid source-data file: "',TRIM(datafolder)//TRIM(FlashFile),'"'
+                     Write(2,*) 'or'
                      Write(2,*) '*** error, expected: StartTrace_ms, [BoxCenter(1:3) or track], WindowTime_ms '
                      Stop 'ATRID reading error'
                   EndIf
@@ -285,7 +288,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    use DataConstants, only : DataFolder, OutFileLabel
    use Chunk_AntInfo, only : Unique_SAI, StartT_sam, Tot_UniqueAnt, Ant_Stations, TimeBase
    use Chunk_AntInfo, only : Unique_StatID,  Nr_UniqueStat, Nr_UniqueAnt, N_Chunk_max
-   use Chunk_AntInfo, only : StartT_sam, TimeFrame, NoiseLevel, RefAnt, Simulation
+   use Chunk_AntInfo, only : StartT_sam, TimeFrame, NoiseLevel, Simulation ! , RefAnt
    use DataConstants, only : Ant_nrMax
    use ThisSource, only : ChunkNr, SourcePos, PeakPos, Dual
    use ThisSource, only : PeakNr, PeakNrTotal, PeakChiSQ, TotPeakNr
@@ -321,12 +324,12 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    Integer, allocatable, intent(out) :: OrignlPeakpos(:)
    !
    Real(dp) :: SourceGuess(3,N_Chunk_max)
-   integer :: j, k, nxx, DeadEnd=50, i_s1, i_s2 ! i,
+   integer :: j, k, nxx, DeadEnd=150, i_s1, i_s2 ! *** changed: [DeadEnd=50 to =150]  to accomodate longer IntfSmoothWin
    integer :: i_Peak, Sampl_shiftA, N_Smth_new !, N_slice_default
    Integer, parameter :: Nmin=5000
-   Integer :: Npix(1:3,1:2), DataUnit,  N_minima       !  N_Int,
+   Integer :: ContourPlot, Npix(1:3,1:2), DataUnit,  N_minima       !  N_Int,
    Real(dp) :: dpix(1:3), Spread_Grd, Spread_Dist, Spread_Aspect, GridVolume(1:3), StartTref_ms, TimeShft, ST_ms  ! Spread_SclLong,
-   Logical :: ContourPlot, SourceLabel_C(1:Nmin), verbose   ! , ListTable
+   Logical :: SourceLabel_C(1:Nmin), verbose   ! , ListTable
    !Integer ::  SourcePos_C(1:Nmin), SourceWidth_C(1:Nmin)  !, SlicingPoints(0,3000)
    !character(len=2) :: txt
    Real(dp) :: BoxSize, BoxFineness !, Spread_IntDens
@@ -337,7 +340,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    !BoxCenter(1:3) ! in [m]
    !
    write(2,"(A)") '===== Running Atrid in Auto-search mode with parameters:'
-   write(2,"(A,F11.5)") 'middle time [ms] of the trace:',StartTrace_ms
+   write(2,"(A,F11.5)") 'Start time [ms] of the trace:',StartTrace_ms
    write(2,"(A,F8.6,A)") 'Length [ms] of the trace to be searched:',WindowTime_ms,', should not exeed 0.3 ms'
    write(2,"(A,3F9.4)") 'Center of the box (NEh, [km]) where search is performed:',BoxCenter(1:3)/1000.
    !
@@ -375,13 +378,15 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    PulseWidth(1)=SumWindw
    PulsePos(0)=PulsePos(1)
    PulseWidth(0)=PulseWidth(1)
-   ContourPlot=.false.
+   ContourPlot=0
    BoxSize=0.2
    BoxFineness=1.
    GridVolume(1:3)=BoxSize
    Call EI_run(GridVolume, BoxFineness)
-!      write(2,*) 'dimensions for interferometry out of range: ', IntfBase, IntfBase+IntfDim, Time_dim
-!      write(2,*) 'input for interferometry: ', SumStrt, SumWindw
+      write(2,*) 'dimensions for interferometry: ', SumWindw
+   !Call OutputIntfPowrMxPos(i_chunk)  ! main one for analyzing slices
+      write(2,*) 'input for interferometry: ', SumStrt, SumWindw
+   !
    !
    !write(2,*) 'search window:', SumStrt,SumWindw, DeadEnd
    If(N_Smth.lt.7) Then
@@ -441,6 +446,7 @@ Subroutine AtridAuto(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse, Sta
    PeakNrTotal=i_peak
    !
    write(2,*) 'TimeBase=', TimeBase, ', total of ', PeakNrTotal,' sources kept out of', NrPixSmPowTr
+   !If(PeakNrTotal.gt. 200) stop 'too many sources for my taste'
    Call CPU_usage
    flush(unit=2)
    Allocate( PeakStartChunk_ms(1:PeakNrTotal) )
@@ -498,24 +504,24 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
       SourcePolMag(1:3,1:PeakNrTotal), SourcePolZen(1:3,1:PeakNrTotal), SourcePolAzi(1:3,1:PeakNrTotal), &
       SourcePoldOm(1:3,1:PeakNrTotal)
    Complex, intent(out) :: SourcesStk_NEh(1:3,1:3,1:PeakNrTotal)
-   Integer :: i_peak, Npix(1:3,1:2), N_Int
+   Integer :: ContourPlot, i_peak, Npix(1:3,1:2), N_Int
    Real(dp) :: dpix(1:3), Spread_Grd, Spread_Dist, Spread_SclLong, Spread_Aspect, Spread_IntVol
    !Integer ::    !, k, Sam_peak, DataUnit, DataUnitp, Width_max, keep
-   Logical :: ContourPlot, verbose   ! , ListTable
+   Logical :: verbose   ! , ListTable
    Real(dp) :: Boxsize, BoxFineness   !
     Real(dp), external :: tShift_ms   !
   !
       BoxSize=(10.+BoxSize_coarse/3.)/2.
       BoxFineness=BoxFineness_coarse/3.
       If(PeakNrTotal.lt.15 .and. ChainRun.eq.0) Then
-         ContourPlot=.true.
+         ContourPlot=1
          !verbose=.true.
          verbose=.false.
       Else
-         ContourPlot=.false.
+         ContourPlot=0
          verbose=.false.
       EndIf
-      Call PeakInterferometerRun(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
+      Call ATRID_Run(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
       write(2,"('Peak#',I4, ', Intensity=',F11.5, ', (N,E,h)=',3F11.5,'[km], diffs:', 3F8.3,'[m]')") i_peak, &
          MaxSmPow(1), MaxSmPowLoc(1:3,1)/1000., MaxSmPowLoc(1:3,1)-SourcePos(1:3,i_Peak)
       !
@@ -560,7 +566,7 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
       SourcesStk_NEh(1:3,1:3,i_Peak) = Stk_NEh(1:3,1:3)
 End Subroutine RefinementStep
 !=================================
-Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse) !CurtainHalfWidth
+Subroutine ATRID_Option(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse) !CurtainHalfWidth
 !   Adaptive TRI-D (ATRI-D) imaging of peaks found by the impulsive (or the TRI-D) imager
 !
 !   Procedural steps:
@@ -586,7 +592,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    Use Interferom_Pars, only : N_best, Grd_best, Int_best
    Use Interferom_Pars, only : StI, StI12, StQ, StU, StV, StI3, StU1, StV1, StU2, StV2, P_un, P_lin, P_circ, Chi2pDF
    Use Interferom_Pars, only : PolZen, PolAzi, PolMag, PoldOm, Stk_NEh  !  calculated in "PolTestCath", called from EI_PolGridDel when (Outpt.ge.1); (PolMag(k), PolZen(k), PolAzi(k), PoldOm(k), k=1,3)
-   !use StationMnemonics, only : Statn_ID2Mnem !, Station_Mnem2ID
+   !use StationMnemonics, only : Statn_ID2Mnem !
    use FFT, only : RFTransform_su,DAssignFFT, RFTransform_CF2CT
    use GLEplots, only : GLEplotControl
    use AReadPKI, only : ReadFlashImageDat
@@ -609,8 +615,8 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    Integer, allocatable :: PeakWidth(:)
    Integer, allocatable :: OrignlPeakpos(:) !, SrcQual(:,:)
    Complex, allocatable :: SourcesStk_NEh(:,:,:)
-   Logical :: ContourPlot, SourceLabel_C(0:20), verbose   ! , ListTable
-   Integer ::  SourcePos_C(0:20), SourceWidth_C(0:20), Nmin
+   Logical :: SourceLabel_C(0:20), verbose   ! , ListTable
+   Integer ::  ContourPlot, SourcePos_C(0:20), SourceWidth_C(0:20), Nmin
    Character(len=180):: Message
    Real(dp) :: time, x_plot, y_plot, z_plot, Cnst, BoxSize, BoxFineness, Chi2Mean, Chi2Var
    Real(dp) :: Spread_Grd, Spread_Dist, Spread_SclLong, Spread_Aspect, Spread_IntVol
@@ -673,10 +679,10 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
       !dpix(1:3) = (/ 4.d0, 3.d0, 6.d0 /)
       !Npix(1:3,2)=(/ 0, 0, 0 /)
       !Npix(1:3,1)=-Npix(1:3,2)
-      ContourPlot=.false.
+      ContourPlot=0
       BoxSize=0.2
       BoxFineness=1.
-      Call PeakInterferometerRun(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
+      Call ATRID_Run(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
       !
       !
       !write(2,*) 'TIntens000(1:2*N_smth+1)', TIntens000(1:2*N_smth+1)
@@ -692,14 +698,14 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
       BoxSize=BoxSize_coarse
       BoxFineness=BoxFineness_coarse
       If(PeakNrTotal.lt.15 ) Then
-         ContourPlot=.true.
+         ContourPlot=-1
          !verbose=.true.
          verbose=.false.
       Else
-         ContourPlot=.false.
+         ContourPlot=0
          verbose=.false.
       EndIf
-      Call PeakInterferometerRun(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
+      Call ATRID_Run(PeakStartChunk_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
       write(2,"('Peak#',I4, ', Intensity=',F11.5, ', (N,E,h)=',3F11.5,'[km], diffs:', 3F8.3,'[m]')") i_peak, &
          MaxSmPow(1), MaxSmPowLoc(1:3,1)/1000., MaxSmPowLoc(1:3,1)-SourcePos(1:3,i_Peak)
       Call IntensitySpread(Grd_best(1,1,1), Int_best(1,1), dpix, N_best, N_Int, Npix, BoxFineness, &
@@ -732,9 +738,9 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
          SourceStI, SourceUn, SourceLin, SourceCirc, SourcePolMag, SourcePolZen, SourcePolAzi, SourcePoldOm,  SourcesStk_NEh )
    !
    Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer*.z')
-   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecPowMx_d.dat')
+   !Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecPowMx_d.dat')
    Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'_EISpec*.dat')
-   Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin_d.csv')
+   !Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin_d.csv')
    !
    Call GLEplotControl( Submit=.true.)
    !
@@ -743,7 +749,7 @@ Subroutine PeakInterferoOption(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_c
    !
    !====================================================================
    !
-End Subroutine PeakInterferoOption
+End Subroutine ATRID_Option
 !-----------------------------------------
 Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLevel, TimeBase, &
          PeakStartChunk_ms, SourceTime_ms, Peakpos, SourcePos, &
@@ -755,9 +761,10 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
    Implicit none
    Integer, intent(in) :: PeakNrTotal,  PeakWidth(1:PeakNrTotal), Peakpos(1:PeakNrTotal), OrignlpeakPos(1:PeakNrTotal)
    Real(dp), intent(in) :: Chi2_set, IVol_set
+   Real(dp), intent(inout) :: SourceIntVol(1:PeakNrTotal), Chi2(1:PeakNrTotal) ! to be able to put a cap on the large values
    Real(dp), intent(in) :: MinSrcDist, NoiseLevel, TimeBase, PeakStartChunk_ms(1:PeakNrTotal), SourceTime_ms(1:PeakNrTotal), &
-      SourcePos(1:3,1:PeakNrTotal), Chi2(1:PeakNrTotal), SourceIntensity(1:PeakNrTotal), SourceIntSpread(1:PeakNrTotal), &
-      SourceIntVol(1:PeakNrTotal), I3(1:PeakNrTotal), SourceStI(1:PeakNrTotal), &
+      SourcePos(1:3,1:PeakNrTotal), SourceIntensity(1:PeakNrTotal), SourceIntSpread(1:PeakNrTotal), &
+      I3(1:PeakNrTotal), SourceStI(1:PeakNrTotal), &
       SourceUn(1:PeakNrTotal), SourceLin(1:PeakNrTotal), SourceCirc(1:PeakNrTotal), &
       SourcePolMag(1:3,1:PeakNrTotal), SourcePolZen(1:3,1:PeakNrTotal), SourcePolAzi(1:3,1:PeakNrTotal), &
       SourcePoldOm(1:3,1:PeakNrTotal), OrignlSourcePos(1:3,1:PeakNrTotal)
@@ -766,7 +773,7 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
    Real(dp) :: I20, StI, Chi2Mean, Chi2Var, SpreadMean, SpreadVar, Lin1, PolN, PolE, Polh, PolPlotScale, I3_lim  ! , Aspct_lim
    Real(dp) :: IVolMean, IVolVar, Spread_lim, Chi2_Lim, IVol_Lim  ! , Aspct_lim
    Real(dp) :: tMin, tMax, BBx_min(1:3), BBx_max(1:3)
-   character(len=2) :: txt
+   character(len=2) :: txt,txd
    character(len=4) :: txt2
    character(len=8) :: txt3
    Character*30 :: Qual
@@ -848,10 +855,8 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
    BBx_max(1:3)=-1.e7
    tmin=SourceTime_ms(1)
    tmax=SourceTime_ms(1)
-   keep=0
    Do i_Peak=1,PeakNrTotal
       If(DeSelect(i_Peak)) cycle
-      keep=keep+1
       If(SourceTime_ms(i_Peak) .gt. tmax) tmax=SourceTime_ms(i_Peak)
       If(SourceTime_ms(i_Peak) .lt. tmin) tmin=SourceTime_ms(i_Peak)
       Do k=1,3
@@ -875,31 +880,15 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
       'North','East', 'h [km]','Width','Chi^2','IntVol','St_I/20',  'I_3%','P_un, P_lin, P_circ%','Zen , azi ', &
       ' ;  Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
    !
-   write(Qual,"(A,F5.2,'ns & I_V<',F8.1,A)") '"Q<',Chi2_Lim, IVol_lim,',"'
-   OPEN(UNIT=DataUnitp,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.plt')
-   write(DataUnitp,"(6F9.3,2F9.3,A,F7.1,i3,' 0')") BBx_min(1),BBx_max(1),BBx_min(2),BBx_max(2),BBx_min(3),BBx_max(3), tMin, tMax,&
-         ' NoBox ', TimeBase, 0 ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-   Write(DataUnitp,"(A,I5,1x,A,F6.1,A,F7.1,F7.0,A, 2F7.1, A)") &
-      ' 0 ',keep, Trim(Qual)//' 0 '//TRIM(FlashName)//':'//TRIM(OutFileLabel),10.,' -1. ', &
-      IVolMean, IVolVar, ' -1. ', Chi2Mean, Chi2Var, ' -1. 0 0 -1. 0 0 0 1.  1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
-   write(DataUnitp,"(2A)") '!  #   t_src[ms]                   (NEh)[km]                Im_Int Width  Chi^2  Sprd', &
-      ' PUn- Plin- Pcircpol  I_lin   Pol_direction(NEh)'
-   !
-   !OPEN(UNIT=29,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ATRIDSrc.dat')  ! for plotting
-   !write(29,"(6F8.2,2F9.3,A,F7.1,i3,' 0')") BBx_min(2),BBx_max(2),BBx_min(1),BBx_max(1),BBx_min(3),BBx_max(3), tMin, tMax,  &
-   !      ' NoBox ', TimeBase, 0 ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
-   !Write(29,"(A,I5, A,F6.1,A, F7.1, F7.0, A, 2F7.1, A)") ' 0 ',PeakNrTotal, Trim(Qual)//' 0 '//TRIM(OutFileLabel),10.,' -1. ', &
-   !   Chi2_Lim, Spread_Lim, ' -1. ', Chi2Mean, Chi2Var, ' -1. 0 0 -1. 0 0 0 1.  1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
-   !Write(29,"(A,A)") '! sourceNr,  time,     x=east,    y=north,    z=height, Intensity,  ', &
-   !   '    spread,       1/rho,        chi^2,      I3/I '
-   !
-   write(2,"('!',I5,A,A)") PeakNrTotal,', t_src [ms] ,    north=y ,   east=x , height[km], Width,   I_12 ISprd  IVol ',&
+   write(2,"('!',I5,A,A)") PeakNrTotal,', t_src [ms] ,    north=y ,   east=x , height[km], Width, I_12/W ISprd  IVol ',&
       ' Chi^2,   I3%  P_un,P_lin,P_circ; Diffs (samples, [m]) ; St_I/20,       Zen, Azi  , t_ref'
    keep=0
-   PolPlotScale=1.
    Do i_Peak=1,PeakNrTotal
-      txt='S'
-      Message=''
+      If(modulo(i_peak,25).eq.24) Then
+         write(2,"(A,A)") '!  ###, t_src [ms] ,    north   ,   east   , height[km], Width, I_12/W ISprd  IVol ',&
+            ' Chi^2,   I3%  P_un,P_lin,P_circ; Diffs (samples, [m]) ; St_I/20,       Zen, Azi  , t_ref'
+      EndIf
+      !
       If(DeSelect(i_Peak)) Then
          Write(2,"(2(A,F7.2), 2(A,F8.1), 2(A,F6.1),2(A,F8.1),2(A,F6.3), A)")   &
             '! Chi^2=', Chi2(i_Peak), ' exceeds max allowed of ',Chi2_lim, &  !  2(A,F7.2),
@@ -908,46 +897,53 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
             !', and/or % radial polarization=',I3(i_Peak)*100., ' exceeds ', I3_lim*100., & !  2(A,F6.3),
             ', and/or % Intensty Vol',SourceIntVol(i_Peak), ' exceeds ', IVol_lim, &  !  2(A,F6.1),
             ' ----- '
-         txt='!'
-      Else
-         Sam_peak=PeakStartChunk_ms(i_peak)/sample_ms + PeakPos(i_Peak)  !=ref station time, different from SourceTime_ms
-         Do k=1,PeakNrTotal
-            If(k.eq.i_Peak) cycle
-            If(( (abs(PeakStartChunk_ms(k)/sample_ms + PeakPos(k) -Sam_peak) .lt. (PeakWidth(i_Peak)+PeakWidth(k))/4)) .and. &
-            !If(( (abs(SourceTime_ms(k) -SourceTime_ms(i_Peak)) .lt. (PeakWidth(i_Peak)+PeakWidth(k))/4)) .and. &
-                  (.not. DeSelect(k)) ) Then ! check for two similar sources
-               Write(txt2,"(I4)") k
-               !write(2,*) '!Message:"',TRIM(message),'"', k
-               !flush(unit=2)
-               If(i_Peak.gt.k) Then
-                  If(Message .eq. '') Then
-                     Message='Similar position as source #'//txt2
-                  Else
-                     Message=TRIM(message)//','//txt2
-                  EndIf
-               EndIf
-               If( ABS(PeakWidth(i_Peak)-PeakWidth(k)).lt. 20) Then ! Similar position and width; check chi^2
-                  StI=sqrt( sum((SourcePos(1:3,i_Peak)-SourcePos(1:3,k))**2 ) ) ! just a dummy
-                  If(Chi2(i_Peak) .gt. Chi2(k) .and. StI.lt.MinSrcDist ) Then  ! Disqualify this source
-                     Write(txt3,"(F8.2)") StI
-                     Message='Disqualify; Similar position & width as source #'//txt2//', rel.dist='//txt3//'m, but worse chi^2'
-                     txt='!'
-                     DeSelect(i_Peak)=.true.
-                     exit
-                  EndIf
+      EndIf
+      !
+      Sam_peak=PeakStartChunk_ms(i_peak)/sample_ms + PeakPos(i_Peak)  !=ref station time, different from SourceTime_ms
+      txd=' '
+      Message=''
+      Do k=1,PeakNrTotal
+         If(k.eq.i_Peak) cycle
+         !If(( (abs(PeakStartChunk_ms(k)/sample_ms + PeakPos(k) -Sam_peak) .lt. (PeakWidth(i_Peak)+PeakWidth(k))/4)) .and. &
+         !      (.not. DeSelect(k)) ) Then ! check for two similar sources
+         If(( (abs(PeakStartChunk_ms(k)/sample_ms + PeakPos(k) -Sam_peak) .lt. (PeakWidth(i_Peak)+PeakWidth(k))/4)) ) Then ! check for two similar sources
+            Write(txt2,"(I4)") k
+            !write(2,*) '!Message:"',TRIM(message),'"', k
+            !flush(unit=2)
+            If(k .lt. i_Peak) Then
+               If(Message .eq. '') Then
+                  Message='Similar position as source #'//txt2
+               Else
+                  Message=TRIM(message)//','//txt2  ! give numbers of all previous peaks in the list
                EndIf
             EndIf
-         Enddo
-         If(Message .ne. '') write(2,"(A,A)") '! Note: ', trim(Message)
-      EndIf
+            If( ABS(PeakWidth(i_Peak)-PeakWidth(k)).lt. 20) Then ! Similar position and width; check chi^2
+               StI=sqrt( sum((SourcePos(1:3,i_Peak)-SourcePos(1:3,k))**2 ) ) ! just a dummy
+               If(Chi2(i_Peak) .gt. Chi2(k) .and. StI.lt.MinSrcDist ) Then  ! Disqualify this source
+                  Write(txt3,"(F8.2)") StI
+                  Message='Disqualify; Similar position & width as source #'//txt2//', rel.dist='//txt3//'m, but worse chi^2'
+                  txd='!'
+                  DeSelect(i_Peak)=.true.
+                  exit
+               EndIf
+            EndIf
+         EndIf
+      Enddo
+      !
+      If(Message .ne. '') write(2,"(A,A)") '! Note: ', trim(Message)
       !write(2,*) 'OutputPkInterfer: txt,Message',i_Peak, txt,Message
       !Flush(unit=2)
-      StI = Real(Stk_NEh(1,1,i_Peak) + Stk_NEh(2,2,i_Peak) + Stk_NEh(3,3,i_Peak))  ! =\Lambda_0  from  PHYSICAL REVIEW E 66, 016615 ~2002!
+      StI = Real(Stk_NEh(1,1,i_Peak) + Stk_NEh(2,2,i_Peak) + Stk_NEh(3,3,i_Peak))
       ! Note that the stokes parameters are averaged over the window, summed and divided by the window length.
       ! Stokes thus gives the intensity per sample, averaged over the complete window.
       I20=StI*PeakWidth(i_Peak)/20.
       ! Since StI is per sample, I20 is proportional to the total (summed) intensity in the window.
-      If(txt.ne. '!') keep=keep+1
+      If(DeSelect(i_Peak)) Then
+         txt='!'
+      Else
+         txt=' '
+         keep=keep+1
+      EndIf
       !
       write(2,"(A,I4, ', ',F11.6,', ',3F11.5,', ',I4, ', ',F8.1,2F6.1,F6.2,', ',4F6.1, I3, 3F8.3 ,1pg12.4, 0p2f7.2, F11.6)") txt, &
          i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), &
@@ -957,40 +953,53 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
          I20, SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak), &
          PeakStartChunk_ms(i_peak)+PeakPos(i_Peak)*sample_ms -TimeBase
       !
-      !  For storing data for later processing in whatever way:
+      !  For storing data for later processing in whatever way, do not apply any cuts, except for double sources:
+      If(Chi2(i_Peak).gt.1000.) Chi2(i_Peak)=999.
+      If(SourceIntVol(i_Peak).gt.1000.) SourceIntVol(i_Peak)=999.
       write(DataUnit,"(A,I4, ',',F11.6,3(',',F11.5),', ',I4, ',', F7.2,',', F7.1, ',',1pg12.4, ',',0pF6.1, 3(',',F6.1), &
-          2(',',f7.2),1p, 6(' , (',g12.4','g12.4,')' ))") txt, &
+          2(',',f7.2),1p, 6(' ,  ',g12.4','g12.4,' ' ))") txd, &
          i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), Chi2(i_Peak), SourceIntVol(i_Peak), &
          I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
          SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak),  Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
       !
-      ! For making a plot of the just analyzed sources:
-      !write(29,"(i6,' ',4(f11.5,' '),g13.6, 2x ,4(1pg13.4), I5)") i_Peak, SourceTime_ms(i_Peak), SourcePos(2,i_Peak)/1000., &
-      !   SourcePos(1,i_Peak)/1000., SourcePos(3,i_Peak)/1000., ABS(SourceIntensity(i_Peak)), &
-      !   SourceIntSpread(i_Peak), SourceIntVol(i_Peak), Chi2(i_Peak), I3(i_Peak)*100.,  PeakWidth(i_Peak)
-      !
-      If(.not. DeSelect(i_Peak)) Then
-         Lin1= I20* SourceLin(i_Peak)  ! /100.
-         polN=PolPlotScale*sin(SourcePolZen(1,i_Peak)*pi/180.) * cos(SourcePolAzi(1,i_Peak)*pi/180.)
-         PolE=PolPlotScale*sin(SourcePolZen(1,i_Peak)*pi/180.) * sin(SourcePolAzi(1,i_Peak)*pi/180.)
-         Polh=PolPlotScale*cos(SourcePolZen(1,i_Peak)*pi/180.)
-         write(DataUnitp,"(I4,F14.6, 3F12.5, F12.1, I5, 2F7.2,  3F6.3, F10.1, 3f7.3)") &
-            i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  ABS(SourceIntensity(i_Peak)), &
-            PeakWidth(i_Peak), Chi2(i_Peak), SourceIntVol(i_Peak), &
-            SourceUn(i_Peak), SourceLin(i_Peak), SourceCirc(i_Peak), Lin1, PolN, PolE, Polh
-      EndIf
       !write(2,*) 'OutputPkInterfer: DeSelect', i_Peak, DeSelect(i_Peak)
       Flush(unit=2)
    EndDo
+   Close(Unit=DataUnit)
    Write(2,*) 'Figure-Data File written: "', trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.plt','"'
    Write(2,*) 'Complete Sources-Data File written: "', trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.csv','"'
    Write(2,*) keep,' sources kept out of ',PeakNrTotal
    !
-   !Close(Unit=29)
-   Close(Unit=DataUnitp)
-   Close(Unit=DataUnit)
-   !
-   If(PeakNrTotal.gt.1) then
+   ! Write files for plotting when more than one source to plot
+   If(Keep.gt.1) then
+      write(Qual,"(A,F5.2,'ns & I_V<',F8.1,A)") '"Q<',Chi2_Lim, IVol_lim,',"'
+      OPEN(UNIT=DataUnitp,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.plt')
+      write(DataUnitp,"(6F9.3,2F9.3,A,F7.1,i3,' 0')") BBx_min(1),BBx_max(1),BBx_min(2),BBx_max(2),BBx_min(3),BBx_max(3), &
+            tMin, tMax, ' NoBox ', TimeBase, 0 ! gleRead:  xMin xMax yMin yMax zMin zMax tMin tMax ZmBx$ t_offst
+      Write(DataUnitp,"(A,I5,1x,A,F6.1,A,F7.1,F7.0,A, 2F7.1, A)") &
+         ' 0 ',keep, Trim(Qual)//' 0 '//TRIM(FlashName)//':'//TRIM(OutFileLabel),10.,' -1. ', &
+         IVolMean, IVolVar, ' -1. ', Chi2Mean, Chi2Var, ' -1. 0 0 -1. 0 0 0 1.  1.0 !' ! gleRead:  NTracks EventNr Q t_start label$ AmplitudePlot a1 b1 c1 a2 b2 c2 d2
+      write(DataUnitp,"(2A)") '!  #   t_src[ms]                   (NEh)[km]                Im_Int Width  Chi^2  Sprd', &
+         ' PUn- Plin- Pcircpol  I_lin   Pol_direction(NEh)'
+      PolPlotScale=1.
+      Do i_Peak=1,PeakNrTotal
+         If(DeSelect(i_Peak)) cycle
+         StI = Real(Stk_NEh(1,1,i_Peak) + Stk_NEh(2,2,i_Peak) + Stk_NEh(3,3,i_Peak))
+         ! Note that the stokes parameters are averaged over the window, summed and divided by the window length.
+         ! Stokes thus gives the intensity per sample, averaged over the complete window.
+         I20=StI*PeakWidth(i_Peak)/20.
+         ! Since StI is per sample, I20 is proportional to the total (summed) intensity in the window.
+         Lin1= I20* SourceLin(i_Peak)  ! /100.
+         polN=PolPlotScale*sin(SourcePolZen(1,i_Peak)*pi/180.) * cos(SourcePolAzi(1,i_Peak)*pi/180.)
+         PolE=PolPlotScale*sin(SourcePolZen(1,i_Peak)*pi/180.) * sin(SourcePolAzi(1,i_Peak)*pi/180.)
+         Polh=PolPlotScale*cos(SourcePolZen(1,i_Peak)*pi/180.)
+         write(DataUnitp,"(I4,F14.6, 3F12.5, F12.1, I5, 2F7.2,  3F6.3, G12.4, 3f7.3)") &
+            i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  ABS(SourceIntensity(i_Peak)), &
+            PeakWidth(i_Peak), Chi2(i_Peak), SourceIntVol(i_Peak), &
+            SourceUn(i_Peak), SourceLin(i_Peak), SourceCirc(i_Peak), Lin1, PolN, PolE, Polh
+      EndDo
+      Close(Unit=DataUnitp)
+      !
       Call GLEplotControl(PlotType='SrcsPltPol', PlotName='ATRID'//TRIM(OutFileLabel)//'IPol', &
          PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'ATRID' )
       Call GLEplotControl(PlotType='SrcsPltPol', PlotName='ATRID'//TRIM(OutFileLabel)//'IPolEA', &
@@ -1001,12 +1010,13 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
          PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
       Call GLEplotControl(PlotType='SrcsPltLoc', PlotName='ATRID'//TRIM(OutFileLabel), &
          PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel)//'ATRID' )
+      Call GLEplotControl(CleanPlotFile=trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.plt')
       ! write(10,"('gle -d pdf -o ',A,'-InfImaMx_',I1,'.pdf ${UtilDir}/SourcesPlot.gle ${FlashFolder}/files/',A)") &!
       !   TRIM(OutFileLabel), i_eo, TRIM(OutFileLabel)//'IntfSpecPowMx'//TRIM(txt)
       !Call GLEplotControl(PlotType='EIPolariz', PlotName='IntfPol'//TRIM(txt)//TRIM(OutFileLabel), &
       !   PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel) )
    EndIf
-
+   !
 End Subroutine OutputPkInterfer
 !-----------------------------------------
 Subroutine PeakCurtain(i_peak)
@@ -1031,7 +1041,7 @@ Subroutine PeakCurtain(i_peak)
    If(PeakNrTotal.le.15) Outpt=2
    !Outpt=0  ! minimal output
    N_fit=N_smth
-   write(Label,"('Peak ',i3.3)") i_Peak
+   write(Label,"('Src  ',i3.3)") i_Peak
    IntfBase= Peakpos(i_Peak) - IntfNuDim
    Call Alloc_EInterfImag_Pars
    Call EISelectAntennas(i_chunk)  ! select antennas for which there is an even and an odd one.
@@ -1316,8 +1326,14 @@ Subroutine WindowCutting_N_Smth(N_Smth, N_Window, Intens, DeadEnd, Nmin, SourceP
    Real(dp) :: smooth(-N_Smth:N_Smth)  ! a dummy
    NSmth=2*(N_Smth/2)  ! make sure N_Smth is even
    k=0
-   If(NSmth.lt.MinLength) stop "N_Smth too small"
-   If(NSmth.gt.2*DeadEnd) stop "Dead end"
+   If(NSmth.lt.MinLength) Then
+      write(2,*) '*********** Error (NSmth.lt.MinLength):', NSmth, MinLength
+      stop "N_Smth too small"
+   End If
+   If(NSmth.gt.2*DeadEnd) Then
+      write(2,*) '*********** Error (NSmth.gt.2*DeadEnd):', NSmth, DeadEnd
+      stop "Dead end"
+   EndIf
    i=DeadEnd+NSmth/2
    !write(2,*) i, DeadEnd, NSmth
    Do while ( i.lt.(N_Window-2*DeadEnd))
@@ -1651,7 +1667,7 @@ Subroutine LocationPCA(PeakNrTotal, Locations, Spread_SclLong, Spread_Aspect, ve
 End Subroutine LocationPCA
 !-----------------------------------------
 !=================
-Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
+Subroutine ATRID_Run(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness, dpix, Npix, ContourPlot )
    use constants, only : dp, ci, pi, c_mps, sample_ms
    Use Interferom_Pars, only : Polar, NewCenLoc,  AmpltPlot
    Use Interferom_Pars, only : N_pix, d_loc, CenLocPol, CenLoc, PixLoc, IntFer_ant
@@ -1659,7 +1675,7 @@ Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness,
    Use Interferom_Pars, only : N_smth, NrPixSmPowTr, i_chunk
    use ThisSource, only : ChunkNr, SourcePos, PeakPos
    use DataConstants, only : OutFileLabel, DataFolder, Time_Dim !, Cnu_dim,
-   use Chunk_AntInfo, only : StartT_sam, TimeFrame,   NoiseLevel, RefAnt, Simulation
+   use Chunk_AntInfo, only : StartT_sam, TimeFrame,   NoiseLevel, Simulation ! , RefAnt
    use FFT, only : RFTransform_su, DAssignFFT !, RFTransform_CF, RFTransform_CF2CT
    use HDF5_LOFAR_Read, only : CloseDataFiles
    use GLEplots, only : GLEplotControl
@@ -1668,7 +1684,7 @@ Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness,
    Real(dp), intent(in) :: PeakStartTref_ms(*), BoxSize, BoxFineness
    Real(dp), intent(out) :: dpix(1:3)
    Integer, intent(out) :: Npix(1:3,1:2)
-   logical, intent(in) :: ContourPlot
+   Integer, intent(in) :: ContourPlot
    integer :: i  !,j, k, i_s, i_loc(1), i_ant, j_corr, i_eo, Station, j_IntFer, i_nu,  nxx
    character(len=3) :: txt
    character(len=100) :: OutFileLabel_original
@@ -1717,15 +1733,12 @@ Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness,
    If(NoiseLevel.lt.0) NoiseLevel=0.2
    !
    !   Allocate( Smooth(-N_smth:N_smth) )
-   !   Allocate( TIntens_pol(1:3,-N_smth:N_smth) )  !  Intensity trace for different pol directions as seen at the core, For use in "PeakInterferoOption"
+   !   Allocate( TIntens_pol(1:3,-N_smth:N_smth) )  !  Intensity trace for different pol directions as seen at the core, For use in "ATRID_Option"
    !   Call SetSmooth(N_Smth, ParabolicSmooth, Smooth)
    ! ----------------------------------------------------
-   If(ContourPlot) Then
-      If(BoxFineness.gt.2) Then
-         write(txt,"('+',I2.2)") i_peak
-      Else
-         write(txt,"('-',I2.2)") i_peak
-      EndIf
+   If(ContourPlot.gt.0) write(txt,"('+',I2.2)") i_peak
+   If(ContourPlot.lt.0) write(txt,"('-',I2.2)") i_peak
+   If(ContourPlot.ne.0) then
       OutFileLabel_original=OutFileLabel
       OutFileLabel=TRIM(OutFileLabel)//txt
    EndIf
@@ -1737,22 +1750,22 @@ Subroutine PeakInterferometerRun(PeakStartTref_ms, i_Peak, BoxSize, BoxFineness,
    dpix(1:3)=d_loc(1:3)
    Npix(1:3,1:2)=N_pix(1:3,1:2)
    !------------------------------------------
-   If(ContourPlot) Then
-      !write(2,*) 'prepare plot:', TRIM(OutFileLabel), '--------------'
+   If(ContourPlot.ne.0) then
+      write(2,*) 'prepare plot: "', 'EIContour'//TRIM(OutFileLabel), '" --------------'
       !Call GLEplotControl(PlotType='EIContour-QUV', PlotName='EIContourQUV'//TRIM(OutFileLabel), &
       !         PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel))
       Call GLEplotControl(PlotType='EIContour', PlotName='EIContour'//TRIM(OutFileLabel), &
                PlotDataFile=TRIM(DataFolder)//TRIM(OutFileLabel))
       Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'_EISpec*.dat')
       Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'Interferometer*.z')
-      Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecPowMx_d.dat')
-      Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin_d.csv')
+      !Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecPowMx_d.dat')
+      !Call GLEplotControl(CleanPlotFile=TRIM(OutFileLabel)//'IntfSpecWin_d.csv')
       OutFileLabel=OutFileLabel_original
    EndIf
    !
    Return
     !
-End Subroutine PeakInterferometerRun
+End Subroutine ATRID_Run
 !-------------------------------------------------------------
 !=========================================
 

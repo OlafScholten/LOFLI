@@ -1,10 +1,34 @@
-!    Include 'ConstantsModules.f90'
-!    Include 'FFT_routines.f90'
-!    Include 'ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
-!    Include 'MappingUtilities.f90'
-!    Include 'AntFuncCnst.f90'
-!    Include 'AntFunct.f90'
-!    Include 'System_Utilities.f90'
+    Include 'H_ConstantsModules.f90'
+    Include 'AntFuncCnst.f90'
+    Include 'FFT_routines.f90'
+    Include 'H_ParamModules.f90'  ! v18d: Cnu storage changed  for InterfEngineB
+    Include 'AntFunct.f90'
+    Include 'H_InterferomPars.f90'
+    Include 'PredefTrack.f90'
+    Include 'H_MappingUtilitiesModules.f90'
+    Include 'H_GLEplotUtil.f90'
+    Include 'H_LOFLI_InputHandling.f90'
+    Include 'H_MappingUtilities.f90'
+    Include 'System_Utilities.f90'
+    Include 'H_InterferometryOptSbRtns.f90'  ! d: Cnu storage changed for InterfEngineB
+    Include 'H_EIOption.f90'
+    Include 'H_FitParams.f90'
+    Include 'HDF5_LOFAR_Read.f90'
+    Include 'H_CalibrationsMod.f90'
+    Include 'H_Ant-Read.f90'
+    Include 'H_EICallRtns.f90'
+    Include 'H_EIFitter.f90'
+    Include 'H_InterferometryOption.f90'  ! d: Cnu storage changed for InterfEngineB
+    Include 'H_PeakInterferoOption.f90'
+    Include 'H_CurtainPlotOption.f90'
+    Include 'H_CrossCorr.f90'
+!    Include 'H_FindSources.f90'
+    Include 'H_FindCallibr.f90'   ! Station Callibration
+    Include 'MGMR3D_spline.f90'   ! Station Callibration
+    Include 'H_SourceTryal.f90'  ! v16.f90' = v17.f90'  ; v17a.f90' uses grid search
+    Include 'H_Fitter_CorrMax.f90'     ! uses chi-square mini
+    Include 'H_FindSources.f90'
+    Include 'nl2sol.f90'
 !-----------------------------------
 !-----------------------------------
 Program Simulate_Data
@@ -40,7 +64,6 @@ Program Simulate_Data
    Implicit none
    !
    Integer, parameter :: AntpStat=20  ! Max Nr antennas per station
-   Real(dp) :: Ant_pos(1:3,1:AntpStat)
    !
    Integer :: SrcNrMax=100
    Real(dp), allocatable :: SourcesListLocNEh(:,:), SourcesListTms(:), SourcesListAmpNEh(:,:)
@@ -62,20 +85,22 @@ Program Simulate_Data
    Real(dp) :: PulseRespWidth=20. !samples
    Real(dp) :: dFreq, nu, dnu, Phi_d, Phi_r, Thet_d, Thet_r, SourceGuess(3), StartT_sam,t_shft
    Character(len=12) :: Station_name, Lab1, Lab2, Lab3, Lab4
-   Integer :: i_file, i_ant, j_ant, Ant_nr, i_sample, k, Ant_IDs(1:AntpStat)
+   Integer :: i_file, i_ant, j_ant, Ant_nr, i_sample, k
+   Real(dp) :: Ant_pos(1:3,1:2*AntpStat), Ant_RawSourceDist(1:2*AntpStat)
+   Integer :: Ant_Stations(1:2*AntpStat), Ant_IDs(1:2*AntpStat), NrAnt
    Integer,save :: EvenOdd=-1
-   Integer :: inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, nxx, N_even, N_odd
+   Integer :: inu1, inu2, i_eo, STATION_ID, Ant_ID, Sample_Offset, nxx, N_even, N_odd, N_StAnt, Unt
    Real(dp) :: StatStartTime, SubSample_Offset, LFRAnt_crdnts(3), RDist, T_Offset, Powr, N_TRID, NrmStI
    Real(dp) :: BckgrPwr_0, BckgrPwr_1, NormEvenOdd=1.d2 !,StatAnt_Calib !,StartTime_ms
    Integer :: i_freq, i_nu, i_src, SrcNr, i_sampl, IntfSmoothWin
    Character(LEN=180) :: lname
-   Character(len=20) :: Utility, release, Antennas, Simulation, OutFileLabel, Folder
+   Character(len=20) :: Antennas, Simulation, OutFileLabel ! , Folder ! Utility, release,
    INTEGER :: DATE_T(8),i
+   Logical :: DualPosOnly=.true.
    Real :: random_stdnormal
    NAMELIST /Parameters/ Antennas, Simulation, FracGalacNoisePow, OutFileLabel, SrcNrMax, NtSamples, TimingErr_ns, IntfSmoothWin !, &
    !   SourcesListLocNEh, SourcesListTms, SourcesListAmpNEh
    !
-   Open(unit=2,STATUS='unknown',ACTION='write', FILE ="Simulate.out")
    FracGalacNoisePow=0.5
    OutFileLabel=""
    TimingErr_ns = 1 ! [ns]
@@ -89,6 +114,7 @@ Program Simulate_Data
    !NormEvenOdd=1.d2   ! to undo the action of NormEven & NormOdd in AntennaRead
    !
    Read(*,NML = Parameters)
+   Open(unit=2,STATUS='unknown',ACTION='write', FILE ="Simulate"//TRIM(OutFileLabel)//".out")
    !
    If(FracGalacNoisePow.gt.1. .or. FracGalacNoisePow.lt. 0.) Then
       FracGalacNoisePow=0.5
@@ -178,7 +204,7 @@ Program Simulate_Data
       (0.5*(ABS(CTime_1(Sample_Offset-i_sampl))+ABS(CTime_1(Sample_Offset+i_sampl)))/ABS(CTime_1(Sample_Offset)))**2 &
       ,'% of peak, TotalGain=', TotalGain, ', slicing window IntfSmoothWin=',IntfSmoothWin
    !
-   Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure.dat',IOSTAT=nxx)
+   Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure_LBA.dat',IOSTAT=nxx)
    If(nxx.eq.0) Then
       write(2,*) 'opened file:', 'files/'//TRIM(Antennas)//'_Structure.dat'
    Else
@@ -190,7 +216,7 @@ Program Simulate_Data
    !
    Call CreateNewFolder(Simulation) ! create new folder when needed
    !
-   Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure.dat',IOSTAT=nxx)
+   Open(unit=24,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_Structure_LBA.dat',IOSTAT=nxx)
    If(nxx.eq.0) Then
       write(2,*) 'Writing to file:', 'files/'//TRIM(Simulation)//'_Structure.dat'
    Else
@@ -204,68 +230,56 @@ Program Simulate_Data
    !
    Station_name='CXnnn'
    SourceGuess(:)=SourcesListLocNEh(:,1)
+   !AntNr_lw=1
    Do i_file=1,Station_NrMax ! 10 !80
-      read(14,*,IOSTAT=nxx) STATION_ID, Station_name
+      read(14,*,IOSTAT=nxx) STATION_ID, Station_name, N_StAnt
       If(nxx.ne.0) exit
-      write(24,*,IOSTAT=nxx) STATION_ID, Station_name
-      Open(unit=12,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_'//TRIM(Station_name)//'.dat')
-      !If(EvenOdd.eq.-1) Then  ! Check is station numbers were specified for the first time reading a file like this
-      !   Read(12,*) Lab1
-      !   Read(12,*) Lab1
-      !   read(Lab1,*,IOSTAT=nxx) Ant_ID  ! is an integer
-      !   If(nxx.eq.0) Then ! there was a number at this place, all antennas are pairs infact
-      !      EvenOdd=1
-      !      !Signature='Dual' ! It is assumed that antanna-pairs are meant, not single antennas. Number is ignored.
-      !   Else
-      !      EvenOdd=0
-      !      Write(2,*) 'antennas should be paired', i_file,Lab1
-      !      stop 'antennas should be paired'
-      !   EndIf
-      !   rewind(unit=12)
-      !EndIf
-      !
-      !Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.dat')
-      OPEN( Unit=22, STATUS='unknown',ACTION='write', Form='unformatted', &
-         FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.udt')
-      Read(12,*) Lab1! , StatStartTime, Lab2, i_src, lab3, NrAnt, lab4, powr  ![ms],,&  =noise power
-      j_ant=0
-      Do    ! count number of antenna pairs
-         Read(12,"(A180)",IOSTAT=nxx) lname
-         If(nxx.ne.0) exit ! end of antenna list signaled.
-         Read (lname,*,IOSTAT=nxx) lab1, lab2, LFRAnt_crdnts(1:3)
-         If(nxx.ne.0) exit ! end of antenna list signaled.
-         Read(lab2,*,IOSTAT=nxx) D ! when possible then started reading timespectrum, thus quit
-         If(nxx.eq.0) exit ! end of antenna list signaled.
-         If(trim(lab1).eq.'Even' .or. trim(lab1).eq.'Odd') cycle
-         write(2,*) 'Valid antenna pair:',trim(lname)
-         !write(2,*) 'input',Ant_ID, lab1, LFRAnt_crdnts(1:3)
-         ! value of Ant_ID is ignored. all antennas are taken as pairs.
-         j_ant=j_ant+1
-         Ant_IDs(j_ant)=10*j_ant
-         Ant_pos(:,j_ant)=LFRAnt_crdnts(:)
-         If(j_ant.ge.AntpStat) then
-            write(2,*) 'nr of antennas too large in SimulationRead:',i_file,STATION_ID,j_ant
-            exit
-         EndIf
-         !flush(Unit=2)
-      EndDo
+      If(N_StAnt.gt.2*AntpStat) Then
+         write(2,*) '**** mismatch antenna nr',N_StAnt,AntpStat
+         N_StAnt=2*AntpStat
+      EndIf
+      ! write(24,*,IOSTAT=nxx) STATION_ID, Station_name
+      Unt=12
+      Open(unit=Unt,STATUS='old',ACTION='read', Form='unformatted', &
+         FILE = 'files/'//TRIM(Antennas)//'_'//TRIM(Station_name)//'.udt')
+      Call ReadSimulStatHead(Unt, SourceGuess, STATION_ID, N_StAnt,  StatStartTime, &
+         Ant_Stations, Ant_IDs, Ant_pos, Ant_RawSourceDist, NrAnt, DualPosOnly)
       Close(unit=12)
-      Ant_nr=j_ant
+      !
+      Ant_nr= Ant_nr + NrAnt
+      write(24,*,IOSTAT=nxx) STATION_ID, Station_name, NrAnt,  NtSamples
       !
       ! Start constructing traces
       !
       Call RelDist(SourceGuess,Ant_pos(:,1),RDist)
       StatStartTime=SourcesListTms(1)/(Sample*1000.)+RDist-200 ! place first source at sample 200 in trace
       StatStartTime=StatStartTime + TimingErr_ns * random_stdnormal()/5. ! to convert timing error to samples
+      !
+      !Open(unit=22,STATUS='unknown',ACTION='write', FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.dat')
+      OPEN( Unit=22, STATUS='unknown',ACTION='write', Form='unformatted', &
+         FILE = 'files/'//TRIM(Simulation)//'_'//TRIM(Station_name)//'.udt')
+      ! Structure of this unformatted file
+      ! rec 1: StatStartTime [ms],  NtSamples, NrAnt [=2xnumber of different dipole positions]
+      !  followed by 'j_ant=1:ant_nr/2' data for each dipole
+      ! recs 2: 'Dual       ', Ant_IDs(j_ant), Ant_pos(:,j_ant) ! info for dipole 'j_ant'
+      !  followed by 'i_ant=1:ant_nr' data for each antenna
+      ! recs 3: time trace even antenna (only if 'dual' or 'Even', real*4) for antenna 'i_ant'
+      ! at present all dipoles are necessarily 'Dual'
+      !
       !write(22,*) 'StartTime[ms]=', StatStartTime*(Sample*1000.), 'N_samples=', NtSamples, &
       !      'N_ant=', Ant_nr, 'P_noise= 1.'  ![ms],,&  =noise power
-      write(22)  StatStartTime*(Sample*1000.),  NtSamples, Ant_nr
+      write(22)  StatStartTime*(Sample*1000.),  NtSamples, NrAnt
       write(2,"(A,I3,I9,1x,A5,A,I2,A,A,F10.5,A,F9.6)") 'Station=',i_file,STATION_ID, Station_name, &
-         ' uses',j_ant,' antenna pairs.', ' Start time=',StatStartTime*(Sample*1000.),'[ms]'
+         ' uses',NrAnt/2,' antenna pairs.', ' Start time=',StatStartTime*(Sample*1000.),'[ms]'
       Flush(unit=2)
-      Do j_ant=1,Ant_nr  ! Calculate and write spectra
+      Do j_ant=1,NrAnt/2  ! Calculate and write spectra
+         i_ant=2*j_ant - 1
          !write(22,*) Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
-         write(22) 'AntId       ', Ant_IDs(j_ant), Ant_pos(:,j_ant)
+         write(22) 'Dual', Ant_IDs(i_ant), Ant_pos(:,i_ant)
+         !write(2,*) i_ant, Ant_IDs(i_ant), Ant_pos(:,i_ant)
+      Enddo
+      Do j_ant=1,NrAnt/2  ! Calculate and write spectra
+         i_ant=2*j_ant - 1
          ! Instrumental noise:
          Do i_sampl=1,NtSamples
             RTime_0(i_sampl)=random_stdnormal()
@@ -323,14 +337,14 @@ Program Simulate_Data
          !Cnu_1(:)=0.
          Do i_src=1,SrcNr
             !write(2,*) 'Galactic background=',SUM(ABS(Cnu_p(:))**2),SUM(ABS(Cnu_t(:))**2)
-            Call RelDist(SourcesListLocNEh(:,i_src),Ant_pos(:,j_ant),RDist)
+            Call RelDist(SourcesListLocNEh(:,i_src),Ant_pos(:,i_ant),RDist)
             T_Offset=RDist - StatStartTime +SourcesListTms(i_src)/(Sample*1000.)  ! in units of samples
             Sample_Offset = INT(T_Offset) ! in units of sample size
             !write(2,*) 'Sample_Offset for src=', i_src, Sample_Offset, &
             !      ' ,antenna=', Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
             If(Sample_Offset.le.0 .or. Sample_Offset.ge.NtSamples) Then
                write(2,*) '*****Sample_Offset out of range for src=', i_src, Sample_Offset, &
-                     ' ,antenna=', Ant_IDs(j_ant), 'NEh=', Ant_pos(:,j_ant)
+                     ' ,antenna=', Ant_IDs(i_ant), 'NEh=', Ant_pos(:,i_ant)
                cycle
             EndIf
             SubSample_Offset = T_Offset - Sample_Offset ! in units of sample size
@@ -338,23 +352,9 @@ Program Simulate_Data
             RTime_s(Sample_Offset)=1.
             Call RFTransform_CF(RTime_s,Cnu_s(0)) ! delta peak at abou right time, filtering done while selecting proper frequencies.
             !
-            !  testing
-            !dphShift=exp(ipi*SubSample_Offset/NnuSamples )
-            !phShift=1. !exp(-ipi*inu1*SubSample_Offset/NnuSamples )
-            !Do i_nu=0,NnuSamples   ! Increment frequency spectrum of the antenna with the signal from this source
-            !   nu=i_nu*dnu
-            !   Cnu_s(i_nu)=phShift*Cnu_s(i_nu)
-            !   phShift=phShift*dphShift
-            !Enddo
-            !Call RFTransform_CF2CT(Cnu_s(0),CTime_0(1) )  ! RFTransform_CF2RT(Cnu,RD)
-            !k=Maxloc( (Abs(CTime_0(:))**2),1)
-            !write(2,*) '!testTimeshift:',SubSample_Offset, T_Offset-k, &
-            !      (Abs(CTime_0(k-1))**2), (Abs(CTime_0(k))**2), (Abs(CTime_0(k+1))**2)
-
-            !
             ! get t and p oriented signals
             !
-            Ras(:)=(SourcesListLocNEh(:,i_src)-Ant_pos(:,j_ant))/1000.  ! \vec{R}_{antenna to source}
+            Ras(:)=(SourcesListLocNEh(:,i_src)-Ant_pos(:,i_ant))/1000.  ! \vec{R}_{antenna to source}
             HorDist= Ras(1)*Ras(1) + Ras(2)*Ras(2)  ! =HYPOT(X,Y)
             D=sqrt(HorDist + Ras(3)*Ras(3))
             HorDist=sqrt( HorDist ) ! =HYPOT(X,Y)
@@ -388,8 +388,6 @@ Program Simulate_Data
                   Ji_t0(i_freq)*J_0p(i_freq)+Ji_t1(i_freq)*J_1p(i_freq),  &
                't', Ji_t0(i_freq)*J_0t(i_freq)+Ji_t1(i_freq)*J_1t(i_freq), Ji_p0(i_freq)*J_0t(i_freq)+Ji_p1(i_freq)*J_1t(i_freq)
             EndIf
-
-
             !  for sub-sample shift of peak position:
             dphShift=exp(ipi*SubSample_Offset/NnuSamples )
             phShift=exp(ipi*inu1*SubSample_Offset/NnuSamples )
@@ -433,6 +431,7 @@ Program Simulate_Data
             Do i_sampl=1,NtSamples
                write(23,*) i_sampl,REAL(CTime_0(i_sampl)), ABS(CTime_0(i_sampl)), REAL(CTime_1(i_sampl)), ABS(CTime_1(i_sampl))
             Enddo
+            close(unit=23)
          EndIf
       Enddo ! j_ant=1,NrAnt
       !
@@ -443,8 +442,8 @@ Program Simulate_Data
       !   !write(2,*) i_sample, Sample_Offset
       !Enddo
       Close(unit=22)
-      Close(unit=12)
       !
+      !AntNr_lw=   AntNr_lw+NrAnt
    Enddo !  i_file=1,StationNrMax
    write(2,*) 'Ave background power (all antennas)=', BckgrPwr_0/N_even, BckgrPwr_1/N_odd, N_even, N_odd, NtSamples !  (should be about 1. to be consistent with Ant-read.f90)
    Close(unit=14)
@@ -493,6 +492,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
          Endif
          !
          Call GetNonZeroLine(lname)
+         write(2,"(A,i4,A,A,A)") 'input line for Rep-source',SrcNr+1,':"',TRIM(lname),'"'
          Read(lname,*,IOSTAT=nxx) Lab1
          If((Lab1(1:3) .eq. 'Clo') .or. (Lab1(1:3) .eq. 'clo')) Then ! Cloud
             Read(lname,*,IOSTAT=nxx) Lab1, Time_width, Space_width, PolSpread, NCloud
@@ -501,6 +501,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
                stop
             Endif
             Call GetNonZeroLine(lname)
+            write(2,"(A,i4,A,A,A)") 'input line for Rep-Cloud-source',SrcNr+1,':"',TRIM(lname),'"'
             Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
             If(nxx.ne.0) then
                Write(2,*) 'Expected: "Sources_TS[samples], Sources_LocNEh(1:3)[m], Sources_AmpNEh(1:3)" but got ',TRIM(lname)
@@ -548,6 +549,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
             stop
          Endif
          Call GetNonZeroLine(lname)
+         write(2,"(A,i4,A,A,A)") 'input line for Cloud-source',SrcNr+1,':"',TRIM(lname),'"'
          Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
          If(nxx.ne.0) then
             Write(2,*) 'Expected: "Sources_TS[samples], Sources_LocNEh(1:3)[m], Sources_AmpNEh(1:3)" but got ',TRIM(lname)
@@ -580,6 +582,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
       Else
          ! Check for single source, otherwise quit
          Read(lname,*,IOSTAT=nxx) Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
+         !write(2,*) '!nxx=',nxx,Sources_TS, Sources_LocNEh(:), Sources_AmpNEh(:)
          If(nxx.ne.0) Then
             exit  ! terminate reading sequence
          EndIf
@@ -600,10 +603,14 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
       !t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*Refrac/c_mps ! in [ms] due to signal travel distance
       t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*RefracIndex(SourcesListLocNEh(3,i_src))/c_mps ! in [ms] due to signal travel distance
       !write(2,*) i_src,t_shft
+      x=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))
+      z=sqrt(SUM(SourcesListAmpNEh(:,i_src)*SourcesListAmpNEh(:,i_src)))
+      y=SUM(SourcesListLocNEh(:,i_src)*SourcesListAmpNEh(:,i_src))/(x*z)
+      thet=ACOS(y)*180./pi
       SourcesListTms(i_src)=SourcesListTS(i_src)*Sample_ms+t_shft  ! source time at core
       I123=SUM(SourcesListAmpNEh(:,i_src)*SourcesListAmpNEh(:,i_src))*NrmStI
-      write(2,"(I4,F11.5,F11.5,2x, 3F10.4,2x,3F8.2,2x,F12.2)") i_src,(SourcesListTms(i_src)-SourcesListTms(1)), &
-         SourcesListTS(i_src)*Sample_ms, SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src), I123
+      write(2,"(I4,F11.5,F11.5,2x, 3F10.4,2x,3F8.2,2x,F12.2, 2x, F8.2)") i_src,(SourcesListTms(i_src)-SourcesListTms(1)), &
+         SourcesListTS(i_src)*Sample_ms, SourcesListLocNEh(:,i_src)/1000., SourcesListAmpNEh(:,i_src), I123, thet
    Enddo
    write(2,*) 'Nr of sources=',SrcNr, ', time of first source pulse at the core=',SourcesListTms(1)
    Flush(unit=2)

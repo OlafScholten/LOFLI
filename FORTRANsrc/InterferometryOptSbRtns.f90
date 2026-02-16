@@ -63,7 +63,7 @@ Subroutine GridPhaseChange(RMSW, IO_control)
    Real(dp), intent(out) :: RMSW(1:3)
    Logical, intent(in) :: IO_control
    Real(dp) :: PixLoc(1:3), PixLocPol(1:3), t_shft, RDist
-   Real(dp) :: t_n, t_p, mean, RMS, Err(3), meanW, Weight, D
+   Real(dp) :: t_n, t_p, mean, RMS, meanW, Weight, D, W, AW2
    Integer :: i, i_ant, j_IntFer, Nr_IntFer
    !
    PixLoc(:)=CenLoc(:)
@@ -81,30 +81,39 @@ Subroutine GridPhaseChange(RMSW, IO_control)
       Endif
       !write(2,*) 'PixLoc-carthesian',PixLoc(:)
       t_n=0.   ; t_p=0
-      Mean=0. ; RMS=0.
+      Mean=0. ; RMS=0.  ; AW2=0.
       MeanW=0. ; RMSW(i)=0. ; Weight=0
       Do j_IntFer=1,Nr_IntFer   ! Loop over selected antennas
          i_ant=IntFer_ant(j_IntFer,i_chunk)
          Call RelDist(PixLoc(1),Ant_pos(1,i_ant,i_chunk),RDist)
          t_shft=Rdist - Ant_RawSourceDist(i_ant,i_chunk)    ! units of samples
-         Mean=Mean+t_shft
-         RMS=RMS + t_shft*t_shft
          if(t_shft.lt.t_n) t_n=t_shft
          if(t_shft.gt.t_p) t_p=t_shft
          D=sqrt(sum( (PixLoc(1:3)-Ant_pos(1:3,i_ant,i_chunk))**2 ))
-         Weight=Weight + 1./D
-         MeanW=MeanW+t_shft/D
-         RMSW(i)=RMSW(i) + t_shft*t_shft/(D*D)
-         !write(2,*) i_ant,'t_shft',t_shft, Rdist, Mean/j_IntFer, RMS/j_IntFer, ';' &
-         !   , D/1000., Weight/j_IntFer, MeanW/j_IntFer, RMSW/j_IntFer
+         !Weight=Weight + 1./D
+         !MeanW=MeanW+t_shft/D
+         !RMSW(i)=RMSW(i) + t_shft*t_shft/(D*D)
+         ! 1 Jan 2026: more correctly
+         W=1/D       ! may also be 1/D^2
+         Weight=Weight + W
+         MeanW=MeanW + t_shft*W
+         RMSW(i)=RMSW(i) + t_shft*t_shft*W
+         W=1.  !  1./(D*D)       ! may also be 1/D^2
+         AW2=AW2+ W
+         Mean=Mean+t_shft*W
+         RMS=RMS + t_shft*t_shft*W
       EndDo ! j_IntFer
-      Mean=Mean/Nr_IntFer
-      RMS=RMS/Nr_IntFer
+      Mean=Mean/AW2
+      RMS=RMS/AW2
       RMS=sqrt(RMS-Mean*Mean)
-      MeanW=MeanW/Nr_IntFer
+      !MeanW=MeanW/Nr_IntFer
+      !Weight=Weight/Nr_IntFer
+      !RMSW(i)=RMSW(i)/Nr_IntFer
+      !RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)/Weight  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
+      MeanW=MeanW/Weight
+      RMSW(i)=RMSW(i)/Weight
+      RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
       Weight=Weight/Nr_IntFer
-      RMSW(i)=RMSW(i)/Nr_IntFer
-      RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)/Weight  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
       If(IO_control) write(2,"(A,i2,2f7.2,A,f6.2,f7.3,A,f9.5,A,3f7.2,A)") 'min & max time shift [samples] per pixel',i, &
          t_n, t_p,', RMS=', RMS, RMSW(i), '%, for d(i)=',d_loc(i),', d(N,E,h)=',Pixloc(:)-CenLoc(:),'[m]'
       diff(i) =t_p      ! needed to calculate lead-time for complete grid
@@ -136,7 +145,7 @@ Subroutine PixBoundingBox(GridVolume, BoxFineness)
    !Integer, intent(in) :: i_chunk
    Real(dp), intent(in) :: GridVolume(1:3), BoxFineness
    Real(dp) :: PixLoc(1:3), PixLocPol(1:3), t_shft, RDist
-   Real(dp) :: t_n, t_p, mean, RMS, Err(3), meanW, RMSW(1:3), Weight, D
+   Real(dp) ::  RMSW(1:3) !  t_n, t_p,  RMS, Err(3),  Weight, D
    Integer :: i, i_ant, j_IntFer, Nr_IntFer
    logical :: IO_control
    !
@@ -234,7 +243,6 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    Real(dp) :: Pref, Psum, half
    Real(dp) :: PixLocPol(1:3), PixLoc(1:3), StartTime_ms
    Logical :: Obsolete=.false.
-   Character(len=20) :: FMT
    !
    !  write intensity distribution for pixel-planes with i_h=-1,0,+1 needed for contour plots
    If(Dual) then
@@ -337,7 +345,7 @@ Subroutine OutputIntfPowrTotal(RefAntSAI, i_eo)
    StartTime_ms=StartT_sam(1)*sample*1000.d0  ! in ms
    If(Dual) then
       OPEN(UNIT=30,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'_EISpeceo.dat')
-      Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,F9.2,I4, ' 0')") StartTime_ms, CenLoc/1000., AntennaRange, &
+      Write(30,"(f9.3,3(',',f8.3),',',f5.1,',',i2,',',i2,F8.3,g12.4,I4, ' 0')") StartTime_ms, CenLoc/1000., AntennaRange, &
          SSm, i, t_shft*1000., ABS(SMPowMx), N_smth
       Do i=0,Time_Dim/SSm-1
          Pref=0.
@@ -554,7 +562,7 @@ Subroutine OutputIntfPowrMxPos(i_eo)
             Call EI_PolarizSlice(i_slice)   ! Refine polarization analysis by calculating observables at interpolated position
             !
             !  For storing data for later processing in DataSelect:
-            write(28,"(I5, ','F12.6,3(','F11.5),', ',F12.1, ',', F7.2,',', 1pg12.4, 6(' , (',g12.4','g12.4,')' ))")  &
+            write(28,"(I5, ','F12.6,3(','F11.5),', ',F12.1, ',', F7.2,',', 1pg12.4, 6(' ,  ',g12.4','g12.4,' ' ))")  &
                i_slice, t_ms-t_shft, PixLoc(1:3)/1000., SMPowMx, Chi2pDF, StI,   Stk_NEh(1,1:3), Stk_NEh(2,2:3), Stk_NEh(3,3)
             !
             ! For making a plot of the just analyzed sources:
@@ -652,7 +660,7 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Logical :: Check=.false.
    !Logical :: Check=.true.  !  .false.
    !
-   !write(2,*) 'FindInterpolMx',i
+   !write(2,*) '!FindInterpolMx',i, MaxSmPowGrd(:,i)
    !flush(unit=2)
    i_gr(:)=MaxSmPowGrd(:,i)
    !write(2,*) '!FindInterpolMx; i_gr(:)',i, i_gr(:), MaxSmPow(0:i)
@@ -665,10 +673,11 @@ Subroutine FindInterpolMx(i,d_gr,SMPow,Qualty)
    Do j=1,3  ! fit y=Ax^2/2+Bx+C; A=y"/d^2 & B=y'/2d & x_max= -B/A= -d y'/(2y")
       ! 3D case: y=Sum[A(i)X(i)^2/2 + R'(i,j)X(i)X(j)+B(i)x(i)+C]
       If((i_gr(j).eq.N_pix(j,1)) .or. (i_gr(j).eq.N_pix(j,2))) Then
-         If((N_pix(1,2)*N_pix(2,2)*N_pix(3,2)).gt.1) Then
+         If((N_pix(1,2)*N_pix(2,2)*N_pix(3,2)).gt.1) Then  ! skip this for case of central pixel calculation for ATRID
             If(i.eq.0) Then
                Write(2,"(A,F9.2,A,3(I5,','))") &
                   ' Bordercase full window, Intensty=',y0,', Max @',MaxSmPowGrd(:,i)
+               !write(2,*) "! BordercaseTest",j,i_gr(j),N_pix(j,1),N_pix(j,2)
             ElseIf(TRIDFile) then
                Write(2,"(A,i5,A,F9.2,A,3(I5,','))") &
                   ' Bordercase slice',i,', Intensty=',y0,', Max @',MaxSmPowGrd(:,i)

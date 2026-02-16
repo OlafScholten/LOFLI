@@ -29,7 +29,11 @@ Module DS_Select
    !Real*8 :: d_AmplScale
    !
    Real(dp), save :: xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, SMPowCut ! RatMax=ratio (Max rim)/peak
-   Real(dp), save :: xyztBB(8), NEhtBB(8) ! RatMax=ratio (Max rim)/peak
+   Real(dp), save :: xyztBB(8), NEhtBB(8)
+   Real(dp), save :: SpeedNEht(4)  ! wind (or airplane) speed to determine time-dependent shifting of all sources
+   Real(dp), save :: VelDist_NEht(4)   ! calculate velocities of the various points while taking this location-time as the source
+   Real(dp), save :: MaxSpeed
+   Logical, save :: VelDist
    Real(dp), save :: Tiny=epsilon(Tiny), Small
    Integer, parameter :: NDataFil=50
    character*20 :: datafile(NDataFil)
@@ -57,12 +61,13 @@ Subroutine DS_ReadCntrl(Fini)
    Integer :: j, nxx
    Character(len=20) :: RunOption !, shellin
    Character(len=120) :: PlotFile
-   logical :: exist
+   logical :: ExistDataFile
    NAMELIST /Parameters/ datafile, BckgrFile, PlotName, TimeBase, &
       SMPowCut, MaxAmplFitPercent, FileStatN, StatNCut, SrcDensTimeResol, AmplitudePlot, &
       tCutl, tCutu, RunOption , xyztBB, NEhtBB, CutSigmaH, LinCutH, RMS_ns, IntensSpread, DelNEff, ZoomBox &
    , MaxTrackDist, Wtr, Aweight, TimeWin, PreDefTrackFile, dt_MTL, HeightFact, NLongTracksMax, LongTrack_Min &
-   , Corr_dD, Corr_Dnr, Corr_dtau, QualPlot
+   , Corr_dD, Corr_Dnr, Corr_dtau, QualPlot &
+   , SpeedNEht, VelDist_NEht, MaxSpeed
    !
    OPEN(UNIT=2,STATUS='unknown',ACTION='WRITE',FILE='DataSelect.out')
    !
@@ -74,6 +79,9 @@ Subroutine DS_ReadCntrl(Fini)
    xMin=Tiny; xMax=Tiny; yMin=Tiny; yMax=Tiny; zMin=Tiny; zMax=Tiny; tMin=Tiny; tMax=Tiny
    xyztBB(:)=Tiny
    NEhtBB(:)=Tiny
+   SpeedNEht(:)=0.
+   MaxSpeed=-1.
+   VelDist_NEht(:)=0.
    TimeBase=tiny  ! to initialize it to a value that will not be put on input, to be able to check if set at all
    tCutl=0.; tCutu=0.
    RunOption=''
@@ -106,24 +114,34 @@ Subroutine DS_ReadCntrl(Fini)
       Backspace(Unit=5)  !   (unit = 5, file = 'stdin')
       Write(2,NML = Parameters)
       Read(*,"(A100)") BckgrFile
-      Write(2,*) TRIM(BckgrFile)
-      Write(2,*) '======================  End input or namelist "Parameters" error'
+      Write(2,*) 'last line:', TRIM(BckgrFile)
+      !If((BckgrFile(1:4).eq.'&end') .or. (BckgrFile(1:4).eq.'&End')) Then
+         Write(2,*) '======================  A fatal error in namelist "Parameters" occurred, '
+      !Else
+         Write(2,*) '======================  or the end of intended input was reached.'
+      !EndIf
       !write(2,NML = Parameters,IOSTAT=nxx)
       Fini=1
       return
    EndIf
+   VelDist=.false.
+   If(Sum(VelDist_NEht(:)**2).gt.0.0001) VelDist=.true.
    !
    ! Automatic RunOption setting when not specified in input
    If(RunOption.eq. '') Then
-      INQUIRE(FILE = trim(datafile(1))//'.csv', exist=exist)  ! in the main Fsash directory
-      If(exist) Then
+      INQUIRE(FILE = trim(datafile(1))//'.csv', exist=ExistDataFile)  ! in the main Fsash directory
+      If(.not. ExistDataFile) Then
+         INQUIRE(FILE = TRIM(DataFolder)//trim(datafile(1))//'.csv', exist=ExistDataFile)
+         If(ExistDataFile) datafile(1)=TRIM(DataFolder)//datafile(1)
+      EndIf
+      If(ExistDataFile) Then
          RunOption='Impulsive'
       Else
          RunOption='TRI-D'
          Do j=1,NDataFil  ! select one particular file (may be sequence)
             If(datafile(j).eq."") exit
-            INQUIRE(FILE = TRIM(DataFolder)//trim(datafile(j))//'ATRID.csv', exist=exist)
-            If(exist) Then
+            INQUIRE(FILE = TRIM(DataFolder)//trim(datafile(j))//'ATRID.csv', exist=ExistDataFile)
+            If(ExistDataFile) Then
                RunOption='ATRID'
                exit
             EndIf
@@ -163,11 +181,12 @@ Subroutine DS_ReadCntrl(Fini)
       write(2,*) 'Image control:'
       Call PrintValues(PlotName,'PlotName', 'Added to flash name to label plots')  !
       Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayed as a grey background plot.')  !
+      !Call PrintValues(SpeedNEht,'SpeedNEht', 'Wind speed [m/s] and reference time (from timebase) .')  !
       Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  !
       Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  !
       Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
       If(NLongTracksMax.gt.0) Then
-         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', '[km] Max. distance between sources to include on a track.')  !
          Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
          Call PrintValues(Aweight,'Aweight', 'Importance of intensity in weight of newest source for track centroid.')  !
          Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
@@ -201,13 +220,14 @@ Subroutine DS_ReadCntrl(Fini)
       write(2,*) 'Image control:'
       Call PrintValues(PlotName,'PlotName', 'Added to data name to label plots')  !
       Call PrintValues(BckgrFile,'BckgrFile', 'Name of file that is displayed as a grey background plot.')  !
+      !Call PrintValues(SpeedNEht,'SpeedNEht', 'Wind speed [m/s] and reference time (from timebase) .')  !
       Call PrintValues(ZoomBox,'ZoomBox', 'Name of zoom-in plot.')  !
       Call PrintValues(AmplitudePlot,'AmplitudePlot', 'Base-size for source-dots in plots.')  !
       Call PrintValues(MaxAmplFitPercent,'MaxAmplFitPercent', 'Max amplitude fitted with modifies power law.')  !
       Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  !
       Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
       If(NLongTracksMax.gt.0) Then
-         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', '[km] Max. distance between sources to include on a track.')  !
          Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
          Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  !
          Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
@@ -248,7 +268,7 @@ Subroutine DS_ReadCntrl(Fini)
       Call PrintValues(FileStatN,'FileStatN', 'Print the strength of the N^th strongest source.')  !
       Call PrintValues(NLongTracksMax,'NLongTracksMax', 'Maximum number of long tracks to be plotted.')  !
       If(NLongTracksMax.gt.0) Then
-         Call PrintValues(MaxTrackDist,'MaxTrackDist', 'Max. distance between sources to include on a track.')  !
+         Call PrintValues(MaxTrackDist,'MaxTrackDist', '[km] Max. distance between sources to include on a track.')  !
          Call PrintValues(Wtr,'Wtr', 'Weight of newest source for track centroid.')  !
          Call PrintValues(Aweight,'Aweight', 'Importance of amplitude in weight of newest source for track centroid.')  !
          Call PrintValues(TimeWin,'TimeWin', '[ms]. Width of gaussian in time to weigh the sources for mean track position.')  !
@@ -303,6 +323,8 @@ Subroutine DS_ReadCntrl(Fini)
       xyztBB(7:8)=NEhtBB(7:8)
    EndIf
    write(2,"(A,3(2F9.3,2x),A,2F10.4,A)") 'used NEhtBB=', NEhtBB(1:6),'[km]', xyztBB(7:8),' [ms]'
+   Write(2,"(A,3F9.3,A,F8.1,A)")  'Wind speed correction=', SpeedNEht(1:3),' [m/s] and reference time=', SpeedNEht(4), &
+         ' [ms] from timebase.'  !
    !
    If(ZoomBox.ne.'NoBox')  ZoomBox=TRIM(DataFolder)//ZoomBox
    !Write(2,"(A,F7.2,A,F7.2,A,F7.2)") 'quality cuts: sigma(z)=', ICVal,'[m] @', Height_1,'[km]'
@@ -356,7 +378,7 @@ Subroutine DS_ReadSelData
       Call DS_ReadSelData_TRID
       Image='T-'//TRIM(datafile(1))//TRIM(PlotName)
    ElseIf(DS_Mode .eq. 3) Then ! ATRID
-      Call DS_ReadSelData_PkInt
+      Call DS_ReadSelData_ATRID
       Image='A-'//TRIM(datafile(1))//TRIM(PlotName)
    Else
       write(2,*) 'Using an unknown file-read option, DS_Mode=',DS_Mode
@@ -378,12 +400,13 @@ Subroutine DS_ReadSelData_Imp
 !   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    Use constants, only : dp
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
-   Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, CutSigmaH, LinCutH, RMS_ns,  DelNEff
+   Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, CutSigmaH, LinCutH, RMS_ns,  DelNEff ! , SpeedNEht
    Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, SourcTotNr, xyztBB, t_offset, datafile
    !Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
    IMPLICIT none
    !Real(dp) ::
    !Integer ::
+   Logical :: ExistDataFile
    Character(len=180) :: lineTXT
    Character(len=100) :: txt
    Integer :: i,j, Nxx
@@ -440,7 +463,7 @@ Subroutine DS_ReadSelData_Imp
       if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
       if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
       !
-      !   write(2,*) 'pass box cuts:',Nxx,lineTXT
+      write(2,"(/,A,I0,1x,A)") 'pass box cuts:',Nxx,lineTXT
 !     CutSigma_h  <-- ICVal
 !     LinCutH <-- Height_1
 !     RMS_ns <-- Chi_max
@@ -450,16 +473,17 @@ Subroutine DS_ReadSelData_Imp
          Else
             Q=sigma(3)*z/LinCutH
          Endif
-         If(Q.gt. CutSigmaH .and. val.gt.CutSigmaH) cycle
+         If(Q.gt. CutSigmaH) cycle !  .and. val.gt.CutSigmaH) cycle
       EndIf
-      !   write(2,*) 'pass sigma cuts:',Q
+      write(2,*) 'pass sigma cuts:',Q
+      !
       Q=sqrt(val)
       If(DelNEff .lt. 0) then
          Q=Q - RMS_ns*(Max_EffAnt-N_EffAnt)/DelNEff
       else
          If( (Max_EffAnt - N_EffAnt) .gt. DelNEff) cycle
       Endif
-      !   write(2,*) 'RMS cuts:',Q,RMS_ns
+      write(2,*) 'RMS cuts:',Q,RMS_ns, j
       If(Q.gt. RMS_ns) cycle
       !
       j=j+1
@@ -497,7 +521,7 @@ Subroutine DS_ReadSelData_TRID
    Use DS_Select, only : PolarAna, Stk_NEh
    Use DS_Select, only : NDataFil, datafile,  TimeBase, t_offset, AmplitudePlot, SMPowCut
    Use DS_Select, only : tCutl, tCutu, SourcTotNr, FileStatN, StatNCut
-   Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, NEhtBB
+   Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, NEhtBB, SpeedNEht
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
    Use unque, only : sort
    IMPLICIT none
@@ -522,7 +546,7 @@ Subroutine DS_ReadSelData_TRID
    !
    Maxd=23000
    Allocate( RA(1:4,1:maxd), Label(1,1:maxd), Iperm(1:maxd), SrcI20(1:maxd), Stk_NEh(1:6,1:maxd) )
-   extension='TRIDsrcs.csv' ! For TRI-D (beamformed) source position data file
+   extension='TRIDx.csv' ! For TRI-D (beamformed) source position data file
    PolarAna = .true.
    First29=.true.
    SourcTotNr=0
@@ -559,7 +583,7 @@ Subroutine DS_ReadSelData_TRID
          datfile=TRIM(DataFolder)//trim(datfile)
          OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
          If(nxx.ne.0) then   ! check weather this particular file can be opened
-            Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
+            Write(2,*) 'Problems opening file:"',trim(datfile)//TRIM(extension),'"'
             Close(Unit=28)
             If(First29) Then
                write(2,*) 'Calling the old data reader for TRI-D'
@@ -573,13 +597,14 @@ Subroutine DS_ReadSelData_TRID
          If(nxx.ne.0) stop 'reading problem'
          n_repack=   n_repack + 10000
          If(First29 .and. RepackData) Then
-            write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'Repack'//TRIM(extension),'"'
+            write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'-R-'//TRIM(extension),'"'
             OPEN(unit=29,FILE=trim(datfile)//'-R-'//TRIM(extension), FORM='FORMATTED',STATUS='unknown',ACTION='write')
             write(29,"(A180)") lineTXT
          EndIf
          !
          !write(2,*) 'from data file, lineTXT:', lineTXT
          read(lineTXT,*,IOSTAT=nxx) tMinR, tMaxR,  TimeBase,  xMinR,xMaxR,yMinR,txt, PixPowOpt, RefinePolarizObs   !     Call SelectBB(xMinR, xMaxR, yMinR, yMaxR, zMinR, zMaxR, tMinR, tMaxR)
+!      0.059      0.160   1153.00   9110.00 -15840.00   3750.00 17A-1:k  0 T 20  999   0.10 0
          !
          Read(28,"(A300)",IOSTAT=nxx) lineTXT   ! comment line
          If(First29) Then
@@ -588,6 +613,7 @@ Subroutine DS_ReadSelData_TRID
             PolarAna=RefinePolarizObs
             First29=.false.  ! for repack option
          EndIf
+         !write(2,*) 'RefinePolarizObs=',RefinePolarizObs,', PolarAna=',PolarAna
          If(AmplitudePlot.eq.Tiny) AmplitudePlot=10
          !
          ! Start actual reading
@@ -758,14 +784,14 @@ Subroutine DS_OldReadSelData_TRID
          datfile=TRIM(DataFolder)//trim(datfile)
          OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
          If(nxx.ne.0) then   ! check weather this particular file can be opened
-            Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
+            Write(2,*) 'Problems opening file:"',trim(datfile)//TRIM(extension),'"'
             Close(Unit=28)
             exit
          endif
          If(PolarAna) Then
             OPEN(unit=27,FILE=trim(datfile)//TRIM(PolExten), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
             If(nxx.ne.0) then   ! check weather this particular file can be opened
-               Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(PolExten),'"'
+               Write(2,*) 'Problems opening file:"',trim(datfile)//TRIM(PolExten),'"'
                PolarAna=.false.
             Else
                Read(27,"(A180)") lineTXT
@@ -929,7 +955,7 @@ Subroutine DS_OldReadSelData_TRID
     Return
 End Subroutine DS_OldReadSelData_TRID
 !===========================================================
-Subroutine DS_ReadSelData_PkInt
+Subroutine DS_ReadSelData_ATRID
 !  Read Selected Data
 !   integer, parameter :: maxd=123000
 !   real*8, save :: RA(4,maxd)  ! 1=t [ms]  2-4= E,N,h in [km]
@@ -938,10 +964,10 @@ Subroutine DS_ReadSelData_PkInt
 !   Complex, save :: Stk_NEh(1:6,maxd)    ! order: (1,1:3), (2,2:3), (3,3)
 !   Logical :: PolarAna
 !   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
-   Use constants, only : dp
+   Use constants, only : dp, sample_ms
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, RMS_ns, SMPowCut,  TimeBase, t_offset, IntensSpread
-   Use DS_Select, only : RA, Label, Maxd, SourcTotNr, xyztBB, t_offset, NDataFil, datafile, PolarAna, SrcISpr
+   Use DS_Select, only : RA, Label, Maxd, SourcTotNr, xyztBB, t_offset, NDataFil, datafile, PolarAna, SrcISpr, SpeedNEht
    Use DS_Select, only : SrcWidth, Iperm, SrcChi2, SrcI20, SrcI3, SrcUn, SrcLin, SrcCirc, SrcPZen, SrcPAzi, Stk_NEh
 !   Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
    IMPLICIT none
@@ -949,7 +975,7 @@ Subroutine DS_ReadSelData_PkInt
    character*100 ::  FileMain, datfile
    character*25 ::  extension, PolExten !, OutFileLabel, SelFileName, PlotName, shellin
    Character(len=350) :: lineTXT !, OS
-   integer :: i,j, nxx, i_datfil, PrevSourcTotNr
+   integer :: i,j,k, nxx, i_datfil, PrevSourcTotNr
    Real*8 :: t_start
    Real(dp) :: t,x,y,z, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi
    !Real(dp) :: Q, AmpltPlotRead
@@ -957,15 +983,18 @@ Subroutine DS_ReadSelData_PkInt
 !   Logical :: ZoomClip=.false.
    Integer :: SourceNrIncr
    !integer :: PixPowOpt
-   Real(dp) :: tp
-   Integer :: Width, i_sequence, LastChar, NullRead
+   Real(dp) :: tp, velcty(3)
+   Real :: Re_Stks(1:6),Im_Stks(1:6)
+   Integer :: Width, i_sequence, LastChar, NullRead, n_repack
    Complex :: Stks(1:6)    ! order: (1,1:3), (2,2:3), (3,3)
-   Logical :: RepackData
+   Logical :: RepackData, First29, nonBracket=.false.
+   Integer :: iRed, iSrc, NrFilesRed, FileFirstSrc(0:NDataFil)
+   Real(dp) :: FileMin(1:NDataFil), FileMax(1:NDataFil), dist
    !
 !         i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), &
 !         Chi2(i_Peak), I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
 !         SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak),  Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
-   maxd=3000
+   maxd=13000
    Allocate( RA(1:4,1:maxd), Label(1,1:maxd), SrcWidth(1:maxd), Iperm(1:maxd), SrcChi2(1:maxd), SrcI20(1:maxd), SrcI3(1:maxd), &
       SrcUn(1:maxd), SrcLin(1:maxd), SrcCirc(1:maxd), SrcPZen(1:maxd), SrcPAzi(1:maxd), Stk_NEh(1:6,1:maxd), SrcISpr(1:maxd) )
    !
@@ -974,12 +1003,15 @@ Subroutine DS_ReadSelData_PkInt
    extension='ATRID.csv' ! For ATRID (beamformed) source position data file
    SourcTotNr=0
    PrevSourcTotNr=0
+   FileFirstSrc(0)=0
+   NrFilesRed=0
+   n_repack=0
+   RepackData=.false.
+   First29=.true.
+   velcty(1:3)=SpeedNEht(1:3)/1.e6 ! [km/ms]
    Do i_datfil=1,NDataFil  ! select one particular file (may be sequence)
       If((i_datfil.gt.1).and. (datafile(i_datfil).eq."")) exit
       nxx=0
-
-
-
       i_sequence=0
       NullRead=0
       LastChar=LEN_TRIM(datafile(i_datfil))
@@ -991,7 +1023,7 @@ Subroutine DS_ReadSelData_PkInt
             If(datafile(i_datfil)(LastChar-1:LastChar-1).eq.'#') then
                If(i_sequence.eq.0) Then
                   datfile=datafile(i_datfil)(1:LastChar-2)
-                  RepackData=.true.
+!                  RepackData=.true.
                Else
                   write(datfile,"(A,i2.2)") datafile(i_datfil)(1:LastChar), i_sequence
                EndIf
@@ -1002,18 +1034,14 @@ Subroutine DS_ReadSelData_PkInt
                !i_sequence=101  ! do not cycle
             EndIf
          EndIf
-
-
-
-
          !   write(2,*) 'RepackData-1', RepackData, First29
          !write(2,*) trim(datafile(i_datfil)), LastChar, datafile(i_datfil)(LastChar:LastChar), i_sequence, datfile
          !datfile=datafile(i_datfil)
          FileMain=datfile  ! Base for output file
          datfile=TRIM(DataFolder)//trim(datfile)
          OPEN(unit=28,FILE=trim(datfile)//TRIM(extension), FORM='FORMATTED',STATUS='OLD',ACTION='READ', IOSTAT=nxx) ! space separated values
-         If(nxx.ne.0) then   ! check weather this particular file can be opened
-            Write(2,*) 'Probelems opening file:"',trim(datfile)//TRIM(extension),'"'
+         If(nxx.ne.0) then   ! check wether this particular file can be opened
+            Write(2,*) 'Problems opening file:"',trim(datfile)//TRIM(extension),'"'
             Close(Unit=28)
             NullRead=NullRead+1
             If(NullRead.gt.10) Then  ! stop after 10 files that do not exist
@@ -1025,10 +1053,6 @@ Subroutine DS_ReadSelData_PkInt
             NullRead=0
          endif
          !
-   !            t_offset=TimeBase
-   !      If(AmplitudePlot.eq.Tiny) AmplitudePlot=AmpltPlotRead
-   !      t_start = t_start-t_offset
-         !
          ! Start actual reading
          j=0
          read(28,*,iostat=nxx) t_start
@@ -1036,30 +1060,51 @@ Subroutine DS_ReadSelData_PkInt
             TimeBase=t_start
          EndIf
          t_offset=TimeBase
-         read(28,*,iostat=nxx) Marker  ! skip first comment line
+         read(28,*,iostat=nxx) lineTxT  ! skip first comment line
+         n_repack=   n_repack + 10000
+!         If(First29 .and. RepackData) Then
+!            write(2,*) 'raw source data will be re-packed into file: "',trim(datfile)//'-R-'//TRIM(extension),'"'
+!            OPEN(unit=29,FILE=trim(datfile)//'-R-'//TRIM(extension), FORM='FORMATTED',STATUS='unknown',ACTION='write')
+!            write(29,*) t_start
+!            write(29,"(A)") Trim(lineTXT)
+!            First29=.false.  ! for repack option
+!         EndIf
+         nonBracket=.false.
          do    ! loop over all source points in this file
             nxx=0
             Read(28,"(A1,A350)",IOSTAT=nxx) Marker, lineTXT
             If (nxx.lt.0) Then    ! Write(2,*) 'EOF reached'
                exit
             Endif
-            read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+            If(marker.eq.'!') Then
+               cycle
+            ElseIf(marker.ne.'S') Then
+               nonBracket=.true.
+            !   write(2,*) 'problem: ',Marker, i,t,x,y,z,width, chi2
+            !   cycle
+            EndIf
+            If(nonBracket) Then
+               read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+                  (Re_Stks(k),Im_Stks(k), k=1,6)
+               Stks(1:6)=CMPLX(Re_Stks(1:6),Im_Stks(1:6))
+            Else
+               read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
+            EndIf
             If(nxx.gt.0) then
                read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
                ISpr=0.
                If(nxx.gt.0) then
-                  write(2,*) 'Read error:',i,t,x,y,z
+                  write(2,*) 'ATRI-D Read error: nonBracket=',nonBracket,i,t,x,y,z, Re_Stks(:)
+                  write(2,*) 'line:',Marker, lineTXT
                   cycle
                EndIf
             Endif
+            !      write(2,*) 'line:',Marker, lineTXT
             !write(2,*) 'no problem yet(1): ',Marker, i,t,x,y,z,width, chi2,  Stks(1:6)
-            If(marker.eq.'!') Then
-               cycle
-            ElseIf(marker.ne.'S') Then
-               write(2,*) 'problem: ',Marker, i,t,x,y,z,width, chi2
-               cycle
-            EndIf
             !
+            y=y + (SpeedNEht(4)-t)*velcty(1)
+            x=x + (SpeedNEht(4)-t)*velcty(2)
+            z=z + (SpeedNEht(4)-t)*velcty(3)   ! units [ms], [km], [km], [km]
             if(x.le.xyztBB(1) .or. x.ge.xyztBB(2)) cycle
             if(y.le.xyztBB(3) .or. y.ge.xyztBB(4)) cycle   ! [km]
             if(z.le.xyztBB(5) .or. z.ge.xyztBB(6)) cycle
@@ -1071,9 +1116,13 @@ Subroutine DS_ReadSelData_PkInt
             If( chi2 .gt. chi2Cut) cycle
             If( ISpr .gt. IntensSpread) cycle
             !write(2,*) 'Passed: ',Marker, i,ISpr, SMPowCut,chi2, chi2Cut
+            !
             SourcTotNr=SourcTotNr+1
-         ! Jan '25' chnged to NEh notatiom
-            RA(1,SourcTotNr)=t ;  RA(2,SourcTotNr)=y ;  RA(3,SourcTotNr)=x ;  RA(4,SourcTotNr)=z   ! units [ms], [km], [km], [km]
+         ! Jan '25' chnged to NEh notatiom, SpeedNEht
+            RA(1,SourcTotNr)=t ;
+            RA(2,SourcTotNr)=y
+            RA(3,SourcTotNr)=x
+            RA(4,SourcTotNr)=z  ! units [ms], [km], [km], [km]
             Label(1,SourcTotNr)=i
             SrcWidth(SourcTotNr)= Width
             SrcChi2(SourcTotNr)= Chi2
@@ -1086,6 +1135,43 @@ Subroutine DS_ReadSelData_PkInt
             SrcPZen(SourcTotNr)= Zen
             SrcPAzi(SourcTotNr)= Azi
             Stk_NEh(1:6,SourcTotNr)= Stks(1:6)
+            !
+            !write(2,*) 'line:',SourcTotNr, Marker, lineTXT
+            !  Check if close (in time&space) to another source, disqualify the worst chi^2
+            !  Difficulty is that this should be done using time at the core, since otherwise biases are inflicted, ignore this as this will be timeconsuming.
+            ! 10 m distance corresponds to 30 ns=6 samples, Usual width in ATRID gt 20, so forget
+            Do iRed=1,NrFilesRed
+               If(FileMin(iRed) .gt. t) cycle
+               If(FileMax(iRed) .lt. t) cycle
+               !write(2,*) '!DS_ReadSelData_ATRID,',ired,FileMin(iRed), FileMax(iRed),NrFilesRed
+               Do iSrc=FileFirstSrc(iRed-1)+1,FileFirstSrc(iRed)
+                  If((RA(1,SourcTotNr)-RA(1,iSrc)) .gt. sample_ms*(SrcWidth(SourcTotNr)+SrcWidth(iSrc))/4 ) cycle ! sources are far enough in time
+                  Dist=sqrt(sum((RA(2:4,SourcTotNr)-RA(2:4,iSrc))**2))
+                  If(dist .gt. 0.005) cycle
+                  ! keep the one with the best chi^2
+                  !write(2,*) '!DS_ReadSelData_ATRID, double source',iSrc, SourcTotNr, Label(1,iSrc),Label(1,SourcTotNr),iRed
+                  If(SrcChi2(SourcTotNr).lt.SrcChi2(iSrc)) Then ! replace the old one with the new
+                     RA(1:4,iSrc)=RA(1:4,SourcTotNr)
+                     Label(1,iSrc)=Label(1,SourcTotNr)
+                     SrcWidth(iSrc)=SrcWidth(SourcTotNr)
+                     SrcChi2(iSrc)=SrcChi2(SourcTotNr)
+                     SrcISpr(iSrc)=SrcISpr(SourcTotNr)
+                     SrcI20(iSrc)=SrcI20(SourcTotNr)
+                     SrcI3(iSrc)=SrcI3(SourcTotNr)
+                     SrcUn(iSrc)=SrcUn(SourcTotNr)
+                     SrcLin(iSrc)=SrcLin(SourcTotNr)
+                     SrcCirc(iSrc)=SrcCirc(SourcTotNr)
+                     SrcPZen(iSrc)=SrcPZen(SourcTotNr)
+                     SrcPAzi(iSrc)=SrcPAzi(SourcTotNr)
+                     Stk_NEh(1:6,iSrc)=Stk_NEh(1:6,SourcTotNr)
+                  EndIf
+                  SourcTotNr=SourcTotNr-1
+                  If(FileFirstSrc(iRed).ge.SourcTotNr) exit
+               EndDo
+            EndDo
+!            If(RepackData) Then
+!               write(29,"(A,A)") Marker, TRIM(lineTXT)
+!            EndIf
             if(SourcTotNr.eq.maxd) then
                write(*,*) 'Max. dimension reached of', maxd,' at',i
                write(2,*) 'Max. dimension reached of', maxd,' at',i,t
@@ -1094,6 +1180,12 @@ Subroutine DS_ReadSelData_PkInt
          enddo     ! loop over all source points in this file
          Close(Unit=28)  ! following is mainly important for multiple files-reads
          SourceNrIncr=SourcTotNr-PrevSourcTotNr
+         If(SourceNrIncr.gt.0 .and. (NrFilesRed .lt. NDataFil)) Then
+            NrFilesRed=NrFilesRed+1
+            FileMin(NrFilesRed)=RA(1,PrevSourcTotNr+1) ! =tmin of this dataset
+            FileMax(NrFilesRed)=RA(1,SourcTotNr) ! =tmax of this dataset
+            FileFirstSrc(NrFilesRed)= SourcTotNr
+         EndIf
          Write(2,"(A, A15,A,I6,A,I6, 4(1pg11.3))") 'After file: ',trim(FileMain), ', SourcTotNr=',SourcTotNr, &
                ', increment=',SourceNrIncr
          PrevSourcTotNr=SourcTotNr
@@ -1101,9 +1193,12 @@ Subroutine DS_ReadSelData_PkInt
       EndDo ! i_sequence loop
    Enddo
    write(2,*) 'Last event read:',i,' @ t=',t,'[s]'
+!   If(RepackData) Then
+!      Close(Unit=29)
+!   EndIf
    !
     Return
-End Subroutine DS_ReadSelData_PkInt
+End Subroutine DS_ReadSelData_ATRID
 !=========================================
 Module AmpFit
 contains
@@ -1122,10 +1217,11 @@ Subroutine AmplitudeFitTracks(TrackNr,TrackLenMax,TrackNrMax,TrackENR,TrackE)
       !OPEN(unit=27,FILE='files/'//trim(Image)//'_??_'//trim(extension),FORM='FORMATTED',STATUS='unknown')
       !write(27,"('! nr', 4(1x,A14),3x,3(1x,A12),2x,A10)") 't [ms]','E [km]','N','h','v_E','v_N','v_h','v [10^6m/s]'
       !
-      write(2,"(A,I2)") 'fitting source strengths along track#',TrackNr
+      write(2,"(A,2I2)") 'fitting source strengths along track#',i, TrackNr
       Call AmplitudeFit(TrackENr(i), SourceNrs=TrackE(1,i))
       !write(2,*) 'AmplitudeFitTracks: AmplitudeFit(',TrackENr(i), TrackE(1,i),i
-      !Call Flush(2)
+      write(2,"(A,2I2)") 'End fitting source strengths along track#',i, TrackNr
+      Call Flush(2)
       !close(unit=27)
    enddo
     !
@@ -1179,8 +1275,10 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    !write(27,"('! nr', 4(1x,A14),3x,3(1x,A12),2x,A10)") 't [ms]','E [km]','N','h','v_E','v_N','v_h','v [10^6m/s]'
    !
    !If(present(SelFileName)) write(2,*) 'A; SelFileName:"',SelFileName,'"'
-   If(NrSources.lt.5) Then
+   If(NrSources.lt.20) Then
       Write(2,*) 'this track has too few sources for amplitude analysis, #=',NrSources
+      If(present(SelFileName)) SelFileName=""
+      Return
    EndIf
    If(present(SourceNrs)) Then
       Do i=1,NrSources
@@ -1261,6 +1359,7 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
       i_AmplMax=Nmax_Ampl-1
       write(2,*) 'i_Ampl .ge. Nmax_Ampl', i_Ampl,Nmax_Ampl, AmplBin,Ampl(i_Ampl)
    EndIf
+   Flush(unit=2)
    If(i_MaxFit.eq.0) i_MaxFit=i_AmplMax
    !write(2,*) i_AmplMax, NrSources, ', i_MaxFit:',i_MaxFit
    !write(2,*) Ampl(i_AmplMax), SourceAmp(NrSources), AmplBin
@@ -1290,7 +1389,7 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    d1=0.
    If(Meqn.lt.0) Then ! no fitting possible
       write(2,*) 'no fitting possible of a1--d1'
-      !flush(unit=2)
+      flush(unit=2)
       goto 5
    EndIf
    b1=exp(x(2))
@@ -1325,7 +1424,7 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    d2=0.
    If(Meqn.lt.0) Then ! no fitting possible
       write(2,*) 'no fitting possible of a2--d2'
-      !flush(unit=2)
+      flush(unit=2)
       goto 8
    EndIf
    If(c2.lt.0.) then
@@ -1348,8 +1447,8 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
    EndIf
    !
 8  continue
-      write(2,*) 'entering SelFileName', present(SelFileName), TRIM(SelFileName), N_bins
-   !   flush(unit=2)
+      !write(2,*) 'entering SelFileName', present(SelFileName), TRIM(SelFileName), N_bins
+      !flush(unit=2)
    If(present(SelFileName) .and. (SelFileName.ne."")) Then
       If(N_bins.gt.1) then
          ! write obtained results to file for plotting
@@ -1363,6 +1462,8 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
             c=sqrt(10.*a/b)
             a=a/c ; b=b*c
          EndIf
+   !      write(2,*) '!A',i,a, b, c
+   !   flush(unit=2)
          c=log(a)/log(10.)
          !write(2,*) 'c=log(a)/log(10.):',c,a
          If(c.lt.0) Then
@@ -1380,7 +1481,8 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
          Else
             a=c
          EndIf
-         !write(2,*) i,c,a
+     !    write(2,*) i,a, b, c
+     ! flush(unit=2)
          If(a.lt.0.01) a=0.01
          c=log(b)/log(10.)
          !write(2,*) 'c=log(b)/log(10.):',c,b
@@ -1419,7 +1521,7 @@ Subroutine AmplitudeFit(NrSources, SourceNrs, SelFileName)
          close(unit=28)
          Write(2,*) 'File written:',TRIM(SelFileName)//'.plt',' with ',i_AmplMax, ' lines'
       Else
-         SelFileName=""
+         If(present(SelFileName)) SelFileName=""
       EndIf
    EndIf
    Nrm=NrSources*Ampl(1)
