@@ -115,6 +115,7 @@ Program Simulate_Data
    !
    Read(*,NML = Parameters)
    Open(unit=2,STATUS='unknown',ACTION='write', FILE ="Simulate"//TRIM(OutFileLabel)//".out")
+   IntfSmoothWin=20
    !
    If(FracGalacNoisePow.gt.1. .or. FracGalacNoisePow.lt. 0.) Then
       FracGalacNoisePow=0.5
@@ -206,12 +207,18 @@ Program Simulate_Data
    !
    Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure_LBA.dat',IOSTAT=nxx)
    If(nxx.eq.0) Then
-      write(2,*) 'opened file:', 'files/'//TRIM(Antennas)//'_Structure.dat'
+      write(2,*) 'opened file:', 'files/'//TRIM(Antennas)//'_Structure_LBA.dat'
    Else
-      write(2,*) 'tried to open file:','files/'//TRIM(Antennas)//'_Structure.dat'
-      write(2,*) 'error nr',nxx,', most probably the folder or the file needed did not exist'
-      write(2,*) 'Advice: run "SimData" first.'
-      goto 9
+!      Open(unit=14,STATUS='old',ACTION='read', FILE = 'files/'//TRIM(Antennas)//'_Structure.dat',IOSTAT=nxx)
+ !     If(nxx.eq.0) Then
+!         write(2,*) 'opened file:', 'files/'//TRIM(Antennas)//'_Structure.dat'
+!      Else
+         write(2,*) 'tried to open file:','files/'//TRIM(Antennas)//'_Structure_LBA.dat'  !, &
+!         ' or ','files/'//TRIM(Antennas)//'_Structure.dat',', but neither succesful.'
+         write(2,*) 'error nr',nxx,', most probably the folder or the file needed did not exist'
+         write(2,*) 'Advice: run "SimData" first.'
+         goto 9
+!      endIf
    EndIf
    !
    Call CreateNewFolder(Simulation) ! create new folder when needed
@@ -598,7 +605,7 @@ Subroutine GetSources(SrcNrMax,SourcesListLocNEh, SourcesListTms, SourcesListAmp
    If(SrcNr.le.0) Then
       write(2,*) 'No valid sources have been entered:',lname
    EndIf !
-   write(2,"(T4,'#',T7,'t_r[ms]',T18,'t[ms]',T30,'(N,E,h) [km]', T61,'Ampl(N,E,h)',T87,'I123_TRI-D')")
+   write(2,"(T4,'#',T7,'t_r[ms]',T18,'t[ms]',T39,'(N,E,h) [km]', T69,'Ampl(N,E,h)',T92,'I123/20',T104,'gamma')")
    Do i_src=1,SrcNr
       !t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*Refrac/c_mps ! in [ms] due to signal travel distance
       t_shft=sqrt(SUM(SourcesListLocNEh(:,i_src)*SourcesListLocNEh(:,i_src)))*1000.*RefracIndex(SourcesListLocNEh(3,i_src))/c_mps ! in [ms] due to signal travel distance
