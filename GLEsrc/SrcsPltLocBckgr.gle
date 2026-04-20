@@ -11,9 +11,6 @@ VerOff=2.0+bsh
 UnderFileDatA$=''   ! 'files/19A1-Rx.plt'
 NBckgr=0
 !UnderFileDatB$='files/19A1-R626.plt'
-UFSymb$='fcircle'
-UFSymbSz=0.7
-greylevelA$=Grey20
 !greylevelB$=Grey10
 
 file$='files/IntfSpecSel1580#+Mx_d'
@@ -26,6 +23,21 @@ if(nargs() > 0 ) then
    end if
 end if
 filedat$=file$+'.plt'
+
+fopen UnderFileDatA$ inchanA read
+freadln inchanA NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space
+freadln inchanA NTracks EventNrA Qual$ t_start label$ AmplitudePlot xa1 xb1 xc1 xa2 xb2 xc2 xd2
+UFSymb$='fcircle'
+UFSymbSz=0.7
+greylevelA$=Grey20
+If EventNrA > 150 then
+   UFSymbSz=0.2
+Else If EventNrA > 50 then
+   UFSymbSz=0.4
+Else
+   UFSymbSz=0.7
+End If
+
 !filedat$='../files/'+file$+'.plt'
 fopen filedat$ inchan read
 freadln inchan NMin NMax EMin EMax hMin hMax tMin tMax ZmBx$ t_offst  ! there needs to be a trailing space

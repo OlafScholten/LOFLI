@@ -26,7 +26,7 @@ Module RFI_MitPars
     Integer :: i_chunkMax
     Integer :: MinAmp ! Amplitude for determining background
     Integer :: N_zeroChunk  ! number of chunks with too many zeros
-    Real(dp) :: Powr, q    ! q is a renorm factor to determine when a chunck is background
+    Real(dp) :: Powr , q    ! q is a renorm factor to determine when a chunck is background
     Real(dp) :: Freq_lo=10, Freq_hi=90  ! bandwidth [MHz]
     Real(dp) :: FreqNtch_lo=90, FreqNtch_hi=10  ! bandwidth [MHz] for notch filter
     Real(dp) :: nu_Fltr(0:Time_dim/2) ! RFI filter
@@ -318,7 +318,7 @@ Subroutine OneKindRFI_mitigation(AntennaFieldsDir, AntType, i_filR)
                !     N_zeroChunk= (number of chucks that have an excess in zero valued samples) is determined for this antenna
                !     MaxAmpChunk(i_chunk) is determined for this antenna
                !
-               Call AccumulateBackgrFreq()  !  MinAmp is determined here
+               Call AccumulateBackgrFreq()  !  Minpow is determined here
             !   DeAllocate (MaxAmpChunk)
                !
                ! Determine averaged frequency spectrum for low-MaxAmpli chuncks
@@ -484,11 +484,12 @@ Subroutine OneKindRFI_mitigation(AntennaFieldsDir, AntType, i_filR)
       If( abs(MinAmp_Ant(i)-MinAmpAv) .gt. 2*sigma) then
          write(2,*) '!!!!!!!! Bad antenna',Unique_SAI(i), &
             ' based on Raw Amplitude deviation of', (MinAmp_Ant(i)-MinAmpAv),' exceedig > 2sigma', &
-            ', antenna powr dev=', (powr_Ant(i)-powrAv)
+            ', antenna powr dev=', (powr_Ant(i)-powrAv)!, ' NOT to be trusted!'
          If(Nfail.lt.BadAnt_nr_max) then
             Nfail=Nfail+1
             BadAnt_SAI(Nfail)=Unique_SAI(i)
          Endif
+      !EndIf
       Else If( abs(powr_Ant(i)-powrAv) .gt. 2*powrsigm) then
          write(2,*) '!!!!!!!! Bad antenna',Unique_SAI(i), &
             ' based on powr deviation of',(powr_Ant(i)-powrAv)
@@ -797,11 +798,11 @@ Subroutine AccumulateBackgrFreq()
    !
    Freq_s(:)=0.
    NBackgr=0
-!   MinAmp=MinVal(MaxAmpChunk)
-!   If(MinAmp.gt.3000.) then
-!      write(2,*) '!!!! Noisy natennas, MinAmp=',MinAmp
-!      Return  ! Antenna is overloaded or bad
-!   EndIf
+   MinAmp=MinVal(MaxAmpChunk)
+   If(MinAmp.gt.3000.) then
+      write(2,*) '!!!! Noisy natennas, MinAmp=',MinAmp
+      Return  ! Antenna is overloaded or bad
+   EndIf
    q=1.9 ! taking this too low has the property of missing some strong RFI lines that are there for only part of the time
    ! even steeing this to 5 does not resolve sufficiently the problem with the strong & imtermittet RFI line
    j=0
@@ -828,12 +829,12 @@ Subroutine AccumulateBackgrFreq()
    !write(2,*) '!Filtering on power'
    Background(:)=.false.
    Do i_chunk=1,i_chunkMax-1
-   !   If(MaxAmpChunk(i_chunk) .gt. MinAmp) cycle
-   !   If(MaxAmpChunk(i_chunk-1) .gt. MinAmp*q) cycle ! select non-lightning area
-   !   If(MaxAmpChunk(i_chunk+1) .gt. MinAmp*q) cycle
       If(powerChunk(i_chunk) .gt. BkgrThreh) cycle
       If(powerChunk(i_chunk-1) .gt. BkgrThreh) cycle ! select non-lightning area
       If(powerChunk(i_chunk+1) .gt. BkgrThreh) cycle
+!      If(powerChunk(i_chunk) .lt. 10.*BkgrThreh) cycle  ! test to see effects frequency filters in HBA
+!      If(powerChunk(i_chunk-1) .lt. 10.*BkgrThreh) cycle ! select non-lightning area
+!      If(powerChunk(i_chunk+1) .lt. 10.*BkgrThreh) cycle
       Background(i_chunk)=.true.
       !write(2,*) 'MaxAmpChunk(i_chunk)', i_chunk, MaxAmpChunk(i_chunk), MinAmp
       Dset_offset=i_chunk*Time_dim
@@ -903,23 +904,24 @@ Subroutine BuildRFIFilter()
       !write(2,*) nu,Freq_s(nu), Av, Bv*6/(dnu*dnu), Bv*12/(dnu*dnu*dnu)
       Av=Av+Bv*6/(dnu*dnu)
       !Bv=sum(Freq_s(nu-dnu:nu))/(dnu)
-      If(nu.gt.nuc_i .and. nu .lt. nuc_f) Av=0 ! 21504 ! takes out RFI-line that causes jump in the power spectrum
-      if(Freq_s(nu).gt.FiltFact*Av) then
+      If(nu.gt.nuc_i .and. nu .lt. nuc_f) Then ! takes out RFI-line that causes jump in the power spectrum
+         nu_fltr(nu)=0.
+      Else if(Freq_s(nu).gt.FiltFact*Av) then
          !FiltPwr=FiltPwr + Freq_s(nu)*Freq_s(nu)
          nu_fltr(nu)=0.
          !Freq_s(nu)=Av
          Filtring=Filtring + 1
          !write(2,*) '!BuildRFIFilter, nu=',Filtring, nu, 200.-nu*200./Time_dim
          !write(2,"(A,I5,F4.1,I6,F9.3)") '!BuildRFIFilter, nu=',Filtring, nu_fltr(nu), nu, 200.-nu*200./Time_dim
+      Else
+         Powr=Powr + Freq_s(nu)*Freq_s(nu)*nu_fltr(nu)
       Endif
-      !If(Filtring.lt. 300.) nu_fltr(nu)=1
-      Powr=Powr + Freq_s(nu)*Freq_s(nu)*nu_fltr(nu)
    Enddo  ! nu=nu_i-dnu,nu_f!
    ! apply (sum of square) in stead of (square of sum) factor (4/pi) since Freq_s(:)=Freq_s(:) + abs(Cnu_s(:))  and later /NBackgr
    Powr=Powr*4./pi
    Freq_s(:)=Freq_s(:)/sqrt(Powr)  ! Normalize the average frequency spectrum
    !Write(2,*) '# filtered frequencies=',Filtring,', RMS=',sqrt(Powr) !,FiltPwr
-   !Write(2,*) '# filtered frequencies=',Filtring,', powerN=',sqrt(Powr),dnu
+   !Write(2,*) '# filtered frequencies=',Filtring,', powerN=',sqrt(Powr),dnu,
    !If(FiltringRef.lt.0) FiltringRef=Filtring
    !If(Filtring.lt.FiltringRef/5) then
    !   powr=-2.
@@ -1019,7 +1021,7 @@ Subroutine TestFilter(LH, Label,i_OddEven)
    use HDF5_LOFAR_Read, only : GetData
    use HDF5_LOFAR_Read, only : Ant_ID, STATION_ID
    use StationMnemonics, only : Station_ID2Mnem, Statn_ID2Mnem
-   Use RFI_MitPars, only : powr, nu_Fltr, i_chunkMax, MinAmp, q, MaxAmpChunk
+   Use RFI_MitPars, only : powr, nu_Fltr, i_chunkMax, MinAmp, MaxAmpChunk , q
    Use RFI_MitPars, only : powerChunk, MinPow, qp,    Background, NBackgr, Filtring
    use FFT, only : RFTransform_CF2CT, Hann, RFTransform_CF_Filt
    Implicit none
@@ -1045,8 +1047,8 @@ Subroutine TestFilter(LH, Label,i_OddEven)
          Filtring, LH, i_OddEven+1
    write(11,"(A)") '! i_chunk,  time,   sqrt(p),   (ChMax-ChMin)'
    !
-   BckgrLev=MinAmp
-   BckgrPow=MinPow*qp
+   BckgrLev=0. ! MinAmp
+   BckgrPow=0. ! MinPow*qp
    NBackgrInc=0
    NB=0
    FreqBackgr(:)=0.
@@ -1080,7 +1082,8 @@ Subroutine TestFilter(LH, Label,i_OddEven)
          If(Background(i_chunk) ) NBackgrInc=NBackgrInc+1
       EndIf
    EndDo
-   write(2,*) 'Max adc counts for background signals=',BckgrLev, ' q=',q*BckgrLev/MinAmp, BckgrPow, MinPow
+   write(2,*) 'Max adc counts for background signals=',BckgrLev, ', pow=',BckgrPow
+! Max adc counts for background signals=   160.00000000000000                0 , q=   1.9999999776482582        0.0000000000000000      , pow=   20.809482506727136        2.0160338813111975
    write(2,*) 'Tot # Chunks with sqrt(p)<1.2 =',NB, ' of these, # included in norm calc=',NBackgrInc, &
       ' = ',NBackgrInc*100./NBackgr,' %'
    Close(Unit=11)

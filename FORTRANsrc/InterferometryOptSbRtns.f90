@@ -97,7 +97,8 @@ Subroutine GridPhaseChange(RMSW, IO_control)
          W=1/D       ! may also be 1/D^2
          Weight=Weight + W
          MeanW=MeanW + t_shft*W
-         RMSW(i)=RMSW(i) + t_shft*t_shft*W
+         RMSW(i)=RMSW(i) + t_shft*t_shft*W   ! 1 Jan 2026: more correctly
+         !RMSW(i)=RMSW(i) + t_shft*t_shft*W*W ! v25 way of doing
          W=1.  !  1./(D*D)       ! may also be 1/D^2
          AW2=AW2+ W
          Mean=Mean+t_shft*W
@@ -106,14 +107,14 @@ Subroutine GridPhaseChange(RMSW, IO_control)
       Mean=Mean/AW2
       RMS=RMS/AW2
       RMS=sqrt(RMS-Mean*Mean)
-      !MeanW=MeanW/Nr_IntFer
-      !Weight=Weight/Nr_IntFer
-      !RMSW(i)=RMSW(i)/Nr_IntFer
-      !RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)/Weight  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
-      MeanW=MeanW/Weight
-      RMSW(i)=RMSW(i)/Weight
-      RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)  ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
-      Weight=Weight/Nr_IntFer
+      !MeanW=MeanW/Nr_IntFer   ! v25 way of doing
+      !Weight=Weight/Nr_IntFer    ! v25 way of doing
+      !RMSW(i)=RMSW(i)/Nr_IntFer  ! v25 way of doing
+      !RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW)/Weight  ! v25 way of doing ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
+      MeanW=MeanW/Weight      ! 1 Jan 2026: more correctly
+      RMSW(i)=RMSW(i)/Weight  ! 1 Jan 2026: more correctly
+      RMSW(i)=5.*sqrt(RMSW(i)-MeanW*MeanW) ! 1 Jan 2026: more correctly ! Factor is bandwidth*sample_time=10 10^6 [1/s] * 5 10^-9 [s] *100%=5 %
+      Weight=Weight/Nr_IntFer   ! 1 Jan 2026: more correctly
       If(IO_control) write(2,"(A,i2,2f7.2,A,f6.2,f7.3,A,f9.5,A,3f7.2,A)") 'min & max time shift [samples] per pixel',i, &
          t_n, t_p,', RMS=', RMS, RMSW(i), '%, for d(i)=',d_loc(i),', d(N,E,h)=',Pixloc(:)-CenLoc(:),'[m]'
       diff(i) =t_p      ! needed to calculate lead-time for complete grid

@@ -7,8 +7,8 @@ sub ClrPltt x0 y0 Leng dmin dmax
     for i = 0 to NC
         !        Cscale = i*Del/Leng
         Clr(i*Del/Leng)
-        amove x0 y0+i*Del
-        marker fsquare Del*2
+        amove x0 y0+i*Del ! +del/2
+        marker fsquare Del*1.75  ! makes markers size [del x del]
     next i
     set color black
     amove x0+del y0+Leng-del/2
@@ -17,3 +17,25 @@ sub ClrPltt x0 y0 Leng dmin dmax
     write 'time [ms]'
 end sub
 
+sub ClrPlttW x0 y0 Leng dmin dmax Width
+    local NC = 10
+    local Del = Leng/NC
+    set color black
+    amove x0+Width y0-Width/2
+    write format$(dmin, "fix 2")
+    for i = 0 to NC
+      Cscale = i*Del/Leng
+      local Cs=0.9+Cscale*0.9
+      local Red = Rd_ClrOld(Cs)
+      local Green = Grn_ClrOld(Cs)
+      local Blue = Bl_ClrOld(Cs)
+        amove x0 y0+i*Del
+        !box x y [justify jtype] [fill color] [name xxx] [nobox] [round val]
+        box Width Del justify C fill rgb(Red,Green,Blue) nobox
+    next i
+    set color black
+    amove x0+Width y0+Leng-Width/2
+    write format$(dmax, "fix 2")
+    amove x0+Width y0+Leng/2
+    write 'time [ms]'
+end sub
