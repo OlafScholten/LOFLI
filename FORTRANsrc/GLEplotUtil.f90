@@ -147,7 +147,7 @@ Subroutine GLEplotControl(PlotType, PlotName, PlotDataFile, SpecialCmnd, Submit,
             !Write(*,*) TRIM(BatchFile)//'.sh  is submitted'
             shellin = 'rm  '//TRIM(BatchFile)//'.sh'
             CALL system(shellin)
-            Write(2,*) TRIM(BatchFile)//'.sh  is removed and plots habe been made'
+            Write(2,*) TRIM(BatchFile)//'.sh  is removed and plots have been made'
          EndIf
          BatchFile=''
       EndIf

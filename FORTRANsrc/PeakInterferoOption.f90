@@ -73,9 +73,6 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
             read(lname(2:InLineLength), *,iostat=nxx) k,t_r,x1,x2,x3  ! [--,tsource_ms,N_km,E_km,h_km]
             If(nxx.ne.0) Then    ! Try Auto Atrid input format
                Read(lname(2:InLineLength),*,iostat=nxx) StartTrace_ms, BoxCenter(1:3), WindowTime_ms  ! Start time
-
-
-
                If(nxx.ne.0) Then  ! no CenLoc was given, but probably a track-name
                   Read(lname(2:InLineLength),*,iostat=nxx) StartTrace_ms, PreDefTrackFile, t_track, WindowTime_ms
                   write(2,"(A)") 'Input line-1: "'//lname(1:1)//'|'//TRIM(lname(2:InLineLength))// &
@@ -99,9 +96,6 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
                   EndIf
                   lname(1:1)='S'
                EndIf
-
-
-
                Call Convert2m(BoxCenter(1:3))
                Return
                !StartTrace_ms ! in source time
@@ -185,6 +179,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
       flush(unit=2)
       !
       !  'lname' needs to be loaded before this loop
+      !write(2,*) 'Reading source guesses with options: OldDatFile',OldDatFile,', PlotFile=',PlotFile,', ATRIDinp=',ATRIDinp
       Do while (i_peak.lt.SourceRead_N)
          write(2,*) 'input line:"', trim(lname),'"'
          If(lname.eq.'') Then
@@ -238,6 +233,7 @@ Subroutine ReadFlashImageDat(PeakStartChunk_ms, PeakWidth, StartTrace_ms, BoxCen
          !write(2,*) 'line:',nxx, lname
       EndDo
       If(InUnit .eq. 17) Close(Unit=17)  ! finished reading
+      If (i_peak.ge.SourceRead_N) write(2,*) '***** Max nr of sources reached ****************'
    EndDo   ! Look for more input sources
    PeakNrTotal=i_peak
    PeakNr_dim=i_peak
@@ -530,10 +526,11 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
       !write(2,*) 'search window:', SumStrt,SumWindw,PeakWidth(i_peak), i_s1, i_s2
       !write(2,*) 'lo:', TIntens000(i_s1-2:i_s1+2)
       !write(2,*) 'hi:',TIntens000(i_s2-2:i_s2+2)
-      If(MaxSmPowLoc(3,1) .gt. NoiseLevel) Then ! otherwise border case
-         SourcePos(1:3,i_Peak)=MaxSmPowLoc(1:3,1)
-      Else
-         write(2,*) '********************** no change in source position ********************************'
+      SourcePos(1:3,i_Peak)=MaxSmPowLoc(1:3,1)
+      If(abs(MaxSmPow(1)) .lt. NoiseLevel) Then ! otherwise border case
+         write(2,*) '********************** Below threshold case ********************************',-MaxSmPow(1)
+      Else If(MaxSmPow(1) .lt. 0.0) Then ! otherwise border case
+         write(2,*) '********************** Borderline case ********************************',-MaxSmPow(1)
       EndIf
       SourceIntensity(i_Peak)=MaxSmPow(1)
       SourceTime_ms(i_Peak)= PeakStartChunk_ms(i_peak)+PeakPos(i_Peak)*sample_ms - tShift_ms(SourcePos(:,i_Peak)) - TimeBase
@@ -551,7 +548,7 @@ Subroutine RefinementStep(BoxSize_coarse, BoxFineness_coarse, NoiseLevel, PeakNr
       !
       ! prepare & produce curtain plot
       ! Calculate polarization observables at interpolated position
-      Call PeakCurtain(i_Peak)
+      Call PeakCurtain(i_Peak, ContourPlot)
 !      SrcQual(6,i_Peak)=NINT(Chi2pDF*10.)
       Chi2(i_Peak) = Chi2pDF
       I3(i_Peak) = StI3/StI
@@ -712,8 +709,10 @@ Subroutine ATRID_Option(Chi2_Lim, IVol_Lim, BoxFineness_coarse, BoxSize_coarse) 
          Spread_Grd, Spread_Dist, Spread_SclLong, Spread_Aspect, Spread_IntVol, verbose)
          !
       SourcePos(1:3,i_Peak)=MaxSmPowLoc(1:3,1)
-      If(MaxSmPow(1) .lt. 0.0) Then ! otherwise border case
-         write(2,*) '********************** Borderline case, change in source position ********************************'
+      If(abs(MaxSmPow(1)) .lt. NoiseLevel) Then ! otherwise border case
+         write(2,*) '********************** Below threshold case ********************************',-MaxSmPow(1)
+      Else If(MaxSmPow(1) .lt. 0.0) Then ! otherwise border case
+         write(2,*) '********************** Borderline case ********************************',-MaxSmPow(1)
       EndIf
       Write(2,"(A,I4,A,3F6.2,A,3I3,A,3F6.1,A,F5.2,10(' -'))") 'Peak#',i_peak, ', Intensity round 1 finished on grd-D:' &
             ,dpix(1:3),'m , grd-N:',Npix(1:3,2), ', Box size: p/m',Npix(1:3,2)*dpix(1:3),' m, Fineness=',BoxFineness
@@ -876,15 +875,15 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
    OPEN(UNIT=DataUnit,STATUS='unknown',ACTION='WRITE',FILE=trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.csv') ! comma separated value
    Write(DataUnit,*) TimeBase
 !  #, Source t[ms] ;    North      East        h [km]   Width  Chi^2    St_I/20     I_3%   P_un, P_lin, P_circ%  Zen , azi    ;  Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)
-   Write(DataUnit,"(A,T25,A,T36,A,T48,A,T57,A, T64,A,T72,A,T81,A,T93,A,  T100,A , T122,A,   T134,A,A)") '!  #, Source t[ms] ;', &
-      'North','East', 'h [km]','Width','Chi^2','IntVol','St_I/20',  'I_3%','P_un, P_lin, P_circ%','Zen , azi ', &
-      ' ;  Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)'
+   Write(DataUnit,"(A,T25,A,T36,A,T48,A,T57,A, T64,A,T72,A,T81,A,T93,A,  T100,A , T122,A,   T134,A,T301,A, T317, A)") &
+      '!  #, Source t[ms] ;', 'North','East', 'h [km]','Width','Chi^2','IntVol','St_I/20',  'I_3%','P_un, P_lin, P_circ%', &
+      'Zen , azi ',' ;  Stk_NEh (N,N) (N,E) (N,h) (E,E) (E,h) (h,h)','I12/W'
    !
-   write(2,"('!',I5,A,A)") PeakNrTotal,', t_src [ms] ,    north=y ,   east=x , height[km], Width, I_12/W ISprd  IVol ',&
-      ' Chi^2,   I3%  P_un,P_lin,P_circ; Diffs (samples, [m]) ; St_I/20,       Zen, Azi  , t_ref'
+   !write(2,"('!',I5,A,A)") PeakNrTotal,', t_src [ms] ,    north=y ,   east=x , height[km], Width, I_12/W ISprd  IVol ',&
+   !   ' Chi^2,   I3%  P_un,P_lin,P_circ; Diffs (samples, [m]) ; St_I/20,       Zen, Azi  , t_ref'
    keep=0
    Do i_Peak=1,PeakNrTotal
-      If(modulo(i_peak,25).eq.24) Then
+      If(modulo(i_peak,25).eq.1) Then
          write(2,"(A,A)") '!  ###, t_src [ms] ,    north   ,   east   , height[km], Width, I_12/W ISprd  IVol ',&
             ' Chi^2,   I3%  P_un,P_lin,P_circ; Diffs (samples, [m]) ; St_I/20,       Zen, Azi  , t_ref'
       EndIf
@@ -901,6 +900,7 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
       !
       Sam_peak=PeakStartChunk_ms(i_peak)/sample_ms + PeakPos(i_Peak)  !=ref station time, different from SourceTime_ms
       txd=' '
+      If(SourceIntensity(i_Peak) .lt. NoiseLevel) txd='!'
       Message=''
       Do k=1,PeakNrTotal
          If(k.eq.i_Peak) cycle
@@ -956,14 +956,19 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
       !  For storing data for later processing in whatever way, do not apply any cuts, except for double sources:
       If(Chi2(i_Peak).gt.1000.) Chi2(i_Peak)=999.
       If(SourceIntVol(i_Peak).gt.1000.) SourceIntVol(i_Peak)=999.
-      write(DataUnit,"(A,I4, ',',F11.6,3(',',F11.5),', ',I4, ',', F7.2,',', F7.1, ',',1pg12.4, ',',0pF6.1, 3(',',F6.1), &
-          2(',',f7.2),1p, 6(' ,  ',g12.4','g12.4,' ' ))") txd, &
+      message="(A,I4, ',',F11.6,3(',',F11.5),', ',I4, ',', F7.2,',', F7.1,',',1pg12.4, ',',0pF6.1, "&
+!         //" 20g12.4)"
+         //" 3(',',F6.1), 2(',',f7.2),1p, 6(', ',g12.4,',',g12.4),' , ',g12.4 )"
+!      write(2,*) message
+!      Flush(unit=2)
+      write(DataUnit,message) txd, &
          i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), Chi2(i_Peak), SourceIntVol(i_Peak), &
          I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
-         SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak),  Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak)
+         SourcePolZen(1,i_Peak), SourcePolAzi(1,i_Peak),  Stk_NEh(1,1:3,i_Peak), Stk_NEh(2,2:3,i_Peak), Stk_NEh(3,3,i_Peak), &
+         SourceIntensity(i_Peak)
       !
       !write(2,*) 'OutputPkInterfer: DeSelect', i_Peak, DeSelect(i_Peak)
-      Flush(unit=2)
+      !Flush(unit=2)
    EndDo
    Close(Unit=DataUnit)
    Write(2,*) 'Figure-Data File written: "', trim(DataFolder)//TRIM(OutFileLabel)//'ATRID.plt','"'
@@ -1019,7 +1024,7 @@ Subroutine OutputPkInterfer(PeakNrTotal, Chi2_set, IVol_set, MinSrcDist, NoiseLe
    !
 End Subroutine OutputPkInterfer
 !-----------------------------------------
-Subroutine PeakCurtain(i_peak)
+Subroutine PeakCurtain(i_peak, ContourPlot)
    use Constants, only : dp !,sample,c_mps, pi, sample_ms
    use DataConstants, only : Ant_nrMax
    use Interferom_Pars, only :  Nr_IntFerMx, Nr_IntferCh ! the latter gives # per chunk
@@ -1030,7 +1035,7 @@ Subroutine PeakCurtain(i_peak)
    use ThisSource, only : SourcePos, PeakPos, ExclStatNr, PeakNrTotal
    Use Interferom_Pars, only : Alloc_EInterfImag_Pars, DeAlloc_EInterfImag_Pars
    Implicit none
-   Integer, intent(in) :: i_Peak
+   Integer, intent(in) :: i_Peak, ContourPlot
    Real(dp) :: FitDelay(1:Ant_nrMax)
    Real(dp) :: ChiSq, DelChi(-N_smth:+N_smth,1:2*Nr_IntFerMx)
    Integer :: IntfBase, Outpt
@@ -1038,7 +1043,7 @@ Subroutine PeakCurtain(i_peak)
    !
    !Outpt=2  ! will generate also a curtain plot
    Outpt=1  ! will not a curtain plot, but calculate carthesial pol. observables
-   If(PeakNrTotal.le.15) Outpt=2
+   If(ContourPlot.gt.0) Outpt=2
    !Outpt=0  ! minimal output
    N_fit=N_smth
    write(Label,"('Src  ',i3.3)") i_Peak

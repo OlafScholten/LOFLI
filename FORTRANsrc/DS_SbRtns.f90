@@ -28,7 +28,7 @@ Module DS_Select
    !Real*8 :: AmplScale=1.d3 ! Scaling factor for amplitude to convert from integer to unity-normalized real
    !Real*8 :: d_AmplScale
    !
-   Real(dp), save :: xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, SMPowCut ! RatMax=ratio (Max rim)/peak
+   Real(dp), save :: xMin,xMax,yMin,yMax,zMin,zMax,tMin,tMax, SMPowCut, I_ImgCut ! RatMax=ratio (Max rim)/peak
    Real(dp), save :: xyztBB(8), NEhtBB(8)
    Real(dp), save :: SpeedNEht(4)  ! wind (or airplane) speed to determine time-dependent shifting of all sources
    Real(dp), save :: VelDist_NEht(4)   ! calculate velocities of the various points while taking this location-time as the source
@@ -63,7 +63,7 @@ Subroutine DS_ReadCntrl(Fini)
    Character(len=120) :: PlotFile
    logical :: ExistDataFile
    NAMELIST /Parameters/ datafile, BckgrFile, PlotName, TimeBase, &
-      SMPowCut, MaxAmplFitPercent, FileStatN, StatNCut, SrcDensTimeResol, AmplitudePlot, &
+      SMPowCut, I_ImgCut, MaxAmplFitPercent, FileStatN, StatNCut, SrcDensTimeResol, AmplitudePlot, &
       tCutl, tCutu, RunOption , xyztBB, NEhtBB, CutSigmaH, LinCutH, RMS_ns, IntensSpread, DelNEff, ZoomBox &
    , MaxTrackDist, Wtr, Aweight, TimeWin, PreDefTrackFile, dt_MTL, HeightFact, NLongTracksMax, LongTrack_Min &
    , Corr_dD, Corr_Dnr, Corr_dtau, QualPlot &
@@ -92,6 +92,7 @@ Subroutine DS_ReadCntrl(Fini)
    PreDefTrackFile=''
    PlotName=''
    SMPowCut=0.
+   I_ImgCut=0.
    CutSigmaH=-1.  !  No cut of sigma(h)
    LinCutH = 0.
    RMS_ns = 10.
@@ -519,7 +520,7 @@ Subroutine DS_ReadSelData_TRID
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
    Use DS_Select, only : tiny
    Use DS_Select, only : PolarAna, Stk_NEh
-   Use DS_Select, only : NDataFil, datafile,  TimeBase, t_offset, AmplitudePlot, SMPowCut
+   Use DS_Select, only : NDataFil, datafile,  TimeBase, t_offset, AmplitudePlot, SMPowCut, I_ImgCut
    Use DS_Select, only : tCutl, tCutu, SourcTotNr, FileStatN, StatNCut
    Use DS_Select, only : QualIndic, RA, Maxd, Label, Iperm, SrcI20, NEhtBB, SpeedNEht
    Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
@@ -528,7 +529,7 @@ Subroutine DS_ReadSelData_TRID
    Character*20 :: BoxOption, txt !, Utility, release
    character*100 ::  FileMain, datfile
    character*25 ::  extension!, OutFileLabel, SelFileName, PlotName, shellin
-   Character(len=300) :: lineTXT !, OS
+   Character(len=320) :: lineTXT !, OS
    integer ::  i,j, nxx, i_datfil, PrevSourcTotNr
    Real(dp) :: t,No,Ea,hi,SMPow
    Real(dp) :: Q, AmpltPlotRead
@@ -536,9 +537,9 @@ Subroutine DS_ReadSelData_TRID
    integer :: i_sequence, LastChar
 !   Logical :: ZoomClip=.false.
    Logical :: First28, First29, RepackData, RefinePolarizObs
-   Integer :: SourceNrIncr
+   Integer :: SourceNrIncr, ReadI12
    real :: ScalAmpl(1:4000), AmplMax, AmplStatN !, FileStatNp, AmplStatNp ! , FileStatNm, AmplStatNm
-   Real :: Chi2pDF, StI, MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx ! just for rewriting
+   Real :: Chi2pDF, StI, MaxSmPowQ, MaxSmPowU, MaxSmPowV, MaxSmPowI3 ,sx,Xx, I_img ! just for rewriting
    integer :: n_repack, PixPowOpt
    Real(dp) :: tp
    Integer :: i_src
@@ -620,11 +621,27 @@ Subroutine DS_ReadSelData_TRID
          j=0
          Chi2pDF=0.
          StI=0.
+         ReadI12=0
+         I_img=1.e9
+         write(2,*) '!readAtrid, options',ReadI12, RefinePolarizObs, nxx, PolarAna
          do    ! loop over all source points in this file
             j=SourcTotNr+1
             If(RefinePolarizObs) Then
-               read(28,*,iostat=nxx) i, RA(1:4,j), SrcI20(j), &
-                  Chi2pDF, StI, Stk_NEh(1:6,j)
+               If(ReadI12 .gt. 0) Then
+                  read(28,*,iostat=nxx) i, RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j), I_img
+               ElseIf(ReadI12 .lt. 0) Then
+                  read(28,*,iostat=nxx) i, RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j)
+               Else
+                  Read(28,"(A320)",IOSTAT=nxx) lineTXT   ! comment line
+                  read(lineTXT,*,iostat=nxx) i, RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j), I_img
+                  ReadI12=1
+                  If(nxx.ne.0) then
+                     read(lineTXT,*,iostat=nxx) i, RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j)
+                     I_img=1.e8
+                     ReadI12=-1
+                  Endif
+                  write(2,*) '!readAtrid, ReadI12',ReadI12,I_img
+               EndIf
             Else
                read(28,*,iostat=nxx) i, RA(1:4,j), SrcI20(j)
                Stk_NEh(1:6,j)=0.
@@ -638,8 +655,8 @@ Subroutine DS_ReadSelData_TRID
             Label(1,j)=n_repack+i
             If(RepackData) Then
                If(PolarAna) Then
-                  write(29,"(i8,','4(f11.5,','),g13.6','f6.2,',',f12.6, 6(' , (',g12.4,',',g12.4,')'))") Label(1,j), &
-                     RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j)
+                  write(29,"(i8,','4(f11.5,','),g13.6','f6.2,',',f12.6, 6(' , (',g12.4,',',g12.4,')'),g13.4)") Label(1,j), &
+                     RA(1:4,j), SrcI20(j), Chi2pDF, StI, Stk_NEh(1:6,j), I_img
                Else
                   write(29,"(i8,','4(f11.5,','),g13.6','f6.2,',',f12.6, 6(' , (',g12.4,',',g12.4,')'))") Label(1,j), &
                      RA(1:4,j), SrcI20(j)
@@ -652,6 +669,7 @@ Subroutine DS_ReadSelData_TRID
             if(RA(1,j).le.NEhtBB(7) .or. RA(1,j).ge.NEhtBB(8)) cycle   ! [ms]
             if(RA(1,j).gt.tCutl .and. RA(1,j).lt.tCutu) cycle  ![ms]
             If( SrcI20(j) .lt. SMPowCut) cycle
+            If( I_img .lt. I_ImgCut) cycle
             !
             !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,SMPow, SMPowCut  ! already in proper units for plotting
             SourcTotNr=SourcTotNr+1
@@ -966,7 +984,7 @@ Subroutine DS_ReadSelData_ATRID
 !   Integer, save :: SourcTotNr  ! number of sources stored in RA, passing the selection criteria
    Use constants, only : dp, sample_ms
    use DataConstants, only : DataFolder !, ProgramFolder, UtilitiesFolder, FlashFolder, FlashName, Windows, RunMode
-   Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, RMS_ns, SMPowCut,  TimeBase, t_offset, IntensSpread
+   Use DS_Select, only : tiny, ZoomBox, tCutl, tCutu, RMS_ns, SMPowCut, I_ImgCut,  TimeBase, t_offset, IntensSpread
    Use DS_Select, only : RA, Label, Maxd, SourcTotNr, xyztBB, t_offset, NDataFil, datafile, PolarAna, SrcISpr, SpeedNEht
    Use DS_Select, only : SrcWidth, Iperm, SrcChi2, SrcI20, SrcI3, SrcUn, SrcLin, SrcCirc, SrcPZen, SrcPAzi, Stk_NEh
 !   Use DS_Select, only : Nrm, a1,b1,c1,d1,ChiSq1,Nrm1, a2,b2,c2,d2,ChiSq2,Nrm2, a3,b3,c3,d3,ChiSq3 ! parameters for describing the amplitude distribution
@@ -988,8 +1006,8 @@ Subroutine DS_ReadSelData_ATRID
    Integer :: Width, i_sequence, LastChar, NullRead, n_repack
    Complex :: Stks(1:6)    ! order: (1,1:3), (2,2:3), (3,3)
    Logical :: RepackData, First29, nonBracket=.false.
-   Integer :: iRed, iSrc, NrFilesRed, FileFirstSrc(0:NDataFil)
-   Real(dp) :: FileMin(1:NDataFil), FileMax(1:NDataFil), dist
+   Integer :: iRed, iSrc, NrFilesRed, FileFirstSrc(0:NDataFil), ReadI12
+   Real(dp) :: FileMin(1:NDataFil), FileMax(1:NDataFil), dist, I_img
    !
 !         i_peak, SourceTime_ms(i_Peak), SourcePos(1:3,i_Peak)/1000.,  PeakWidth(i_Peak), &
 !         Chi2(i_Peak), I20, I3(i_Peak)*100., SourceUn(i_Peak)*100., SourceLin(i_Peak)*100., SourceCirc(i_Peak)*100., &
@@ -1070,6 +1088,7 @@ Subroutine DS_ReadSelData_ATRID
 !            First29=.false.  ! for repack option
 !         EndIf
          nonBracket=.false.
+         ReadI12=0
          do    ! loop over all source points in this file
             nxx=0
             Read(28,"(A1,A350)",IOSTAT=nxx) Marker, lineTXT
@@ -1084,8 +1103,28 @@ Subroutine DS_ReadSelData_ATRID
             !   cycle
             EndIf
             If(nonBracket) Then
-               read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
-                  (Re_Stks(k),Im_Stks(k), k=1,6)
+               If(ReadI12 .eq. 0) Then
+                  read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+                     (Re_Stks(k),Im_Stks(k), k=1,6), I_img
+                  ReadI12=1
+                  If(nxx.ne.0) then
+                     read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+                        (Re_Stks(k),Im_Stks(k), k=1,6)
+                     I_img=1.e8
+                     ReadI12=-1
+                  Endif
+                  write(2,*) '!readAtrid, ReadI12',ReadI12,I_img
+               ElseIf(ReadI12 .lt. 0) Then
+                     read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+                        (Re_Stks(k),Im_Stks(k), k=1,6)
+               Else
+                  read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+                     (Re_Stks(k),Im_Stks(k), k=1,6), I_img
+               EndIf
+
+
+               !read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  &
+               !   (Re_Stks(k),Im_Stks(k), k=1,6)
                Stks(1:6)=CMPLX(Re_Stks(1:6),Im_Stks(1:6))
             Else
                read(lineTXT,*,iostat=nxx) i,t,y,x,z,width, chi2, ISpr, I20, I3, Un, Lin, Circ,  Zen, Azi,  Stks(1:6)
@@ -1110,6 +1149,7 @@ Subroutine DS_ReadSelData_ATRID
             if(z.le.xyztBB(5) .or. z.ge.xyztBB(6)) cycle
             if(t.le.xyztBB(7) .or. t.ge.xyztBB(8)) cycle   ! [ms]
             if(t.gt.tCutl .and. t.lt.tCutu) cycle  ![ms]
+            If( I_img .lt. I_ImgCut) cycle
             !
             !write(2,*)  'DS_ReadSelData_TRID', i,t,x,y,z,I20, SMPowCut,ISpr  ! already in proper units for plotting
             If( I20 .lt. SMPowCut) cycle

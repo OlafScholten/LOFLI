@@ -7,8 +7,8 @@ Module TrackConstruct
    Integer, save :: tNrS_max(1:NrPreDefTrackPoints_Max), PreDefTrackNr
    Integer, save :: tNrS(1:PreDefTrackNr_Max)=1
    Integer :: TrackNr, LongTrackNr, LongTrack_Min=20 !12
-   Integer, parameter :: TrackNrMax=19, TrackLenMax=5000
-   Integer :: TrackENr(TrackLenMax), TrackE(TrackLenMax,TrackNrMax)
+   Integer, parameter :: TrackNrMax=39, TrackLenMax=5000
+   Integer :: TrackENr(TrackNrMax), TrackE(TrackLenMax,TrackNrMax)
    Real*8 :: LeaderPos(1:4,0:TrackLenMax,TrackNrMax)
    Real*8 :: Wtr  ! weighting of new source location for track definition
    Real*8 :: Aweight ! Determines importance of amplitude in weighting new point for track (=0 is not important)
@@ -43,22 +43,22 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
    Real(dp), Intent(in) :: RA(4,*)
    Real, intent(in) :: SrcI20_r(*)
    Integer, intent(in) :: SourcTotNr ! , Label(4,*)
-   Real*8 :: TrackPos(1:3,TrackNrLim)  !  TrackPos(1:3,i): position of the head of the i^th track
-   Real*8 :: TrackWeight(TrackNrLim), AmplWeight
-   Integer :: i_cls(1), n_cls, Cls_track(3)
+   Real*8 :: TrackPos(1:3,TrackNrMax)  !  TrackPos(1:3,i): position of the head of the i^th track
+   Real*8 :: TrackWeight(TrackNrMax), AmplWeight
+   Integer :: i_cls, n_cls, Cls_track(3)
    Real*8 :: Cls_dist(1:3), dist, PWtr
    integer :: i,j,k, TotLongTrackEve, j_i, j_f
    Character(len=120) :: PlotFile
    !
    !-- Get predefined tracks (if any)
-   If(TrackNrLim.gt.TrackNrMax) TrackNrLim=TrackNrMax
+   If(TrackNrLim.lt.TrackNrMax) TrackNrLim=TrackNrMax
    Call ReadPreDefTrFile(PreDefTrackFile)
     ! Reconstruct TrackPosition at time of source i
     !
    TrackNr=PreDefTrackNr
    TrackENr(:)=0
    !tNrS(:)=1
-   Write(2,*) 'Number of predefined tracks=',PreDefTrackNr
+   Write(2,*) 'Number of predefined tracks=',PreDefTrackNr,', TrackNrLim,TrackNrMax=', TrackNrLim,TrackNrMax
    !TrackE(TrackENr(TrackNr),TrackNr)=j
    ! TrackPos(1:3,TrackNr)=RA(2:4,j)
    !TOrder=-1
@@ -89,7 +89,8 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
          ! Add to existing Track
          n_cls=n_cls+1
          Cls_track(n_cls)=i
-         Cls_dist(n_cls)=Dist ! store distances to closest track
+         !Cls_dist(n_cls)=Dist ! store distances to closest track
+         Cls_dist(n_cls)=1./TrackENr(i) ! Use the longest track as preference (Marten's suggestion April 2026)
          If(n_cls.eq.3) exit
          !goto 10
       enddo
@@ -108,9 +109,9 @@ Subroutine Assign2Tracks(RA, SrcI20_r, SourcTotNr)
          !write(2,*) 'Assign2Tracks: source,newtrack=',j,TrackNr
       Else
          !write(2,*) 'n_cls=',n_cls,Cls_track(1:n_cls),Cls_dist(1:n_cls)
-         i_cls=minloc(Cls_dist(1:n_cls)) ! get closest track
+         i_cls=minloc(Cls_dist(1:n_cls),Dim=1) ! get closest track
          ! i_cls=1  !                        get first track that is close
-         i=Cls_track(i_cls(1))           ! Track-number of closest track is i
+         i=Cls_track(i_cls)           ! Track-number of closest track is i
          If(TrackENr(i) .lt. TrackLenMax) then   ! Check if maximal track-length will be exceeded
              TrackENr(i)=TrackENr(i)+1   ! last index for this track
              TrackE(TrackENr(i),i)=j     ! store event-number j in top-position of track i

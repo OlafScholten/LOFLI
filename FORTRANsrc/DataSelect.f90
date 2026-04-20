@@ -101,7 +101,7 @@ PROGRAM DataSelect
          ! 2017:  0.03 0.3 0.01  ! MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]
          ! 2018:  0.12 0.5 0.05  ! MaxTrackDist[km], Wtr[0.5], TimeWin[ms^2]
          If(NLongTracksMax.lt.0) NLongTracksMax=0
-         If(NLongTracksMax.gt.9) NLongTracksMax=0
+         If(NLongTracksMax.gt.9) NLongTracksMax=9
          TrackNrLim=NLongTracksMax
          write(2,"(A,F7.4,A,F4.1,A,F5.2,A,F11.8,A,i2)") 'MaxTrackDist=',MaxTrackDist,'[km], HeightFact=',HeightFact, &
             '; Weight new event=', Wtr, ', TimeWin=', TimeWin,'[ms], Max Nr Long Tracks=', NLongTracksMax
@@ -394,7 +394,7 @@ Subroutine I3Ana(SelFileName)  ! du -sh  directory size
       EndDo
       STIR=SR+ST+SV
       Write(28,*) i_src,  Real(SR)/STI,REAL(St)/STI, REAL(SV)/STI, STI
-      Write(2,*) i_src, Iperm(i_src), SRCI3(Iperm(i_src)), Real(SR)/STI,REAL(ST)/STI, REAL(SV)/STI, STIR/STI
+      !Write(2,*) i_src, Iperm(i_src), SRCI3(Iperm(i_src)), Real(SR)/STI,REAL(ST)/STI, REAL(SV)/STI, STIR/STI
       !Write(2,*)  Real(Stks(1,1))/STI,REAL(Stks(2,2))/STI, REAL(Stks(3,3))/STI, STI
    EndDo ! i_src=1,SourcTotNr
    Close(unit=28)
